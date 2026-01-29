@@ -263,10 +263,12 @@ class EnhancedSystemConfig:
     
     def create_default_profiles(self):
         """Create example profiles for testing"""
+        now = datetime.now().isoformat()
         profiles = [
             UserProfile(
                 name="residential_small",
                 description="Small residential system (apartment)",
+                created_at=now,
                 battery_capacity_kwh=50.0,
                 solar_capacity_kw=5.0,
                 grid_max_import_kw=10.0,
@@ -276,6 +278,7 @@ class EnhancedSystemConfig:
             UserProfile(
                 name="residential_large",
                 description="Large residential system (villa)",
+                created_at=now,
                 battery_capacity_kwh=150.0,
                 solar_capacity_kw=20.0,
                 grid_max_import_kw=100.0,
@@ -285,6 +288,7 @@ class EnhancedSystemConfig:
             UserProfile(
                 name="industrial_small",
                 description="Small industrial facility",
+                created_at=now,
                 battery_capacity_kwh=500.0,
                 solar_capacity_kw=100.0,
                 diesel_capacity_kw=100.0,

@@ -16,7 +16,7 @@ project_root = os.path.dirname(current_dir)
 sys.path.insert(0, project_root)
 
 from src.enhanced_config import get_config
-from src.oree_effective_scraper import OREEEffectiveScraper
+from src.price_fallback import get_prices_with_fallback
 
 # Configure page
 st.set_page_config(page_title="Dashboard", layout="wide", initial_sidebar_state="expanded")
@@ -51,16 +51,11 @@ current_date = datetime.now().strftime("%Y-%m-%d")
 # FETCH REAL PRICES
 # ═══════════════════════════════════════════════════════════════
 
-@st.cache_data(ttl=300)  # Cache for 5 minutes (matches OREE cache)
+@st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_oree_prices():
-    """Fetch real OREE prices"""
-    try:
-        scraper = OREEEffectiveScraper(use_cache=True)
-        prices_df = scraper.fetch_today_prices()
-        return prices_df
-    except Exception as e:
-        st.warning(f"⚠️ Could not fetch OREE prices: {e}")
-        return None
+    """Fetch real OREE prices with fallback to samples"""
+    prices_df, is_real = get_prices_with_fallback()
+    return prices_df
 
 prices_df = get_oree_prices()
 
@@ -189,7 +184,7 @@ if prices_df is not None and len(prices_df) > 0:
             template='plotly_white',
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
     
     with col_info:
         st.subheader("ℹ️ Price Units")
@@ -292,7 +287,7 @@ with col_model2:
     st.metric("Last Retrained", st.session_state.last_retrain)
 
 with col_model3:
-    if st.button("🔄 Retrain Model Now", use_container_width=True):
+    if st.button("🔄 Retrain Model Now", width="stretch"):
         st.info("Redirecting to Configuration page...")
         st.switch_page("pages/1_configuration.py")
 
@@ -314,7 +309,7 @@ if prices_df is not None and len(prices_df) > 0:
     display_df = display_df[['hour', 'price_eur_mwh', 'price_uah_mwh']]
     display_df.columns = ['Hour', 'Price (EUR/MWh)', 'Price (₴ UAH/MWh)']
     
-    st.dataframe(display_df, use_container_width=True, height=400)
+    st.dataframe(display_df, width="stretch", height=400)
 
 st.divider()
 
