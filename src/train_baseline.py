@@ -12,10 +12,15 @@ def train_baseline_with_real_data():
     """Train baseline model using REAL data"""
     print("--- Starting Baseline Training with REAL Data ---\n")
     
-    # Import real data fetchers
-    import sys
-    sys.path.insert(0, '.')
-    from src.data_pipeline.ingest_prices import PriceIngester
+    # Import real data fetchers (fixed import path)
+    try:
+        from src.data_pipeline.ingest_prices import PriceIngester
+    except ModuleNotFoundError:
+        import sys
+        import os
+        # Add project root to path
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from src.data_pipeline.ingest_prices import PriceIngester
     
     logger.info("🔄 Fetching REAL price data for training...\n")
     

@@ -24,25 +24,35 @@ class SmartEnergyEnv(gym.Env):
     
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, weather_data: pd.DataFrame, price_data: pd.DataFrame):
+    def __init__(self, weather_data: pd.DataFrame, price_data: pd.DataFrame, config=None):
         """
         Initialize environment
         
         Args:
             weather_data: DataFrame with columns [temperature, solar_radiation, cloudcover, wind, humidity]
             price_data: DataFrame with column [price_normalized_minmax]
+            config: SystemConfig instance (optional, uses defaults if None)
         """
+        # Import config if not provided
+        if config is None:
+            from src.config import get_config
+            config = get_config()
+        
+        self.config = config
         self.weather = weather_data.reset_index(drop=True)
         self.prices = price_data.reset_index(drop=True)
         self.current_step = 0
         
-        # Constants
-        self.BATTERY_CAPACITY = 150  # kWh
-        self.BATTERY_MIN_SOC = 0.1  # 10% minimum
-        self.BATTERY_MAX_SOC = 0.95  # 95% maximum
-        self.BATTERY_CHARGE_EFFICIENCY = 0.95
-        self.BATTERY_DISCHARGE_EFFICIENCY = 0.95
-        self.GRID_MAX_POWER = 100  # kW
+        # Get constants from config (with fallback to hardcoded defaults)
+        battery_cfg = config.get_battery_config()
+        self.BATTERY_CAPACITY = battery_cfg.get('capacity_kwh', 150)  # kWh
+        self.BATTERY_MIN_SOC = battery_cfg.get('min_soc', 0.1)  # 10% minimum
+        self.BATTERY_MAX_SOC = battery_cfg.get('max_soc', 0.95)  # 95% maximum
+        self.BATTERY_CHARGE_EFFICIENCY = battery_cfg.get('charge_efficiency', 0.95)
+        self.BATTERY_DISCHARGE_EFFICIENCY = battery_cfg.get('discharge_efficiency', 0.95)
+        
+        grid_cfg = config.get_grid_config()
+        self.GRID_MAX_POWER = grid_cfg.get('max_import_power_kw', 100)  # kW
         
         # State space: [temperature, solar, cloudcover, price, battery_soc]
         self.observation_space = spaces.Box(
