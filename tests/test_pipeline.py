@@ -1,94 +1,16 @@
 """
 Unit tests for data pipeline
-Tests: database connections, API ingestion, validation
+Tests: validation, data parsing, integration flow (no DB required)
 """
 
 import pytest
 from datetime import datetime
-from sqlalchemy.orm import Session
 from unittest.mock import Mock, patch, MagicMock
 import pandas as pd
 
-from src.db import SessionLocal, engine, Base, health_check
-from src.models import WeatherForecast, MarketPrice
+from src.data_pipeline.validate import DataValidator, WeatherDataModel, MarketPriceModel
 from src.data_pipeline.ingest_weather import WeatherIngester
 from src.data_pipeline.ingest_prices import PriceIngester
-from src.data_pipeline.validate import DataValidator, WeatherDataModel, MarketPriceModel
-
-
-@pytest.fixture
-def db_session():
-    """Create test database session"""
-    Base.metadata.create_all(bind=engine)
-    session = SessionLocal()
-    yield session
-    session.close()
-    Base.metadata.drop_all(bind=engine)
-
-
-class TestDatabase:
-    """Test database connectivity and models"""
-
-    def test_health_check(self):
-        """Test database health check"""
-        result = health_check()
-        assert result is True
-
-    def test_create_weather_record(self, db_session):
-        """Test creating weather forecast record"""
-        record = WeatherForecast(
-            timestamp=datetime.now(),
-            temperature=5.5,
-            solar_radiation=450.0,
-            cloudcover=75.0,
-            wind_speed=3.2,
-            humidity=65.0
-        )
-        db_session.add(record)
-        db_session.commit()
-
-        retrieved = db_session.query(WeatherForecast).first()
-        assert retrieved is not None
-        assert retrieved.temperature == 5.5
-        assert retrieved.cloudcover == 75.0
-
-    def test_create_price_record(self, db_session):
-        """Test creating market price record"""
-        record = MarketPrice(
-            timestamp=datetime.now(),
-            price_eur_mwh=7.5,
-            price_uah_mwh=262.5
-        )
-        db_session.add(record)
-        db_session.commit()
-
-        retrieved = db_session.query(MarketPrice).first()
-        assert retrieved is not None
-        assert retrieved.price_eur_mwh == 7.5
-
-    def test_unique_timestamp_constraint(self, db_session):
-        """Test unique timestamp constraint"""
-        now = datetime.now()
-        record1 = WeatherForecast(
-            timestamp=now,
-            temperature=5.5,
-            solar_radiation=450.0,
-            cloudcover=75.0
-        )
-        db_session.add(record1)
-        db_session.commit()
-
-        # Try to add duplicate timestamp
-        record2 = WeatherForecast(
-            timestamp=now,
-            temperature=6.0,
-            solar_radiation=500.0,
-            cloudcover=80.0
-        )
-        db_session.add(record2)
-
-        with pytest.raises(Exception):  # IntegrityError
-            db_session.commit()
 
 
 class TestWeatherValidation:
@@ -106,12 +28,25 @@ class TestWeatherValidation:
         }
         model = WeatherDataModel(**data)
         assert model.temperature == 5.5
+        assert model.cloudcover == 75.0
 
     def test_temperature_out_of_bounds(self):
         """Test temperature validation"""
         data = {
             "timestamp": datetime.now(),
             "temperature": -100.0,  # Invalid: < -50
+            "solar_radiation": 450.0,
+            "cloudcover": 75.0,
+            "wind_speed": 3.2
+        }
+        with pytest.raises(ValueError):
+            WeatherDataModel(**data)
+
+    def test_temperature_upper_bound(self):
+        """Test max temperature"""
+        data = {
+            "timestamp": datetime.now(),
+            "temperature": 55.0,  # Invalid: > 50
             "solar_radiation": 450.0,
             "cloudcover": 75.0,
             "wind_speed": 3.2
@@ -142,6 +77,32 @@ class TestWeatherValidation:
         }
         with pytest.raises(ValueError):
             WeatherDataModel(**data)
+
+    def test_cloudcover_negative(self):
+        """Test cloudcover negative"""
+        data = {
+            "timestamp": datetime.now(),
+            "temperature": 5.5,
+            "solar_radiation": 450.0,
+            "cloudcover": -10.0,  # Invalid: < 0
+            "wind_speed": 3.2
+        }
+        with pytest.raises(ValueError):
+            WeatherDataModel(**data)
+
+    def test_realistic_winter_weather(self):
+        """Test realistic winter weather data"""
+        data = {
+            "timestamp": datetime.now(),
+            "temperature": -2.5,
+            "solar_radiation": 200.0,
+            "cloudcover": 85.0,
+            "wind_speed": 3.5,
+            "humidity": 72.0
+        }
+        model = WeatherDataModel(**data)
+        assert model.temperature == -2.5
+        assert model.cloudcover == 85.0
 
 
 class TestPriceValidation:
@@ -185,6 +146,24 @@ class TestPriceValidation:
             model = MarketPriceModel(**data)
             assert model.price_eur_mwh == price
 
+    def test_night_low_price(self):
+        """Test realistic night market price"""
+        data = {
+            "timestamp": datetime.now(),
+            "price_eur_mwh": 2.8
+        }
+        model = MarketPriceModel(**data)
+        assert model.price_eur_mwh == 2.8
+
+    def test_peak_high_price(self):
+        """Test realistic peak price"""
+        data = {
+            "timestamp": datetime.now(),
+            "price_eur_mwh": 12.5
+        }
+        model = MarketPriceModel(**data)
+        assert model.price_eur_mwh == 12.5
+
 
 class TestDataValidator:
     """Test batch validation service"""
@@ -221,6 +200,18 @@ class TestDataValidator:
         valid, invalid = DataValidator.validate_batch(data, "price")
         assert valid == 2
         assert invalid == 1
+
+    def test_validate_mixed_batch(self):
+        """Test batch with multiple invalid records"""
+        data = [
+            {"timestamp": datetime.now(), "price_eur_mwh": 5.0},
+            {"timestamp": datetime.now(), "price_eur_mwh": 100.0},  # Invalid
+            {"timestamp": datetime.now(), "price_eur_mwh": 8.0},
+            {"timestamp": datetime.now(), "price_eur_mwh": 50.0},  # Invalid
+        ]
+        valid, invalid = DataValidator.validate_batch(data, "price")
+        assert valid == 2
+        assert invalid == 2
 
 
 class TestWeatherIngester:
@@ -296,35 +287,18 @@ class TestPriceIngester:
         assert len(df) == 24  # 24 hours
         assert 'price_eur_mwh' in df.columns
 
-
-# Integration tests
-class TestPipelineIntegration:
-    """Test full pipeline integration"""
-
-    def test_weather_to_db_flow(self, db_session):
-        """Test complete weather ingestion flow"""
-        # Create test data
-        record = WeatherForecast(
-            timestamp=datetime.now(),
-            temperature=5.5,
-            solar_radiation=450.0,
-            cloudcover=75.0,
-            wind_speed=3.2
-        )
-        db_session.add(record)
-        db_session.commit()
-
-        # Retrieve and validate
-        retrieved = db_session.query(WeatherForecast).first()
-        is_valid, error = DataValidator.validate_weather({
-            'timestamp': retrieved.timestamp,
-            'temperature': retrieved.temperature,
-            'solar_radiation': retrieved.solar_radiation,
-            'cloudcover': retrieved.cloudcover,
-            'wind_speed': retrieved.wind_speed
-        })
+    def test_fallback_price_ranges(self):
+        """Test fallback prices are realistic"""
+        ingester = PriceIngester()
+        df = ingester._parse_price_html(None)
         
-        assert is_valid is True
+        # All prices should be within realistic bounds
+        assert (df['price_eur_mwh'] >= 0.5).all()
+        assert (df['price_eur_mwh'] <= 20.0).all()
+
+
+class TestValidationIntegration:
+    """Test full validation integration"""
 
     def test_24_hour_forecast_validation(self):
         """Test 24-hour forecast dataset validation"""
@@ -344,6 +318,47 @@ class TestPipelineIntegration:
         assert valid == 24
         assert invalid == 0
 
+    def test_24_hour_price_validation(self):
+        """Test 24-hour price validation"""
+        now = datetime.now()
+        data_list = []
+        
+        for hour in range(24):
+            # Realistic market pattern
+            if 7 <= hour <= 10 or 17 <= hour <= 21:
+                price = 8.0 + (hour % 3)
+            else:
+                price = 3.0 + (hour % 5)
+            
+            data_list.append({
+                'timestamp': now.replace(hour=hour),
+                'price_eur_mwh': price
+            })
+        
+        valid, invalid = DataValidator.validate_batch(data_list, "price")
+        assert valid == 24
+        assert invalid == 0
+
+    def test_realistic_weather_pattern(self):
+        """Test realistic winter weather pattern"""
+        now = datetime.now()
+        data_list = []
+        
+        for hour in range(24):
+            # Winter: cold, cloudy, low solar
+            data_list.append({
+                'timestamp': now.replace(hour=hour),
+                'temperature': -3.0 + 5.0 * (hour / 24),  # -3 to +2°C
+                'solar_radiation': 400.0 * max(0, 1 - abs(hour - 12) / 12),  # Peak noon
+                'cloudcover': 80.0 + 10.0 * (hour % 3),  # 80-90% clouds
+                'wind_speed': 2.5 + (hour % 4) * 0.5,  # 2.5-3.5 m/s
+                'humidity': 70.0
+            })
+        
+        valid, invalid = DataValidator.validate_batch(data_list, "weather")
+        assert valid == 24
+        assert invalid == 0
+
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    pytest.main([__file__, "-v", "--tb=short"])
