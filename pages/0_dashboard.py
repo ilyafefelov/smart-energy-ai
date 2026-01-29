@@ -16,7 +16,7 @@ project_root = os.path.dirname(current_dir)
 sys.path.insert(0, project_root)
 
 from src.enhanced_config import get_config
-from src.price_fallback import get_prices_with_fallback
+from src.oree_fixed_scraper import OREEEffectiveScraper
 
 # Configure page
 st.set_page_config(page_title="Dashboard", layout="wide", initial_sidebar_state="expanded")
@@ -53,9 +53,18 @@ current_date = datetime.now().strftime("%Y-%m-%d")
 
 @st.cache_data(ttl=300)  # Cache for 5 minutes
 def get_oree_prices():
-    """Fetch real OREE prices with fallback to samples"""
-    prices_df, is_real = get_prices_with_fallback()
-    return prices_df
+    """Fetch REAL OREE prices"""
+    try:
+        scraper = OREEEffectiveScraper(use_cache=True)
+        prices_df = scraper.fetch_today_prices()
+        if prices_df is not None and len(prices_df) > 0:
+            return prices_df
+    except Exception as e:
+        st.warning(f"Could not fetch live OREE prices: {str(e)[:100]}")
+    
+    # Fallback to sample data if needed
+    from src.price_fallback import get_sample_prices
+    return get_sample_prices()
 
 prices_df = get_oree_prices()
 
