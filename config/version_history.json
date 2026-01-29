@@ -1,0 +1,38 @@
+{
+  "current_version": "1.0.3",
+  "versions": {
+    "1.0.1": {
+      "version": "1.0.1",
+      "trained_at": "2026-01-29T19:33:15.478405",
+      "episodes": 50,
+      "avg_reward": -81.58326490697947,
+      "best_reward": -33.17471542392308,
+      "training_time_seconds": 0.15020179748535156,
+      "model_path": "config\\models\\ppo_simplified_v1.0.0_20260129_193315.pkl",
+      "metrics": {},
+      "notes": "Simplified training: 50 episodes (Stable-Baselines3 unavailable)"
+    },
+    "1.0.2": {
+      "version": "1.0.2",
+      "trained_at": "2026-01-29T19:34:59.848317",
+      "episodes": 20,
+      "avg_reward": -204.80249696915976,
+      "best_reward": -120.22749541624377,
+      "training_time_seconds": 0.06642317771911621,
+      "model_path": "config\\models\\ppo_simplified_v1.0.1_20260129_193459.pkl",
+      "metrics": {},
+      "notes": "Simplified training: 20 episodes (Stable-Baselines3 unavailable)"
+    },
+    "1.0.3": {
+      "version": "1.0.3",
+      "trained_at": "2026-01-29T19:36:16.790131",
+      "episodes": 5,
+      "avg_reward": -209.59010971255674,
+      "best_reward": -177.1327756828677,
+      "training_time_seconds": 0.015000104904174805,
+      "model_path": "config\\models\\ppo_simplified_v1.0.2_20260129_193616.pkl",
+      "metrics": {},
+      "notes": "Simplified training: 5 episodes (Stable-Baselines3 unavailable)"
+    }
+  }
+}

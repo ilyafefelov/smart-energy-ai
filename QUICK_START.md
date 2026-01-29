@@ -1,317 +1,263 @@
-# Smart Energy AI V2 - Quick Reference & Navigation
+# 🚀 QUICK START GUIDE - Smart Energy AI System
 
-**Project Status:** ✅ PRODUCTION READY
-**Last Updated:** 2026-01-29 17:05 GMT+2
-**Owner:** Illya F (@full_iron) | Developer: Cloud
+## Start the Streamlit App
 
----
-
-## 🚀 Quick Start
-
-### Run the Dashboard
 ```bash
-cd projects/smart-energy-ai
-python -m streamlit run app.py
+cd C:\Users\ilyaf\clawd\projects\smart-energy-ai
+streamlit run app.py
 ```
-Then open: **http://localhost:8501**
 
-### View Available Tabs
-1. **📊 Dashboard** - Real-time energy metrics
-2. **🤖 Training** - RL training analytics (NEW!)
-3. **📖 Technical Guide** - System documentation
+The dashboard will open at: `http://localhost:8501`
 
 ---
 
-## 📚 Documentation Map
+## 📊 Dashboard Features
 
-### For Project Overview
-| Document | Length | Purpose |
-|----------|--------|---------|
-| **PROJECT_COMPLETE.md** | 9K | Final project summary |
-| **WEEKS_1_2_SUMMARY.md** | 15K | Weeks 1-2 detailed overview |
-| **README.md** | Coming Soon | Quick start guide |
+### Main Dashboard (page 0_dashboard.py)
 
-### For Technical Details
-| Document | Length | Purpose |
-|----------|--------|---------|
-| **TRAINING_REPORT.md** | 12K | Training analysis & results |
-| **WEEK2_PLAN.md** | 6K | RL architecture & design |
-| **POSTGRES_SETUP.md** | 3K | Database configuration |
-| **ARCHITECTURE_V2.md** | 5K | System architecture |
+1. **Model Version Display**
+   - Shows current AI model version (e.g., v1.0.2)
+   - Shows last training date
 
-### For Testing & Verification
-| Document | Length | Purpose |
-|----------|--------|---------|
-| **TEST_RESULTS.md** | 2K | Unit test results (96% pass) |
-| **E2E_TEST_RESULTS.md** | 4K | Integration tests |
-| **WEEK1_FINAL_REPORT.md** | 8K | Week 1 completion report |
+2. **Current Market Conditions**
+   - 💶 Current Price (EUR/MWh and UAH)
+   - 📊 Daily Average Price
+   - ☀️ Solar Irradiance (W/m²)
+   - 📈 Estimated Solar Generation (kW)
 
----
+3. **24-Hour Price Forecast**
+   - Interactive price chart
+   - Green threshold line (cheap, typically €3/MWh)
+   - Red threshold line (expensive, typically €8/MWh)
 
-## 💻 Code Navigation
+4. **24-Hour Solar Generation**
+   - Bar chart showing expected solar output per hour
+   - Peak generation typically 12:00-14:00
 
-### Frontend (User-Facing)
-```
-app.py
-├── Dashboard Tab (📊)
-│   ├── Scenario selector
-│   ├── Hour slider
-│   ├── 4 metrics display
-│   ├── Strategy timeline
-│   └── Combined visualization
-├── Training Tab (🤖) [NEW]
-│   ├── 5 KPI metrics
-│   ├── 4 interactive graphs
-│   ├── Detailed report
-│   ├── Strategy explanation
-│   └── Data table
-└── Guide Tab (📖)
-    └── System documentation
-```
+5. **AI Recommendations**
+   - 💚 **CHARGE** when price < €3/MWh
+   - ❤️ **DISCHARGE** when price > €8/MWh
+   - 🟡 **HOLD** when price is average
 
-### Core Modules
-```
-src/
-├── db.py                      # PostgreSQL connection
-├── models.py                  # 5 ORM models
-├── rl_environment.py          # Gym environment (Gym-v0)
-├── rl_training.py            # PPO training script
-├── price_processor.py        # Price transformations (3 types)
-├── training_analyzer.py      # Training analytics [NEW]
-└── data_pipeline/
-    ├── ingest_weather.py     # Open-Meteo API
-    ├── ingest_prices.py      # OREE API
-    └── validate.py           # Pydantic validators
-```
-
-### Scripts
-```
-scripts/
-├── create_notion_docs.py      # Documentation automation
-├── notion_sync.py             # Git → Notion mirror
-├── create_dashboard_page.py   # Dashboard page generator
-└── generate_sample_data.py    # 7-day data generation
-```
-
-### Tests
-```
-tests/
-├── test_pipeline.py           # Data pipeline tests (25 tests)
-├── test_price_processor.py    # Price processor tests (8 tests)
-└── test_rl_environment.py     # RL environment tests [Optional]
-```
+6. **Model Version History**
+   - Shows all trained versions
+   - Training date, episodes, rewards, time
 
 ---
 
-## 📊 Key Metrics
+## ⚙️ Configuration Page
 
-### System Performance
-```
-Code Lines:            3,500+
-Modules:               11
-Tests:                 32 (28 passing, 87.5%)
-Documentation:         40,000+ words
-Git Commits:           20
-Files Created:         30+
+### User Profiles
+Create different system configurations:
+- Small residential (50 kWh battery, 5 kW solar)
+- Large residential (150 kWh battery, 20 kW solar)
+- Industrial small (500 kWh battery, 100 kW solar)
+
+### Retraining UI
+1. Set number of episodes (10-500)
+2. Select learning rate
+3. Click "START TRAINING"
+4. Watch progress bar in real-time
+5. See results with metrics
+
+### Solar Configuration
+- Location: Kyiv, Ukraine (50.45°N, 30.52°E)
+- Panel efficiency: 18-22%
+- System capacity: customizable per profile
+
+### Optimizer Thresholds
+- Cheap price: € below this = CHARGE
+- Expensive price: € above this = DISCHARGE
+- Battery thresholds: low/high SOC limits
+
+### Version History
+View all trained models:
+- Version number
+- Training date
+- Episodes trained
+- Rewards (average & best)
+- Training duration
+
+---
+
+## 🤖 Training Your Model
+
+### Quick Train (50 episodes)
+```python
+from src.enhanced_rl_trainer import EnhancedRLTrainer
+from src.enhanced_config import get_config
+import pandas as pd
+
+# Load data
+weather = pd.read_csv("data.csv")
+prices = pd.read_csv("prices.csv")
+
+# Train
+config = get_config()
+trainer = EnhancedRLTrainer(weather, prices, config)
+result = trainer.train(episodes=50)
+
+# Result:
+# {
+#   'version': '1.0.3',
+#   'episodes': 50,
+#   'avg_reward': -75.42,
+#   'best_reward': -20.15,
+#   'training_time_seconds': 0.15,
+#   'model_path': 'config/models/ppo_v1.0.3_...'
+# }
 ```
 
-### Training Performance
-```
-Episodes:              50
-Baseline Cost:         100,000 UAH/day
-Final Cost:            71,425 UAH/day
-Cost Reduction:        28.6% ✅
-Daily Savings:         28,575 UAH
-Annual Savings:        10.4M UAH
-Convergence:           Episode 30
-Stability:             99.8%
-```
+### Check Training History
+```python
+from src.enhanced_config import get_config
 
-### Frontend Performance
-```
-Page Load:             <2 seconds
-Chart Render:          <500ms
-Memory Usage:          ~150MB
-CPU Usage:             <5%
-Responsiveness:        Excellent
+config = get_config()
+history = config.get_version_history()
+
+for v in history[:5]:  # Last 5 versions
+    print(f"v{v.version}: {v.episodes} ep, avg={v.avg_reward:.0f}")
 ```
 
 ---
 
-## 🔍 File Structure
+## ☀️ Solar Data Features
 
+### Get Current Solar
+```python
+from src.solar_data import get_solar_fetcher
+
+fetcher = get_solar_fetcher()
+current = fetcher.get_current_solar_irradiance()
+
+print(f"Irradiance: {current['irradiance_w_m2']:.0f} W/m²")
+print(f"Cloud cover: {current['cloudcover_percent']:.0f}%")
+print(f"Temperature: {current['temperature']:.1f}°C")
 ```
-smart-energy-ai/
-├── app.py                          # Frontend dashboard (Streamlit)
-├── requirements.txt                # Dependencies
-├── .env.example                    # Configuration template
-│
-├── src/
-│   ├── db.py
-│   ├── models.py
-│   ├── rl_environment.py          # [NEW] Gym environment
-│   ├── rl_training.py             # [NEW] Training script
-│   ├── training_analyzer.py       # [NEW] Analytics
-│   ├── price_processor.py         # [UPDATED] 3 transformations
-│   └── data_pipeline/
-│       ├── ingest_weather.py
-│       ├── ingest_prices.py
-│       └── validate.py
-│
-├── tests/
-│   ├── test_pipeline.py
-│   ├── test_price_processor.py    # [NEW] 8 tests
-│   └── conftest.py
-│
-├── scripts/
-│   ├── create_notion_docs.py
-│   ├── notion_sync.py
-│   ├── create_dashboard_page.py
-│   └── generate_sample_data.py
-│
-├── data/
-│   ├── raw/
-│   │   └── weather_forecast.csv   # 7-day real weather
-│   └── processed/
-│       ├── opt_normal.csv         # Training data
-│       ├── opt_winter.csv
-│       └── opt_blackout.csv
-│
-├── models/
-│   └── ppo_agent.zip              # Trained RL model
-│
-├── logs/                           # TensorBoard logs
-│
-└── docs/ (documentation)
-    ├── PROJECT_COMPLETE.md        # [NEW] Final summary
-    ├── TRAINING_REPORT.md         # [NEW] Training analysis
-    ├── WEEKS_1_2_SUMMARY.md       # Week overview
-    ├── WEEK1_SUMMARY.md
-    ├── WEEK2_PLAN.md
-    ├── E2E_TEST_RESULTS.md
-    ├── TEST_RESULTS.md
-    ├── WEEK1_FINAL_REPORT.md
-    ├── ARCHITECTURE_V2.md
-    ├── POSTGRES_SETUP.md
-    └── More...
+
+### 24-Hour Forecast
+```python
+forecast = fetcher.get_hourly_forecast_24h()
+
+for row in forecast.iterrows():
+    hour = row[1]['hour']
+    gen = row[1]['generation_forecast_kw']
+    print(f"Hour {hour:02d}: {gen:.2f} kW")
+```
+
+### 7-Day Forecast
+```python
+weekly = fetcher.get_daily_forecast_7d()
+
+total = weekly['daily_total_kwh'].sum()
+print(f"Weekly total: {total:.0f} kWh")
 ```
 
 ---
 
-## 🎯 Key Features Explained
+## 📝 Typical Workflow
 
-### Dashboard Tab
-- **Scenario Selector:** Choose Normal/Winter/Blackout
-- **Hour Slider:** View any hour (0-23)
-- **Metrics:** Real-time stats (price, solar, SOC)
-- **Timeline:** Strategy for each hour
-- **Charts:** Price/Solar/Battery visualization
+### Day 1: Setup
+1. Open dashboard
+2. Check model version
+3. View current prices
+4. See solar forecast
 
-### Training Tab [NEW!]
-- **KPI Metrics:** 5 key performance indicators
-- **Cost Graph:** Shows daily cost reduction
-- **Improvement %:** Tracks progress toward 30% goal
-- **Reward Graph:** Shows agent learning
-- **Learning Dynamics:** Episode-to-episode changes
-- **Report:** Detailed text analysis (collapsible)
-- **Data Table:** All metrics per episode
+### Day 1-3: Monitor
+1. Daily check market conditions
+2. Track AI recommendations
+3. Monitor solar generation
 
-### Guide Tab
-- **Concepts:** BUY, CHARGE, SELL, DISCHARGE, STORE
-- **Architecture:** Project structure diagram
-- **Data Sources:** APIs and data explained
+### Week 1: Retrain
+1. Go to Configuration page
+2. Set episodes to 100
+3. Click "START TRAINING"
+4. Wait for completion
+5. Check new version (e.g., 1.0.3)
 
----
-
-## 🚀 Deployment Checklist
-
-### Before Production
-- [x] Code complete
-- [x] Tests passing (87.5%)
-- [x] Documentation complete
-- [x] Frontend tested
-- [x] Training validated
-- [x] API integration verified
-- [x] Database configured
-- [x] Git history clean
-
-### Deployment Steps
-1. Deploy to AWS/Azure (Coming Week 3)
-2. Set up Airflow DAG for daily runs
-3. Configure real API keys
-4. Set up monitoring
-5. Deploy Telegram notifications
-6. Run A/B test vs baseline
-7. Monitor performance
-
-### Post-Deployment
-- [ ] Real-world validation
-- [ ] Fine-tune on live data
-- [ ] Seasonal retraining
-- [ ] Performance monitoring
-- [ ] Cost tracking
+### Ongoing: Optimization
+1. Monthly retraining
+2. Track reward improvements
+3. Adjust thresholds as needed
+4. Monitor performance metrics
 
 ---
 
-## 💡 Quick Tips
+## 🔍 Troubleshooting
 
-### To Understand the System
-1. Read **PROJECT_COMPLETE.md** (5 min)
-2. Run the frontend dashboard
-3. Click through all 3 tabs
-4. View the **Training Report** in the dashboard
-5. Check **TRAINING_REPORT.md** for deep dive
+### Dashboard Won't Load
+```bash
+# Check dependencies
+pip install streamlit plotly pandas numpy
 
-### To Understand the Training
-1. Look at graphs in **Training Tab**
-2. Read **TRAINING_REPORT.md**
-3. Check **src/training_analyzer.py** code
-4. Review **WEEK2_PLAN.md** for architecture
+# Restart
+streamlit run app.py
+```
 
-### To Deploy
-1. Review **WEEK2_PLAN.md** Airflow section
-2. Copy env variables from **.env.example**
-3. Run tests to verify: `pytest tests/ -v`
-4. Start frontend: `streamlit run app.py`
-5. Set up cloud infrastructure
+### No Solar Data
+- System uses fallback synthetic data
+- OpenWeatherMap is optional
+- Forecasts will still work
 
----
+### Training Too Slow
+- Reduce episodes (start with 20)
+- Check CPU usage
+- Increase learning rate
 
-## 📞 Questions? 
-
-**For Technical Details:**
-- Check the relevant markdown file
-- Review the source code (well-commented)
-- Run tests to verify behavior
-
-**For Project Status:**
-- See PROJECT_COMPLETE.md
-- Check WEEKS_1_2_SUMMARY.md
-
-**For Training Info:**
-- Open Training tab in dashboard
-- Read TRAINING_REPORT.md
+### Price Data Missing
+- OREE scraper may have issues
+- System uses fallback data
+- Check price_fallback.py
 
 ---
 
-## 🎊 Summary
+## 📊 API Endpoints Used
 
-✅ **3,500+ lines of production code**
-✅ **32 unit tests (87.5% passing)**
-✅ **4 interactive training graphs**
-✅ **40,000+ words documentation**
-✅ **28.6% cost reduction proven**
-✅ **10.4M UAH annual savings**
-✅ **Complete, tested, documented**
-✅ **Ready for production**
+1. **OpenWeatherMap** (Free tier)
+   - Solar irradiance data
+   - Cloud cover
+   - Temperature
 
-**Status:** ✅ COMPLETE & DELIVERED
-**Timeline:** 2 weeks (2 weeks ahead of schedule)
-**Quality:** Production-ready
+2. **OREE** (Ukrainian Market)
+   - Real-time electricity prices
+   - Hourly forecasts
 
-🚀 **Ready to deploy!**
+Both have fallback mechanisms if unavailable.
 
 ---
 
-*Last Updated: 2026-01-29 17:05 GMT+2*
-*For Support: Contact Cloud (Cloudbot) or Illya F*
+## 🎯 Key Metrics to Monitor
+
+| Metric | Good Value | What It Means |
+|--------|------------|---------------|
+| Current Irradiance | >500 W/m² (daytime) | Good solar conditions |
+| Cloud Cover | <50% | Clear skies |
+| Current Price | <€3 | Cheap - good time to charge |
+| Model Version | Latest | Recently trained |
+| Avg Reward | >-50 | Good model performance |
+| Training Time | <1 min | Fast training |
+
+---
+
+## 💡 Pro Tips
+
+1. **Batch Training**: Train during low-activity hours (2-4 AM)
+2. **Monitor History**: Watch avg_reward trend over versions
+3. **Solar Peaks**: Most generation 11:00-15:00
+4. **Price Patterns**: Night (2-4 AM) usually cheapest
+5. **Version Control**: Keep 5-10 recent versions
+6. **Configuration**: Adjust thresholds based on your data
+
+---
+
+## 📞 Support
+
+For issues, check:
+1. `COMPLETE_SYSTEM_REPORT.md` - Full documentation
+2. `test_complete_system.py` - Run tests
+3. Dashboard error messages
+4. Configuration logs in `config/`
+
+---
+
+**Happy energy optimization! 🌞⚡**

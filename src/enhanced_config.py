@@ -1,16 +1,72 @@
 """
-Enhanced System Configuration with User Profiles
+Enhanced System Configuration with User Profiles + Version Tracking
 Manages all settings: Battery, Solar, Grid, Training, and User-specific configs
+Tracks model versions and training history
 """
 
 import json
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, asdict
 import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ModelVersion:
+    """Model version information and training metrics"""
+    version: str  # semver: 1.0.0
+    trained_at: str  # ISO timestamp
+    episodes: int
+    avg_reward: float
+    best_reward: float
+    training_time_seconds: float
+    model_path: str
+    metrics: Dict[str, float] = None
+    notes: str = ""
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary"""
+        return {
+            'version': self.version,
+            'trained_at': self.trained_at,
+            'episodes': self.episodes,
+            'avg_reward': self.avg_reward,
+            'best_reward': self.best_reward,
+            'training_time_seconds': self.training_time_seconds,
+            'model_path': self.model_path,
+            'metrics': self.metrics or {},
+            'notes': self.notes,
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict) -> 'ModelVersion':
+        """Create from dictionary"""
+        return cls(
+            version=data['version'],
+            trained_at=data['trained_at'],
+            episodes=data['episodes'],
+            avg_reward=data['avg_reward'],
+            best_reward=data['best_reward'],
+            training_time_seconds=data['training_time_seconds'],
+            model_path=data['model_path'],
+            metrics=data.get('metrics', {}),
+            notes=data.get('notes', ''),
+        )
+    
+    def get_summary(self) -> str:
+        """Get formatted summary"""
+        return f"""
+  Version: {self.version}
+  Trained: {self.trained_at}
+  Episodes: {self.episodes}
+  Avg Reward: {self.avg_reward:.2f}
+  Best Reward: {self.best_reward:.2f}
+  Training Time: {self.training_time_seconds:.1f}s
+  Path: {self.model_path}
+"""
 
 
 @dataclass
@@ -88,7 +144,7 @@ class UserProfile:
 
 
 class EnhancedSystemConfig:
-    """Enhanced config manager with user profiles"""
+    """Enhanced config manager with user profiles and version tracking"""
     
     def __init__(self, config_dir: str = "config"):
         """Initialize config system"""
@@ -96,10 +152,13 @@ class EnhancedSystemConfig:
         self.profiles_dir = os.path.join(config_dir, "profiles")
         self.training_config_file = os.path.join(config_dir, "training.json")
         self.optimizer_config_file = os.path.join(config_dir, "optimizer.json")
+        self.version_history_file = os.path.join(config_dir, "version_history.json")
+        self.models_dir = os.path.join(config_dir, "models")
         
         # Ensure directories exist
         os.makedirs(self.config_dir, exist_ok=True)
         os.makedirs(self.profiles_dir, exist_ok=True)
+        os.makedirs(self.models_dir, exist_ok=True)
         
         # Default training config
         self.training_defaults = {
@@ -127,6 +186,13 @@ class EnhancedSystemConfig:
         # Load configs
         self.training_config = self._load_json(self.training_config_file, self.training_defaults)
         self.optimizer_config = self._load_json(self.optimizer_config_file, self.optimizer_defaults)
+        
+        # Version tracking
+        self.version_history = self._load_json(self.version_history_file, {
+            'current_version': '1.0.0',
+            'versions': {}
+        })
+        self.current_model_version = self.version_history.get('current_version', '1.0.0')
         
         # Current user profile
         self.current_profile = None
@@ -229,6 +295,114 @@ class EnhancedSystemConfig:
                 self.optimizer_config[key] = value
                 logger.info(f"✏️  Updated optimizer.{key} = {value}")
         self._save_json(self.optimizer_config_file, self.optimizer_config)
+    
+    # ─── VERSION MANAGEMENT ───
+    
+    def get_battery_config(self) -> Dict[str, float]:
+        """Get battery configuration from current profile or defaults"""
+        if self.current_profile:
+            return {
+                'capacity_kwh': self.current_profile.battery_capacity_kwh,
+                'min_soc': self.current_profile.battery_min_soc_percent / 100.0,
+                'max_soc': self.current_profile.battery_max_soc_percent / 100.0,
+                'charge_efficiency': self.current_profile.battery_charge_efficiency,
+                'discharge_efficiency': self.current_profile.battery_discharge_efficiency,
+            }
+        # Default values
+        return {
+            'capacity_kwh': 150.0,
+            'min_soc': 0.1,
+            'max_soc': 0.95,
+            'charge_efficiency': 0.95,
+            'discharge_efficiency': 0.95,
+        }
+    
+    def get_grid_config(self) -> Dict[str, float]:
+        """Get grid configuration from current profile or defaults"""
+        if self.current_profile:
+            return {
+                'max_import_power_kw': self.current_profile.grid_max_import_kw,
+                'max_export_power_kw': self.current_profile.grid_max_export_kw,
+            }
+        return {
+            'max_import_power_kw': 100.0,
+            'max_export_power_kw': 50.0,
+        }
+    
+    def get_solar_config(self) -> Dict[str, float]:
+        """Get solar configuration from current profile or defaults"""
+        if self.current_profile:
+            return {
+                'capacity_kw': self.current_profile.solar_capacity_kw,
+                'panel_efficiency': self.current_profile.solar_panel_efficiency,
+                'inverter_efficiency': self.current_profile.solar_inverter_efficiency,
+            }
+        return {
+            'capacity_kw': 20.0,
+            'panel_efficiency': 0.20,
+            'inverter_efficiency': 0.95,
+        }
+    
+    def increment_version(self) -> str:
+        """Increment patch version and return new version"""
+        parts = self.current_model_version.split('.')
+        parts[2] = str(int(parts[2]) + 1)  # Increment patch
+        new_version = '.'.join(parts)
+        self.current_model_version = new_version
+        self.version_history['current_version'] = new_version
+        self._save_json(self.version_history_file, self.version_history)
+        logger.info(f"📌 Incremented model version to {new_version}")
+        return new_version
+    
+    def record_training(self, episodes: int, avg_reward: float, best_reward: float,
+                       training_time: float, model_path: str, metrics: Dict = None,
+                       notes: str = "") -> ModelVersion:
+        """Record a training session with metrics"""
+        version = self.increment_version()
+        
+        model_ver = ModelVersion(
+            version=version,
+            trained_at=datetime.now().isoformat(),
+            episodes=episodes,
+            avg_reward=avg_reward,
+            best_reward=best_reward,
+            training_time_seconds=training_time,
+            model_path=model_path,
+            metrics=metrics or {},
+            notes=notes,
+        )
+        
+        # Store in history
+        if 'versions' not in self.version_history:
+            self.version_history['versions'] = {}
+        
+        self.version_history['versions'][version] = model_ver.to_dict()
+        self._save_json(self.version_history_file, self.version_history)
+        
+        logger.info(f"✅ Recorded training v{version}: {episodes} episodes, avg_reward={avg_reward:.2f}")
+        return model_ver
+    
+    def get_current_version(self) -> str:
+        """Get current model version"""
+        return self.current_model_version
+    
+    def get_version_history(self) -> List[ModelVersion]:
+        """Get all recorded versions sorted by date"""
+        versions = []
+        if 'versions' in self.version_history:
+            for ver_data in self.version_history['versions'].values():
+                versions.append(ModelVersion.from_dict(ver_data))
+        
+        # Sort by trained_at descending (newest first)
+        versions.sort(key=lambda v: v.trained_at, reverse=True)
+        return versions
+    
+    def get_version_info(self, version: str) -> Optional[ModelVersion]:
+        """Get info for specific version"""
+        if 'versions' in self.version_history:
+            if version in self.version_history['versions']:
+                return ModelVersion.from_dict(self.version_history['versions'][version])
+        return None
     
     # ─── SAFETY & RETRAINING ───
     

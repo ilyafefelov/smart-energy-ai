@@ -1,11 +1,10 @@
 """
-Enhanced Dashboard with Prices (with units) and Retraining Integration
+Enhanced Dashboard with Real Solar Data, Prices, and Model Versions
 """
 
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 from datetime import datetime
 import sys
 import os
@@ -19,306 +18,247 @@ from src.enhanced_config import get_config
 from src.oree_fixed_scraper import OREEEffectiveScraper
 
 # Configure page
-st.set_page_config(page_title="Dashboard", layout="wide", initial_sidebar_state="expanded")
-
-# Initialize session state
-if 'model_version' not in st.session_state:
-    st.session_state.model_version = "1.0.0"
-
-if 'last_retrain' not in st.session_state:
-    st.session_state.last_retrain = "2026-01-29 17:00:00"
+st.set_page_config(page_title="Smart Energy Dashboard", layout="wide", initial_sidebar_state="expanded")
 
 # ═══════════════════════════════════════════════════════════════
-# HEADER & INFO
+# INITIALIZATION
 # ═══════════════════════════════════════════════════════════════
-
-col_title, col_status = st.columns([3, 1])
-
-with col_title:
-    st.title("📊 Smart Energy AI Dashboard")
-    st.markdown("Real-time optimization and predictions")
-
-with col_status:
-    st.metric("Model Version", st.session_state.model_version)
 
 config = get_config()
-
-# Get current time
 current_hour = datetime.now().hour
 current_date = datetime.now().strftime("%Y-%m-%d")
 
 # ═══════════════════════════════════════════════════════════════
-# FETCH REAL PRICES
+# HEADER WITH VERSION
 # ═══════════════════════════════════════════════════════════════
 
-@st.cache_data(ttl=300)  # Cache for 5 minutes
-def get_oree_prices():
-    """Fetch REAL OREE prices"""
+col_title, col_version, col_retrain = st.columns([2, 1, 1])
+
+with col_title:
+    st.title("📊 Smart Energy AI Dashboard")
+    st.markdown("*Real-time optimization with AI*")
+
+with col_version:
+    current_version = config.get_current_version()
+    st.metric("Model Version", current_version)
+
+with col_retrain:
+    # Get last training time
+    history = config.get_version_history()
+    if history:
+        last_trained = history[0].trained_at[:10]  # YYYY-MM-DD
+        st.metric("Last Trained", last_trained)
+
+# ═══════════════════════════════════════════════════════════════
+# DATA FETCHERS
+# ═══════════════════════════════════════════════════════════════
+
+@st.cache_data(ttl=300)
+def fetch_prices():
+    """Fetch OREE prices with fallback"""
     try:
         scraper = OREEEffectiveScraper(use_cache=True)
         prices_df = scraper.fetch_today_prices()
         if prices_df is not None and len(prices_df) > 0:
             return prices_df
     except Exception as e:
-        st.warning(f"Could not fetch live OREE prices: {str(e)[:100]}")
+        st.warning(f"⚠️ OREE API: {str(e)[:80]}")
     
-    # Fallback to sample data if needed
+    # Fallback
     from src.price_fallback import get_sample_prices
     return get_sample_prices()
 
-prices_df = get_oree_prices()
+@st.cache_data(ttl=3600)
+def fetch_solar():
+    """Fetch solar data with fallback"""
+    try:
+        from src.solar_data import get_solar_fetcher
+        fetcher = get_solar_fetcher()
+        return {
+            'current': fetcher.get_current_solar_irradiance(),
+            'forecast_24h': fetcher.get_hourly_forecast_24h(),
+            'status': 'live'
+        }
+    except Exception as e:
+        st.warning(f"⚠️ Solar API: {str(e)[:80]}")
+        return None
+
+prices_df = fetch_prices()
+solar_data = fetch_solar()
 
 # ═══════════════════════════════════════════════════════════════
-# TOP METRICS
+# CURRENT CONDITIONS
 # ═══════════════════════════════════════════════════════════════
 
-st.subheader("📈 Current Market Conditions")
+st.subheader("📈 Current Market & Solar Conditions")
 
 if prices_df is not None and len(prices_df) > 0:
-    current_price_eur = prices_df.iloc[current_hour]['price_eur_mwh']
-    current_price_uah = prices_df.iloc[current_hour]['price_uah_mwh']
+    current_price_eur = prices_df.iloc[min(current_hour, len(prices_df)-1)]['price_eur_mwh']
+    current_price_uah = prices_df.iloc[min(current_hour, len(prices_df)-1)]['price_uah_mwh']
     avg_price_eur = prices_df['price_eur_mwh'].mean()
-    min_price_eur = prices_df['price_eur_mwh'].min()
-    max_price_eur = prices_df['price_eur_mwh'].max()
     
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col_metrics = st.columns(6)
     
-    with col1:
+    with col_metrics[0]:
         st.metric(
             "Current Price",
             f"€{current_price_eur:.2f}/MWh",
-            delta=f"₴{current_price_uah:.0f}/MWh",
-            help="Current OREE market price"
+            help="OREE market price"
         )
     
-    with col2:
+    with col_metrics[1]:
         st.metric(
-            "Daily Average",
-            f"€{avg_price_eur:.2f}/MWh",
-            help="Average price for the day"
+            "₴ Price (UAH)",
+            f"₴{current_price_uah:.0f}",
+            help="Exchange rate: ~€1=₴35"
         )
     
-    with col3:
+    with col_metrics[2]:
         st.metric(
-            "Daily Low",
-            f"€{min_price_eur:.2f}/MWh",
-            help="Lowest price point"
+            "Daily Avg",
+            f"€{avg_price_eur:.2f}",
+            help="Average price today"
         )
     
-    with col4:
-        st.metric(
-            "Daily High",
-            f"€{max_price_eur:.2f}/MWh",
-            help="Highest price point"
-        )
-    
-    with col5:
-        # Get threshold from optimizer config
-        optimizer_cfg = config.get_optimizer_config()
-        cheap_threshold = optimizer_cfg.get('cheap_price_threshold_eur', 3.0)
-        expensive_threshold = optimizer_cfg.get('expensive_price_threshold_eur', 8.0)
-        
-        if current_price_eur < cheap_threshold:
-            st.metric("Status", "💚 CHEAP", help="Good time to buy")
-        elif current_price_eur > expensive_threshold:
-            st.metric("Status", "❤️ EXPENSIVE", help="Good time to sell")
-        else:
-            st.metric("Status", "🟡 NORMAL", help="Medium prices")
-else:
-    st.error("❌ Could not load price data")
-
-st.divider()
-
-# ═══════════════════════════════════════════════════════════════
-# PRICE CHART WITH UNITS
-# ═══════════════════════════════════════════════════════════════
-
-if prices_df is not None and len(prices_df) > 0:
-    
-    col_chart, col_info = st.columns([3, 1])
-    
-    with col_chart:
-        st.subheader("⏰ 24-Hour Price Schedule")
-        
-        # Create dual-axis chart (EUR and UAH)
-        fig = go.Figure()
-        
-        # EUR prices (primary axis)
-        fig.add_trace(go.Scatter(
-            x=prices_df['hour'],
-            y=prices_df['price_eur_mwh'],
-            name="Price (EUR/MWh)",
-            mode='lines+markers',
-            line=dict(color='#2E86AB', width=3),
-            marker=dict(size=8),
-            hovertemplate='<b>Hour %{x}:00</b><br>' +
-                         'Price: €%{y:.2f}/MWh<br>' +
-                         '<extra></extra>',
-            yaxis='y'
-        ))
-        
-        # Add threshold lines
-        optimizer_cfg = config.get_optimizer_config()
-        cheap_threshold = optimizer_cfg.get('cheap_price_threshold_eur', 3.0)
-        expensive_threshold = optimizer_cfg.get('expensive_price_threshold_eur', 8.0)
-        
-        fig.add_hline(
-            y=cheap_threshold,
-            line_dash="dash",
-            line_color="green",
-            annotation_text="Cheap threshold",
-            annotation_position="right",
-        )
-        
-        fig.add_hline(
-            y=expensive_threshold,
-            line_dash="dash",
-            line_color="red",
-            annotation_text="Expensive threshold",
-            annotation_position="right",
-        )
-        
-        # Update layout
-        fig.update_layout(
-            title="Market Prices (EUR and UAH per MWh)",
-            xaxis_title="Hour of Day",
-            yaxis=dict(
-                title="Price (EUR/MWh)",
-                side='left',
-                color='#2E86AB',
-            ),
-            hovermode='x unified',
-            height=400,
-            showlegend=True,
-            template='plotly_white',
-        )
-        
-        st.plotly_chart(fig, width="stretch")
-    
-    with col_info:
-        st.subheader("ℹ️ Price Units")
-        st.markdown("""
-        **EUR/MWh**
-        - European standard
-        - Megawatt-Hour
-        - 1 MWh = 1,000 kWh
-        
-        **₴ UAH/MWh**
-        - Ukrainian currency
-        - ~€1 ≈ ₴35 UAH
-        
-        **Current Thresholds:**
-        """)
-        
+    with col_metrics[3]:
         optimizer_cfg = config.get_optimizer_config()
         cheap = optimizer_cfg.get('cheap_price_threshold_eur', 3.0)
         expensive = optimizer_cfg.get('expensive_price_threshold_eur', 8.0)
         
-        st.success(f"💚 Cheap: <€{cheap:.2f}")
-        st.warning(f"🟡 Normal: €{cheap:.2f}-€{expensive:.2f}")
-        st.error(f"❤️ Expensive: >€{expensive:.2f}")
+        if current_price_eur < cheap:
+            status = "💚 CHEAP"
+        elif current_price_eur > expensive:
+            status = "❤️ EXPENSIVE"
+        else:
+            status = "🟡 NORMAL"
+        
+        st.metric("Market Status", status)
+    
+    # Solar metrics
+    if solar_data and solar_data['current']:
+        current_solar = solar_data['current']
+        irradiance = current_solar.get('irradiance_w_m2', 0)
+        generation_kw = (irradiance * 20 / 1000) * 0.18  # 20kW system
+        
+        with col_metrics[4]:
+            st.metric(
+                "Solar Irradiance",
+                f"{irradiance:.0f} W/m²",
+                help="Real-time sunlight intensity"
+            )
+        
+        with col_metrics[5]:
+            st.metric(
+                "Est. Solar Gen",
+                f"{generation_kw:.2f} kW",
+                help="20kW system output"
+            )
+    else:
+        with col_metrics[4]:
+            st.metric("Solar Status", "⚠️ Unavailable")
 
 st.divider()
 
 # ═══════════════════════════════════════════════════════════════
-# OPTIMIZATION RECOMMENDATION
+# PRICE FORECAST GRAPH
 # ═══════════════════════════════════════════════════════════════
 
 if prices_df is not None and len(prices_df) > 0:
-    st.subheader("🤖 AI Recommendation")
+    st.subheader("⏰ 24-Hour Price Forecast (EUR/MWh)")
     
-    current_price_eur = prices_df.iloc[current_hour]['price_eur_mwh']
+    fig_price = go.Figure()
+    
+    fig_price.add_trace(go.Scatter(
+        x=prices_df['hour'],
+        y=prices_df['price_eur_mwh'],
+        name="Price",
+        mode='lines+markers',
+        line=dict(color='#2E86AB', width=3),
+        fill='tozeroy',
+        fillcolor='rgba(46, 134, 171, 0.2)',
+        marker=dict(size=8),
+        hovertemplate='<b>Hour %{x}:00</b><br>€%{y:.2f}/MWh<extra></extra>'
+    ))
+    
+    # Add thresholds
     optimizer_cfg = config.get_optimizer_config()
-    cheap_threshold = optimizer_cfg.get('cheap_price_threshold_eur', 3.0)
-    expensive_threshold = optimizer_cfg.get('expensive_price_threshold_eur', 8.0)
+    cheap = optimizer_cfg.get('cheap_price_threshold_eur', 3.0)
+    expensive = optimizer_cfg.get('expensive_price_threshold_eur', 8.0)
     
-    col_rec1, col_rec2, col_rec3 = st.columns(3)
+    fig_price.add_hline(y=cheap, line_dash="dash", line_color="green", 
+                        annotation_text="Cheap", annotation_position="right")
+    fig_price.add_hline(y=expensive, line_dash="dash", line_color="red",
+                        annotation_text="Expensive", annotation_position="right")
     
-    with col_rec1:
-        if current_price_eur < cheap_threshold:
-            st.info("""
-            💚 **CHARGE FROM GRID**
-            
-            Current price (€{:.2f}/MWh) is below cheap threshold.
-            
-            ✅ Actions:
-            - Buy from grid
-            - Charge battery
-            - Store energy for peak hours
-            """.format(current_price_eur))
-        else:
-            st.info("Currently not a good time to charge from grid")
+    fig_price.update_layout(
+        xaxis_title="Hour of Day",
+        yaxis_title="Price (EUR/MWh)",
+        height=350,
+        hovermode='x unified',
+        template='plotly_white'
+    )
     
-    with col_rec2:
-        if current_price_eur > expensive_threshold:
-            st.error("""
-            ❤️ **DISCHARGE TO GRID**
-            
-            Current price (€{:.2f}/MWh) is above expensive threshold.
-            
-            ✅ Actions:
-            - Sell to grid
-            - Discharge battery
-            - Maximize revenue
-            """.format(current_price_eur))
-        else:
-            st.info("Currently not a good time to discharge")
-    
-    with col_rec3:
-        if cheap_threshold <= current_price_eur <= expensive_threshold:
-            st.warning("""
-            🟡 **HOLD / MONITOR**
-            
-            Current price (€{:.2f}/MWh) is at normal level.
-            
-            ✅ Actions:
-            - Maintain battery level
-            - Monitor grid
-            - Prepare for changes
-            """.format(current_price_eur))
-        else:
-            st.info("Price is either very cheap or very expensive")
+    st.plotly_chart(fig_price, use_container_width=True)
 
 st.divider()
 
 # ═══════════════════════════════════════════════════════════════
-# MODEL & RETRAINING INFO
+# SOLAR FORECAST
 # ═══════════════════════════════════════════════════════════════
 
-st.subheader("🤖 Model Information")
-
-col_model1, col_model2, col_model3 = st.columns(3)
-
-with col_model1:
-    st.metric("Model Version", st.session_state.model_version)
-
-with col_model2:
-    st.metric("Last Retrained", st.session_state.last_retrain)
-
-with col_model3:
-    if st.button("🔄 Retrain Model Now", width="stretch"):
-        st.info("Redirecting to Configuration page...")
-        st.switch_page("pages/1_configuration.py")
+if solar_data and solar_data['forecast_24h'] is not None:
+    st.subheader("☀️  24-Hour Solar Generation Forecast")
+    
+    forecast_df = solar_data['forecast_24h']
+    
+    fig_solar = go.Figure()
+    
+    fig_solar.add_trace(go.Bar(
+        x=forecast_df['hour'],
+        y=forecast_df['generation_forecast_kw'],
+        name="Solar Generation",
+        marker=dict(color='#F7B801'),
+        hovertemplate='<b>Hour %{x}:00</b><br>%{y:.2f} kW<extra></extra>'
+    ))
+    
+    fig_solar.update_layout(
+        xaxis_title="Hour of Day",
+        yaxis_title="Generation (kW)",
+        height=300,
+        hovermode='x unified',
+        template='plotly_white'
+    )
+    
+    st.plotly_chart(fig_solar, use_container_width=True)
 
 st.divider()
 
 # ═══════════════════════════════════════════════════════════════
-# SAMPLE DATA TABLE
+# VERSION HISTORY
 # ═══════════════════════════════════════════════════════════════
 
-if prices_df is not None and len(prices_df) > 0:
-    st.subheader("📋 Hourly Price Data")
-    
-    # Create display dataframe with better formatting
-    display_df = prices_df.copy()
-    display_df['hour'] = display_df['hour'].astype(int).apply(lambda h: f"{h:02d}:00")
-    display_df['price_eur_mwh'] = display_df['price_eur_mwh'].apply(lambda p: f"€{p:.2f}")
-    display_df['price_uah_mwh'] = display_df['price_uah_mwh'].apply(lambda p: f"₴{p:,.0f}")
-    
-    display_df = display_df[['hour', 'price_eur_mwh', 'price_uah_mwh']]
-    display_df.columns = ['Hour', 'Price (EUR/MWh)', 'Price (₴ UAH/MWh)']
-    
-    st.dataframe(display_df, width="stretch", height=400)
+st.subheader("📌 Model Version History")
+
+history = config.get_version_history()
+if history:
+    for i, version in enumerate(history[:5]):  # Show last 5
+        with st.expander(f"v{version.version} - {version.trained_at[:10]}", open=(i==0)):
+            col_v1, col_v2, col_v3 = st.columns(3)
+            
+            with col_v1:
+                st.metric("Episodes", version.episodes)
+                st.metric("Avg Reward", f"{version.avg_reward:.2f}")
+            
+            with col_v2:
+                st.metric("Best Reward", f"{version.best_reward:.2f}")
+                st.metric("Training Time", f"{version.training_time_seconds:.1f}s")
+            
+            with col_v3:
+                st.metric("Model Path", version.model_path.split('\\')[-1])
+                if version.notes:
+                    st.caption(f"📝 {version.notes}")
+else:
+    st.info("No training history yet. Train a model in the Configuration page.")
 
 st.divider()
 
@@ -326,16 +266,27 @@ st.divider()
 # FOOTER
 # ═══════════════════════════════════════════════════════════════
 
-col_footer1, col_footer2, col_footer3 = st.columns(3)
+st.subheader("💡 AI Recommendation")
 
-with col_footer1:
-    if st.button("⚙️ Go to Configuration"):
-        st.switch_page("pages/1_configuration.py")
-
-with col_footer2:
-    st.write(f"Last updated: {datetime.now().strftime('%H:%M:%S')}")
-
-with col_footer3:
-    if st.button("🔄 Refresh Prices"):
-        st.cache_data.clear()
-        st.rerun()
+if prices_df is not None and len(prices_df) > 0:
+    if current_price_eur < cheap:
+        st.success("""
+        **CHARGE BATTERY** 💡
+        - Current price is low (€{:.2f})
+        - Store energy for later use
+        - Expected savings: 3-5x in peak hours
+        """.format(current_price_eur))
+    elif current_price_eur > expensive:
+        st.error("""
+        **DISCHARGE & SELL** ⚡
+        - Current price is high (€{:.2f})
+        - Sell battery energy to grid
+        - Expected revenue: €{:.2f}/kWh
+        """.format(current_price_eur, current_price_eur/1000))
+    else:
+        st.warning("""
+        **HOLD** ⏳
+        - Current price is average (€{:.2f})
+        - Wait for cheaper pricing
+        - Next cheapest hours: 2-4 AM
+        """.format(current_price_eur))
