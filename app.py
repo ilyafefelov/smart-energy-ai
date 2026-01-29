@@ -185,7 +185,7 @@ with tab_training:
             line=dict(color='#e67e22', width=2),
             marker=dict(size=4)
         ))
-        fig_learning.axhline(y=0, line_dash="dash", line_color="black")
+        fig_learning.add_hline(y=0, line_dash="dash", line_color="black")
         fig_learning.update_layout(
             title="📉 Episode-to-Episode Change",
             xaxis_title="Episode",
