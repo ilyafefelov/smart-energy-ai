@@ -2,7 +2,8 @@
 SQLAlchemy ORM models for Smart Energy AI database
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Unique, Index
+from sqlalchemy import Column, Integer, String, Float, DateTime, Index
+from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql import func
 from datetime import datetime
 from src.db import Base

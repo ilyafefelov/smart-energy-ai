@@ -1,0 +1,8 @@
+{
+  "cheap_price_threshold_eur": 1.5,
+  "expensive_price_threshold_eur": 13.0,
+  "low_battery_threshold": 0.2,
+  "high_battery_threshold": 0.9,
+  "force_charge_at_night": true,
+  "force_discharge_at_peak": true
+}

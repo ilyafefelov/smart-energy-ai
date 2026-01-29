@@ -1,16 +1,40 @@
+"""
+DEPRECATED: Old optimizer_v2 using DUMMY DATA
+This file is kept for reference only.
+
+USE INSTEAD: optimizer_real.py
+Which uses REAL data from APIs:
+  - Real weather from Open-Meteo
+  - Real prices from OREE
+  - Real/realistic factory loads with scenario modifiers
+"""
+
 import pandas as pd
 import numpy as np
 import os
 
 def run_optimized_scenario(scenario="Normal", solar_mult=1.0, load_mult=1.0):
-    print(f"--- Running Scenario: {scenario} ---")
+    """
+    ❌ DEPRECATED - Uses hardcoded dummy data
+    
+    Prices, Solar, and Factory Load are NOT REAL
+    This was original POC code only
+    
+    For production: use optimizer_real.py instead
+    """
+    print(f"⚠️  WARNING: Using DEPRECATED optimizer_v2 with dummy data!")
+    print(f"✅ USE: optimizer_real.py for real data\n")
+    
+    print(f"--- Running Scenario: {scenario} (DUMMY DATA) ---")
     
     hours = list(range(24))
-    # Base data
+    # ❌ DUMMY PRICES
     prices = [2.5, 2.2, 2.1, 2.0, 2.1, 2.8, 4.5, 6.2, 7.5, 6.8, 5.5, 5.0, 
               4.8, 4.5, 4.2, 5.0, 7.5, 9.2, 11.5, 10.5, 8.5, 6.0, 4.5, 3.5]
+    # ❌ DUMMY SOLAR
     solar_gen = [0, 0, 0, 0, 0, 2, 15, 40, 65, 85, 95, 100, 
                  98, 88, 70, 45, 20, 5, 0, 0, 0, 0, 0, 0]
+    # ❌ DUMMY FACTORY LOAD
     factory_load = [50] * 24 
 
     # Apply scenario modifiers
@@ -64,6 +88,9 @@ def run_optimized_scenario(scenario="Normal", solar_mult=1.0, load_mult=1.0):
     out_dir = 'projects/smart-energy-ai/data/processed'
     if not os.path.exists(out_dir): os.makedirs(out_dir)
     df.to_csv(f'{out_dir}/opt_{scenario.lower()}.csv', index=False)
+    
+    print(df.to_string(index=False))
+    print(f"\n⚠️  This data is DUMMY - not for production use!")
     return df
 
 if __name__ == "__main__":
