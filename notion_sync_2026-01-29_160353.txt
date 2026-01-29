@@ -1,0 +1,28 @@
+Notion Sync Summary - 2026-01-29_160353
+Project: smart energy
+============================================================
+
+## 📝 Recent Commits
+
+- `a893033` - refactor(notion): Simplify sync script - generate summary for manual Notion updates (2026-01-29)
+  - - Generate commit history summary (15 recent commits)...
+- `e14ad45` - feat(notion): Add Notion sync script to mirror commits + docs (2026-01-29)
+  - - Syncs recent git commits (hash, message, author, date, body) to Notion...
+- `0a6ee8d` - feat(data): Add sample data generator for RL training (2026-01-29)
+  - Creates 7 days (168 hours) of realistic training data:...
+- `88020af` - test(pipeline): Add comprehensive unit tests for data pipeline (2026-01-29)
+  - Tests included:...
+- `f873f31` - feat(notion): Add Notion sprint documentation script (2026-01-29)
+  - - Create NotionSprintDoc class for workspace management...
+- `e2643e6` - feat(data-pipeline): Add price ingestion and data validation (2026-01-29)
+  - - Implement PriceIngester class for OREE Ukraine DAM prices...
+- `6cb8d76` - feat(data-pipeline): Add PostgreSQL setup, ORM models, and weather ingestion (2026-01-29)
+  - - Add POSTGRES_SETUP.md with local + AWS RDS configuration...
+- `0d16649` - Update roadmap for 3-week university capstone timeline: Week 1 pipeline, Week 2 RL+Airflow, Week 3 testing+presentation (2026-01-29)
+- `603ebb6` - Add comprehensive V2 architecture: ETL/ELT pipeline + PPO RL agent design (2026-01-29)
+- `7ff5332` - Initial commit: Smart Energy AI infrastructure, Optimizer v2 and Streamlit Dashboard (2026-01-28)
+
+## 📚 Documentation Files
+
+- **ARCHITECTURE_V2.md** (14550 bytes)
+- **POSTGRES_SETUP.md** (3751 bytes)
