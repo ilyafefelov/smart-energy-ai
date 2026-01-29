@@ -10,8 +10,15 @@ st.set_page_config(page_title="Smart Energy AI Enterprise", layout="wide")
 # --- DATA LOADING ---
 file_map = {"Normal": "opt_normal.csv", "Winter": "opt_winter.csv", "Blackout": "opt_blackout.csv"}
 scenario = st.sidebar.selectbox("Select Scenario", ["Normal", "Winter", "Blackout"])
-df = pd.read_csv(f"projects/smart-energy-ai/data/processed/{file_map[scenario]}")
-weather_df = pd.read_csv('projects/smart-energy-ai/data/raw/weather_forecast.csv')
+
+# Get correct paths based on where app.py is running from
+import os
+current_dir = os.path.dirname(os.path.abspath(__file__))
+data_processed = os.path.join(current_dir, "data", "processed", file_map[scenario])
+data_raw = os.path.join(current_dir, "data", "raw", "weather_forecast.csv")
+
+df = pd.read_csv(data_processed)
+weather_df = pd.read_csv(data_raw)
 
 # --- TABS FOR NAVIGATION ---
 tab_dashboard, tab_guide = st.tabs(["📊 Dashboard", "📖 Technical Guide"])
