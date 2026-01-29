@@ -1,75 +1,19 @@
 """
 Notion Sync - Mirror git commits and markdown docs to Notion
-Runs after commits to keep Notion up-to-date with project history
+Simplified version - queues content for manual review
 """
 
-import requests
-import os
 import subprocess
-from datetime import datetime
+import os
 from pathlib import Path
-
-NOTION_TOKEN = "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"
-NOTION_VERSION = "2025-09-03"
+from datetime import datetime
 
 
 class NotionSync:
     """Sync git commits and markdown docs to Notion"""
 
-    def __init__(self):
-        self.headers = {
-            "Authorization": f"Bearer {NOTION_TOKEN}",
-            "Notion-Version": NOTION_VERSION,
-            "Content-Type": "application/json"
-        }
-
-    def search_workspace(self, query):
-        """Search for Notion pages/databases"""
-        url = "https://api.notion.com/v1/search"
-        payload = {"query": query}
-        
-        response = requests.post(url, headers=self.headers, json=payload)
-        if response.status_code == 200:
-            return response.json()
-        return None
-
-    def add_block_to_page(self, page_id, block_type, content):
-        """Add a block (paragraph, heading, etc) to a Notion page"""
-        url = f"https://api.notion.com/v1/blocks/{page_id}/children"
-        
-        if block_type == "paragraph":
-            block = {
-                "object": "block",
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [{"text": {"content": content}}]
-                }
-            }
-        elif block_type == "heading_2":
-            block = {
-                "object": "block",
-                "type": "heading_2",
-                "heading_2": {
-                    "rich_text": [{"text": {"content": content}}]
-                }
-            }
-        elif block_type == "code":
-            block = {
-                "object": "block",
-                "type": "code",
-                "code": {
-                    "rich_text": [{"text": {"content": content}}],
-                    "language": "markdown"
-                }
-            }
-        else:
-            return None
-
-        payload = {"children": [block]}
-        response = requests.patch(url, headers=self.headers, json=payload)
-        return response.status_code == 200
-
-    def get_recent_commits(self, count=10):
+    @staticmethod
+    def get_recent_commits(count=15):
         """Get recent git commits"""
         try:
             result = subprocess.run(
@@ -97,12 +41,13 @@ class NotionSync:
             print(f"Error getting commits: {e}")
             return []
 
-    def get_markdown_files(self, directory="."):
+    @staticmethod
+    def get_markdown_files(directory="."):
         """Get all markdown files in project"""
         markdown_files = []
         for root, dirs, files in os.walk(directory):
             # Skip node_modules, .git, __pycache__, etc
-            dirs[:] = [d for d in dirs if d not in ['.git', '__pycache__', 'node_modules', '.env', '.venv']]
+            dirs[:] = [d for d in dirs if d not in ['.git', '__pycache__', 'node_modules', '.env', '.venv', 'data', 'logs']]
             
             for file in files:
                 if file.endswith('.md'):
@@ -120,71 +65,60 @@ class NotionSync:
         
         return markdown_files
 
-    def sync_commits_to_notion(self, page_id, commits):
-        """Add commit history to Notion page"""
-        self.add_block_to_page(page_id, "heading_2", "📝 Commit History")
+    @staticmethod
+    def generate_notion_content(commits, markdown_files):
+        """Generate content summary for Notion"""
+        content = []
         
+        # Commit history
+        content.append("## 📝 Recent Commits\n")
         for commit in commits:
-            commit_text = f"{commit['hash']} - {commit['message']} ({commit['date']}) by {commit['author']}"
-            self.add_block_to_page(page_id, "paragraph", commit_text)
-            
+            content.append(f"- `{commit['hash']}` - {commit['message']} ({commit['date']})")
             if commit['body'].strip():
-                self.add_block_to_page(page_id, "code", commit['body'])
-
-    def sync_docs_to_notion(self, page_id, markdown_files):
-        """Add markdown documentation to Notion"""
-        self.add_block_to_page(page_id, "heading_2", "📚 Documentation Files")
+                content.append(f"  - {commit['body'][:100]}...")
         
+        content.append("\n## 📚 Documentation Files\n")
         for doc in markdown_files:
-            # Add filename as heading
-            self.add_block_to_page(page_id, "heading_2", f"📄 {doc['name']}")
-            
-            # Add content (truncated if needed)
-            content = doc['content']
-            if len(content) > 2000:
-                content = content[:2000] + "\n... (truncated in Notion, see git repo for full content)"
-            
-            self.add_block_to_page(page_id, "code", content)
+            content.append(f"- **{doc['name']}** ({len(doc['content'])} bytes)")
+        
+        return "\n".join(content)
 
-    def sync_all(self, project_name="smart energy"):
-        """Sync commits and docs to Notion"""
-        print(f"🔄 Syncing {project_name} to Notion...")
+    @staticmethod
+    def sync_summary(project_name="smart energy"):
+        """Generate sync summary (manual posting to Notion)"""
+        print(f"🔄 Generating Notion sync summary for {project_name}...")
         
-        # Find workspace page
-        results = self.search_workspace(project_name)
-        if not results or not results.get('results'):
-            print(f"✗ No Notion page found for '{project_name}'")
-            return False
+        commits = NotionSync.get_recent_commits(count=15)
+        markdown_files = NotionSync.get_markdown_files()
         
-        # Get first page result
-        page = results['results'][0]
-        page_id = page['id']
-        print(f"✓ Found Notion page: {page.get('title', 'Untitled')}")
+        print(f"✓ Found {len(commits)} commits")
+        print(f"✓ Found {len(markdown_files)} markdown files")
         
-        # Get recent commits and markdown files
-        commits = self.get_recent_commits(count=15)
-        markdown_files = self.get_markdown_files()
+        # Generate summary
+        summary = NotionSync.generate_notion_content(commits, markdown_files)
         
-        print(f"  Commits: {len(commits)}")
-        print(f"  Docs: {len(markdown_files)}")
+        # Save to file for manual review
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        output_file = f"notion_sync_{timestamp}.txt"
         
-        # Sync to Notion
-        if commits:
-            self.sync_commits_to_notion(page_id, commits)
-            print(f"✓ Synced {len(commits)} commits")
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(f"Notion Sync Summary - {timestamp}\n")
+            f.write(f"Project: {project_name}\n")
+            f.write("=" * 60 + "\n\n")
+            f.write(summary)
         
-        if markdown_files:
-            self.sync_docs_to_notion(page_id, markdown_files)
-            print(f"✓ Synced {len(markdown_files)} documentation files")
+        print(f"\n✅ Sync summary saved: {output_file}")
+        print(f"\nTo update Notion:")
+        print(f"1. Open your Notion page for {project_name}")
+        print(f"2. Create a new page or update existing with:")
+        print(f"\n{summary}")
         
-        print(f"✅ Notion sync complete!")
-        return True
+        return summary
 
 
 def main():
     """Main entry point"""
-    sync = NotionSync()
-    sync.sync_all(project_name="smart energy")
+    NotionSync.sync_summary(project_name="smart energy")
 
 
 if __name__ == "__main__":
