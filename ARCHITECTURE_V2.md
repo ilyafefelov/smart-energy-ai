@@ -300,38 +300,150 @@ smart-energy-ai/
 
 ---
 
-## Implementation Roadmap
+## Implementation Roadmap (3-Week University Capstone)
 
-### Week 1-2: Data Pipeline
-- [ ] Set up PostgreSQL + connection pooling
-- [ ] Implement weather ingest (Open-Meteo)
-- [ ] Implement price ingest (OREE scraping or API)
-- [ ] Build data validation layer
-- [ ] Create feedback loop logging
+### Week 1: Data Pipeline + PostgreSQL (Days 1-7)
 
-### Week 3: RL Environment & Training
-- [ ] Define custom Gym environment
-- [ ] Implement reward function
-- [ ] Train baseline PPO agent
-- [ ] Create evaluation metrics
+**Days 1-2: Infrastructure**
+- [ ] Install PostgreSQL locally
+- [ ] Create 5-table schema (weather, prices, history, rl_logs, config)
+- [ ] SQLAlchemy ORM + connection pooling
+- [ ] Environment variables (DB_URL, API keys)
 
-### Week 4: Orchestration & Integration
-- [ ] Set up APScheduler
-- [ ] Wire pipeline → RL agent → output
-- [ ] Create daily automation flow
-- [ ] Build monitoring/alerting
+**Days 3-4: Data Ingestion**
+- [ ] `src/data_pipeline/ingest_weather.py` - Open-Meteo API → PostgreSQL
+  - Daily 24h forecast at 6:00 AM
+  - Validation: NaN check, bounds (0-2000 W/m²)
+  - Fallback: Use yesterday's data if API fails
+- [ ] `src/data_pipeline/ingest_prices.py` - OREE Ukraine → PostgreSQL
+  - Real DAM prices (24 hours ahead)
+  - Parse HTML/API endpoint
+  - Validation: Price bounds (1-15 EUR/MWh)
+  - Fallback: Use historical average if API down
 
-### Week 5: Dashboard & Reporting
-- [ ] Update Streamlit with RL results
-- [ ] Add backtesting view (historical performance)
-- [ ] Create cost comparison (RL vs baseline vs actual)
-- [ ] Performance metrics dashboard
+**Days 5-7: Validation & Testing**
+- [ ] `src/data_pipeline/validate.py` - Data quality layer
+- [ ] Unit tests: `tests/test_pipeline.py`
+- [ ] Collect 7 days of real data for Week 2 training
+- [ ] Git commit: "Week 1: Data pipeline + PostgreSQL"
 
-### Week 6: Testing & Documentation
-- [ ] Unit tests for pipeline
-- [ ] Integration tests end-to-end
-- [ ] Load testing (can it handle 1 week? 1 month?)
-- [ ] Thesis documentation
+**Output:** PostgreSQL with 7+ days of real weather + OREE prices
+
+---
+
+### Week 2: RL Agent + Airflow Orchestration (Days 8-14)
+
+**Days 1-3: RL Environment & Training**
+- [ ] `src/rl_agent/env.py` - Custom gym.Env
+  - State: [hour, price, solar_forecast, load_actual, battery_soc, ...]
+  - Actions: [charge, discharge, sell, buy, idle]
+  - Reward: -(actual_cost - baseline_cost)
+- [ ] `src/rl_agent/train.py` - PPO training on Week 1 data
+  - Stable-Baselines3 PPO
+  - Train on 7 days, validate on day 8
+  - Save best model to `models/rl_agent_v1.pkl`
+- [ ] `src/rl_agent/evaluate.py` - Backtest performance
+  - Compare RL vs baseline cost on historical data
+  - Print: "RL saves 25% vs baseline"
+
+**Days 4-5: Airflow DAG**
+- [ ] Install Airflow locally
+- [ ] Create `dags/daily_energy_optimization.py`
+  - DAG schedule: Daily at 6:00 AM
+  - Task 1: `fetch_weather` (6:00 - 6:05)
+  - Task 2: `fetch_prices` (6:05 - 6:10)
+  - Task 3: `preprocess_data` (6:10 - 6:15)
+  - Task 4: `train_rl_agent` (6:15 - 6:25)
+  - Task 5: `generate_action_plan` (6:25 - 6:30)
+  - Task 6: `log_results` (continuous)
+- [ ] Error handling: Retry failed tasks, alert on failure
+- [ ] DAG monitoring in Airflow UI
+
+**Days 6-7: Dashboard Update**
+- [ ] Update `app.py` Streamlit:
+  - Tab 1: Current day plan (RL recommendations)
+  - Tab 2: Historical performance (RL vs baseline)
+  - Tab 3: Cost savings graph (cumulative)
+  - Tab 4: Forecast accuracy (MAPE %)
+  - Tab 5: RL training loss over time
+- [ ] Git commit: "Week 2: RL agent + Airflow automation"
+
+**Output:** Daily automated RL agent generating optimized plans + visible results
+
+---
+
+### Week 3: Testing, Documentation, Presentation (Days 15-21)
+
+**Days 1-2: Integration & Testing**
+- [ ] End-to-end test: Full pipeline runs → RL trains → plan generated
+- [ ] Test OREE API edge cases (holiday, network down, format change)
+- [ ] Performance test: Pipeline completes in < 5 minutes
+- [ ] Data quality on real API (check for missing hours, outliers)
+- [ ] Error handling: Graceful failure if API down (use cached data)
+- [ ] `tests/test_integration.py` - Full pipeline test
+
+**Days 3-4: Documentation**
+- [ ] Update `README.md`:
+  - Installation steps (PostgreSQL, Python deps)
+  - How to run locally
+  - How to deploy to AWS free tier
+- [ ] Create `DEPLOYMENT.md`:
+  - AWS RDS PostgreSQL setup
+  - Airflow on EC2 or Lambda
+  - Environment variables
+- [ ] Performance metrics doc:
+  - RL vs baseline cost savings
+  - Forecast accuracy (MAPE)
+  - Pipeline latency
+  - Uptime metrics
+
+**Days 5-7: Presentation + Final Polish**
+- [ ] Presentation slides (10-15 slides):
+  - Problem statement (energy cost optimization)
+  - V1 architecture (static model)
+  - V2 architecture (ETL + RL evolution)
+  - Data pipeline diagram
+  - RL agent visualization
+  - Results: Cost savings %, forecast accuracy
+  - Demo: Live Streamlit dashboard + Airflow DAG
+  - Future work (sensors, distributed RL, multi-site)
+- [ ] Record short demo video (2-3 min)
+- [ ] Final git cleanup:
+  - Remove debug code
+  - .gitignore for secrets
+  - Commit: "Week 3: Final documentation + presentation"
+
+**Output:** Presentation-ready capstone with real data + RL agent
+
+---
+
+## Technology Stack (Finalized)
+
+**Data:**
+- PostgreSQL (local + AWS free tier later)
+- SQLAlchemy ORM
+- Pydantic (validation)
+
+**Orchestration:**
+- Airflow (local + easy to scale)
+- Python 3.9+
+
+**ML/RL:**
+- Stable-Baselines3 (PPO)
+- Gymnasium (gym environment)
+- NumPy / Pandas
+
+**APIs:**
+- Open-Meteo (free, no auth)
+- OREE Ukraine (scraping or API)
+
+**Dashboard:**
+- Streamlit (existing, extend with RL results)
+- Plotly (charts)
+
+**Testing:**
+- Pytest
+- Docker (optional, for consistency)
 
 ---
 
