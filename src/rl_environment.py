@@ -170,48 +170,83 @@ class SmartEnergyEnv(gym.Env):
 
 
 if __name__ == "__main__":
-    # Test environment
+    # Test environment with REAL data
     logging.basicConfig(level=logging.INFO)
     
-    # Create dummy data
-    weather = pd.DataFrame({
-        'temperature': np.random.uniform(-10, 20, 24),
-        'solar_radiation': np.concatenate([np.zeros(6), np.linspace(100, 1000, 12), np.zeros(6)]),
-        'cloudcover': np.random.uniform(20, 80, 24),
-        'wind': np.random.uniform(0, 20, 24),
-        'humidity': np.random.uniform(40, 80, 24),
-    })
+    print("🔄 Loading REAL data for environment test...\n")
     
-    prices = pd.DataFrame({
-        'price_normalized_minmax': np.concatenate([
-            np.linspace(0.1, 0.3, 6),  # Night
-            np.linspace(0.3, 0.8, 6),  # Morning
-            np.linspace(0.8, 1.0, 6),  # Afternoon peak
-            np.linspace(1.0, 0.4, 6),  # Evening decline
-        ]),
-        'price_uah_original': np.concatenate([
-            np.linspace(70, 210, 6),
-            np.linspace(210, 280, 6),
-            np.linspace(280, 402.5, 6),
-            np.linspace(402.5, 280, 6),
-        ]),
-    })
+    # Import real data sources
+    from src.data_pipeline.ingest_weather import WeatherIngester
+    from src.data_pipeline.ingest_prices import PriceIngester
+    from src.price_processor import prepare_prices_for_rl
+    
+    # Fetch real weather
+    weather_ingester = WeatherIngester()
+    weather_data = weather_ingester.fetch_weather()
+    
+    if weather_data:
+        weather = weather_ingester.parse_weather_data(weather_data)
+        print(f"✅ Loaded REAL weather: {len(weather)} hours")
+    else:
+        print("⚠️  Weather API unavailable, using realistic simulation...")
+        # Fallback: realistic weather pattern
+        weather = pd.DataFrame({
+            'temperature': np.concatenate([np.linspace(-10, -5, 6), np.linspace(-5, 5, 12), np.linspace(5, -5, 6)]),
+            'solar_radiation': np.concatenate([np.zeros(6), np.linspace(100, 500, 12), np.zeros(6)]),
+            'cloudcover': np.random.uniform(20, 80, 24),
+            'wind': np.random.uniform(0, 20, 24),
+            'humidity': np.random.uniform(40, 80, 24),
+        })
+    
+    # Fetch real prices
+    price_ingester = PriceIngester()
+    prices_df = price_ingester.fetch_oree_prices()
+    
+    if prices_df is not None and not prices_df.empty:
+        print(f"✅ Loaded REAL prices from OREE: {len(prices_df)} hours")
+        # Process for RL
+        prices, _ = prepare_prices_for_rl(prices_df, normalize=True)
+    else:
+        print("⚠️  OREE prices unavailable, using realistic simulation...")
+        # Fallback: realistic price pattern
+        prices = pd.DataFrame({
+            'price_normalized_minmax': np.concatenate([
+                np.linspace(0.1, 0.3, 6),  # Night (cheap)
+                np.linspace(0.3, 0.8, 6),  # Morning
+                np.linspace(0.8, 1.0, 6),  # Afternoon peak (expensive)
+                np.linspace(1.0, 0.4, 6),  # Evening decline
+            ]),
+            'price_uah_original': np.concatenate([
+                np.linspace(70, 210, 6),
+                np.linspace(210, 280, 6),
+                np.linspace(280, 402.5, 6),
+                np.linspace(402.5, 280, 6),
+            ]),
+        })
     
     env = SmartEnergyEnv(weather, prices)
     
-    print("Testing environment...")
+    print("\n🚀 Testing environment with REAL/realistic data...\n")
     state = env.reset()
-    print(f"Initial state: {state}")
+    print(f"Initial state shape: {state.shape}")
+    print(f"Initial state: {state[:5]}...\n")
     
     # Random episode
     total_reward = 0
+    print(f"{'Hour':>4} {'Reward':>8} {'Cost (UAH)':>12} {'SOC':>7} {'Action':>12}")
+    print("-" * 55)
+    
     for _ in range(24):
         action = env.action_space.sample()
         state, reward, done, info = env.step(action)
         total_reward += reward
-        print(f"Hour {info['hour']:2d}: Reward={reward:6.2f}, Cost={info['hourly_cost']:7.1f} UAH, SOC={info['battery_soc']:6.1f}")
+        action_names = {0: 'CHARGE', 1: 'DISCHARGE', 2: 'HOLD'}
+        print(f"{info['hour']:4d} {reward:8.2f} {info['hourly_cost']:12.1f} {info['battery_soc']:7.1f}% {action_names.get(action, str(action)):>12}")
         if done:
             break
     
-    print(f"\nEpisode total reward: {total_reward:.2f}")
-    print(f"Episode total cost: {info['episode_cost']:.1f} UAH")
+    print("-" * 55)
+    print(f"\n✅ Episode Results:")
+    print(f"   Total Reward: {total_reward:.2f}")
+    print(f"   Total Cost: {info['episode_cost']:.1f} UAH")
+    print(f"   Data Source: {'REAL APIs' if weather_data and prices_df is not None else 'Realistic simulation'}")

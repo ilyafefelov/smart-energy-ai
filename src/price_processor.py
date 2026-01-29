@@ -218,19 +218,37 @@ def prepare_prices_for_rl(df: pd.DataFrame, normalize: bool = True,
 
 
 if __name__ == "__main__":
-    # Test with sample data
+    # Test with REAL data
     logging.basicConfig(level=logging.INFO)
     
-    # Create sample price data (realistic Ukraine winter prices)
-    sample_prices = pd.Series([
-        2.5, 2.2, 2.1, 2.0, 2.1, 2.8, 4.5, 6.2, 7.5, 6.8, 5.5, 5.0,
-        4.8, 4.5, 4.2, 5.0, 7.5, 9.2, 11.5, 10.5, 8.5, 6.0, 4.5, 3.5
-    ]) * 35  # Convert to UAH/MWh
+    print("🔄 Fetching REAL price data from OREE Ukraine...\n")
     
-    sample_df = pd.DataFrame({
-        'hour': range(24),
-        'price_uah_mwh': sample_prices
-    })
+    # Import real data fetcher
+    from src.data_pipeline.ingest_prices import PriceIngester
+    
+    ingester = PriceIngester()
+    prices_df = ingester.fetch_oree_prices()
+    
+    if prices_df is None or prices_df.empty:
+        print("⚠️  OREE not available, using realistic simulation...\n")
+        # Fallback: realistic market pattern
+        base_prices_eur = [
+            2.5, 2.2, 2.1, 2.0, 2.1, 2.8, 4.5, 6.2, 7.5, 6.8, 5.5, 5.0,
+            4.8, 4.5, 4.2, 5.0, 7.5, 9.2, 11.5, 10.5, 8.5, 6.0, 4.5, 3.5
+        ]
+        prices_uah = [p * 35 for p in base_prices_eur]
+        sample_df = pd.DataFrame({
+            'hour': range(24),
+            'price_uah_mwh': prices_uah,
+            'source': 'realistic_simulation'
+        })
+        print(f"Using realistic prices (UAH): {prices_uah}\n")
+    else:
+        sample_df = prices_df.copy()
+        print(f"✅ Got REAL prices from OREE")
+        print(f"   Hours: {len(sample_df)}")
+        print(f"   Range: {sample_df['price_uah_mwh'].min():.2f} - {sample_df['price_uah_mwh'].max():.2f} UAH/MWh")
+        print(f"   Source: {sample_df.get('source', ['real_oree'])[0]}\n")
     
     # Process for RL training
     processed, stats = prepare_prices_for_rl(sample_df, normalize=True, add_noise=True)
@@ -240,3 +258,4 @@ if __name__ == "__main__":
     print("\n=== Statistics ===")
     for key, value in stats.items():
         print(f"{key}: {value}")
+    print(f"\n✅ Price processor test complete (using {'REAL' if prices_df is not None else 'realistic'} data)")
