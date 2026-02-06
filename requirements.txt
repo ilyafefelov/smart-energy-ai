@@ -1,44 +1,43 @@
 # Smart Energy AI V2 - Python Dependencies
 
-# Core
-python-dotenv==1.0.0
-pydantic==2.5.0
+# Core frameworks
+dagster>=1.6.0
+polars>=0.20.0
+numpy>=1.24.0
+pandas>=2.0.0
+requests>=2.31.0
+pydantic>=2.0.0
+pyyaml>=6.0
+beautifulsoup4>=4.12.0
+
+# Data processing engines
+# NVTabular is optional (GPU systems only)
+# nvtabular>=23.08  # Uncommented for GPU deployments
+
+# Machine learning
+scikit-learn>=1.3.0
+optuna>=3.5.0
+xgboost>=2.0.0
+
+# Time series and forecasting
+statsmodels>=0.14.0
+
+# Web framework (for API endpoints)
+fastapi>=0.104.0
+uvicorn>=0.24.0
 
 # Database
-sqlalchemy==2.0.23
-psycopg2-binary==2.9.9
+psycopg2-binary>=2.9.0
 
-# Data
-pandas==2.1.3
-numpy==1.26.2
+# Utilities
+python-dotenv>=1.0.0
+click>=8.1.0
+rich>=13.0.0
+tqdm>=4.66.0
 
-# API & Web
-requests==2.31.0
-fastapi==0.104.1
-uvicorn==0.24.0
-
-# ML & RL
-stable-baselines3==2.2.0
-gymnasium==0.29.1
-torch==2.1.1
-scikit-learn==1.3.2
-
-# Dashboard
-streamlit==1.29.0
-plotly==5.18.0
-
-# Orchestration
-apache-airflow==2.7.1
-apache-airflow-providers-postgres==5.8.0
-
-# Testing
-pytest==7.4.3
-pytest-cov==4.1.0
-
-# Logging & Monitoring
-python-json-logger==2.0.7
-
-# Development
-black==23.12.0
-flake8==6.1.0
-mypy==1.7.1
+# Development and testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.6.0

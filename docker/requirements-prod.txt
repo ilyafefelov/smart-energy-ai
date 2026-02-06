@@ -1,0 +1,9 @@
+# Production requirements for Docker deployment
+dagster[postgres,docker]
+dagster-webserver
+dagster-daemon
+mlflow
+psycopg2-binary
+redis
+gunicorn
+uvicorn[standard]
