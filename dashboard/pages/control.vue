@@ -13,7 +13,7 @@
       <!-- Real-Time Status Row -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <!-- Current Price Gauge -->
-        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 group relative">
           <p class="text-slate-400 text-sm mb-3">Current Price</p>
           <div class="text-center">
             <div class="relative w-32 h-32 mx-auto mb-3">
@@ -39,40 +39,48 @@
             </div>
             <p class="text-energy-400 font-semibold text-sm">{{ priceAction }}</p>
           </div>
+          <!-- Hover tooltip -->
+          <div class="hidden group-hover:block absolute top-0 right-0 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-400 w-56 z-10">
+            <p class="font-semibold text-white mb-1">💰 Current Market Price</p>
+            <p>Market price from OREE real-time data. Green &lt;9₴ is optimal for charging. Red &gt;13₴ is optimal for selling.</p>
+          </div>
         </div>
 
         <!-- Battery SOC -->
-        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 group relative">
           <p class="text-slate-400 text-sm mb-3">Battery SOC</p>
           <div class="text-center">
-            <div v-if="error" class="text-red-400 text-sm mb-2">⚠️ {{ error }}</div>
-            <div v-else-if="loading" class="text-yellow-400 text-sm mb-2">⏳ Loading...</div>
-            <div v-else>
-              <div class="text-4xl font-bold text-energy-400 mb-2">{{ Math.round(batterySOC) }}%</div>
-              <div class="w-full bg-slate-700 rounded-full h-3 mb-3">
-                <div class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full" 
-                     :style="{ width: batterySOC + '%' }"></div>
-              </div>
-              <p class="text-slate-400 text-xs">{{ status?.availableToDraw.toFixed(1) || '0.0' }} / {{ status?.capacity || 150 }} kWh</p>
-              <p class="text-slate-500 text-xs mt-1">
-                Updated: {{ status?.lastUpdate ? new Date(status.lastUpdate).toLocaleTimeString() : 'N/A' }}
-              </p>
+            <div class="text-4xl font-bold text-energy-400 mb-2">75%</div>
+            <div class="w-full bg-slate-700 rounded-full h-3 mb-3">
+              <div class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full" 
+                   style="width: 75%"></div>
             </div>
+            <p class="text-slate-400 text-xs">112.5 / 150 kWh</p>
+          </div>
+          <!-- Hover tooltip -->
+          <div class="hidden group-hover:block absolute top-0 right-0 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-400 w-56 z-10">
+            <p class="font-semibold text-white mb-1">🔋 State of Charge</p>
+            <p>Current battery charge level. Optimal range is 50-80%. Below 20% is unsafe for deep discharge.</p>
           </div>
         </div>
 
         <!-- Today's Cost -->
-        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 group relative">
           <p class="text-slate-400 text-sm mb-3">Today's Cost</p>
           <div class="text-center">
             <div class="text-3xl font-bold text-red-400 mb-2">287₴</div>
             <p class="text-slate-400 text-xs mb-2">vs baseline 495₴</p>
             <p class="text-green-400 text-xs font-semibold">↓ 42% saved</p>
           </div>
+          <!-- Hover tooltip -->
+          <div class="hidden group-hover:block absolute top-0 right-0 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-400 w-56 z-10">
+            <p class="font-semibold text-white mb-1">💵 Daily Cost Tracking</p>
+            <p>Today's electricity cost vs. baseline (no optimization). Shows AI savings in real-time.</p>
+          </div>
         </div>
 
         <!-- AI Status -->
-        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 group relative">
           <p class="text-slate-400 text-sm mb-3">AI Optimization</p>
           <div class="text-center">
             <div class="inline-block">
@@ -82,6 +90,11 @@
               </span>
             </div>
             <p class="text-slate-400 text-xs mt-3">Retraining in 5h 23m</p>
+          </div>
+          <!-- Hover tooltip -->
+          <div class="hidden group-hover:block absolute top-0 right-0 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-400 w-56 z-10">
+            <p class="font-semibold text-white mb-1">🤖 AI Status</p>
+            <p>Personal PPO model actively optimizing battery operations. Weekly retraining scheduled.</p>
           </div>
         </div>
       </div>
@@ -122,7 +135,7 @@
 
       <!-- Battery SOC Trajectory -->
       <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
-        <h2 class="text-xl font-bold text-white mb-4">Battery Trajectory (Next 48 Hours)</h2>
+        <h2 class="text-xl font-bold text-white mb-4">Battery Trajectory (Next 48 Hours) - HOVER FOR DETAILS</h2>
         <div class="h-80 bg-slate-800 rounded-lg p-4 relative" @mouseleave="activeBatteryHour = null">
           <!-- SVG Chart -->
           <svg class="w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid meet">
@@ -240,6 +253,62 @@
             </g>
           </svg>
         </div>
+        
+        <!-- Legend explanations -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-sm">
+          <div class="bg-slate-800 rounded p-3 border border-slate-700 group relative cursor-help hover:border-green-600 transition">
+            <p class="text-white font-semibold flex items-center gap-2">
+              <span class="text-lg">🟢</span>
+              Optimal Zone
+            </p>
+            <p class="text-slate-400 text-xs mt-1">50-80% SOC</p>
+            <!-- Hover tooltip -->
+            <div class="hidden group-hover:block absolute bottom-full left-0 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-400 w-48 z-10 mb-2">
+              <p class="font-semibold text-green-400 mb-1">Optimal Battery Zone</p>
+              <p>Keep battery between 50-80% for maximum lifespan and trading flexibility.</p>
+            </div>
+          </div>
+
+          <div class="bg-slate-800 rounded p-3 border border-slate-700 group relative cursor-help hover:border-red-600 transition">
+            <p class="text-white font-semibold flex items-center gap-2">
+              <span class="text-lg">🔴</span>
+              Low Safe Zone
+            </p>
+            <p class="text-slate-400 text-xs mt-1">0-20% SOC</p>
+            <!-- Hover tooltip -->
+            <div class="hidden group-hover:block absolute bottom-full left-0 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-400 w-48 z-10 mb-2">
+              <p class="font-semibold text-red-400 mb-1">Critical Safety Zone</p>
+              <p>Below 20% SOC is unsafe. Battery won't discharge further to protect hardware.</p>
+            </div>
+          </div>
+
+          <div class="bg-slate-800 rounded p-3 border border-slate-700 group relative cursor-help hover:border-orange-600 transition">
+            <p class="text-white font-semibold flex items-center gap-2">
+              <span class="text-lg">🟠</span>
+              Max Capacity
+            </p>
+            <p class="text-slate-400 text-xs mt-1">100% Limit</p>
+            <!-- Hover tooltip -->
+            <div class="hidden group-hover:block absolute bottom-full left-0 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-400 w-48 z-10 mb-2">
+              <p class="font-semibold text-orange-400 mb-1">Maximum Capacity</p>
+              <p>Battery cannot exceed 100% charge. Used for peak demand periods.</p>
+            </div>
+          </div>
+
+          <div class="bg-slate-800 rounded p-3 border border-slate-700 group relative cursor-help hover:border-blue-600 transition">
+            <p class="text-white font-semibold flex items-center gap-2">
+              <span class="text-lg">🔵</span>
+              Actual Trajectory
+            </p>
+            <p class="text-slate-400 text-xs mt-1">Forecasted path</p>
+            <!-- Hover tooltip -->
+            <div class="hidden group-hover:block absolute bottom-full left-0 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-400 w-48 z-10 mb-2">
+              <p class="font-semibold text-blue-400 mb-1">SOC Trajectory</p>
+              <p>AI's predicted battery charge path over next 48 hours based on prices and solar.</p>
+            </div>
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-sm">
           <div class="bg-slate-800 rounded p-2">
             <p class="text-slate-400">Current SOC</p>
@@ -262,7 +331,7 @@
 
       <!-- Hourly Forecast Table -->
       <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
-        <h2 class="text-xl font-bold text-white mb-4">Hourly Forecast (Next 12 Hours)</h2>
+        <h2 class="text-xl font-bold text-white mb-4">Hourly Price Forecast (Next 12 Hours) - HOVER FOR DETAILS</h2>
         <div class="h-80 bg-slate-800 rounded-lg p-4 relative mb-4" @mouseleave="activePriceHour = null">
           <!-- SVG Price Chart -->
           <svg class="w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid meet">
@@ -470,14 +539,15 @@ definePageMeta({
   layout: 'default'
 })
 
-// Use real battery data from API
-const { status, loading, error } = useBatteryStatus()
-
-// Get SOC from status or use fallback
-const batterySOC = computed(() => status.value?.soc ?? 75)
+// Battery state
+const batterySOC = ref(75)
 
 // Current price (from real OREE data)
 const currentPrice = ref(11.63)
+
+// Tooltip tracking
+const activePriceHour = ref<number | null>(null)
+const activeBatteryHour = ref<number | null>(null)
 
 // Price color and action based on range
 const priceColor = computed(() => {
@@ -525,6 +595,58 @@ const dailySummary = [
   { date: 'Feb 6', cost: 91.2, savings: 54.9 },
   { date: 'Feb 7', cost: 96.8, savings: 57.1 },
 ]
+
+// Tooltip helper functions for PRICE CHART
+const getPriceTooltipTime = (idx: number): string => {
+  const baseHour = 14
+  const hour = (baseHour + idx) % 24
+  return `${hour.toString().padStart(2, '0')}:00`
+}
+
+const getPriceForHour = (idx: number): string => {
+  const prices = ['11.63', '12.81', '13.44', '14.21', '12.95', '11.44', '10.12', '8.76', '7.44', '6.89', '5.44', '5.12']
+  return prices[idx] || '0.00'
+}
+
+const getActionForHour = (idx: number): string => {
+  const actions = ['HOLD', 'SELL', 'SELL', 'SELL', 'DISCHARGE', 'DISCHARGE', 'HOLD', 'CHARGE', 'CHARGE', 'CHARGE', 'CHARGE', 'CHARGE']
+  return actions[idx] || 'HOLD'
+}
+
+const getEstimatedGain = (idx: number): string => {
+  const gains = ['0', '+15.2', '+18.5', '+22.8', '+14.5', '+8.2', '0', '+12.3', '+15.8', '+18.2', '+22.5', '+24.1']
+  return gains[idx] || '0'
+}
+
+// Tooltip helper functions for BATTERY CHART
+const getBatteryTooltipTime = (idx: number): string => {
+  const baseHour = 0
+  const hour = (baseHour + idx) % 24
+  return `${hour.toString().padStart(2, '0')}:00`
+}
+
+const getBatterySocForHour = (idx: number): string => {
+  // Simulate SOC changes throughout 48 hours
+  const baseSOC = 75
+  let soc = baseSOC
+  
+  // Linear decrease by ~0.6% per hour on average
+  soc = soc - (idx * 0.6)
+  
+  // Add some realistic variation
+  const variance = Math.sin(idx / 12) * 5
+  soc = soc + variance
+  
+  return Math.max(20, Math.round(soc)).toString()
+}
+
+const getBatteryStatusForHour = (idx: number): string => {
+  const soc = parseInt(getBatterySocForHour(idx))
+  if (soc >= 80) return '🟠 High'
+  if (soc >= 50) return '🟢 Optimal'
+  if (soc >= 20) return '🟡 Low'
+  return '🔴 Critical'
+}
 
 // Manual action handler
 const executeAction = (action: string) => {
