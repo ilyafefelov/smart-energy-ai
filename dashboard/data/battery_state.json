@@ -1,0 +1,10 @@
+{
+  "soc": 75,
+  "capacity": 150,
+  "voltage": 400,
+  "current": 0,
+  "temperature": 22,
+  "cycles": 1245,
+  "health": 98.5,
+  "lastUpdate": "2026-02-07T01:24:00Z"
+}
