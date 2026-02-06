@@ -1,8 +1,6 @@
-import { useState, computed, useRouter } from '#app'
+import { useState, computed } from '#app'
 
 export const useSettings = () => {
-  const router = useRouter()
-
   // Default settings
   const defaultSettings = {
     general: {
