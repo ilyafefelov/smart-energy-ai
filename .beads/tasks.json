@@ -1,0 +1,47 @@
+[
+  {
+    "id": "T001",
+    "title": "Setup Dagster workspace configuration",
+    "status": "todo",
+    "priority": "P0",
+    "epic": "E001",
+    "created": "2026-02-06",
+    "assignee": "codex-agent"
+  },
+  {
+    "id": "T002", 
+    "title": "Implement market_data_asset (ENTSO-E/Ukrenergo API)",
+    "status": "todo",
+    "priority": "P0",
+    "epic": "E001",
+    "created": "2026-02-06",
+    "assignee": "codex-agent"
+  },
+  {
+    "id": "T003",
+    "title": "Implement weather_asset (Open-Meteo API)",
+    "status": "todo", 
+    "priority": "P0",
+    "epic": "E001",
+    "created": "2026-02-06",
+    "assignee": "codex-agent"
+  },
+  {
+    "id": "T004",
+    "title": "Implement client_state_asset (synthetic data)",
+    "status": "todo",
+    "priority": "P0", 
+    "epic": "E001",
+    "created": "2026-02-06",
+    "assignee": "codex-agent"
+  },
+  {
+    "id": "T005",
+    "title": "Implement feature_matrix hybrid asset",
+    "status": "todo",
+    "priority": "P0",
+    "epic": "E001", 
+    "created": "2026-02-06",
+    "assignee": "codex-agent"
+  }
+]
