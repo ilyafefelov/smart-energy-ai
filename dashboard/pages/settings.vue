@@ -407,6 +407,62 @@
         </div>
       </div>
 
+      <!-- Import/Export Section -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-bold text-white mb-4">📥 Backup & Transfer</h2>
+        <p class="text-slate-400 text-sm mb-4">Export your configuration as backup or to share with other instances</p>
+        
+        <!-- Import Status -->
+        <div v-if="importStatus.show" 
+             :class="[
+               'rounded-lg border p-4 flex items-center gap-3 mb-4 animate-fade-in',
+               importStatus.success 
+                 ? 'bg-green-900 bg-opacity-30 border-green-700' 
+                 : 'bg-red-900 bg-opacity-30 border-red-700'
+             ]">
+          <div :class="importStatus.success ? 'text-green-400 text-xl' : 'text-red-400 text-xl'">
+            {{ importStatus.success ? '✅' : '❌' }}
+          </div>
+          <div>
+            <p :class="importStatus.success ? 'text-green-300 font-semibold' : 'text-red-300 font-semibold'">
+              {{ importStatus.message }}
+            </p>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Export Button -->
+          <button @click="exportSettings" 
+                  :disabled="isExporting"
+                  class="bg-green-600 hover:bg-green-500 disabled:bg-slate-700 px-6 py-3 rounded-lg font-semibold text-white transition flex items-center justify-center gap-2">
+            <span>{{ isExporting ? '⏳' : '📤' }}</span>
+            {{ isExporting ? 'Exporting...' : 'Export Config' }}
+          </button>
+          
+          <!-- Import File Input -->
+          <div class="relative">
+            <input 
+              ref="fileInput"
+              type="file" 
+              accept=".json"
+              @change="handleFileImport"
+              class="hidden"
+              :disabled="isImporting"
+            />
+            <button @click="$refs.fileInput?.click()" 
+                    :disabled="isImporting"
+                    class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 px-6 py-3 rounded-lg font-semibold text-white transition flex items-center justify-center gap-2">
+              <span>{{ isImporting ? '⏳' : '📥' }}</span>
+              {{ isImporting ? 'Importing...' : 'Import Config' }}
+            </button>
+          </div>
+        </div>
+        
+        <p class="text-xs text-slate-500 mt-4">
+          💡 <strong>Tip:</strong> Export regularly to backup your settings. Import from another instance to replicate configuration.
+        </p>
+      </div>
+
       <!-- Save Button -->
       <div class="flex gap-4 justify-end">
         <button @click="resetSettings" 
@@ -437,8 +493,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useSettings } from '#app'
+import { ref, reactive, computed } from 'vue'
 
 definePageMeta({
   layout: 'default'
@@ -499,8 +554,14 @@ const saveSettings = async () => {
 
 // Reset settings
 const resetSettings = () => {
-  if (confirm('Are you sure? This will reset to defaults and reload the page.')) {
-    composableReset()
+  if (confirm('Are you sure? This will reset to defaults.')) {
+    settings.siteName = 'Factory #1'
+    settings.timezone = 'Europe/Kiev (GMT+2)'
+    settings.currency = 'UAH'
+    settings.battery.capacity = 150
+    settings.battery.minSOC = 15
+    settings.battery.maxChargeRate = 50
+    settings.battery.maxDischargeRate = 50
     
     saveStatus.success = true
     saveStatus.message = '🔄 Settings reset to defaults'
@@ -508,9 +569,6 @@ const resetSettings = () => {
     
     setTimeout(() => {
       saveStatus.show = false
-      if (process.client) {
-        location.reload()
-      }
     }, 1500)
   }
 }
@@ -571,10 +629,127 @@ const launchFullRetraining = async () => {
   }, 5000)
 }
 
-// Load settings on mount
-onMounted(async () => {
-  await composableLoad()
+// Import/Export state
+const fileInput = ref<HTMLInputElement | null>(null)
+const isExporting = ref(false)
+const isImporting = ref(false)
+const importStatus = reactive({
+  show: false,
+  success: false,
+  message: ''
 })
+
+// Export settings function
+const exportSettings = async () => {
+  isExporting.value = true
+  try {
+    const response = await $fetch('/api/settings/export')
+    
+    // Create a blob from the response
+    const blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    
+    // Generate filename
+    const siteName = settings.siteName.toLowerCase().replace(/\s+/g, '-')
+    const dateStr = new Date().toISOString().split('T')[0]
+    link.href = url
+    link.download = `settings-${siteName}-${dateStr}.json`
+    
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    saveStatus.success = true
+    saveStatus.message = '✅ Settings exported successfully!'
+    saveStatus.show = true
+    
+    setTimeout(() => {
+      saveStatus.show = false
+    }, 3000)
+  } catch (error: any) {
+    saveStatus.success = false
+    saveStatus.message = `❌ Export failed: ${error.message}`
+    saveStatus.show = true
+  } finally {
+    isExporting.value = false
+  }
+}
+
+// Import settings function
+const handleFileImport = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  
+  if (!file) return
+  
+  isImporting.value = true
+  try {
+    // Read file
+    const fileContent = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => resolve(e.target?.result as string)
+      reader.onerror = () => reject(new Error('Failed to read file'))
+      reader.readAsText(file)
+    })
+    
+    // Parse and validate JSON
+    let importedData
+    try {
+      importedData = JSON.parse(fileContent)
+    } catch {
+      throw new Error('Invalid JSON file format')
+    }
+    
+    if (!importedData.settings) {
+      throw new Error('Invalid file format: missing "settings" key')
+    }
+    
+    // Create FormData for multipart upload
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    // Send to server
+    const result = await $fetch('/api/settings/import', {
+      method: 'POST',
+      body: formData
+    })
+    
+    // Update local settings with imported values
+    Object.assign(settings, importedData.settings)
+    
+    importStatus.success = true
+    importStatus.message = `✅ Settings imported successfully from ${result.imported?.siteName || 'backup'}`
+    importStatus.show = true
+    
+    // Also show in main save status
+    saveStatus.success = true
+    saveStatus.message = `✅ Settings imported and applied!`
+    saveStatus.show = true
+    
+    // Show retraining proposal since settings changed
+    showRetrainingProposal.value = true
+    
+    setTimeout(() => {
+      importStatus.show = false
+    }, 5000)
+  } catch (error: any) {
+    importStatus.success = false
+    importStatus.message = `❌ Import failed: ${error.message || error}`
+    importStatus.show = true
+    
+    saveStatus.success = false
+    saveStatus.message = `❌ Import failed: ${error.message || error}`
+    saveStatus.show = true
+  } finally {
+    isImporting.value = false
+    // Reset file input
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+  }
+}
 </script>
 
 <style scoped>
