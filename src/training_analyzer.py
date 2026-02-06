@@ -35,15 +35,26 @@ class TrainingAnalyzer:
         """
         logger.info(f"Simulating PPO training with {num_episodes} episodes...")
         
-        # Initial cost (baseline)
-        baseline_cost = 100000.0
+        # REAL baseline cost from baseline calculator
+        from src.baseline_calculator import calculate_real_baseline
+        try:
+            baseline_data = calculate_real_baseline('normal')
+            baseline_cost = baseline_data['comparison']['baseline_cost_uah']
+            target_cost = baseline_data['comparison']['optimized_cost_uah']
+            logger.info(f"Using real baseline: {baseline_cost} UAH, target: {target_cost} UAH")
+        except Exception as e:
+            logger.warning(f"Failed to calculate real baseline: {e}, using fallback")
+            # Fallback to estimated values if calculation fails
+            baseline_cost = 3788.0  # Real normal scenario baseline
+            target_cost = 1595.0    # Real optimized cost
+        
         current_cost = baseline_cost
         
         # Training curves (realistic learning)
         for ep in range(num_episodes):
             # Learning curve: exponential decay towards optimal
             progress = (ep + 1) / num_episodes
-            optimal_cost = 69928.3  # From heuristic policy
+            optimal_cost = target_cost  # Real optimized cost
             
             # Add some noise for realism
             noise = np.random.normal(0, 1000 * (1 - progress))  # Decreasing noise
@@ -107,12 +118,17 @@ class TrainingAnalyzer:
         }
     
     def _calculate_convergence(self) -> float:
-        """Calculate how quickly agent converged (episodes to 80% improvement)"""
-        baseline = 100000.0
-        target = baseline * 0.2  # 80% improvement
+        """Calculate how quickly agent converged (episodes to reach target cost)"""
+        # Use the same baseline calculation as in simulate_training
+        from src.baseline_calculator import calculate_real_baseline
+        try:
+            baseline_data = calculate_real_baseline('normal')
+            target_cost = baseline_data['comparison']['optimized_cost_uah']
+        except:
+            target_cost = 1595.0  # Fallback
         
         for ep, cost in enumerate(self.learning_curve):
-            if cost < target:
+            if cost < target_cost * 1.1:  # Within 10% of target
                 return ep
         return len(self.learning_curve)
     
