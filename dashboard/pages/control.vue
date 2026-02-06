@@ -1,166 +1,330 @@
 <template>
-  <div class="space-y-8">
-    <div>
-      <h1 class="text-4xl font-bold text-energy-400 mb-2">Battery Control</h1>
-      <p class="text-slate-400">Real-time optimization & manual control</p>
-    </div>
+  <div class="min-h-screen bg-slate-950 text-white p-8">
+    <div class="max-w-6xl mx-auto space-y-8">
+      <!-- Header -->
+      <div class="mb-8">
+        <NuxtLink to="/" class="text-blue-400 hover:text-blue-300 text-sm mb-2 inline-block">
+          ← Back to Dashboard
+        </NuxtLink>
+        <h1 class="text-4xl font-bold text-energy-400 mt-2">🔋 Control</h1>
+        <p class="text-slate-400 mt-2">Real-time battery optimization & manual trading</p>
+      </div>
 
-    <!-- Battery Status -->
-    <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
-      <h2 class="text-2xl font-bold text-white mb-6">Battery Status</h2>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- SOC Display -->
-        <div>
-          <div class="flex justify-between items-center mb-2">
-            <span class="text-slate-300">State of Charge</span>
-            <span class="text-3xl font-bold text-energy-400">75%</span>
-          </div>
-          <div class="w-full bg-slate-700 rounded-full h-4 overflow-hidden">
-            <div class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500" style="width: 75%"></div>
-          </div>
-          <div class="flex justify-between text-sm text-slate-400 mt-2">
-            <span>112.5 kWh / 150 kWh</span>
-            <span>Min: 15 kWh | Max: 142.5 kWh</span>
+      <!-- Real-Time Status Row -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Current Price Gauge -->
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+          <p class="text-slate-400 text-sm mb-3">Current Price</p>
+          <div class="text-center">
+            <div class="relative w-32 h-32 mx-auto mb-3">
+              <svg class="w-full h-full" viewBox="0 0 100 100">
+                <!-- Background arc -->
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#334155" stroke-width="8" 
+                        stroke-dasharray="251.3" stroke-dashoffset="0" transform="rotate(-90 50 50)" />
+                <!-- Value arc (green to yellow to red) -->
+                <circle cx="50" cy="50" r="40" fill="none" 
+                        :stroke="priceColor" stroke-width="8"
+                        :stroke-dasharray="priceDashArray"
+                        stroke-dashoffset="0" transform="rotate(-90 50 50)" />
+                <!-- Center circle -->
+                <circle cx="50" cy="50" r="28" fill="#0f172a" />
+                <!-- Price text -->
+                <text x="50" y="48" text-anchor="middle" class="text-2xl font-bold" fill="#10b981">
+                  {{ currentPrice.toFixed(2) }}
+                </text>
+                <text x="50" y="58" text-anchor="middle" class="text-xs" fill="#94a3b8">
+                  ₴/kWh
+                </text>
+              </svg>
+            </div>
+            <p class="text-energy-400 font-semibold text-sm">{{ priceAction }}</p>
           </div>
         </div>
 
-        <!-- Power Flow -->
-        <div>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="bg-slate-800 rounded p-4">
-              <p class="text-slate-400 text-sm mb-2">Charging Power</p>
-              <p class="text-2xl font-bold text-green-400">25 kW</p>
-              <p class="text-xs text-slate-500">Efficiency: 95%</p>
+        <!-- Battery SOC -->
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+          <p class="text-slate-400 text-sm mb-3">Battery SOC</p>
+          <div class="text-center">
+            <div class="text-4xl font-bold text-energy-400 mb-2">75%</div>
+            <div class="w-full bg-slate-700 rounded-full h-3 mb-3">
+              <div class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full" 
+                   style="width: 75%"></div>
             </div>
-            <div class="bg-slate-800 rounded p-4">
-              <p class="text-slate-400 text-sm mb-2">Available Power</p>
-              <p class="text-2xl font-bold text-yellow-400">50 kW</p>
-              <p class="text-xs text-slate-500">Max rate</p>
+            <p class="text-slate-400 text-xs">112.5 / 150 kWh</p>
+          </div>
+        </div>
+
+        <!-- Today's Cost -->
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+          <p class="text-slate-400 text-sm mb-3">Today's Cost</p>
+          <div class="text-center">
+            <div class="text-3xl font-bold text-red-400 mb-2">287₴</div>
+            <p class="text-slate-400 text-xs mb-2">vs baseline 495₴</p>
+            <p class="text-green-400 text-xs font-semibold">↓ 42% saved</p>
+          </div>
+        </div>
+
+        <!-- AI Status -->
+        <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+          <p class="text-slate-400 text-sm mb-3">AI Optimization</p>
+          <div class="text-center">
+            <div class="inline-block">
+              <span class="inline-flex items-center gap-2 px-3 py-1 bg-green-900 bg-opacity-30 border border-green-700 rounded-full">
+                <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                <span class="text-xs text-green-400 font-semibold">Active</span>
+              </span>
             </div>
+            <p class="text-slate-400 text-xs mt-3">Retraining in 5h 23m</p>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Control Panel -->
-    <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
-      <h2 class="text-2xl font-bold text-white mb-6">Control Panel</h2>
-      
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Charge Control -->
-        <div class="border border-slate-700 rounded-lg p-4">
-          <h3 class="text-lg font-semibold text-white mb-4">Charging Strategy</h3>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-slate-300 text-sm mb-2">Target SOC</label>
-              <input type="range" min="10" max="95" value="75" class="w-full">
-              <div class="flex justify-between text-xs text-slate-400 mt-1">
-                <span>Min 10%</span>
-                <span>75%</span>
-                <span>Max 95%</span>
-              </div>
-            </div>
-            <div>
-              <label class="block text-slate-300 text-sm mb-2">Charge Rate</label>
-              <select class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white">
-                <option>Conservative (25 kW)</option>
-                <option selected>Balanced (40 kW)</option>
-                <option>Aggressive (50 kW)</option>
-              </select>
-            </div>
-            <button class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded mt-3">
-              ↑ Start Charging
-            </button>
+      <!-- Manual Control Buttons -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
+        <h2 class="text-xl font-bold text-white mb-4">Manual Controls</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <!-- Charge Button -->
+          <button @click="executeAction('charge')"
+                  :disabled="batterySOC > 80"
+                  class="px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition text-sm">
+            🔋 CHARGE NOW
+          </button>
+
+          <!-- Sell Button -->
+          <button @click="executeAction('sell')"
+                  :disabled="batterySOC < 30"
+                  class="px-4 py-3 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition text-sm">
+            ⚡ SELL TO GRID
+          </button>
+
+          <!-- Hold Button -->
+          <button @click="executeAction('hold')"
+                  class="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition text-sm">
+            ⏸️ HOLD
+          </button>
+
+          <!-- Discharge Button -->
+          <button @click="executeAction('discharge')"
+                  :disabled="batterySOC < 50 || currentPrice < 12"
+                  class="px-4 py-3 bg-red-600 hover:bg-red-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-semibold rounded-lg transition text-sm">
+            💨 DISCHARGE
+          </button>
+        </div>
+        <p class="text-xs text-slate-500 mt-3">Note: Manual actions override AI optimization for the selected period</p>
+      </div>
+
+      <!-- Battery SOC Trajectory -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
+        <h2 class="text-xl font-bold text-white mb-4">Battery Trajectory (Next 48 Hours)</h2>
+        <div class="h-80 bg-slate-800 rounded-lg p-4 relative">
+          <!-- SVG Chart -->
+          <svg class="w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid meet">
+            <!-- Grid background -->
+            <defs>
+              <pattern id="grid" width="100" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 100 0 L 0 0 0 30" fill="none" stroke="#334155" stroke-width="0.5" />
+              </pattern>
+            </defs>
+            <rect width="1000" height="300" fill="url(#grid)" />
+
+            <!-- Min safe zone (red, 0-20%) -->
+            <rect x="50" y="220" width="900" height="60" fill="#dc26262e" />
+            <text x="20" y="250" font-size="12" fill="#94a3b8">20%</text>
+
+            <!-- Optimal zone (green, 50-80%) -->
+            <rect x="50" y="70" width="900" height="90" fill="#10b98166" />
+            <text x="20" y="120" font-size="12" fill="#94a3b8">80%</text>
+            <text x="20" y="145" font-size="12" fill="#94a3b8">50%</text>
+
+            <!-- Max capacity line (orange, 100%) -->
+            <line x1="50" y1="10" x2="950" y2="10" stroke="#f97316" stroke-width="2" />
+            <text x="20" y="20" font-size="12" fill="#f97316">100%</text>
+
+            <!-- Actual SOC line (blue) -->
+            <polyline points="50,140 150,130 250,120 350,130 450,150 550,140 650,130 750,120 850,110 950,100" 
+                      fill="none" stroke="#3b82f6" stroke-width="3" />
+
+            <!-- Optimal band (shaded green) -->
+            <polygon points="50,140 150,135 250,132 350,138 450,145 550,140 650,135 750,132 850,125 950,118 950,200 850,200 750,200 650,200 550,200 450,200 350,200 250,200 150,200 50,200"
+                     fill="#10b98144" />
+
+            <!-- Hour labels -->
+            <text x="50" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">0h</text>
+            <text x="250" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">12h</text>
+            <text x="450" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">24h</text>
+            <text x="650" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">36h</text>
+            <text x="950" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">48h</text>
+          </svg>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-sm">
+          <div class="bg-slate-800 rounded p-2">
+            <p class="text-slate-400">Current SOC</p>
+            <p class="text-energy-400 font-bold">75%</p>
+          </div>
+          <div class="bg-slate-800 rounded p-2">
+            <p class="text-slate-400">Min Forecast</p>
+            <p class="text-blue-400 font-bold">45%</p>
+          </div>
+          <div class="bg-slate-800 rounded p-2">
+            <p class="text-slate-400">Max Forecast</p>
+            <p class="text-orange-400 font-bold">88%</p>
+          </div>
+          <div class="bg-slate-800 rounded p-2">
+            <p class="text-slate-400">Peak Hour</p>
+            <p class="text-yellow-400 font-bold">3:00 PM (35h)</p>
           </div>
         </div>
+      </div>
 
-        <!-- Discharge Control -->
-        <div class="border border-slate-700 rounded-lg p-4">
-          <h3 class="text-lg font-semibold text-white mb-4">Discharging Strategy</h3>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-slate-300 text-sm mb-2">Min Reserve</label>
-              <input type="range" min="10" max="50" value="20" class="w-full">
-              <div class="flex justify-between text-xs text-slate-400 mt-1">
-                <span>10%</span>
-                <span>20%</span>
-                <span>50%</span>
-              </div>
+      <!-- Hourly Forecast Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
+        <h2 class="text-xl font-bold text-white mb-4">Hourly Forecast (Next 12 Hours)</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-700">
+                <th class="text-left py-2 px-3 text-slate-400 font-semibold">Hour</th>
+                <th class="text-right py-2 px-3 text-slate-400 font-semibold">Price (₴/kWh)</th>
+                <th class="text-right py-2 px-3 text-slate-400 font-semibold">Solar (kW)</th>
+                <th class="text-right py-2 px-3 text-slate-400 font-semibold">Demand (kW)</th>
+                <th class="text-center py-2 px-3 text-slate-400 font-semibold">AI Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(hour, idx) in forecastHours" :key="idx" 
+                  :class="['border-b border-slate-800 hover:bg-slate-800 transition', 
+                           idx === 0 ? 'bg-slate-800' : '']">
+                <td class="py-2 px-3 font-semibold">{{ hour.time }}</td>
+                <td class="py-2 px-3 text-right" :class="hour.priceColor">{{ hour.price }}</td>
+                <td class="py-2 px-3 text-right text-yellow-400">{{ hour.solar }}</td>
+                <td class="py-2 px-3 text-right text-red-400">{{ hour.demand }}</td>
+                <td class="py-2 px-3 text-center">
+                  <span :class="['px-2 py-1 rounded-full text-xs font-semibold', hour.actionColor]">
+                    {{ hour.action }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 7-Day Summary -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
+        <h2 class="text-xl font-bold text-white mb-4">7-Day Cost Summary</h2>
+        <div class="h-64 bg-slate-800 rounded-lg p-4 flex items-end justify-around">
+          <!-- Daily bars -->
+          <div v-for="day in dailySummary" :key="day.date" class="flex flex-col items-center gap-2">
+            <div class="text-xs text-slate-400">{{ day.savings }}</div>
+            <div class="flex gap-1 items-end" style="height: 180px;">
+              <!-- Cost bar (gray) -->
+              <div class="w-4 bg-slate-600 rounded-t" :style="{ height: (day.cost / 5) + 'px' }"></div>
+              <!-- Savings bar (green) -->
+              <div class="w-4 bg-green-500 rounded-t" :style="{ height: (day.savings / 5) + 'px' }"></div>
             </div>
-            <div>
-              <label class="block text-slate-300 text-sm mb-2">Discharge Rate</label>
-              <select class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-white">
-                <option>Conservative (25 kW)</option>
-                <option selected>Balanced (40 kW)</option>
-                <option>Aggressive (50 kW)</option>
-              </select>
-            </div>
-            <button class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded mt-3">
-              ↓ Start Discharging
-            </button>
+            <div class="text-xs font-semibold text-slate-400">{{ day.date }}</div>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3 mt-4 text-sm">
+          <div class="flex items-center gap-2 px-3 py-2 bg-slate-800 rounded">
+            <div class="w-3 h-3 bg-slate-600 rounded"></div>
+            <span class="text-slate-400">Cost (₴)</span>
+          </div>
+          <div class="flex items-center gap-2 px-3 py-2 bg-slate-800 rounded">
+            <div class="w-3 h-3 bg-green-500 rounded"></div>
+            <span class="text-slate-400">Savings (₴)</span>
+          </div>
+          <div class="text-right px-3 py-2 bg-slate-800 rounded">
+            <p class="text-energy-400 font-bold">7-day: 55,316₴</p>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Today's Activity -->
-    <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
-      <h2 class="text-2xl font-bold text-white mb-6">Today's Activity (Feb 6)</h2>
-      
-      <div class="grid grid-cols-3 gap-4 mb-6">
-        <div class="bg-slate-800 rounded p-3">
-          <p class="text-slate-400 text-sm">Charge Cycles</p>
-          <p class="text-2xl font-bold text-energy-400">3</p>
-        </div>
-        <div class="bg-slate-800 rounded p-3">
-          <p class="text-slate-400 text-sm">Energy In</p>
-          <p class="text-2xl font-bold text-green-400">120 kWh</p>
-        </div>
-        <div class="bg-slate-800 rounded p-3">
-          <p class="text-slate-400 text-sm">Energy Out</p>
-          <p class="text-2xl font-bold text-yellow-400">110 kWh</p>
-        </div>
-      </div>
-
-      <div class="bg-slate-800 rounded p-4">
-        <p class="text-slate-300"><strong>Loss Rate:</strong> 10 kWh (8.3% typical for LiFePO4)</p>
-        <p class="text-slate-300 mt-2"><strong>Health:</strong> 98% | <strong>Cycles:</strong> 3,245 remaining</p>
-      </div>
-    </div>
-
-    <!-- Safety Settings -->
-    <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
-      <h2 class="text-2xl font-bold text-white mb-4">Safety & Limits</h2>
-      
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-slate-800 rounded p-3">
-          <p class="text-slate-400 text-xs mb-1">Max Charge</p>
-          <p class="text-lg font-bold text-white">50 kW</p>
-          <p class="text-xs text-green-400">✓ Safe</p>
-        </div>
-        <div class="bg-slate-800 rounded p-3">
-          <p class="text-slate-400 text-xs mb-1">Max Discharge</p>
-          <p class="text-lg font-bold text-white">50 kW</p>
-          <p class="text-xs text-green-400">✓ Safe</p>
-        </div>
-        <div class="bg-slate-800 rounded p-3">
-          <p class="text-slate-400 text-xs mb-1">Min Temp</p>
-          <p class="text-lg font-bold text-white">-10°C</p>
-          <p class="text-xs text-blue-400">Current: 22°C</p>
-        </div>
-        <div class="bg-slate-800 rounded p-3">
-          <p class="text-slate-400 text-xs mb-1">Max Temp</p>
-          <p class="text-lg font-bold text-white">55°C</p>
-          <p class="text-xs text-blue-400">Current: 22°C</p>
-        </div>
+      <!-- Footer navigation -->
+      <div class="flex gap-4 justify-center text-center mt-12 pt-8 border-t border-slate-800">
+        <NuxtLink to="/" class="bg-blue-700 hover:bg-blue-600 px-6 py-2 rounded-lg transition text-sm">
+          📊 Dashboard
+        </NuxtLink>
+        <NuxtLink to="/analytics" class="bg-blue-700 hover:bg-blue-600 px-6 py-2 rounded-lg transition text-sm">
+          📈 Analytics
+        </NuxtLink>
+        <NuxtLink to="/settings" class="bg-blue-700 hover:bg-blue-600 px-6 py-2 rounded-lg transition text-sm">
+          ⚙️ Settings
+        </NuxtLink>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
+
 definePageMeta({
   layout: 'default'
 })
+
+// Battery state
+const batterySOC = ref(75)
+
+// Current price (from real OREE data)
+const currentPrice = ref(11.63)
+
+// Price color and action based on range
+const priceColor = computed(() => {
+  const percent = (currentPrice.value / 20) * 100
+  if (percent < 33) return '#10b981' // Green
+  if (percent < 66) return '#eab308' // Yellow
+  return '#ef4444' // Red
+})
+
+const priceDashArray = computed(() => {
+  const percent = (currentPrice.value / 20) * 100
+  return (percent / 100) * 251.3
+})
+
+const priceAction = computed(() => {
+  const percent = (currentPrice.value / 20) * 100
+  if (percent < 33) return '🟢 Good for CHARGING'
+  if (percent < 66) return '🟡 HOLD Position'
+  return '🔴 SELL PREMIUM'
+})
+
+// Forecast data for next 12 hours
+const forecastHours = computed(() => [
+  { time: '14:00 (now)', price: '11.63₴', priceColor: 'text-yellow-400', solar: '12.5', demand: '42', action: 'HOLD', actionColor: 'bg-yellow-600 bg-opacity-30 text-yellow-400' },
+  { time: '15:00', price: '12.81₴', priceColor: 'text-red-400', solar: '14.2', demand: '45', action: 'SELL', actionColor: 'bg-green-600 bg-opacity-30 text-green-400' },
+  { time: '16:00', price: '13.44₴', priceColor: 'text-red-400', solar: '15.0', demand: '48', action: 'SELL', actionColor: 'bg-green-600 bg-opacity-30 text-green-400' },
+  { time: '17:00', price: '14.21₴', priceColor: 'text-red-400', solar: '12.8', demand: '50', action: 'SELL', actionColor: 'bg-green-600 bg-opacity-30 text-green-400' },
+  { time: '18:00', price: '12.95₴', priceColor: 'text-red-400', solar: '8.2', demand: '52', action: 'DISCHARGE', actionColor: 'bg-red-600 bg-opacity-30 text-red-400' },
+  { time: '19:00', price: '11.44₴', priceColor: 'text-yellow-400', solar: '2.1', demand: '48', action: 'DISCHARGE', actionColor: 'bg-red-600 bg-opacity-30 text-red-400' },
+  { time: '20:00', price: '10.12₴', priceColor: 'text-yellow-400', solar: '0.0', demand: '42', action: 'HOLD', actionColor: 'bg-slate-600 bg-opacity-30 text-slate-400' },
+  { time: '21:00', price: '8.76₴', priceColor: 'text-green-400', solar: '0.0', demand: '35', action: 'CHARGE', actionColor: 'bg-blue-600 bg-opacity-30 text-blue-400' },
+  { time: '22:00', price: '7.44₴', priceColor: 'text-green-400', solar: '0.0', demand: '30', action: 'CHARGE', actionColor: 'bg-blue-600 bg-opacity-30 text-blue-400' },
+  { time: '23:00', price: '6.89₴', priceColor: 'text-green-400', solar: '0.0', demand: '25', action: 'CHARGE', actionColor: 'bg-blue-600 bg-opacity-30 text-blue-400' },
+  { time: '00:00', price: '5.44₴', priceColor: 'text-green-400', solar: '0.0', demand: '20', action: 'CHARGE', actionColor: 'bg-blue-600 bg-opacity-30 text-blue-400' },
+  { time: '01:00', price: '5.12₴', priceColor: 'text-green-400', solar: '0.0', demand: '18', action: 'CHARGE', actionColor: 'bg-blue-600 bg-opacity-30 text-blue-400' },
+])
+
+// 7-day summary
+const dailySummary = [
+  { date: 'Feb 1', cost: 95.5, savings: 55.3 },
+  { date: 'Feb 2', cost: 87.2, savings: 52.1 },
+  { date: 'Feb 3', cost: 92.1, savings: 54.8 },
+  { date: 'Feb 4', cost: 98.3, savings: 58.2 },
+  { date: 'Feb 5', cost: 94.6, savings: 56.4 },
+  { date: 'Feb 6', cost: 91.2, savings: 54.9 },
+  { date: 'Feb 7', cost: 96.8, savings: 57.1 },
+]
+
+// Manual action handler
+const executeAction = (action: string) => {
+  console.log(`Executing action: ${action}`)
+  // In real implementation, this would trigger API call to change battery mode
+}
 </script>
+
+<style scoped>
+.energy-400 {
+  @apply text-emerald-400;
+}
+</style>
