@@ -3,12 +3,13 @@
 ## 🎯 What is MCP?
 
 **Model Context Protocol (MCP)** allows Codex CLI to:
-- Access your file system with context
-- Understand Nuxt UI framework structure
+- Access your **file system** with context
+- Understand **Nuxt framework** architecture & best practices
+- Access **Nuxt UI component** library
 - Integrate with GitHub
 - Perform web searches
 - Run tools and execute tests
-- All while maintaining code context
+- All while maintaining full code context
 
 ---
 
@@ -19,14 +20,21 @@
 Your MCP config is at: `~/.codex/config.toml`
 
 ```toml
-# Remote: Nuxt UI MCP Server
+# Remote: Nuxt Framework (docs, patterns, best practices)
+[[mcp.servers]]
+name = "nuxt"
+command = "npx"
+args = ["mcp-remote", "https://nuxt.com/mcp"]
+enabled = true
+
+# Remote: Nuxt UI Components (UCard, UButton, etc.)
 [[mcp.servers]]
 name = "nuxt-ui"
 command = "npx"
 args = ["mcp-remote", "https://ui.nuxt.com/mcp"]
 enabled = true
 
-# Local: Filesystem access
+# Local: Filesystem (your project files)
 [[mcp.servers]]
 name = "filesystem"
 command = "npx"
@@ -49,288 +57,315 @@ npm run dev
 # Navigate to dashboard directory
 cd dashboard
 
-# Now use Codex - it will have Nuxt UI context via MCP
-codex "Create a component for real-time price display"
-codex "Add dark mode toggle to settings page"
-codex "Fix responsive layout on mobile"
-codex "Implement battery charge/discharge animation"
+# Now Codex has FULL CONTEXT:
+# - Nuxt framework knowledge
+# - Nuxt UI components
+# - Your project files
+# - Best practices
+
+codex "Create a composable for real-time price updates"
+codex "Build a page using Nuxt server routes"
+codex "Generate Nuxt UI components for battery control"
 ```
 
 ---
 
 ## 💡 Example Use Cases
 
-### 1. Generate New Components
+### 1. Generate Components with Nuxt Best Practices
 ```bash
-codex "Create a Vue 3 component called <PriceChart> with:
-- Real-time price data visualization
-- Chart.js for smooth animations
+codex "Create a Vue 3 component using Nuxt patterns:
+- Use Nuxt composable for logic
+- Nuxt UI components (UCard, UButton)
+- Chart.js for price visualization
 - Dark theme with tailwind
-- Responsive on mobile
-- Full TypeScript types
-- Production-ready code"
+- TypeScript throughout
+- Production-ready"
 ```
 
-**Result:** Codex generates complete component with:
-- TypeScript types
-- Event handlers
-- Tailwind styling
-- Accessibility features
-- Dark mode support
-- Chart integration
-
-### 2. Refactor Existing Code
-```bash
-codex "Refactor all API routes in server/api/ to:
-- Use consistent error handling
-- Add request logging
-- Validate all inputs
-- Return typed responses"
-```
-
-**Result:** Updates all 4 endpoints with:
-- Unified error patterns
-- Request logging
-- Response validation
+**Result:** Component with:
+- Proper Nuxt composable pattern
+- Nuxt UI integration
 - Type safety
+- Tailwind styling
+- Best practices
 
-### 3. Debug Issues
+### 2. Create Nuxt Pages with Auto-Routing
 ```bash
-codex "The battery control panel layout breaks on mobile. 
-Analyze the responsive design and provide a fix using Tailwind"
+codex "Create new Nuxt page /pages/forecasting.vue:
+- Fetch predictions from /server/api/forecast
+- Display with Nuxt UI
+- Use Pinia store for state
+- Add to nav automatically
+- Dark theme"
 ```
 
-**Result:** Analyzes the component and:
-- Identifies responsive issues
-- Suggests grid/flex changes
-- Tests on mobile sizes
-- Provides working fix
+**Result:**
+- Auto-routed page
+- Server integration
+- Store setup
+- Full styling
 
-### 4. Add Features
+### 3. Build Nuxt Server Routes
 ```bash
-codex "Add a new page at /advanced-settings with:
-- Model tuning parameters
-- Risk tolerance slider
-- Data export options
-- Match the existing dark theme UI"
+codex "Create server route /server/api/predictions.ts:
+- Validates input params
+- Calls ML endpoint
+- Returns typed response
+- Error handling
+- Following Nuxt conventions"
 ```
 
-**Result:** Creates complete page with:
-- Routing setup
-- Component structure
-- Styling consistency
-- API integration
+**Result:** Production-ready API route
 
-### 5. Use Nuxt UI Components
+### 4. Create Nuxt Composables
 ```bash
-codex "Create a settings form using Nuxt UI components:
-- UInput for text fields
-- UToggle for boolean settings
-- USelect for dropdowns
-- UButton for submit
-- Dark theme styling"
+codex "Create composable useBatteryStatus:
+- Fetches battery data
+- Real-time updates
+- Pinia store integration
+- Error handling
+- Reactive state"
 ```
 
-**Result:** Uses Nuxt UI components with:
-- Proper Nuxt UI API
-- Dark theme integration
-- Form validation
-- Accessibility built-in
+**Result:** Reusable composable
+
+### 5. Refactor with Nuxt Patterns
+```bash
+codex "Refactor all pages to use:
+- Nuxt composables for shared logic
+- Auto-imported components
+- Proper Nuxt directory structure
+- Server routes instead of API layer
+- Full TypeScript types"
+```
+
+**Result:** Code following Nuxt best practices
 
 ---
 
 ## 🔗 MCP Servers Available
 
-### ✅ Enabled
+### ✅ Enabled (3 Servers)
 
-**nuxt-ui** (Remote) - Nuxt UI framework context
+**nuxt** (Remote) - Nuxt Framework Documentation
+- Official Nuxt documentation
+- Framework patterns & best practices
+- Composition API patterns
+- Server routes, middleware, etc.
+- Auto-imports & directory structure
+
 ```bash
-# Generate components using Nuxt UI
-codex "Create a UCard-based component for battery status"
-codex "Use UButton and UInput from Nuxt UI in settings"
-codex "Generate a Nuxt UI form with validation"
+codex "How do Nuxt composables work?"
+codex "What's the difference between middleware and plugins?"
+codex "Create a Nuxt server middleware for logging"
 ```
 
-**filesystem** (Local) - File system access
+**nuxt-ui** (Remote) - Nuxt UI Component Library
+- 50+ ready-made components
+- UCard, UButton, UInput, UForm, etc.
+- Dark mode support
+- Tailwind integration
+- Accessibility built-in
+
 ```bash
-codex "Show me all .vue files in the pages directory"
-codex "How many lines of code in dashboard/pages/index.vue?"
-codex "List all TypeScript files in the project"
+codex "What Nuxt UI components exist for forms?"
+codex "Create a data table with Nuxt UI"
+codex "Build dashboard using UCard components"
+```
+
+**filesystem** (Local) - Project File Access
+- Your project structure
+- Current code analysis
+- File-aware recommendations
+- Cross-file refactoring
+
+```bash
+codex "Show me the project structure"
+codex "How many Vue components do we have?"
+codex "Refactor all pages at once"
 ```
 
 ### 🔲 Disabled (Can Enable)
 
-**github** (Remote) - GitHub integration
-- Features: Issue creation, PR automation, commit history
-- Enable in `~/.codex/config.toml`
+**github** (Remote) - GitHub Integration
+- Issue/PR automation
+- Commit message generation
+- Repository analysis
 
-**brave-search** (Remote) - Web search
-- Features: Search documentation, find examples
-- Enable in `~/.codex/config.toml`
+**brave-search** (Remote) - Web Search
+- Documentation lookup
+- Example finding
+- Package research
 
 ---
 
-## 📋 Pro Tips
+## 🎓 Codex + MCP Workflows
 
-### Tip 1: Combine MCP Context
-```bash
-# Use nuxt-ui + filesystem context together
-codex "Create a complete feature:
-1. New API endpoint for battery forecasting
-2. Vue component using Nuxt UI to display forecast
-3. Pinia store for state management
-4. Add route to navigation menu"
-```
+### Workflow 1: Add New Feature with Full Nuxt Context
 
-### Tip 2: Nuxt UI Specific
 ```bash
-# Leverage Nuxt UI components
-codex "Build a dashboard using Nuxt UI:
-- UCard for metric cards
-- UButton for actions
-- UInput for forms
-- UToggle for settings
-- Dark theme throughout"
-```
-
-### Tip 3: Local Context Matters
-```bash
-# Go to dashboard directory first
 cd dashboard
 
-# Now Codex has Nuxt context from remote MCP
-codex "your task"  # More accurate than from root
-```
+# 1. Ask about Nuxt pattern
+codex "How should I structure a new feature in Nuxt?"
 
-### Tip 4: Chain Requests
-```bash
-# First: Understand structure
-codex "Explain the Nuxt UI component architecture"
+# 2. Generate the page
+codex "Create /pages/advanced-settings.vue with:
+- Nuxt composables for data
+- Nuxt UI forms
+- Server routes for API
+- Store for state
+- Dark theme"
 
-# Then: Generate code
-codex "Create a custom UCard variant for energy metrics"
+# 3. Create composable
+codex "Create composable for advanced settings logic"
 
-# Finally: Integrate
-codex "Add the new component to the dashboard"
-```
-
-### Tip 5: Remote MCP Benefits
-```bash
-# No need to install - already hosted
-# Always up-to-date
-# No permission issues
-# Works everywhere
-codex "I want to use the latest Nuxt UI features"
-```
-
----
-
-## 🔐 Environment Variables
-
-Remote MCP servers don't require env vars (hosted online).
-
-For GitHub integration (optional):
-```powershell
-# Enable GitHub if needed
-$env:GITHUB_TOKEN = "your-github-token"
-
-# Then enable in ~/.codex/config.toml
-# [[mcp.servers]]
-# name = "github"
-# enabled = true
-```
-
----
-
-## 🎓 Learning Path
-
-### Beginner
-1. Generate components with Nuxt UI
-2. Use Tailwind for styling
-3. Add Vue interactivity
-
-### Intermediate
-1. Generate complete features (page + API + store)
-2. Use Nuxt UI for consistent design
-3. Refactor existing code
-
-### Advanced
-1. Complex multi-file features
-2. Automated component generation
-3. CI/CD pipeline setup
-4. Performance optimization
-
----
-
-## 🚀 Workflow Example: Add Forecasting with Nuxt UI
-
-```bash
-# 1. Start dev server
-cd dashboard
-npm run dev
-
-# 2. Open new terminal, navigate to dashboard
-cd dashboard
-
-# 3. Ask Codex to add forecasting using Nuxt UI
-codex "Create a price forecasting feature:
-1. New API endpoint /api/forecast (returns 7-day predictions)
-2. New page /forecasting with:
-   - UCard component for header
-   - UButton actions
-   - Chart.js for visualization
-   - Dark theme styling
-3. Update dashboard to show 'predicted savings'
-4. All production-ready, TypeScript, Nuxt UI styled"
-
-# 4. Apply generated code
-# Review -> Copy -> Paste into files
+# 4. Create API route
+codex "Create /server/api/settings/save.ts"
 
 # 5. Test
 npm run dev
-# Visit http://localhost:3000/forecasting
+# Visit http://localhost:3000/advanced-settings
+```
+
+### Workflow 2: Refactor Existing Code
+
+```bash
+cd dashboard
+
+# Understand current structure
+codex "Analyze the current project structure"
+
+# Plan refactor
+codex "How should we restructure using Nuxt best practices?"
+
+# Execute refactor
+codex "Refactor all pages to use composables"
+codex "Move logic from components to server routes"
+codex "Update API layer to use proper Nuxt patterns"
+```
+
+### Workflow 3: Build Complete Feature
+
+```bash
+# Start with feature request
+codex "Build price forecasting feature:
+1. /pages/forecasting.vue page
+2. usePriceForecast composable
+3. /server/api/forecast endpoint
+4. Nuxt UI components for display
+5. Pinia store for state
+6. Tests for API"
+```
+
+---
+
+## 📚 MCP + Nuxt Context Examples
+
+### Understanding Nuxt Patterns
+```bash
+codex "Explain Nuxt's auto-import system and give examples"
+codex "How do server routes differ from client API calls?"
+codex "Show me the recommended project structure"
+```
+
+### Building with Nuxt UI
+```bash
+codex "List all Nuxt UI form components"
+codex "Create a complex form with validation using Nuxt UI"
+codex "How do I customize Nuxt UI components?"
+```
+
+### Nuxt Best Practices
+```bash
+codex "What are Nuxt middleware and when should I use them?"
+codex "Explain composables vs useAsync"
+codex "How should I handle authentication in Nuxt?"
 ```
 
 ---
 
 ## 🌐 Remote MCP vs Local
 
-| Feature | Remote (Nuxt UI) | Local (Filesystem) |
-|---------|------------------|-------------------|
-| Installation | ✓ None needed | ✗ Requires npm |
-| Updates | ✓ Always latest | ✗ Manual updates |
-| Permissions | ✓ No issues | ✗ May require sudo |
-| Network | ✗ Requires internet | ✓ Offline capable |
-| Speed | ~ 1-2s overhead | ✓ Instant |
-| Content | ✓ Official docs | ✓ Your files |
+| Feature | Remote Nuxt | Remote Nuxt UI | Local Filesystem |
+|---------|-------------|----------------|------------------|
+| **Source** | nuxt.com | ui.nuxt.com | Your files |
+| **Content** | Framework docs | Components | Project code |
+| **Updates** | Always latest | Always latest | Real-time |
+| **Internet** | Required | Required | Not needed |
+| **Setup** | Zero | Zero | npm install |
+| **Speed** | 1-2s overhead | 1-2s overhead | Instant |
 
-**Best practice:** Use both!
-- Remote for frameworks (Nuxt UI)
-- Local for project files (filesystem)
+**Best Practice:** Use all 3!
+- Remote Nuxt for framework knowledge
+- Remote Nuxt UI for components
+- Local filesystem for your code
 
 ---
 
-## 📚 Resources
+## 🚀 Performance Tips
 
-- **MCP Protocol:** https://modelcontextprotocol.io/
+1. **Navigate to project first:**
+   ```bash
+   cd dashboard
+   codex "your task"  # Better context
+   ```
+
+2. **Be specific in requests:**
+   ```bash
+   # Good
+   codex "Create /pages/settings.vue with Nuxt composable pattern"
+   
+   # Less specific
+   codex "Create settings page"
+   ```
+
+3. **Ask about patterns first:**
+   ```bash
+   codex "How should I structure this feature?"
+   # Then use the answer for generation
+   ```
+
+4. **Chain requests for complex features:**
+   ```bash
+   codex "Create page..."
+   codex "Create composable..."
+   codex "Create API route..."
+   # Build incrementally
+   ```
+
+---
+
+## 📖 Resources
+
+- **Nuxt:** https://nuxt.com/
 - **Nuxt UI:** https://ui.nuxt.com/
-- **Nuxt Docs:** https://nuxt.com/
+- **MCP Protocol:** https://modelcontextprotocol.io/
 - **Codex CLI:** `codex --help`
-- **Config File:** `~/.codex/config.toml`
 
 ---
 
 ## ✅ Status
 
-- ✅ MCP configured in `~/.codex/config.toml`
-- ✅ nuxt-ui remote server enabled
-- ✅ filesystem server enabled
+- ✅ **nuxt** MCP enabled (Nuxt framework context)
+- ✅ **nuxt-ui** MCP enabled (Component library)
+- ✅ **filesystem** MCP enabled (Project access)
 - ✅ Ready to use `codex` command
-- ✅ No npm install needed for remote servers
+- ✅ Full Nuxt context available
 
-**Next:** Run `codex "your task"` in dashboard directory!
+**Start developing:**
+```bash
+cd dashboard
+npm install
+npm run dev
+
+# In new terminal:
+cd dashboard
+codex "your task here"
+```
 
 ---
 
-**Happy coding with Codex + MCP! 🚀**
-**Remote Nuxt UI server = instant Nuxt UI context! 🎨**
+**Happy coding with Codex + Nuxt! 🚀**
+**Three MCP servers = full framework context! 🎉**
