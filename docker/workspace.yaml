@@ -1,0 +1,8 @@
+# Docker workspace configuration
+
+load_from:
+  - python_module:
+      module_name: src.definitions
+      attribute: defs
+      working_directory: /app
+      location_name: smart_energy_v2
