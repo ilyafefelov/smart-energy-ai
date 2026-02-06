@@ -45,12 +45,19 @@
         <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
           <p class="text-slate-400 text-sm mb-3">Battery SOC</p>
           <div class="text-center">
-            <div class="text-4xl font-bold text-energy-400 mb-2">75%</div>
-            <div class="w-full bg-slate-700 rounded-full h-3 mb-3">
-              <div class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full" 
-                   style="width: 75%"></div>
+            <div v-if="error" class="text-red-400 text-sm mb-2">⚠️ {{ error }}</div>
+            <div v-else-if="loading" class="text-yellow-400 text-sm mb-2">⏳ Loading...</div>
+            <div v-else>
+              <div class="text-4xl font-bold text-energy-400 mb-2">{{ Math.round(batterySOC) }}%</div>
+              <div class="w-full bg-slate-700 rounded-full h-3 mb-3">
+                <div class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full" 
+                     :style="{ width: batterySOC + '%' }"></div>
+              </div>
+              <p class="text-slate-400 text-xs">{{ status?.availableToDraw.toFixed(1) || '0.0' }} / {{ status?.capacity || 150 }} kWh</p>
+              <p class="text-slate-500 text-xs mt-1">
+                Updated: {{ status?.lastUpdate ? new Date(status.lastUpdate).toLocaleTimeString() : 'N/A' }}
+              </p>
             </div>
-            <p class="text-slate-400 text-xs">112.5 / 150 kWh</p>
           </div>
         </div>
 
@@ -116,7 +123,7 @@
       <!-- Battery SOC Trajectory -->
       <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
         <h2 class="text-xl font-bold text-white mb-4">Battery Trajectory (Next 48 Hours)</h2>
-        <div class="h-80 bg-slate-800 rounded-lg p-4 relative">
+        <div class="h-80 bg-slate-800 rounded-lg p-4 relative" @mouseleave="activeBatteryHour = null">
           <!-- SVG Chart -->
           <svg class="w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid meet">
             <!-- Grid background -->
@@ -154,6 +161,83 @@
             <text x="450" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">24h</text>
             <text x="650" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">36h</text>
             <text x="950" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">48h</text>
+
+            <!-- Interactive layer (invisible rects for each hour) -->
+            <g class="cursor-pointer">
+              <rect v-for="(hour, idx) in 48"
+                    :key="`hour-battery-${idx}`"
+                    :x="50 + idx * 18.75"
+                    y="0"
+                    width="20"
+                    height="300"
+                    fill="transparent"
+                    @mouseenter="activeBatteryHour = idx"
+              />
+            </g>
+
+            <!-- Tooltip for battery chart -->
+            <g v-if="activeBatteryHour !== null">
+              <!-- Vertical line at cursor -->
+              <line
+                :x1="50 + activeBatteryHour * 18.75 + 10"
+                y1="0"
+                :x2="50 + activeBatteryHour * 18.75 + 10"
+                y2="300"
+                stroke="#64748b"
+                stroke-width="1"
+                stroke-dasharray="5,5"
+              />
+              
+              <!-- Tooltip box -->
+              <rect
+                :x="Math.max(100, 50 + activeBatteryHour * 18.75 - 80)"
+                :y="30"
+                width="160"
+                height="110"
+                fill="#1e293b"
+                stroke="#64748b"
+                stroke-width="1"
+                rx="4"
+              />
+              
+              <!-- Tooltip text -->
+              <text
+                :x="Math.max(110, 50 + activeBatteryHour * 18.75 - 70)"
+                :y="55"
+                fill="#10b981"
+                font-weight="bold"
+                font-size="14"
+              >
+                Hour {{ activeBatteryHour }}: {{ getBatteryTooltipTime(activeBatteryHour) }}
+              </text>
+              
+              <text
+                :x="Math.max(110, 50 + activeBatteryHour * 18.75 - 70)"
+                :y="75"
+                fill="#fff"
+                font-size="13"
+              >
+                SOC: {{ getBatterySocForHour(activeBatteryHour) }}%
+              </text>
+              
+              <text
+                :x="Math.max(110, 50 + activeBatteryHour * 18.75 - 70)"
+                :y="95"
+                fill="#94a3b8"
+                font-size="12"
+              >
+                Status: {{ getBatteryStatusForHour(activeBatteryHour) }}
+              </text>
+
+              <text
+                :x="Math.max(110, 50 + activeBatteryHour * 18.75 - 70)"
+                :y="115"
+                fill="#94a3b8"
+                font-size="12"
+              >
+                Confidence: 82%
+              </text>
+            </g>
           </svg>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-sm">
@@ -179,6 +263,129 @@
       <!-- Hourly Forecast Table -->
       <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
         <h2 class="text-xl font-bold text-white mb-4">Hourly Forecast (Next 12 Hours)</h2>
+        <div class="h-80 bg-slate-800 rounded-lg p-4 relative mb-4" @mouseleave="activePriceHour = null">
+          <!-- SVG Price Chart -->
+          <svg class="w-full h-full" viewBox="0 0 1000 300" preserveAspectRatio="xMidYMid meet">
+            <!-- Grid background -->
+            <defs>
+              <pattern id="grid-price" width="100" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 100 0 L 0 0 0 30" fill="none" stroke="#334155" stroke-width="0.5" />
+              </pattern>
+            </defs>
+            <rect width="1000" height="300" fill="url(#grid-price)" />
+
+            <!-- Price zones -->
+            <!-- Red zone (expensive, >13₴) -->
+            <rect x="50" y="0" width="900" height="60" fill="#dc26262e" />
+            <text x="20" y="30" font-size="12" fill="#ef4444">13₴</text>
+
+            <!-- Yellow zone (moderate, 9-13₴) -->
+            <rect x="50" y="60" width="900" height="120" fill="#eab30844" />
+            <text x="20" y="120" font-size="12" fill="#eab308">9₴</text>
+
+            <!-- Green zone (cheap, <9₴) -->
+            <rect x="50" y="180" width="900" height="100" fill="#10b98166" />
+            <text x="20" y="240" font-size="12" fill="#10b981">0₴</text>
+
+            <!-- Price line -->
+            <polyline points="50,140 150,120 250,100 350,90 450,80 550,120 650,140 750,160 850,180 950,200" 
+                      fill="none" stroke="#3b82f6" stroke-width="3" />
+
+            <!-- Hour labels -->
+            <text x="50" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">14:00</text>
+            <text x="250" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">16:00</text>
+            <text x="450" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">18:00</text>
+            <text x="650" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">20:00</text>
+            <text x="950" y="290" font-size="11" fill="#94a3b8" text-anchor="middle">01:00</text>
+
+            <!-- Interactive layer (invisible rects for each hour) -->
+            <g class="cursor-pointer">
+              <rect v-for="(hour, idx) in 12"
+                    :key="`hour-price-${idx}`"
+                    :x="50 + idx * 75"
+                    y="0"
+                    width="75"
+                    height="300"
+                    fill="transparent"
+                    @mouseenter="activePriceHour = idx"
+              />
+            </g>
+
+            <!-- Tooltip for price chart -->
+            <g v-if="activePriceHour !== null">
+              <!-- Vertical line at cursor -->
+              <line
+                :x1="50 + activePriceHour * 75 + 37.5"
+                y1="0"
+                :x2="50 + activePriceHour * 75 + 37.5"
+                y2="300"
+                stroke="#64748b"
+                stroke-width="1"
+                stroke-dasharray="5,5"
+              />
+              
+              <!-- Tooltip box -->
+              <rect
+                :x="Math.max(100, 50 + activePriceHour * 75 - 60)"
+                :y="30"
+                width="160"
+                height="130"
+                fill="#1e293b"
+                stroke="#64748b"
+                stroke-width="1"
+                rx="4"
+              />
+              
+              <!-- Tooltip text -->
+              <text
+                :x="Math.max(110, 50 + activePriceHour * 75 - 50)"
+                :y="55"
+                fill="#10b981"
+                font-weight="bold"
+                font-size="14"
+              >
+                {{ getPriceTooltipTime(activePriceHour) }}
+              </text>
+              
+              <text
+                :x="Math.max(110, 50 + activePriceHour * 75 - 50)"
+                :y="75"
+                fill="#fff"
+                font-size="13"
+              >
+                Price: {{ getPriceForHour(activePriceHour) }}₴/kWh
+              </text>
+              
+              <text
+                :x="Math.max(110, 50 + activePriceHour * 75 - 50)"
+                :y="95"
+                fill="#94a3b8"
+                font-size="12"
+              >
+                Action: {{ getActionForHour(activePriceHour) }}
+              </text>
+
+              <text
+                :x="Math.max(110, 50 + activePriceHour * 75 - 50)"
+                :y="115"
+                fill="#94a3b8"
+                font-size="12"
+              >
+                Confidence: 78%
+              </text>
+
+              <text
+                :x="Math.max(110, 50 + activePriceHour * 75 - 50)"
+                :y="135"
+                fill="#94a3b8"
+                font-size="11"
+              >
+                Est. Gain: {{ getEstimatedGain(activePriceHour) }}₴
+              </text>
+            </g>
+          </svg>
+        </div>
+
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
@@ -263,8 +470,11 @@ definePageMeta({
   layout: 'default'
 })
 
-// Battery state
-const batterySOC = ref(75)
+// Use real battery data from API
+const { status, loading, error } = useBatteryStatus()
+
+// Get SOC from status or use fallback
+const batterySOC = computed(() => status.value?.soc ?? 75)
 
 // Current price (from real OREE data)
 const currentPrice = ref(11.63)

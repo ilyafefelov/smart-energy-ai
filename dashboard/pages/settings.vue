@@ -109,7 +109,7 @@
         <div v-if="activeTab === 'general'" class="space-y-6">
           <div>
             <label class="block text-slate-300 font-semibold mb-2">Location / Site Name</label>
-            <input v-model="settings.siteName" 
+            <input v-model="settings.value.general.siteName" 
                    type="text" 
                    placeholder="e.g., Factory #1, Warehouse A"
                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-energy-400 focus:outline-none">
@@ -118,7 +118,7 @@
 
           <div>
             <label class="block text-slate-300 font-semibold mb-2">Timezone</label>
-            <select v-model="settings.timezone" 
+            <select v-model="settings.value.general.timezone" 
                     class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
               <option>Europe/Kiev (GMT+2)</option>
               <option>Europe/London (GMT+0)</option>
@@ -129,7 +129,7 @@
 
           <div>
             <label class="block text-slate-300 font-semibold mb-2">Currency</label>
-            <select v-model="settings.currency" 
+            <select v-model="settings.value.general.currency" 
                     class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
               <option value="UAH">Ukrainian Hryvnia (₴)</option>
               <option value="USD">US Dollar ($)</option>
@@ -142,11 +142,11 @@
               <p class="text-white font-semibold">Enable Real-Time Notifications</p>
               <p class="text-xs text-slate-400 mt-1">Get alerts for trading opportunities and model updates</p>
             </div>
-            <button @click="settings.notificationsEnabled = !settings.notificationsEnabled" 
+            <button @click="settings.value.general.notificationsEnabled = !settings.value.general.notificationsEnabled" 
                     :class="['relative inline-flex h-8 w-14 items-center rounded-full transition', 
-                             settings.notificationsEnabled ? 'bg-green-600' : 'bg-slate-700']">
+                             settings.value.general.notificationsEnabled ? 'bg-green-600' : 'bg-slate-700']">
               <span :class="['inline-block h-6 w-6 transform rounded-full bg-white transition', 
-                            settings.notificationsEnabled ? 'translate-x-7' : 'translate-x-1']"></span>
+                            settings.value.general.notificationsEnabled ? 'translate-x-7' : 'translate-x-1']"></span>
             </button>
           </div>
         </div>
@@ -161,13 +161,13 @@
           <div>
             <label class="block text-slate-300 font-semibold mb-2">Total Battery Capacity (kWh)</label>
             <div class="flex gap-4">
-              <input v-model.number="settings.battery.capacity" 
+              <input v-model.number="settings.value.battery.capacity" 
                      type="number" 
                      min="10" 
                      max="1000"
                      class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
               <div class="bg-slate-800 rounded-lg px-4 py-2 text-slate-400 min-w-24 flex items-center">
-                {{ settings.battery.capacity }} kWh
+                {{ settings.value.battery.capacity }} kWh
               </div>
             </div>
             <p class="text-xs text-slate-400 mt-1">Maximum energy storage capacity of your battery system</p>
@@ -176,13 +176,13 @@
           <div>
             <label class="block text-slate-300 font-semibold mb-2">Minimum Safe SOC (State of Charge)</label>
             <div class="flex gap-4">
-              <input v-model.number="settings.battery.minSOC" 
+              <input v-model.number="settings.value.battery.minSOC" 
                      type="number" 
                      min="0" 
                      max="100"
                      class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
               <div class="bg-slate-800 rounded-lg px-4 py-2 text-slate-400 min-w-16 flex items-center">
-                {{ settings.battery.minSOC }}%
+                {{ settings.value.battery.minSOC }}%
               </div>
             </div>
             <p class="text-xs text-slate-400 mt-1">Battery won't discharge below this level (safety reserve)</p>
@@ -191,13 +191,13 @@
           <div>
             <label class="block text-slate-300 font-semibold mb-2">Maximum Charge Rate (kW)</label>
             <div class="flex gap-4">
-              <input v-model.number="settings.battery.maxChargeRate" 
+              <input v-model.number="settings.value.battery.maxChargeRate" 
                      type="number" 
                      min="1" 
                      max="500"
                      class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
               <div class="bg-slate-800 rounded-lg px-4 py-2 text-slate-400 min-w-20 flex items-center">
-                {{ settings.battery.maxChargeRate }} kW
+                {{ settings.value.battery.maxChargeRate }} kW
               </div>
             </div>
             <p class="text-xs text-slate-400 mt-1">Maximum power input to battery (inverter limit)</p>
@@ -206,13 +206,13 @@
           <div>
             <label class="block text-slate-300 font-semibold mb-2">Maximum Discharge Rate (kW)</label>
             <div class="flex gap-4">
-              <input v-model.number="settings.battery.maxDischargeRate" 
+              <input v-model.number="settings.value.battery.maxDischargeRate" 
                      type="number" 
                      min="1" 
                      max="500"
                      class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
               <div class="bg-slate-800 rounded-lg px-4 py-2 text-slate-400 min-w-20 flex items-center">
-                {{ settings.battery.maxDischargeRate }} kW
+                {{ settings.value.battery.maxDischargeRate }} kW
               </div>
             </div>
             <p class="text-xs text-slate-400 mt-1">Maximum power output from battery</p>
@@ -333,15 +333,15 @@
                   <p class="text-white font-semibold">🔴 High Price Alert</p>
                   <p class="text-xs text-slate-400 mt-1">Notify when price exceeds threshold (sell opportunity)</p>
                 </div>
-                <button @click="settings.notifications.highPrice = !settings.notifications.highPrice" 
+                <button @click="settings.value.notifications.highPrice = !settings.value.notifications.highPrice" 
                         :class="['relative inline-flex h-6 w-11 items-center rounded-full transition', 
-                                 settings.notifications.highPrice ? 'bg-red-600' : 'bg-slate-700']">
+                                 settings.value.notifications.highPrice ? 'bg-red-600' : 'bg-slate-700']">
                   <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition', 
-                                settings.notifications.highPrice ? 'translate-x-6' : 'translate-x-1']"></span>
+                                settings.value.notifications.highPrice ? 'translate-x-6' : 'translate-x-1']"></span>
                 </button>
               </div>
-              <div v-if="settings.notifications.highPrice" class="flex gap-2">
-                <input v-model.number="settings.notifications.highPriceThreshold" 
+              <div v-if="settings.value.notifications.highPrice" class="flex gap-2">
+                <input v-model.number="settings.value.notifications.highPriceThreshold" 
                        type="number" 
                        placeholder="₴/kWh"
                        class="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-1 text-sm text-white placeholder-slate-500 focus:border-energy-400">
@@ -356,15 +356,15 @@
                   <p class="text-white font-semibold">🟢 Low Price Alert</p>
                   <p class="text-xs text-slate-400 mt-1">Notify when price drops (buy opportunity)</p>
                 </div>
-                <button @click="settings.notifications.lowPrice = !settings.notifications.lowPrice" 
+                <button @click="settings.value.notifications.lowPrice = !settings.value.notifications.lowPrice" 
                         :class="['relative inline-flex h-6 w-11 items-center rounded-full transition', 
-                                 settings.notifications.lowPrice ? 'bg-green-600' : 'bg-slate-700']">
+                                 settings.value.notifications.lowPrice ? 'bg-green-600' : 'bg-slate-700']">
                   <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition', 
-                                settings.notifications.lowPrice ? 'translate-x-6' : 'translate-x-1']"></span>
+                                settings.value.notifications.lowPrice ? 'translate-x-6' : 'translate-x-1']"></span>
                 </button>
               </div>
-              <div v-if="settings.notifications.lowPrice" class="flex gap-2">
-                <input v-model.number="settings.notifications.lowPriceThreshold" 
+              <div v-if="settings.value.notifications.lowPrice" class="flex gap-2">
+                <input v-model.number="settings.value.notifications.lowPriceThreshold" 
                        type="number" 
                        placeholder="₴/kWh"
                        class="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-1 text-sm text-white placeholder-slate-500 focus:border-energy-400">
@@ -379,11 +379,11 @@
                   <p class="text-white font-semibold">🤖 Model Training Complete</p>
                   <p class="text-xs text-slate-400 mt-1">Notify when retraining finishes</p>
                 </div>
-                <button @click="settings.notifications.modelComplete = !settings.notifications.modelComplete" 
+                <button @click="settings.value.notifications.modelComplete = !settings.value.notifications.modelComplete" 
                         :class="['relative inline-flex h-6 w-11 items-center rounded-full transition', 
-                                 settings.notifications.modelComplete ? 'bg-blue-600' : 'bg-slate-700']">
+                                 settings.value.notifications.modelComplete ? 'bg-blue-600' : 'bg-slate-700']">
                   <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition', 
-                                settings.notifications.modelComplete ? 'translate-x-6' : 'translate-x-1']"></span>
+                                settings.value.notifications.modelComplete ? 'translate-x-6' : 'translate-x-1']"></span>
                 </button>
               </div>
             </div>
@@ -395,11 +395,11 @@
                   <p class="text-white font-semibold">⚠️ System Alerts</p>
                   <p class="text-xs text-slate-400 mt-1">Battery low, grid outages, errors</p>
                 </div>
-                <button @click="settings.notifications.systemAlerts = !settings.notifications.systemAlerts" 
+                <button @click="settings.value.notifications.systemAlerts = !settings.value.notifications.systemAlerts" 
                         :class="['relative inline-flex h-6 w-11 items-center rounded-full transition', 
-                                 settings.notifications.systemAlerts ? 'bg-orange-600' : 'bg-slate-700']">
+                                 settings.value.notifications.systemAlerts ? 'bg-orange-600' : 'bg-slate-700']">
                   <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition', 
-                                settings.notifications.systemAlerts ? 'translate-x-6' : 'translate-x-1']"></span>
+                                settings.value.notifications.systemAlerts ? 'translate-x-6' : 'translate-x-1']"></span>
                 </button>
               </div>
             </div>
@@ -437,36 +437,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useSettings } from '#app'
 
 definePageMeta({
   layout: 'default'
 })
 
+// Load composable
+const { settings: composableSettings, saveSettings: composableSaveSettings, resetSettings: composableReset, loadSettings: composableLoad } = useSettings()
+
 // Active tab
 const activeTab = ref('general')
 
-// Settings state
-const settings = reactive({
-  siteName: 'Factory #1',
-  timezone: 'Europe/Kiev (GMT+2)',
-  currency: 'UAH',
-  notificationsEnabled: true,
-  battery: {
-    capacity: 150,
-    minSOC: 15,
-    maxChargeRate: 50,
-    maxDischargeRate: 50
-  },
-  notifications: {
-    highPrice: true,
-    highPriceThreshold: 13.0,
-    lowPrice: true,
-    lowPriceThreshold: 7.0,
-    modelComplete: true,
-    systemAlerts: true
-  }
-})
+// Settings state - use composable settings directly
+const settings = composableSettings
 
 // Save status
 const isSaving = ref(false)
@@ -486,21 +471,25 @@ const retraining = reactive({
   type: '' // 'quick' or 'full'
 })
 
-// Save settings
+// Save settings - use composable with real API
 const saveSettings = async () => {
   isSaving.value = true
   
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 800))
+  const result = await composableSaveSettings(settings.value)
   
-  saveStatus.success = true
-  saveStatus.message = '✅ Settings saved successfully!'
+  if (result.success) {
+    saveStatus.success = true
+    saveStatus.message = '✅ Settings saved and will persist on reload!'
+  } else {
+    saveStatus.success = false
+    saveStatus.message = `❌ Save failed: ${result.error}`
+  }
+  
   saveStatus.show = true
+  isSaving.value = false
   
   // Show retraining proposal
   showRetrainingProposal.value = true
-  
-  isSaving.value = false
   
   // Auto-hide success message after 5 seconds
   setTimeout(() => {
@@ -510,21 +499,20 @@ const saveSettings = async () => {
 
 // Reset settings
 const resetSettings = () => {
-  settings.siteName = 'Factory #1'
-  settings.timezone = 'Europe/Kiev (GMT+2)'
-  settings.currency = 'UAH'
-  settings.battery.capacity = 150
-  settings.battery.minSOC = 15
-  settings.battery.maxChargeRate = 50
-  settings.battery.maxDischargeRate = 50
-  
-  saveStatus.success = true
-  saveStatus.message = '🔄 Settings reset to defaults'
-  saveStatus.show = true
-  
-  setTimeout(() => {
-    saveStatus.show = false
-  }, 3000)
+  if (confirm('Are you sure? This will reset to defaults and reload the page.')) {
+    composableReset()
+    
+    saveStatus.success = true
+    saveStatus.message = '🔄 Settings reset to defaults'
+    saveStatus.show = true
+    
+    setTimeout(() => {
+      saveStatus.show = false
+      if (process.client) {
+        location.reload()
+      }
+    }, 1500)
+  }
 }
 
 // Dismiss retraining proposal
@@ -582,6 +570,11 @@ const launchFullRetraining = async () => {
     retraining.completed = false
   }, 5000)
 }
+
+// Load settings on mount
+onMounted(async () => {
+  await composableLoad()
+})
 </script>
 
 <style scoped>
