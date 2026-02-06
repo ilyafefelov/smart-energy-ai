@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 /**
  * Composable for real-time energy metrics
@@ -143,5 +143,3 @@ export const useEnergyMetrics = () => {
     fetchHistory
   }
 }
-
-import { onMounted } from 'vue'

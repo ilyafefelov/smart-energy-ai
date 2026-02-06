@@ -10,8 +10,8 @@ export default defineNuxtConfig({
   // Build config
   nitro: {
     prerender: {
-      crawlLinks: true,
-      routes: ['/sitemap.xml'],
+      crawlLinks: false,
+      routes: [],
     }
   },
 

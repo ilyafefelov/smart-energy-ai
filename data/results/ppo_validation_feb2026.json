@@ -1,0 +1,11 @@
+{
+  "baseline_total": 95538.28799999999,
+  "optimized_total": 40221.619247999995,
+  "daily_baseline": 13648.326857142854,
+  "daily_optimized": 5745.945606857143,
+  "daily_savings": 7902.381250285712,
+  "improvement_pct": 57.9,
+  "timestamp": "2026-02-06T20:50:07.767125",
+  "data_period": "Feb 1-7, 2026",
+  "days_analyzed": 7
+}
