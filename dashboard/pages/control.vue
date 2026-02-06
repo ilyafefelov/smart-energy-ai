@@ -50,12 +50,19 @@
         <div class="bg-slate-900 border border-slate-800 rounded-lg p-4 group relative">
           <p class="text-slate-400 text-sm mb-3">Battery SOC</p>
           <div class="text-center">
-            <div class="text-4xl font-bold text-energy-400 mb-2">75%</div>
-            <div class="w-full bg-slate-700 rounded-full h-3 mb-3">
-              <div class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full" 
-                   style="width: 75%"></div>
+            <div v-if="error" class="text-red-400 text-sm mb-2">⚠️ {{ error }}</div>
+            <div v-else-if="loading" class="text-yellow-400 text-sm mb-2">⏳ Loading...</div>
+            <div v-else>
+              <div class="text-4xl font-bold text-energy-400 mb-2">{{ Math.round(batterySOC) }}%</div>
+              <div class="w-full bg-slate-700 rounded-full h-3 mb-3">
+                <div class="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full" 
+                     :style="{ width: batterySOC + '%' }"></div>
+              </div>
+              <p class="text-slate-400 text-xs">{{ status?.availableToDraw.toFixed(1) || '0.0' }} / {{ status?.capacity || 150 }} kWh</p>
+              <p class="text-slate-500 text-xs mt-1">
+                Updated: {{ status?.lastUpdate ? new Date(status.lastUpdate).toLocaleTimeString() : 'N/A' }}
+              </p>
             </div>
-            <p class="text-slate-400 text-xs">112.5 / 150 kWh</p>
           </div>
           <!-- Hover tooltip -->
           <div class="hidden group-hover:block absolute top-0 right-0 bg-slate-950 border border-slate-700 rounded p-3 text-xs text-slate-400 w-56 z-10">
@@ -539,8 +546,11 @@ definePageMeta({
   layout: 'default'
 })
 
-// Battery state
-const batterySOC = ref(75)
+// Use real battery data from API
+const { status, loading, error } = useBatteryStatus()
+
+// Get SOC from status or use fallback
+const batterySOC = computed(() => status.value?.soc ?? 75)
 
 // Current price (from real OREE data)
 const currentPrice = ref(11.63)
