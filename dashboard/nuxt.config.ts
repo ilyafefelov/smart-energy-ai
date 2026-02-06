@@ -1,23 +1,11 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   
-  // UI Configuration
+  // UI Configuration - Simplified
   modules: [
     '@nuxtjs/tailwindcss',
-    'nuxt-ui',
     '@pinia/nuxt',
   ],
-
-  // Nuxt UI config
-  ui: {
-    primary: 'emerald',
-    gray: 'slate',
-  },
-
-  // TailwindCSS config
-  tailwindcss: {
-    configPath: '~/tailwind.config.ts'
-  },
 
   // Build config
   nitro: {
