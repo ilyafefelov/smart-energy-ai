@@ -15,8 +15,19 @@ from .assets.core.market import market_data_asset
 from .assets.core.weather import weather_asset  
 from .assets.core.client_state import client_state_asset
 
+# Import Phase 2 assets
+from .assets.benchmarks.performance import (
+    engine_benchmark_asset, 
+    accuracy_benchmark_asset, 
+    mlflow_tracking_asset
+)
+from .assets.multi_tenant.asset_factory import create_all_assets, multi_client_analytics
+
 # Import engines for feature processing
 from .engines.polars_engine import PolarsEngine
+
+# Generate dynamic client assets using the asset factory
+client_assets = create_all_assets()
 
 # Define jobs
 daily_data_refresh_job = define_asset_job(
@@ -29,11 +40,33 @@ daily_data_refresh_job = define_asset_job(
     description="Daily refresh of market, weather, and client state data"
 )
 
+benchmark_job = define_asset_job(
+    name="benchmark_engines",
+    selection=AssetSelection.assets(
+        engine_benchmark_asset,
+        accuracy_benchmark_asset,
+        mlflow_tracking_asset
+    ),
+    description="Performance and accuracy benchmarking of processing engines"
+)
+
+multi_tenant_job = define_asset_job(
+    name="multi_tenant_analytics", 
+    selection=AssetSelection.assets(multi_client_analytics),
+    description="Cross-client analytics and comparative insights"
+)
+
 # Define schedules
 daily_refresh_schedule = ScheduleDefinition(
     job=daily_data_refresh_job,
     cron_schedule="0 6 * * *",  # 6:00 AM daily
     description="Run daily data refresh at 6:00 AM Kiev time"
+)
+
+weekly_benchmark_schedule = ScheduleDefinition(
+    job=benchmark_job,
+    cron_schedule="0 3 * * 0",  # 3:00 AM on Sundays
+    description="Weekly performance benchmarking"
 )
 
 # Resources (simplified for Stage 1)
@@ -42,14 +75,24 @@ resources = {
     "polars_engine": PolarsEngine()
 }
 
+# Collect all assets
+all_assets = [
+    # Core assets
+    market_data_asset,
+    weather_asset, 
+    client_state_asset,
+    # Benchmark assets
+    engine_benchmark_asset,
+    accuracy_benchmark_asset,
+    mlflow_tracking_asset,
+    # Multi-tenant analytics
+    multi_client_analytics
+] + client_assets  # Add dynamically generated client assets
+
 # Main definitions for Dagster
 defs = Definitions(
-    assets=[
-        market_data_asset,
-        weather_asset,
-        client_state_asset
-    ],
-    jobs=[daily_data_refresh_job],
-    schedules=[daily_refresh_schedule],
+    assets=all_assets,
+    jobs=[daily_data_refresh_job, benchmark_job, multi_tenant_job],
+    schedules=[daily_refresh_schedule, weekly_benchmark_schedule],
     resources=resources
 )

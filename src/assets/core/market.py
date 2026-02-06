@@ -12,7 +12,7 @@ import polars as pl
 from dagster import asset, AssetMaterialization, MetadataValue
 from datetime import datetime, timedelta
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import requests
 from bs4 import BeautifulSoup
 import re
