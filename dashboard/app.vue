@@ -1,24 +1,7 @@
-<template>
-  <div class="bg-slate-950 min-h-screen text-white">
-    <!-- Global Navigation -->
-    <NavigationMenu />
-
-    <!-- Main Content -->
-    <main>
-      <NuxtPage />
-    </main>
-
-    <!-- Global Error Toast (optional) -->
-    <div v-if="globalError" class="fixed bottom-4 right-4 bg-red-900 border border-red-700 rounded-lg p-4 text-red-200 max-w-sm">
-      {{ globalError }}
-      <button @click="globalError = ''" class="ml-2 text-red-400 hover:text-red-300">✕</button>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useSettingsStore } from '~/stores/settingsStore'
+import Navigation from './components/Navigation/NavigationMenu.vue'
 
 const globalError = ref('')
 
@@ -35,6 +18,24 @@ onMounted(async () => {
   }
 })
 </script>
+
+<template>
+  <div class="bg-slate-950 min-h-screen text-white">
+    <!-- Global Navigation -->
+    <Navigation />
+
+    <!-- Main Content -->
+    <main>
+      <NuxtPage />
+    </main>
+
+    <!-- Global Error Toast (optional) -->
+    <div v-if="globalError" class="fixed bottom-4 right-4 bg-red-900 border border-red-700 rounded-lg p-4 text-red-200 max-w-sm">
+      {{ globalError }}
+      <button @click="globalError = ''" class="ml-2 text-red-400 hover:text-red-300">✕</button>
+    </div>
+  </div>
+</template>
 
 <style>
 @import 'tailwindcss/base';
@@ -67,3 +68,4 @@ body {
   color: var(--color-energy-400);
 }
 </style>
+
