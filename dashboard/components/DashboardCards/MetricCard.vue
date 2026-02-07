@@ -1,7 +1,7 @@
 <template>
   <div 
     :class="[
-      'rounded-lg border p-6 transition-all hover:shadow-lg',
+      'rounded-lg border p-6 transition-all hover:shadow-lg hover:scale-105 cursor-pointer',
       colorClasses[color] || colorClasses.slate
     ]"
   >
