@@ -300,11 +300,13 @@ import { useMetricsStore } from '~/stores/metricsStore'
 import { useBatteryStore } from '~/stores/batteryStore'
 import { usePricesStore } from '~/stores/pricesStore'
 import { useRetrainingStore } from '~/stores/retrainingStore'
+import { useSettingsStore } from '~/stores/settingsStore'
 
 const metricsStore = useMetricsStore()
 const batteryStore = useBatteryStore()
 const pricesStore = usePricesStore()
 const retrainingStore = useRetrainingStore()
+const settingsStore = useSettingsStore()
 
 const showRetrainingComplete = ref(false)
 
@@ -345,7 +347,10 @@ const dismissRetrainingComplete = () => {
 
 // Initialize data on mount
 onMounted(async () => {
-  // Fetch all data in parallel
+  // Load settings FIRST so battery capacity is available
+  await settingsStore.loadSettings()
+  
+  // Then fetch all data in parallel
   await Promise.all([
     metricsStore.fetchMetrics(),
     batteryStore.fetchBatteryStatus(),
