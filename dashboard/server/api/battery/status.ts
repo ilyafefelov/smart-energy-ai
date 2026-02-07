@@ -1,6 +1,9 @@
 import { getBatteryState, simulateBatteryBehavior } from '~/server/utils/battery'
 
 export default defineEventHandler(async (event) => {
+  // GET /api/battery/status
+  // STANDARDIZED RESPONSE: { success, battery: { soc, voltage, current, power, temperature, health, capacity, lastUpdated } }
+
   try {
     // Optional: simulate behavior for testing
     const query = getQuery(event)
@@ -16,24 +19,27 @@ export default defineEventHandler(async (event) => {
     const power = (state.voltage * state.current) / 1000 // kW
     
     return {
-      soc: state.soc,
-      capacity: state.capacity,
-      voltage: state.voltage,
-      current: state.current,
-      temperature: state.temperature,
-      cycles: state.cycles,
-      health: state.health,
-      lastUpdate: state.lastUpdate,
-      // Computed fields
-      availableToDraw: parseFloat(availableToDraw.toFixed(2)),
-      availableToCharge: parseFloat(availableToCharge.toFixed(2)),
-      power: parseFloat(power.toFixed(3)),
-      timestamp: Date.now()
+      success: true,
+      battery: {
+        soc: state.soc,
+        capacity: state.capacity,
+        voltage: state.voltage,
+        current: state.current,
+        temperature: state.temperature,
+        health: state.health,
+        power: parseFloat(power.toFixed(3)),
+        availableToDraw: parseFloat(availableToDraw.toFixed(2)),
+        availableToCharge: parseFloat(availableToCharge.toFixed(2)),
+        lastUpdated: state.lastUpdate || new Date().toISOString()
+      }
     }
-  } catch (e) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: `Failed to get battery status: ${e.message}`
-    })
+  } catch (e: any) {
+    console.error('Failed to get battery status:', e)
+    return {
+      success: false,
+      error: e.message || 'Failed to get battery status',
+      battery: null
+    }
   }
 })
+

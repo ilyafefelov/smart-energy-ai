@@ -1,10 +1,11 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   
-  // UI Configuration - Simplified
+  // Module Configuration
   modules: [
     '@nuxtjs/tailwindcss',
-    '@pinia/nuxt',
+    '@pinia/nuxt'
+    // @nuxt/ui removed - requires Nuxt 4, we have Nuxt 3
   ],
 
   // Build config
@@ -44,3 +45,4 @@ export default defineNuxtConfig({
   // Compatibility config
   compatibilityDate: '2024-01-01'
 })
+

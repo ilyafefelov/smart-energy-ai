@@ -1,10 +1,10 @@
 {
-  "soc": 75,
+  "soc": 72.6,
   "capacity": 150,
-  "voltage": 400,
-  "current": 0,
-  "temperature": 22,
+  "voltage": 378.08,
+  "current": -21.74,
+  "temperature": 28.8,
   "cycles": 1245,
   "health": 98.5,
-  "lastUpdate": "2026-02-07T01:24:00Z"
+  "lastUpdate": "2026-02-07T00:14:00.060Z"
 }

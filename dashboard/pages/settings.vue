@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-slate-950 text-white p-8">
     <div class="max-w-6xl mx-auto space-y-8">
-      <!-- Header with back navigation -->
+      <!-- Header -->
       <div class="flex items-center justify-between mb-8">
         <div>
           <NuxtLink to="/" class="text-blue-400 hover:text-blue-300 text-sm mb-2 inline-block">
@@ -12,772 +12,406 @@
         </div>
       </div>
 
-      <!-- Status Alerts Section -->
+      <!-- Status Messages -->
       <div class="space-y-4">
-        <!-- Save Status Notification (Initially hidden) -->
-        <div v-if="saveStatus.show" 
-             :class="[
-               'rounded-lg border p-4 flex items-center gap-3 animate-fade-in',
-               saveStatus.success 
-                 ? 'bg-green-900 bg-opacity-30 border-green-700' 
-                 : 'bg-red-900 bg-opacity-30 border-red-700'
-             ]">
-          <div :class="saveStatus.success ? 'text-green-400 text-xl' : 'text-red-400 text-xl'">
-            {{ saveStatus.success ? '✅' : '❌' }}
-          </div>
+        <!-- Save Success -->
+        <div v-if="saveSuccess" class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-4 flex items-center gap-3">
+          <span class="text-green-400 text-xl">✅</span>
           <div>
-            <p :class="saveStatus.success ? 'text-green-300 font-semibold' : 'text-red-300 font-semibold'">
-              {{ saveStatus.message }}
-            </p>
+            <p class="text-green-300 font-semibold">Settings saved successfully</p>
+            <p class="text-xs text-green-400">All changes have been saved</p>
           </div>
         </div>
 
-        <!-- Retraining Proposal Alert -->
-        <div v-if="showRetrainingProposal" class="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg p-4">
-          <div class="flex items-start justify-between gap-4">
-            <div class="flex-1">
-              <p class="text-blue-300 font-semibold mb-2">🤖 Model Retraining Recommended</p>
-              <p class="text-blue-200 text-sm mb-3">
-                Your settings have been updated. It's recommended to retrain your personal model to adapt to the new configuration.
-              </p>
-              <p class="text-xs text-blue-400 mb-3">
-                <strong>Retraining will:</strong> Take ~5-10 minutes, optimize PPO agent for your new parameters, improve decision quality
-              </p>
-            </div>
-            <button @click="dismissRetrainingProposal" class="text-blue-400 hover:text-blue-300 text-2xl">
-              ×
-            </button>
-          </div>
-          <div class="flex gap-3 mt-4">
-            <button @click="launchRetraining" 
-                    class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg font-semibold text-sm transition">
-              🚀 Start Retraining Now
-            </button>
-            <button @click="dismissRetrainingProposal" 
-                    class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm transition">
-              Skip for Now
-            </button>
-          </div>
+        <!-- Save Error -->
+        <div v-if="settingsStore.error" class="bg-red-900 bg-opacity-30 border border-red-700 rounded-lg p-4">
+          <p class="text-red-300 font-semibold">❌ Error: {{ settingsStore.error }}</p>
+          <button @click="settingsStore.clearError" class="text-xs text-red-400 hover:text-red-300 mt-2">Dismiss</button>
         </div>
 
-        <!-- Active Retraining Progress -->
-        <div v-if="retraining.active" class="bg-yellow-900 bg-opacity-30 border border-yellow-700 rounded-lg p-4">
-          <div class="flex items-center gap-3 mb-3">
-            <div class="animate-spin">⚙️</div>
-            <p class="text-yellow-300 font-semibold">Model Retraining in Progress</p>
-          </div>
-          <div class="w-full bg-slate-800 rounded-full h-2 mb-2">
-            <div class="h-full bg-yellow-500 rounded-full" :style="{ width: retraining.progress + '%' }"></div>
-          </div>
-          <p class="text-xs text-yellow-400">{{ retraining.progress }}% complete • {{ retraining.timeRemaining }}</p>
-        </div>
-
-        <!-- Retraining Complete -->
-        <div v-if="retraining.completed" class="bg-green-900 bg-opacity-30 border border-green-700 rounded-lg p-4">
-          <p class="text-green-300 font-semibold">✅ Model Retraining Complete!</p>
-          <p class="text-sm text-green-200 mt-2">Your personal PPO model has been optimized and is now active.</p>
+        <!-- Loading State -->
+        <div v-if="settingsStore.isLoading" class="bg-blue-900 bg-opacity-30 border border-blue-700 rounded-lg p-4">
+          <p class="text-blue-300 font-semibold">Loading settings...</p>
         </div>
       </div>
 
       <!-- Settings Tabs -->
       <div class="border-b border-slate-800 flex gap-4">
-        <button @click="activeTab = 'general'" 
-                :class="['px-4 py-3 font-semibold transition border-b-2', 
-                         activeTab === 'general' ? 'border-energy-400 text-energy-400' : 'border-transparent text-slate-400 hover:text-white']">
-          General
-        </button>
-        <button @click="activeTab = 'battery'" 
-                :class="['px-4 py-3 font-semibold transition border-b-2', 
-                         activeTab === 'battery' ? 'border-energy-400 text-energy-400' : 'border-transparent text-slate-400 hover:text-white']">
-          Battery
-        </button>
-        <button @click="activeTab = 'model'" 
-                :class="['px-4 py-3 font-semibold transition border-b-2', 
-                         activeTab === 'model' ? 'border-energy-400 text-energy-400' : 'border-transparent text-slate-400 hover:text-white']">
-          Model & Training
-        </button>
-        <button @click="activeTab = 'notifications'" 
-                :class="['px-4 py-3 font-semibold transition border-b-2', 
-                         activeTab === 'notifications' ? 'border-energy-400 text-energy-400' : 'border-transparent text-slate-400 hover:text-white']">
-          Notifications
+        <button 
+          v-for="tab in tabs"
+          :key="tab.id"
+          @click="activeTab = tab.id"
+          :class="[
+            'px-4 py-3 font-semibold transition border-b-2',
+            activeTab === tab.id
+              ? 'border-energy-400 text-energy-400'
+              : 'border-transparent text-slate-400 hover:text-white'
+          ]"
+        >
+          {{ tab.icon }} {{ tab.label }}
         </button>
       </div>
 
       <!-- Tab Content -->
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-6">
-        <!-- GENERAL TAB -->
+      <div class="space-y-8">
+        <!-- General Settings -->
         <div v-if="activeTab === 'general'" class="space-y-6">
-          <div>
-            <label class="block text-slate-300 font-semibold mb-2">Location / Site Name</label>
-            <input v-model="settings.value.general.siteName" 
-                   type="text" 
-                   placeholder="e.g., Factory #1, Warehouse A"
-                   class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:border-energy-400 focus:outline-none">
-            <p class="text-xs text-slate-400 mt-1">Your facility's identifier for multi-site management</p>
-          </div>
+          <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
+            <h2 class="text-xl font-bold text-white mb-6">General Settings</h2>
 
-          <div>
-            <label class="block text-slate-300 font-semibold mb-2">Timezone</label>
-            <select v-model="settings.value.general.timezone" 
-                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
-              <option>Europe/Kiev (GMT+2)</option>
-              <option>Europe/London (GMT+0)</option>
-              <option>Europe/Berlin (GMT+1)</option>
-              <option>America/New_York (GMT-5)</option>
-            </select>
-          </div>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Site Name</label>
+                <input 
+                  v-model="settingsStore.settings.general.siteName"
+                  type="text"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-energy-400"
+                  placeholder="e.g., Factory #1"
+                />
+              </div>
 
-          <div>
-            <label class="block text-slate-300 font-semibold mb-2">Currency</label>
-            <select v-model="settings.value.general.currency" 
-                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
-              <option value="UAH">Ukrainian Hryvnia (₴)</option>
-              <option value="USD">US Dollar ($)</option>
-              <option value="EUR">Euro (€)</option>
-            </select>
-          </div>
+              <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Timezone</label>
+                <select 
+                  v-model="settingsStore.settings.general.timezone"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
+                >
+                  <option>Europe/Kiev (GMT+2)</option>
+                  <option>UTC</option>
+                  <option>Europe/London (GMT)</option>
+                </select>
+              </div>
 
-          <div class="flex items-center justify-between p-4 bg-slate-800 rounded-lg border border-slate-700">
-            <div>
-              <p class="text-white font-semibold">Enable Real-Time Notifications</p>
-              <p class="text-xs text-slate-400 mt-1">Get alerts for trading opportunities and model updates</p>
+              <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Currency</label>
+                <select 
+                  v-model="settingsStore.settings.general.currency"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
+                >
+                  <option>UAH</option>
+                  <option>USD</option>
+                  <option>EUR</option>
+                </select>
+              </div>
+
+              <div class="flex items-center gap-3 pt-4">
+                <input 
+                  v-model="settingsStore.settings.general.notificationsEnabled"
+                  type="checkbox"
+                  id="notif"
+                  class="w-5 h-5 rounded border-slate-700 cursor-pointer"
+                />
+                <label for="notif" class="text-sm text-slate-300 cursor-pointer">Enable notifications</label>
+              </div>
             </div>
-            <button @click="settings.value.general.notificationsEnabled = !settings.value.general.notificationsEnabled" 
-                    :class="['relative inline-flex h-8 w-14 items-center rounded-full transition', 
-                             settings.value.general.notificationsEnabled ? 'bg-green-600' : 'bg-slate-700']">
-              <span :class="['inline-block h-6 w-6 transform rounded-full bg-white transition', 
-                            settings.value.general.notificationsEnabled ? 'translate-x-7' : 'translate-x-1']"></span>
+
+            <button 
+              @click="saveGeneralSettings"
+              :disabled="settingsStore.isSaving"
+              class="mt-6 px-6 py-2 bg-energy-400 hover:bg-cyan-300 text-slate-950 font-semibold rounded-lg transition disabled:opacity-50"
+            >
+              {{ settingsStore.isSaving ? 'Saving...' : 'Save Changes' }}
             </button>
           </div>
         </div>
 
-        <!-- BATTERY TAB -->
+        <!-- Battery Settings -->
         <div v-if="activeTab === 'battery'" class="space-y-6">
-          <div class="bg-blue-900 bg-opacity-20 border border-blue-700 rounded-lg p-4 text-sm text-blue-200">
-            <p class="font-semibold mb-2">💡 About Battery Settings</p>
-            <p>These parameters define your battery constraints. The AI model learns from these values during training.</p>
-          </div>
+          <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
+            <h2 class="text-xl font-bold text-white mb-6">Battery Configuration</h2>
 
-          <div>
-            <label class="block text-slate-300 font-semibold mb-2">Total Battery Capacity (kWh)</label>
-            <div class="flex gap-4">
-              <input v-model.number="settings.value.battery.capacity" 
-                     type="number" 
-                     min="10" 
-                     max="1000"
-                     class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
-              <div class="bg-slate-800 rounded-lg px-4 py-2 text-slate-400 min-w-24 flex items-center">
-                {{ settings.value.battery.capacity }} kWh
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Capacity (kWh)</label>
+                <input 
+                  v-model.number="settingsStore.settings.battery.capacity"
+                  type="number"
+                  min="1"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
+                />
+                <p class="text-xs text-slate-400 mt-1">Total usable capacity of your battery system</p>
               </div>
-            </div>
-            <p class="text-xs text-slate-400 mt-1">Maximum energy storage capacity of your battery system</p>
-          </div>
 
-          <div>
-            <label class="block text-slate-300 font-semibold mb-2">Minimum Safe SOC (State of Charge)</label>
-            <div class="flex gap-4">
-              <input v-model.number="settings.value.battery.minSOC" 
-                     type="number" 
-                     min="0" 
-                     max="100"
-                     class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
-              <div class="bg-slate-800 rounded-lg px-4 py-2 text-slate-400 min-w-16 flex items-center">
-                {{ settings.value.battery.minSOC }}%
+              <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Minimum SOC (%)</label>
+                <input 
+                  v-model.number="settingsStore.settings.battery.minSOC"
+                  type="number"
+                  min="0"
+                  max="100"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
+                />
+                <p class="text-xs text-slate-400 mt-1">Minimum safe charge level to maintain</p>
               </div>
-            </div>
-            <p class="text-xs text-slate-400 mt-1">Battery won't discharge below this level (safety reserve)</p>
-          </div>
 
-          <div>
-            <label class="block text-slate-300 font-semibold mb-2">Maximum Charge Rate (kW)</label>
-            <div class="flex gap-4">
-              <input v-model.number="settings.value.battery.maxChargeRate" 
-                     type="number" 
-                     min="1" 
-                     max="500"
-                     class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
-              <div class="bg-slate-800 rounded-lg px-4 py-2 text-slate-400 min-w-20 flex items-center">
-                {{ settings.value.battery.maxChargeRate }} kW
+              <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Max Charge Rate (kW)</label>
+                <input 
+                  v-model.number="settingsStore.settings.battery.maxChargeRate"
+                  type="number"
+                  min="0"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
+                />
               </div>
-            </div>
-            <p class="text-xs text-slate-400 mt-1">Maximum power input to battery (inverter limit)</p>
-          </div>
 
-          <div>
-            <label class="block text-slate-300 font-semibold mb-2">Maximum Discharge Rate (kW)</label>
-            <div class="flex gap-4">
-              <input v-model.number="settings.value.battery.maxDischargeRate" 
-                     type="number" 
-                     min="1" 
-                     max="500"
-                     class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-energy-400 focus:outline-none">
-              <div class="bg-slate-800 rounded-lg px-4 py-2 text-slate-400 min-w-20 flex items-center">
-                {{ settings.value.battery.maxDischargeRate }} kW
-              </div>
-            </div>
-            <p class="text-xs text-slate-400 mt-1">Maximum power output from battery</p>
-          </div>
-        </div>
-
-        <!-- MODEL & TRAINING TAB -->
-        <div v-if="activeTab === 'model'" class="space-y-6">
-          <div class="bg-green-900 bg-opacity-20 border border-green-700 rounded-lg p-4">
-            <p class="text-green-300 font-semibold mb-3">📊 Model Architecture</p>
-            <div class="space-y-2 text-sm text-green-200">
-              <div class="flex justify-between">
-                <span>Algorithm:</span>
-                <span class="font-semibold">PPO (Proximal Policy Optimization)</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Network:</span>
-                <span class="font-semibold">2 hidden layers × 64 units</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Optimizer:</span>
-                <span class="font-semibold">Adam (learning rate 3e-4)</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Training Framework:</span>
-                <span class="font-semibold">Stable-Baselines3</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Model Strategy Explanation -->
-          <div class="bg-blue-900 bg-opacity-20 border border-blue-700 rounded-lg p-4 space-y-3">
-            <p class="text-blue-300 font-semibold">🤖 Personal vs Shared Models</p>
-            <p class="text-sm text-blue-200">
-              You have a <strong>personal PPO model</strong> trained specifically on your energy patterns, facility constraints, and local electricity prices. This ensures optimal decisions for YOUR unique situation.
-            </p>
-            <div class="bg-slate-800 rounded-lg p-3 text-sm space-y-2">
-              <p class="text-slate-300"><strong>Why personal models?</strong></p>
-              <ul class="text-slate-400 list-disc list-inside space-y-1">
-                <li>Different facilities have different demand patterns</li>
-                <li>Solar availability varies by location and season</li>
-                <li>Electricity prices differ by region (OREE zones)</li>
-                <li>Battery constraints are facility-specific</li>
-              </ul>
-            </div>
-          </div>
-
-          <!-- Training Schedule -->
-          <div class="space-y-3">
-            <p class="text-slate-300 font-semibold">📅 Retraining Schedule</p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                <p class="text-slate-400 text-sm mb-2">Full Retraining</p>
-                <p class="text-2xl font-bold text-energy-400 mb-2">Weekly</p>
-                <p class="text-xs text-slate-500">Comprehensive model optimization (5-10 min)</p>
-              </div>
-              <div class="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                <p class="text-slate-400 text-sm mb-2">Quick Update</p>
-                <p class="text-2xl font-bold text-blue-400 mb-2">Daily</p>
-                <p class="text-xs text-slate-500">Fast parameter adjustment (30-60 sec)</p>
-              </div>
-            </div>
-            <p class="text-xs text-slate-400 mt-3">
-              <strong>What triggers retraining?</strong> Settings changes (battery, notifications, preferences) automatically trigger a quick daily update. Manual retraining recommended after major configuration changes.
-            </p>
-          </div>
-
-          <!-- Manual Retraining -->
-          <div class="border-t border-slate-700 pt-6">
-            <p class="text-slate-300 font-semibold mb-4">🚀 Manual Model Retraining</p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button @click="launchQuickUpdate" 
-                      :disabled="retraining.active"
-                      class="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 px-6 py-3 rounded-lg font-semibold text-white transition">
-                ⚡ Quick Daily Update (1 min)
-              </button>
-              <button @click="launchFullRetraining" 
-                      :disabled="retraining.active"
-                      class="bg-green-600 hover:bg-green-500 disabled:bg-slate-700 px-6 py-3 rounded-lg font-semibold text-white transition">
-                🔄 Full Weekly Retraining (10 min)
-              </button>
-            </div>
-          </div>
-
-          <!-- Last Training Info -->
-          <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 text-sm">
-            <p class="text-slate-400 mb-2">📌 Last Training Session</p>
-            <div class="space-y-1 text-slate-300">
-              <div class="flex justify-between">
-                <span>Completed:</span>
-                <span>Feb 6, 2026 • 20:50 GMT+2</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Duration:</span>
-                <span>8 minutes 23 seconds</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Data Points:</span>
-                <span>2,016 hourly observations (7 days)</span>
-              </div>
-              <div class="flex justify-between">
-                <span>Performance:</span>
-                <span class="text-green-400">+57.9% cost reduction ✓</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- NOTIFICATIONS TAB -->
-        <div v-if="activeTab === 'notifications'" class="space-y-6">
-          <p class="text-slate-400 text-sm">Configure when and how you want to be notified about trading opportunities and system events</p>
-
-          <div class="space-y-4">
-            <!-- High Price Alert -->
-            <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-3">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-white font-semibold">🔴 High Price Alert</p>
-                  <p class="text-xs text-slate-400 mt-1">Notify when price exceeds threshold (sell opportunity)</p>
-                </div>
-                <button @click="settings.value.notifications.highPrice = !settings.value.notifications.highPrice" 
-                        :class="['relative inline-flex h-6 w-11 items-center rounded-full transition', 
-                                 settings.value.notifications.highPrice ? 'bg-red-600' : 'bg-slate-700']">
-                  <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition', 
-                                settings.value.notifications.highPrice ? 'translate-x-6' : 'translate-x-1']"></span>
-                </button>
-              </div>
-              <div v-if="settings.value.notifications.highPrice" class="flex gap-2">
-                <input v-model.number="settings.value.notifications.highPriceThreshold" 
-                       type="number" 
-                       placeholder="₴/kWh"
-                       class="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-1 text-sm text-white placeholder-slate-500 focus:border-energy-400">
-                <span class="text-slate-400 text-sm flex items-center">₴/kWh</span>
+              <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Max Discharge Rate (kW)</label>
+                <input 
+                  v-model.number="settingsStore.settings.battery.maxDischargeRate"
+                  type="number"
+                  min="0"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
+                />
               </div>
             </div>
 
-            <!-- Low Price Alert -->
-            <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-3">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-white font-semibold">🟢 Low Price Alert</p>
-                  <p class="text-xs text-slate-400 mt-1">Notify when price drops (buy opportunity)</p>
-                </div>
-                <button @click="settings.value.notifications.lowPrice = !settings.value.notifications.lowPrice" 
-                        :class="['relative inline-flex h-6 w-11 items-center rounded-full transition', 
-                                 settings.value.notifications.lowPrice ? 'bg-green-600' : 'bg-slate-700']">
-                  <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition', 
-                                settings.value.notifications.lowPrice ? 'translate-x-6' : 'translate-x-1']"></span>
-                </button>
-              </div>
-              <div v-if="settings.value.notifications.lowPrice" class="flex gap-2">
-                <input v-model.number="settings.value.notifications.lowPriceThreshold" 
-                       type="number" 
-                       placeholder="₴/kWh"
-                       class="flex-1 bg-slate-700 border border-slate-600 rounded px-3 py-1 text-sm text-white placeholder-slate-500 focus:border-energy-400">
-                <span class="text-slate-400 text-sm flex items-center">₴/kWh</span>
-              </div>
-            </div>
-
-            <!-- Model Training Complete -->
-            <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-3">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-white font-semibold">🤖 Model Training Complete</p>
-                  <p class="text-xs text-slate-400 mt-1">Notify when retraining finishes</p>
-                </div>
-                <button @click="settings.value.notifications.modelComplete = !settings.value.notifications.modelComplete" 
-                        :class="['relative inline-flex h-6 w-11 items-center rounded-full transition', 
-                                 settings.value.notifications.modelComplete ? 'bg-blue-600' : 'bg-slate-700']">
-                  <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition', 
-                                settings.value.notifications.modelComplete ? 'translate-x-6' : 'translate-x-1']"></span>
-                </button>
-              </div>
-            </div>
-
-            <!-- System Alerts -->
-            <div class="bg-slate-800 rounded-lg p-4 border border-slate-700 space-y-3">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-white font-semibold">⚠️ System Alerts</p>
-                  <p class="text-xs text-slate-400 mt-1">Battery low, grid outages, errors</p>
-                </div>
-                <button @click="settings.value.notifications.systemAlerts = !settings.value.notifications.systemAlerts" 
-                        :class="['relative inline-flex h-6 w-11 items-center rounded-full transition', 
-                                 settings.value.notifications.systemAlerts ? 'bg-orange-600' : 'bg-slate-700']">
-                  <span :class="['inline-block h-4 w-4 transform rounded-full bg-white transition', 
-                                settings.value.notifications.systemAlerts ? 'translate-x-6' : 'translate-x-1']"></span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Import/Export Section -->
-      <div class="bg-slate-900 border border-slate-800 rounded-lg p-6 mb-6">
-        <h2 class="text-xl font-bold text-white mb-4">📥 Backup & Transfer</h2>
-        <p class="text-slate-400 text-sm mb-4">Export your configuration as backup or to share with other instances</p>
-        
-        <!-- Import Status -->
-        <div v-if="importStatus.show" 
-             :class="[
-               'rounded-lg border p-4 flex items-center gap-3 mb-4 animate-fade-in',
-               importStatus.success 
-                 ? 'bg-green-900 bg-opacity-30 border-green-700' 
-                 : 'bg-red-900 bg-opacity-30 border-red-700'
-             ]">
-          <div :class="importStatus.success ? 'text-green-400 text-xl' : 'text-red-400 text-xl'">
-            {{ importStatus.success ? '✅' : '❌' }}
-          </div>
-          <div>
-            <p :class="importStatus.success ? 'text-green-300 font-semibold' : 'text-red-300 font-semibold'">
-              {{ importStatus.message }}
-            </p>
-          </div>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Export Button -->
-          <button @click="exportSettings" 
-                  :disabled="isExporting"
-                  class="bg-green-600 hover:bg-green-500 disabled:bg-slate-700 px-6 py-3 rounded-lg font-semibold text-white transition flex items-center justify-center gap-2">
-            <span>{{ isExporting ? '⏳' : '📤' }}</span>
-            {{ isExporting ? 'Exporting...' : 'Export Config' }}
-          </button>
-          
-          <!-- Import File Input -->
-          <div class="relative">
-            <input 
-              ref="fileInput"
-              type="file" 
-              accept=".json"
-              @change="handleFileImport"
-              class="hidden"
-              :disabled="isImporting"
-            />
-            <button @click="$refs.fileInput?.click()" 
-                    :disabled="isImporting"
-                    class="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 px-6 py-3 rounded-lg font-semibold text-white transition flex items-center justify-center gap-2">
-              <span>{{ isImporting ? '⏳' : '📥' }}</span>
-              {{ isImporting ? 'Importing...' : 'Import Config' }}
+            <button 
+              @click="saveBatterySettings"
+              :disabled="settingsStore.isSaving"
+              class="mt-6 px-6 py-2 bg-energy-400 hover:bg-cyan-300 text-slate-950 font-semibold rounded-lg transition disabled:opacity-50"
+            >
+              {{ settingsStore.isSaving ? 'Saving...' : 'Save Changes' }}
             </button>
           </div>
         </div>
-        
-        <p class="text-xs text-slate-500 mt-4">
-          💡 <strong>Tip:</strong> Export regularly to backup your settings. Import from another instance to replicate configuration.
-        </p>
-      </div>
 
-      <!-- Save Button -->
-      <div class="flex gap-4 justify-end">
-        <button @click="resetSettings" 
-                class="bg-slate-700 hover:bg-slate-600 px-6 py-3 rounded-lg font-semibold transition">
-          Reset to Defaults
-        </button>
-        <button @click="saveSettings" 
-                :disabled="isSaving"
-                class="bg-energy-600 hover:bg-energy-500 disabled:bg-slate-700 px-6 py-3 rounded-lg font-semibold text-white transition">
-          {{ isSaving ? '⏳ Saving...' : '💾 Save Settings' }}
-        </button>
-      </div>
+        <!-- Notification Settings -->
+        <div v-if="activeTab === 'notifications'" class="space-y-6">
+          <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
+            <h2 class="text-xl font-bold text-white mb-6">Notification Preferences</h2>
 
-      <!-- Footer navigation -->
-      <div class="flex gap-4 justify-center text-center mt-12 pt-8 border-t border-slate-800">
-        <NuxtLink to="/" class="bg-blue-700 hover:bg-blue-600 px-6 py-2 rounded-lg transition text-sm">
-          📊 Dashboard
-        </NuxtLink>
-        <NuxtLink to="/analytics" class="bg-blue-700 hover:bg-blue-600 px-6 py-2 rounded-lg transition text-sm">
-          📈 Analytics
-        </NuxtLink>
-        <NuxtLink to="/control" class="bg-blue-700 hover:bg-blue-600 px-6 py-2 rounded-lg transition text-sm">
-          🔋 Control
-        </NuxtLink>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-slate-300">High Price Alerts</p>
+                  <p class="text-xs text-slate-400">Notify when price exceeds threshold</p>
+                </div>
+                <input 
+                  v-model="settingsStore.settings.notifications.highPrice"
+                  type="checkbox"
+                  class="w-5 h-5 rounded cursor-pointer"
+                />
+              </div>
+
+              <div v-if="settingsStore.settings.notifications.highPrice" class="pl-4 border-l-2 border-slate-700">
+                <label class="block text-xs font-semibold text-slate-300 mb-2">Threshold (₴/kWh)</label>
+                <input 
+                  v-model.number="settingsStore.settings.notifications.highPriceThreshold"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  class="w-full max-w-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-white text-sm focus:outline-none focus:border-energy-400"
+                />
+              </div>
+
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-slate-300">Low Price Alerts</p>
+                  <p class="text-xs text-slate-400">Notify when price drops below threshold</p>
+                </div>
+                <input 
+                  v-model="settingsStore.settings.notifications.lowPrice"
+                  type="checkbox"
+                  class="w-5 h-5 rounded cursor-pointer"
+                />
+              </div>
+
+              <div v-if="settingsStore.settings.notifications.lowPrice" class="pl-4 border-l-2 border-slate-700">
+                <label class="block text-xs font-semibold text-slate-300 mb-2">Threshold (₴/kWh)</label>
+                <input 
+                  v-model.number="settingsStore.settings.notifications.lowPriceThreshold"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  class="w-full max-w-xs bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-white text-sm focus:outline-none focus:border-energy-400"
+                />
+              </div>
+
+              <div class="pt-4 space-y-3">
+                <div class="flex items-center gap-3">
+                  <input 
+                    v-model="settingsStore.settings.notifications.modelComplete"
+                    type="checkbox"
+                    id="notif-model"
+                    class="w-5 h-5 rounded cursor-pointer"
+                  />
+                  <label for="notif-model" class="text-sm text-slate-300 cursor-pointer">Notify when model training completes</label>
+                </div>
+
+                <div class="flex items-center gap-3">
+                  <input 
+                    v-model="settingsStore.settings.notifications.systemAlerts"
+                    type="checkbox"
+                    id="notif-system"
+                    class="w-5 h-5 rounded cursor-pointer"
+                  />
+                  <label for="notif-system" class="text-sm text-slate-300 cursor-pointer">Enable system alerts</label>
+                </div>
+              </div>
+            </div>
+
+            <button 
+              @click="saveNotificationSettings"
+              :disabled="settingsStore.isSaving"
+              class="mt-6 px-6 py-2 bg-energy-400 hover:bg-cyan-300 text-slate-950 font-semibold rounded-lg transition disabled:opacity-50"
+            >
+              {{ settingsStore.isSaving ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Model Settings -->
+        <div v-if="activeTab === 'model'" class="space-y-6">
+          <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
+            <h2 class="text-xl font-bold text-white mb-6">Model & Training Configuration</h2>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Learning Rate</label>
+                <input 
+                  v-model.number="settingsStore.settings.model.learningRate"
+                  type="number"
+                  min="0"
+                  step="0.0001"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
+                />
+                <p class="text-xs text-slate-400 mt-1">Controls model training speed (smaller = slower but more stable)</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Batch Size</label>
+                <input 
+                  v-model.number="settingsStore.settings.model.batchSize"
+                  type="number"
+                  min="1"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
+                />
+                <p class="text-xs text-slate-400 mt-1">Number of samples per training iteration</p>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-slate-300 mb-2">Training Epochs</label>
+                <input 
+                  v-model.number="settingsStore.settings.model.epochs"
+                  type="number"
+                  min="1"
+                  max="100"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
+                />
+                <p class="text-xs text-slate-400 mt-1">Number of complete passes through training data</p>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-6 border-t border-slate-700 space-y-4">
+              <button 
+                @click="saveModelSettings"
+                :disabled="settingsStore.isSaving"
+                class="w-full px-6 py-2 bg-energy-400 hover:bg-cyan-300 text-slate-950 font-semibold rounded-lg transition disabled:opacity-50"
+              >
+                {{ settingsStore.isSaving ? 'Saving...' : 'Save Changes' }}
+              </button>
+
+              <button 
+                @click="startModelRetraining"
+                class="w-full px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition"
+              >
+                🚀 Retrain Model with New Settings
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="bg-red-900 bg-opacity-20 border border-red-700 rounded-lg p-6">
+          <h2 class="text-lg font-bold text-red-300 mb-4">⚠️ Danger Zone</h2>
+          <p class="text-sm text-red-200 mb-4">Reset all settings to factory defaults. This cannot be undone.</p>
+          <button 
+            @click="resetSettings"
+            class="px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg transition"
+          >
+            🔄 Reset to Defaults
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useSettingsStore } from '~/stores/settingsStore'
+import { useRetrainingStore } from '~/stores/retrainingStore'
 
-definePageMeta({
-  layout: 'default'
-})
+const settingsStore = useSettingsStore()
+const retrainingStore = useRetrainingStore()
 
-// Load composable
-const { settings: composableSettings, saveSettings: composableSaveSettings, resetSettings: composableReset, loadSettings: composableLoad } = useSettings()
-
-// Active tab
 const activeTab = ref('general')
+const saveSuccess = ref(false)
 
-// Settings state - use composable settings directly
-const settings = composableSettings
+const tabs = [
+  { id: 'general', label: 'General', icon: '🌍' },
+  { id: 'battery', label: 'Battery', icon: '🔋' },
+  { id: 'notifications', label: 'Notifications', icon: '🔔' },
+  { id: 'model', label: 'Model', icon: '🤖' }
+]
 
-// Save status
-const isSaving = ref(false)
-const saveStatus = reactive({
-  show: false,
-  success: false,
-  message: ''
-})
+const showSaveSuccess = () => {
+  saveSuccess.value = true
+  setTimeout(() => {
+    saveSuccess.value = false
+  }, 3000)
+}
 
-// Retraining state
-const showRetrainingProposal = ref(true)
-const retraining = reactive({
-  active: false,
-  completed: false,
-  progress: 0,
-  timeRemaining: '0s',
-  type: '' // 'quick' or 'full'
-})
-
-// Save settings - use composable with real API
-const saveSettings = async () => {
-  isSaving.value = true
-  
-  const result = await composableSaveSettings(settings.value)
-  
+const saveGeneralSettings = async () => {
+  const result = await settingsStore.updateGeneralSettings(settingsStore.settings.general)
   if (result.success) {
-    saveStatus.success = true
-    saveStatus.message = '✅ Settings saved and will persist on reload!'
-  } else {
-    saveStatus.success = false
-    saveStatus.message = `❌ Save failed: ${result.error}`
-  }
-  
-  saveStatus.show = true
-  isSaving.value = false
-  
-  // Show retraining proposal
-  showRetrainingProposal.value = true
-  
-  // Auto-hide success message after 5 seconds
-  setTimeout(() => {
-    saveStatus.show = false
-  }, 5000)
-}
-
-// Reset settings
-const resetSettings = () => {
-  if (confirm('Are you sure? This will reset to defaults.')) {
-    settings.siteName = 'Factory #1'
-    settings.timezone = 'Europe/Kiev (GMT+2)'
-    settings.currency = 'UAH'
-    settings.battery.capacity = 150
-    settings.battery.minSOC = 15
-    settings.battery.maxChargeRate = 50
-    settings.battery.maxDischargeRate = 50
-    
-    saveStatus.success = true
-    saveStatus.message = '🔄 Settings reset to defaults'
-    saveStatus.show = true
-    
-    setTimeout(() => {
-      saveStatus.show = false
-    }, 1500)
+    showSaveSuccess()
   }
 }
 
-// Dismiss retraining proposal
-const dismissRetrainingProposal = () => {
-  showRetrainingProposal.value = false
-}
-
-// Launch quick update
-const launchQuickUpdate = async () => {
-  retraining.active = true
-  retraining.type = 'quick'
-  showRetrainingProposal.value = false
-  
-  for (let i = 0; i <= 100; i += 20) {
-    retraining.progress = i
-    retraining.timeRemaining = `${Math.round(60 - (i * 0.6))}s`
-    await new Promise(resolve => setTimeout(resolve, 300))
+const saveBatterySettings = async () => {
+  const result = await settingsStore.updateBatterySettings(settingsStore.settings.battery)
+  if (result.success) {
+    showSaveSuccess()
   }
-  
-  retraining.active = false
-  retraining.completed = true
-  
-  saveStatus.success = true
-  saveStatus.message = '✅ Quick model update complete!'
-  saveStatus.show = true
-  
-  setTimeout(() => {
-    saveStatus.show = false
-    retraining.completed = false
-  }, 5000)
 }
 
-// Launch full retraining
-const launchFullRetraining = async () => {
-  retraining.active = true
-  retraining.type = 'full'
-  showRetrainingProposal.value = false
-  
-  for (let i = 0; i <= 100; i += 5) {
-    retraining.progress = i
-    const timeLeft = Math.round(600 - (i * 6))
-    retraining.timeRemaining = `${Math.floor(timeLeft / 60)}m ${timeLeft % 60}s`
-    await new Promise(resolve => setTimeout(resolve, 200))
+const saveNotificationSettings = async () => {
+  const result = await settingsStore.updateNotificationSettings(settingsStore.settings.notifications)
+  if (result.success) {
+    showSaveSuccess()
   }
-  
-  retraining.active = false
-  retraining.completed = true
-  
-  saveStatus.success = true
-  saveStatus.message = '✅ Full model retraining complete! New model is now active.'
-  saveStatus.show = true
-  
-  setTimeout(() => {
-    saveStatus.show = false
-    retraining.completed = false
-  }, 5000)
 }
 
-// Import/Export state
-const fileInput = ref<HTMLInputElement | null>(null)
-const isExporting = ref(false)
-const isImporting = ref(false)
-const importStatus = reactive({
-  show: false,
-  success: false,
-  message: ''
+const saveModelSettings = async () => {
+  const result = await settingsStore.updateModelSettings(settingsStore.settings.model)
+  if (result.success) {
+    showSaveSuccess()
+  }
+}
+
+const startModelRetraining = async () => {
+  // Pass model settings to retraining
+  const result = await retrainingStore.startRetraining({
+    learningRate: settingsStore.settings.model.learningRate,
+    batchSize: settingsStore.settings.model.batchSize,
+    epochs: settingsStore.settings.model.epochs
+  })
+
+  if (result.success) {
+    // Could navigate to dashboard or show success
+    showSaveSuccess()
+  }
+}
+
+const resetSettings = async () => {
+  if (confirm('Are you sure? This will reset all settings to defaults.')) {
+    await settingsStore.resetToDefaults()
+    showSaveSuccess()
+  }
+}
+
+onMounted(async () => {
+  await settingsStore.loadSettings()
 })
-
-// Export settings function
-const exportSettings = async () => {
-  isExporting.value = true
-  try {
-    const response = await $fetch('/api/settings/export')
-    
-    // Create a blob from the response
-    const blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    
-    // Generate filename
-    const siteName = settings.siteName.toLowerCase().replace(/\s+/g, '-')
-    const dateStr = new Date().toISOString().split('T')[0]
-    link.href = url
-    link.download = `settings-${siteName}-${dateStr}.json`
-    
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-    
-    saveStatus.success = true
-    saveStatus.message = '✅ Settings exported successfully!'
-    saveStatus.show = true
-    
-    setTimeout(() => {
-      saveStatus.show = false
-    }, 3000)
-  } catch (error: any) {
-    saveStatus.success = false
-    saveStatus.message = `❌ Export failed: ${error.message}`
-    saveStatus.show = true
-  } finally {
-    isExporting.value = false
-  }
-}
-
-// Import settings function
-const handleFileImport = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  
-  if (!file) return
-  
-  isImporting.value = true
-  try {
-    // Read file
-    const fileContent = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (e) => resolve(e.target?.result as string)
-      reader.onerror = () => reject(new Error('Failed to read file'))
-      reader.readAsText(file)
-    })
-    
-    // Parse and validate JSON
-    let importedData
-    try {
-      importedData = JSON.parse(fileContent)
-    } catch {
-      throw new Error('Invalid JSON file format')
-    }
-    
-    if (!importedData.settings) {
-      throw new Error('Invalid file format: missing "settings" key')
-    }
-    
-    // Create FormData for multipart upload
-    const formData = new FormData()
-    formData.append('file', file)
-    
-    // Send to server
-    const result = await $fetch('/api/settings/import', {
-      method: 'POST',
-      body: formData
-    })
-    
-    // Update local settings with imported values
-    Object.assign(settings, importedData.settings)
-    
-    importStatus.success = true
-    importStatus.message = `✅ Settings imported successfully from ${result.imported?.siteName || 'backup'}`
-    importStatus.show = true
-    
-    // Also show in main save status
-    saveStatus.success = true
-    saveStatus.message = `✅ Settings imported and applied!`
-    saveStatus.show = true
-    
-    // Show retraining proposal since settings changed
-    showRetrainingProposal.value = true
-    
-    setTimeout(() => {
-      importStatus.show = false
-    }, 5000)
-  } catch (error: any) {
-    importStatus.success = false
-    importStatus.message = `❌ Import failed: ${error.message || error}`
-    importStatus.show = true
-    
-    saveStatus.success = false
-    saveStatus.message = `❌ Import failed: ${error.message || error}`
-    saveStatus.show = true
-  } finally {
-    isImporting.value = false
-    // Reset file input
-    if (fileInput.value) {
-      fileInput.value.value = ''
-    }
-  }
-}
 </script>
-
-<style scoped>
-.energy-400 {
-  @apply text-emerald-400;
-}
-.energy-500 {
-  @apply bg-emerald-500;
-}
-.energy-600 {
-  @apply bg-emerald-600;
-}
-.energy-500:hover {
-  @apply bg-emerald-500;
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-in-out;
-}
-</style>

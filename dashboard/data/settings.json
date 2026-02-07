@@ -1,0 +1,29 @@
+{
+  "general": {
+    "siteName": "Factory #1",
+    "timezone": "Europe/Kiev (GMT+2)",
+    "currency": "UAH",
+    "notificationsEnabled": true
+  },
+  "battery": {
+    "capacity": 130,
+    "minSOC": 15,
+    "maxChargeRate": 50,
+    "maxDischargeRate": 50
+  },
+  "notifications": {
+    "highPrice": true,
+    "highPriceThreshold": 13,
+    "lowPrice": true,
+    "lowPriceThreshold": 7,
+    "modelComplete": true,
+    "systemAlerts": true
+  },
+  "model": {
+    "learningRate": 0.0003,
+    "batchSize": 64,
+    "epochs": 21
+  },
+  "lastUpdated": "2026-02-07T06:48:48.303Z",
+  "version": "1.0"
+}

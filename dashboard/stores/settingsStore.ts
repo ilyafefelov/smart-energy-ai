@@ -65,6 +65,8 @@ const DEFAULT_SETTINGS: Settings = {
   }
 }
 
+const STORAGE_KEY = 'energy_settings_v1'
+
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<Settings>({ ...DEFAULT_SETTINGS })
   const isLoading = ref(false)
@@ -88,52 +90,33 @@ export const useSettingsStore = defineStore('settings', () => {
     error.value = null
 
     try {
-      // PRIORITY 1: Try localStorage first (client-side, always available)
-      if (process.client) {
-        const saved = localStorage.getItem('energy_settings')
+      // Only try localStorage (skip API entirely for now)
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = localStorage.getItem(STORAGE_KEY)
         if (saved) {
           try {
             const parsed = JSON.parse(saved)
+            console.log('[SettingsStore] Loaded from localStorage:', parsed)
             settings.value = {
               general: { ...DEFAULT_SETTINGS.general, ...parsed.general },
               battery: { ...DEFAULT_SETTINGS.battery, ...parsed.battery },
               notifications: { ...DEFAULT_SETTINGS.notifications, ...parsed.notifications },
               model: { ...DEFAULT_SETTINGS.model, ...parsed.model }
             }
-            console.log('[Settings] Loaded from localStorage:', settings.value)
             isDirty.value = false
             return
-          } catch (err) {
-            console.warn('[Settings] localStorage parse failed:', err)
+          } catch (parseErr) {
+            console.error('[SettingsStore] Failed to parse localStorage:', parseErr)
+            error.value = 'Failed to parse saved settings'
           }
         }
       }
 
-      // PRIORITY 2: Try backend API
-      try {
-        const response = await $fetch('/api/settings/load') as any
-
-        if (response.success && response.settings) {
-          settings.value = {
-            general: { ...DEFAULT_SETTINGS.general, ...response.settings.general },
-            battery: { ...DEFAULT_SETTINGS.battery, ...response.settings.battery },
-            notifications: { ...DEFAULT_SETTINGS.notifications, ...response.settings.notifications },
-            model: { ...DEFAULT_SETTINGS.model, ...response.settings.model }
-          }
-          console.log('[Settings] Loaded from backend API:', settings.value)
-          
-          // Also persist to localStorage
-          if (process.client) {
-            localStorage.setItem('energy_settings', JSON.stringify(settings.value))
-          }
-          
-          isDirty.value = false
-        }
-      } catch (apiErr) {
-        console.warn('[Settings] Backend API load failed:', apiErr)
-      }
+      // No saved settings found, use defaults
+      console.log('[SettingsStore] No saved settings found, using defaults')
+      settings.value = { ...DEFAULT_SETTINGS }
     } catch (e) {
-      console.error('Failed to load settings:', e)
+      console.error('[SettingsStore] Error loading settings:', e)
       error.value = 'Failed to load settings'
     } finally {
       isLoading.value = false
@@ -147,37 +130,24 @@ export const useSettingsStore = defineStore('settings', () => {
     try {
       const dataToSave = newSettings ? { ...settings.value, ...newSettings } : settings.value
 
-      // PRIORITY 1: Save to localStorage (always works, client-side)
-      if (process.client) {
-        localStorage.setItem('energy_settings', JSON.stringify(dataToSave))
-        console.log('[Settings] Saved to localStorage:', dataToSave)
+      // Save to localStorage
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
+        console.log('[SettingsStore] Saved to localStorage:', dataToSave)
+      } else {
+        throw new Error('localStorage not available')
       }
 
-      // PRIORITY 2: Try to save to backend (may fail, but try)
-      try {
-        const response = await $fetch('/api/settings/save', {
-          method: 'POST',
-          body: dataToSave
-        }) as any
-
-        if (response.success) {
-          console.log('[Settings] Saved to backend:', response)
-        } else {
-          console.warn('[Settings] Backend save returned error:', response.error)
-        }
-      } catch (apiErr) {
-        console.warn('[Settings] Backend save failed, but localStorage persisted:', apiErr)
-      }
-
-      // Mark as saved (success because localStorage definitely worked)
+      // Update state
       Object.assign(settings.value, dataToSave)
       isDirty.value = false
       lastSaveTime.value = new Date()
 
+      console.log('[SettingsStore] Settings saved successfully')
       return { success: true }
     } catch (e) {
       const errorMsg = (e as Error).message
-      console.error('Save failed:', e)
+      console.error('[SettingsStore] Save failed:', e)
       error.value = errorMsg
       return { success: false, error: errorMsg }
     } finally {
