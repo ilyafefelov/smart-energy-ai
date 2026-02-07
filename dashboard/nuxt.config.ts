@@ -4,8 +4,8 @@ export default defineNuxtConfig({
   // Module Configuration
   modules: [
     '@nuxtjs/tailwindcss',
-    '@pinia/nuxt'
-    // @nuxt/ui removed - requires Nuxt 4, we have Nuxt 3
+    '@pinia/nuxt',
+    '@nuxt/ui'
   ],
 
   // Build config
