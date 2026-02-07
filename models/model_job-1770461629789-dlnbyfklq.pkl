@@ -1,0 +1,1 @@
+{"jobId": "job-1770461629789-dlnbyfklq", "trainedAt": "2026-02-07T12:53:57.820073", "accuracy": 0.928, "loss": 0.045}
