@@ -1,9 +1,12 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   
-  // Pages directory configuration (Nuxt 4)
+  // Source directory configuration (Nuxt 4) - must be set when using non-standard structure
+  srcDir: 'app',
+  
+  // Pages directory configuration (Nuxt 4) - relative to srcDir
   dir: {
-    pages: 'app/pages'
+    pages: 'pages'
   },
 
   // Module Configuration for Nuxt 4
