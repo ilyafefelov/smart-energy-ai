@@ -1,13 +1,9 @@
-// server/api/prices/current.ts - Current OREE prices with standardized response
+// server/api/prices/current.ts - Current OREE prices with stabilized responses
 
-// Simple in-memory cache to stabilize repeated requests (e.g., user clicking "Refresh" rapidly)
 let PRICE_CACHE: { ts: number; data: any } | null = null
-const CACHE_TTL_MS = 60 * 1000 // 1 minute
+const CACHE_TTL_MS = 60 * 1000 // 1 minute cache
 
 export default defineEventHandler(async (event) => {
-  // GET /api/prices/current
-  // STANDARDIZED RESPONSE: { success, prices: { current, today, forecast } }
-
   try {
     // Return cached response when available and fresh
     const nowTs = Date.now()
@@ -15,97 +11,82 @@ export default defineEventHandler(async (event) => {
       return PRICE_CACHE.data
     }
 
-    // This would normally fetch from OREE database
-    // For now, returning realistic Ukrainian energy prices (generated deterministically for the current hour window)
     const now = new Date()
     const hour = now.getHours()
 
-    // Use a stable pseudo-random seed for the duration of the cache window to reduce noise
-    // Create a simple seed from the current hour and minute-group (cache window)
-    const seedGroup = Math.floor(nowTs / CACHE_TTL_MS)
-    const seed = (hour * 31 + seedGroup) % 100000
-    const rand = (n = 1) => {
-      // simple xorshift-ish deterministic PRNG
-      let x = (seed + 0x9e3779b9) & 0xffffffff
-      x ^= x << 13
-      x ^= x >>> 17
-      x ^= x << 5
-      return (Math.abs(x) % (n * 1000)) / 1000
-    }
-
-    // Simulate realistic hourly price variations
+    // Simple deterministic pricing based on time of day
+    // Peak hours (8-20): higher prices; Off-peak: lower prices
     const basePrice = 9.85
-    const peakMultiplier = hour >= 8 && hour <= 20 ? 1.4 : 0.8
-    // Use deterministic noise based on seed
-    const currentPriceApprox = basePrice * peakMultiplier + (rand() - 0.5) * 2
+    const isPeak = hour >= 8 && hour <= 20
+    const peakMultiplier = isPeak ? 1.35 : 0.75
 
-    // Generate 24-hour forecast (deterministic within cache window)
-    const forecast = Array.from({ length: 24 }, (_, i) => {
+    // Deterministic variation based on hour (same result within cache TTL)
+    const hourSeed = hour % 12
+    const variation = (Math.sin(hourSeed * 0.5) * 2) // -2 to +2
+
+    // Generate 24-hour forecast
+    const prices = Array.from({ length: 24 }, (_, i) => {
       const h = (hour + i) % 24
-      const mult = h >= 8 && h <= 20 ? 1.4 : 0.8
-      const noise = (rand() - 0.5) * 2
-      const price = Math.max(5, Math.min(18, basePrice * mult + noise))
+      const hPeak = h >= 8 && h <= 20
+      const hMult = hPeak ? 1.35 : 0.75
+      const hSeed = h % 12
+      const hVar = Math.sin(hSeed * 0.5) * 2
+      const price = Math.max(5, Math.min(18, basePrice * hMult + hVar))
+
       return {
         hour: h,
         timestamp: new Date(now.getTime() + i * 3600000).toISOString(),
         price: Math.round(price * 100) / 100,
-        confidence: Math.round((0.80 + (rand() * 0.15)) * 100) / 100,
-        trend: i === 0 ? 'stable' : (rand() > 0.5 ? 'up' : 'down')
+        confidence: 0.85 + (Math.abs(Math.cos(hSeed)) * 0.1), // 0.75-0.95
+        trend: hVar > 0.5 ? 'up' : hVar < -0.5 ? 'down' : 'stable'
       }
     })
 
-    const prices = forecast.slice(0, 24)
-
+    // Calculate statistics
     const minPrice = Math.min(...prices.map(p => p.price))
     const maxPrice = Math.max(...prices.map(p => p.price))
-    const avgPrice = prices.reduce((sum, p) => sum + p.price, 0) / prices.length
-    const weightedPrice = prices.reduce((sum, p) => sum + p.price * (p.confidence || 0.9), 0) / prices.length
+    const avgPrice = Math.round((prices.reduce((sum, p) => sum + p.price, 0) / prices.length) * 100) / 100
+    const weightedPrice = Math.round((prices.reduce((sum, p) => sum + p.price * p.confidence, 0) / prices.reduce((sum, p) => sum + p.confidence, 0)) * 100) / 100
 
-    // Identify peak and off-peak
+    // Peak and off-peak averages
     const peakPrices = prices.filter(p => p.hour >= 8 && p.hour <= 20)
     const offPeakPrices = prices.filter(p => p.hour < 8 || p.hour > 20)
 
     const peakPrice = peakPrices.length > 0
-      ? peakPrices.reduce((sum, p) => sum + p.price, 0) / peakPrices.length
+      ? Math.round((peakPrices.reduce((sum, p) => sum + p.price, 0) / peakPrices.length) * 100) / 100
       : avgPrice
 
     const offPeakPrice = offPeakPrices.length > 0
-      ? offPeakPrices.reduce((sum, p) => sum + p.price, 0) / offPeakPrices.length
+      ? Math.round((offPeakPrices.reduce((sum, p) => sum + p.price, 0) / offPeakPrices.length) * 100) / 100
       : avgPrice
 
-    // Use the first forecast point as the canonical "current" price for consistency
-    const canonicalCurrent = prices[0]?.price ?? Math.round(currentPriceApprox * 100) / 100
+    // Current price is the first forecast entry (canonical)
+    const currentPrice = prices[0].price
 
     const result = {
       success: true,
       prices: {
         current: {
-          price: Math.round(canonicalCurrent * 100) / 100,
+          price: currentPrice,
           timestamp: now.toISOString(),
-          trend: canonicalCurrent > avgPrice * 1.1 ? 'up' : canonicalCurrent < avgPrice * 0.9 ? 'down' : 'stable'
+          trend: currentPrice > avgPrice * 1.05 ? 'up' : currentPrice < avgPrice * 0.95 ? 'down' : 'stable'
         },
         today: {
           min: Math.round(minPrice * 100) / 100,
           max: Math.round(maxPrice * 100) / 100,
-          avg: Math.round(avgPrice * 100) / 100,
-          current: Math.round(canonicalCurrent * 100) / 100,
-          weighted: Math.round(weightedPrice * 100) / 100
+          avg: avgPrice,
+          current: currentPrice,
+          weighted: weightedPrice
         },
         forecast: {
-          next24h: prices.map(p => ({
-            hour: p.hour,
-            timestamp: p.timestamp,
-            price: p.price,
-            confidence: p.confidence,
-            trend: p.trend
-          })),
-          peak: Math.round(peakPrice * 100) / 100,
-          offPeak: Math.round(offPeakPrice * 100) / 100
+          next24h: prices,
+          peak: peakPrice,
+          offPeak: offPeakPrice
         }
       }
     }
 
-    // Cache the generated result for the TTL duration
+    // Cache for next 60 seconds
     PRICE_CACHE = { ts: nowTs, data: result }
 
     return result
