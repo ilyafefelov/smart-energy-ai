@@ -110,6 +110,13 @@
           </div>
           <div class="flex gap-2">
             <button 
+              @click="refreshChartData" 
+              class="px-3 py-1 text-xs bg-slate-700 hover:bg-energy-400 hover:text-slate-900 rounded transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isRefreshingChart"
+            >
+              {{ isRefreshingChart ? '⏳ Loading...' : '🔄 Refresh' }}
+            </button>
+            <button 
               @click="zoomChart" 
               class="px-3 py-1 text-xs bg-slate-700 hover:bg-energy-400 hover:text-slate-900 rounded transition font-semibold"
               :disabled="chartZoom >= 3"
@@ -511,6 +518,7 @@ const showRetrainingComplete = ref(false)
 const chartZoom = ref(1)
 const chartPanX = ref(0)
 const hoverPrice = ref<{ hour: number; price: number } | null>(null)
+const isRefreshingChart = ref(false)
 
 // Chart interactivity
 const zoomChart = () => {
@@ -674,6 +682,21 @@ const exportSavingsData = () => {
 const refreshPriceData = async () => {
   console.log('Refresh clicked - Price Data')
   await pricesStore.fetchPrices()
+}
+
+
+const refreshChartData = async () => {
+  console.log('🔄 Refreshing price forecast chart...')
+  isRefreshingChart.value = true
+
+  try {
+    await pricesStore.fetchPrices()
+    console.log('✅ Price forecast updated successfully')
+  } catch (e) {
+    console.error('❌ Failed to refresh chart:', e)
+  } finally {
+    isRefreshingChart.value = false
+  }
 }
 
 
