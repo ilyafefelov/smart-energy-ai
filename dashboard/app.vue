@@ -1,7 +1,7 @@
 <template>
   <div class="bg-slate-950 min-h-screen text-white">
     <!-- Global Navigation -->
-    <NavigationPageMenu />
+    <NavigationMenu />
 
     <!-- Main Content -->
     <main>

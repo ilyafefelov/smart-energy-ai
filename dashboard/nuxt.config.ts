@@ -1,12 +1,22 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   
-  // Module Configuration
+  // Pages directory configuration (Nuxt 4)
+  dir: {
+    pages: 'app/pages'
+  },
+
+  // Module Configuration for Nuxt 4
   modules: [
     '@nuxtjs/tailwindcss',
-    '@pinia/nuxt',
     '@nuxt/ui'
   ],
+
+  // Pinia Store Configuration (Direct in Nuxt 4)
+  // @pinia/nuxt not needed - Pinia integrated into Nuxt 4 core
+  pinia: {
+    storesDirs: ['./stores/**']
+  },
 
   // Build config
   nitro: {
@@ -43,6 +53,5 @@ export default defineNuxtConfig({
   },
 
   // Compatibility config
-  compatibilityDate: '2024-01-01'
+  compatibilityDate: '2024-04-01'
 })
-
