@@ -588,22 +588,87 @@ const scrollToPriceTable = () => {
   }
 }
 
-// Export functions with logging
-const exportPriceData = () => {
-  console.log('Export clicked - Price History')
-  console.log('Exporting 24-hour price data:', pricesStore.forecast)
-  // Placeholder for future CSV export functionality
+// CSV Export utility
+const downloadCSV = (csvContent: string, filename: string) => {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  
+  link.setAttribute('href', url)
+  link.setAttribute('download', filename)
+  link.style.visibility = 'hidden'
+  
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  
+  console.log(`✅ Downloaded: ${filename}`)
 }
 
-const exportSavingsData = () => {
-  console.log('Export clicked - Daily Savings Breakdown')
-  console.log('Exporting savings data:', {
-    arbitrageProfits: 1250,
-    avoidedPeakCharges: 450,
-    efficiencyGains: 220,
-    totalDailySavings: 1920
+// Export Price History Data (last 8 hours)
+const exportPriceData = () => {
+  const now = new Date()
+  const dateStr = now.toISOString().split('T')[0]
+  const filename = `price-history-${dateStr}.csv`
+  
+  // Get the last 8 hours of price data
+  const priceData = pricesStore.forecast.slice(0, 8)
+  
+  // Build CSV header
+  let csv = 'Hour,Price(₴/kWh),Status,vs Average,Action\n'
+  
+  // Build CSV rows
+  priceData.forEach((price, idx) => {
+    const hour = (new Date().getHours() + idx) % 24
+    const priceValue = price.price.toFixed(2)
+    
+    // Determine status
+    let status = 'Normal'
+    if (price.price > (pricesStore.todayAvg * 1.15)) {
+      status = 'Peak'
+    } else if (price.price < (pricesStore.todayAvg * 0.85)) {
+      status = 'Off-Peak'
+    }
+    
+    // Calculate vs Average percentage
+    const vsAvg = ((price.price - pricesStore.todayAvg) / pricesStore.todayAvg * 100).toFixed(0)
+    
+    // Determine action
+    let action = '-'
+    if (price.price < (pricesStore.todayAvg * 0.85)) {
+      action = 'Buy'
+    } else if (price.price > (pricesStore.todayAvg * 1.15)) {
+      action = 'Sell'
+    }
+    
+    csv += `${hour}:00,${priceValue},${status},${vsAvg}%,${action}\n`
   })
-  // Placeholder for future CSV export functionality
+  
+  downloadCSV(csv, filename)
+}
+
+// Export Savings Breakdown Data
+const exportSavingsData = () => {
+  const now = new Date()
+  const dateStr = now.toISOString().split('T')[0]
+  const filename = `savings-breakdown-${dateStr}.csv`
+  
+  // Savings data (from the displayed values)
+  const arbitrage = 1250
+  const peakAvoidance = 450
+  const efficiency = 220
+  const total = arbitrage + peakAvoidance + efficiency
+  
+  // Build CSV header
+  let csv = 'Category,Amount(₴),Percentage\n'
+  
+  // Build CSV rows
+  csv += `Arbitrage Profit,${arbitrage},${((arbitrage / total) * 100).toFixed(1)}%\n`
+  csv += `Avoided Peak Charges,${peakAvoidance},${((peakAvoidance / total) * 100).toFixed(1)}%\n`
+  csv += `Efficiency Gains,${efficiency},${((efficiency / total) * 100).toFixed(1)}%\n`
+  csv += `Total Daily Savings,${total},100%\n`
+  
+  downloadCSV(csv, filename)
 }
 
 const refreshPriceData = async () => {
