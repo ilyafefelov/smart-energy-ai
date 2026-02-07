@@ -1,13 +1,15 @@
 <template>
   <div 
     :class="[
-      'rounded-lg border p-6 transition-all hover:shadow-lg hover:scale-105 cursor-pointer',
+      'rounded-lg border p-6 transition-all duration-300 hover:shadow-lg',
       colorClasses[color] || colorClasses.slate
     ]"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
   >
     <!-- Header with tooltip -->
     <div class="flex items-start justify-between mb-4">
-      <div>
+      <div class="flex-1">
         <p class="text-sm text-slate-400 font-medium">{{ label }}</p>
         <InfoTooltip 
           v-if="tooltipInfo"
@@ -49,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 interface Props {
   label: string
@@ -72,14 +74,16 @@ const props = withDefaults(defineProps<Props>(), {
   description: undefined
 })
 
+const isHovered = ref(false)
+
 const colorClasses = {
-  green: 'bg-green-900 bg-opacity-20 border-green-700 hover:bg-opacity-30',
-  red: 'bg-red-900 bg-opacity-20 border-red-700 hover:bg-opacity-30',
-  blue: 'bg-blue-900 bg-opacity-20 border-blue-700 hover:bg-opacity-30',
-  yellow: 'bg-yellow-900 bg-opacity-20 border-yellow-700 hover:bg-opacity-30',
-  purple: 'bg-purple-900 bg-opacity-20 border-purple-700 hover:bg-opacity-30',
-  slate: 'bg-slate-800 bg-opacity-40 border-slate-700 hover:bg-opacity-50',
-  orange: 'bg-orange-900 bg-opacity-20 border-orange-700 hover:bg-opacity-30'
+  green: 'bg-green-900 bg-opacity-20 border-green-700 hover:bg-opacity-30 hover:scale-102 hover:shadow-lg',
+  red: 'bg-red-900 bg-opacity-20 border-red-700 hover:bg-opacity-30 hover:scale-102 hover:shadow-lg',
+  blue: 'bg-blue-900 bg-opacity-20 border-blue-700 hover:bg-opacity-30 hover:scale-102 hover:shadow-lg',
+  yellow: 'bg-yellow-900 bg-opacity-20 border-yellow-700 hover:bg-opacity-30 hover:scale-102 hover:shadow-lg',
+  purple: 'bg-purple-900 bg-opacity-20 border-purple-700 hover:bg-opacity-30 hover:scale-102 hover:shadow-lg',
+  slate: 'bg-slate-800 bg-opacity-40 border-slate-700 hover:bg-opacity-50 hover:scale-102 hover:shadow-lg',
+  orange: 'bg-orange-900 bg-opacity-20 border-orange-700 hover:bg-opacity-30 hover:scale-102 hover:shadow-lg'
 }
 
 const trendIcon = computed(() => {
@@ -106,6 +110,10 @@ const trendColor = computed(() => {
 </script>
 
 <style scoped>
+.hover\:scale-102:hover {
+  transform: scale(1.02);
+}
+
 .hover\:shadow-lg:hover {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
 }

@@ -103,52 +103,114 @@
         <div class="flex justify-between items-start mb-4">
           <div>
             <h2 class="text-xl font-bold text-white mb-1">24h Price Forecast</h2>
-            <p class="text-sm text-slate-400">Hover for details • Click to lock price</p>
+            <p class="text-sm text-slate-400">
+              <span v-if="hoverPrice">{{ hoverPrice.hour }}:00 → {{ hoverPrice.price.toFixed(2) }}₴/kWh</span>
+              <span v-else>Hover for details • Zoom: {{ chartZoom.toFixed(1) }}x</span>
+            </p>
           </div>
           <div class="flex gap-2">
-            <button class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">🔍+ Zoom</button>
-            <button class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">◀ Pan</button>
+            <button 
+              @click="zoomChart" 
+              class="px-3 py-1 text-xs bg-slate-700 hover:bg-energy-400 hover:text-slate-900 rounded transition font-semibold"
+              :disabled="chartZoom >= 3"
+              :class="{ 'opacity-50 cursor-not-allowed': chartZoom >= 3 }"
+            >
+              🔍+ Zoom
+            </button>
+            <button 
+              @click="panChart" 
+              class="px-3 py-1 text-xs bg-slate-700 hover:bg-energy-400 hover:text-slate-900 rounded transition font-semibold"
+              :disabled="chartPanX <= -600"
+              :class="{ 'opacity-50 cursor-not-allowed': chartPanX <= -600 }"
+            >
+              ◀ Pan
+            </button>
+            <button 
+              @click="resetChart" 
+              class="px-3 py-1 text-xs bg-slate-700 hover:bg-energy-400 hover:text-slate-900 rounded transition font-semibold"
+              v-show="chartZoom > 1 || chartPanX < 0"
+            >
+              ↺ Reset
+            </button>
           </div>
         </div>
 
         <!-- Simple SVG Chart -->
-        <div v-if="pricesStore.forecast.length > 0" class="relative">
-          <svg viewBox="0 0 1200 400" class="w-full h-64 mb-4">
-            <!-- Grid lines -->
-            <line x1="0" y1="50" x2="1200" y2="50" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
-            <line x1="0" y1="150" x2="1200" y2="150" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
-            <line x1="0" y1="250" x2="1200" y2="250" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
-            <line x1="0" y1="350" x2="1200" y2="350" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
+        <div v-if="pricesStore.forecast.length > 0" class="relative overflow-hidden">
+          <div class="overflow-x-auto">
+            <svg 
+              viewBox="0 0 1200 400" 
+              class="w-full h-64 mb-4 transition-transform"
+              :style="{ 
+                transform: `scale(${chartZoom}) translateX(${chartPanX}px)`,
+                transformOrigin: 'top left',
+                minWidth: `${(chartZoom - 1) * 100}%`
+              }"
+              @mousemove="onChartHover"
+              @mouseleave="onChartLeave"
+            >
+              <!-- Good buying zones (light green background) -->
+              <g v-for="(f, i) in pricesStore.forecast" :key="`buy-${i}`">
+                <rect
+                  v-if="f.price < (pricesStore.todayAvg * 0.85)"
+                  :x="(i / pricesStore.forecast.length) * 1200 - 15"
+                  y="0"
+                  width="30"
+                  height="400"
+                  fill="#22c55e"
+                  opacity="0.15"
+                />
+              </g>
 
-            <!-- Price line chart -->
-            <polyline
-              :points="chartPoints"
-              fill="none"
-              stroke="#22d3ee"
-              stroke-width="3"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
+              <!-- Good selling zones (light red background) -->
+              <g v-for="(f, i) in pricesStore.forecast" :key="`sell-${i}`">
+                <rect
+                  v-if="f.price > (pricesStore.todayAvg * 1.15)"
+                  :x="(i / pricesStore.forecast.length) * 1200 - 15"
+                  y="0"
+                  width="30"
+                  height="400"
+                  fill="#ef4444"
+                  opacity="0.15"
+                />
+              </g>
 
-            <!-- Fill under line -->
-            <polygon
-              :points="`0,350 ${chartPoints} 1200,350`"
-              fill="url(#priceGradient)"
-              opacity="0.3"
-            />
+              <!-- Grid lines -->
+              <line x1="0" y1="50" x2="1200" y2="50" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
+              <line x1="0" y1="150" x2="1200" y2="150" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
+              <line x1="0" y1="250" x2="1200" y2="250" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
+              <line x1="0" y1="350" x2="1200" y2="350" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
 
-            <!-- Gradient definition -->
-            <defs>
-              <linearGradient id="priceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" style="stop-color: #22d3ee; stop-opacity: 0.5" />
-                <stop offset="100%" style="stop-color: #22d3ee; stop-opacity: 0" />
-              </linearGradient>
-            </defs>
+              <!-- Price line chart -->
+              <polyline
+                :points="chartPoints"
+                fill="none"
+                stroke="#22d3ee"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
 
-            <!-- Axis labels -->
-            <text x="10" y="25" font-size="12" fill="#94a3b8">{{ pricesStore.peakPrice.toFixed(1) }}₴</text>
-            <text x="10" y="375" font-size="12" fill="#94a3b8">{{ pricesStore.offPeakPrice.toFixed(1) }}₴</text>
-          </svg>
+              <!-- Fill under line -->
+              <polygon
+                :points="`0,350 ${chartPoints} 1200,350`"
+                fill="url(#priceGradient)"
+                opacity="0.3"
+              />
+
+              <!-- Gradient definition -->
+              <defs>
+                <linearGradient id="priceGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color: #22d3ee; stop-opacity: 0.5" />
+                  <stop offset="100%" style="stop-color: #22d3ee; stop-opacity: 0" />
+                </linearGradient>
+              </defs>
+
+              <!-- Axis labels -->
+              <text x="10" y="25" font-size="12" fill="#94a3b8">{{ pricesStore.peakPrice.toFixed(1) }}₴</text>
+              <text x="10" y="375" font-size="12" fill="#94a3b8">{{ pricesStore.offPeakPrice.toFixed(1) }}₴</text>
+            </svg>
+          </div>
 
           <!-- Legend -->
           <div class="flex justify-center gap-6 text-sm">
@@ -158,11 +220,11 @@
             </div>
             <div class="flex items-center gap-2">
               <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span class="text-slate-300">Good buying time</span>
+              <span class="text-slate-300">Good buying time (< 85% avg)</span>
             </div>
             <div class="flex items-center gap-2">
               <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span class="text-slate-300">Good selling time</span>
+              <span class="text-slate-300">Good selling time (> 115% avg)</span>
             </div>
           </div>
         </div>
@@ -234,15 +296,15 @@
       </div>
 
       <!-- Price History Table -->
-      <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
+      <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6" id="price-history-table">
         <div class="flex justify-between items-center mb-4">
           <div>
             <h2 class="text-xl font-bold text-white">📊 Price History (Today)</h2>
             <p class="text-sm text-slate-400 mt-1">24-hour pricing data with peak/off-peak classification</p>
           </div>
           <div class="flex gap-2">
-            <button class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">📥 Export</button>
-            <button class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">🔄 Refresh</button>
+            <button @click="exportPriceData" class="px-3 py-1 text-xs bg-slate-700 hover:bg-energy-400 hover:text-slate-900 rounded transition font-semibold cursor-pointer">📥 Export</button>
+            <button @click="refreshPriceData" class="px-3 py-1 text-xs bg-slate-700 hover:bg-energy-400 hover:text-slate-900 rounded transition font-semibold cursor-pointer">🔄 Refresh</button>
           </div>
         </div>
 
@@ -281,14 +343,17 @@
           </table>
         </div>
 
-        <p class="text-xs text-slate-400 mt-4">Showing first 8 hours • <a href="#" class="text-energy-400 hover:text-cyan-300">View all 24 hours</a></p>
+        <p class="text-xs text-slate-400 mt-4">Showing first 8 hours • <button @click="scrollToPriceTable" class="text-energy-400 hover:text-cyan-300 cursor-pointer transition">View all 24 hours</button></p>
       </div>
 
       <!-- Daily Savings Trend -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Savings Breakdown -->
         <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
-          <h2 class="text-xl font-bold text-white mb-4">💰 Daily Savings Breakdown</h2>
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-white">💰 Daily Savings Breakdown</h2>
+            <button @click="exportSavingsData" class="px-3 py-1 text-xs bg-slate-700 hover:bg-energy-400 hover:text-slate-900 rounded transition font-semibold cursor-pointer">📥 Export</button>
+          </div>
           
           <div class="space-y-3">
             <div>
@@ -443,6 +508,46 @@ const retrainingStore = useRetrainingStore()
 const settingsStore = useSettingsStore()
 
 const showRetrainingComplete = ref(false)
+const chartZoom = ref(1)
+const chartPanX = ref(0)
+const hoverPrice = ref<{ hour: number; price: number } | null>(null)
+
+// Chart interactivity
+const zoomChart = () => {
+  chartZoom.value = Math.min(chartZoom.value + 0.5, 3)
+}
+
+const panChart = () => {
+  chartPanX.value = Math.max(chartPanX.value - 100, -600)
+}
+
+const resetChart = () => {
+  chartZoom.value = 1
+  chartPanX.value = 0
+}
+
+// Hover tooltip
+const onChartHover = (event: MouseEvent) => {
+  const svg = event.currentTarget as SVGElement
+  const rect = svg.getBoundingClientRect()
+  const x = event.clientX - rect.left
+
+  // Calculate which hour is being hovered
+  const dataPoints = pricesStore.forecast.length
+  const pointWidth = 1200 / dataPoints
+  const hoverIndex = Math.floor(x / pointWidth)
+
+  if (hoverIndex >= 0 && hoverIndex < dataPoints) {
+    hoverPrice.value = {
+      hour: (new Date().getHours() + hoverIndex) % 24,
+      price: pricesStore.forecast[hoverIndex].price
+    }
+  }
+}
+
+const onChartLeave = () => {
+  hoverPrice.value = null
+}
 
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('en-US', {
@@ -475,11 +580,38 @@ const cancelRetraining = async () => {
   await retrainingStore.cancelRetraining()
 }
 
-const dismissRetrainingComplete = () => {
-  showRetrainingComplete.value = false
+// Scroll to price history table
+const scrollToPriceTable = () => {
+  const element = document.getElementById('price-history-table')
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 }
 
-// Initialize data on mount
+// Export functions with logging
+const exportPriceData = () => {
+  console.log('Export clicked - Price History')
+  console.log('Exporting 24-hour price data:', pricesStore.forecast)
+  // Placeholder for future CSV export functionality
+}
+
+const exportSavingsData = () => {
+  console.log('Export clicked - Daily Savings Breakdown')
+  console.log('Exporting savings data:', {
+    arbitrageProfits: 1250,
+    avoidedPeakCharges: 450,
+    efficiencyGains: 220,
+    totalDailySavings: 1920
+  })
+  // Placeholder for future CSV export functionality
+}
+
+const refreshPriceData = async () => {
+  console.log('Refresh clicked - Price Data')
+  await pricesStore.fetchPrices()
+}
+
+
 onMounted(async () => {
   // Load settings FIRST so battery capacity is available
   await settingsStore.loadSettings()
