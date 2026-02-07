@@ -28,6 +28,14 @@ from energy_ml.assets.training import (
     xgboost_model_metadata,
     model_training_status,
 )
+from energy_ml.assets.models import (
+    xgboost_trained_model,
+    model_evaluation,
+    optuna_tuning_results,
+    backtesting_results,
+    model_comparison,
+    model_readiness_check,
+)
 
 # Define jobs
 # Daily batch job - recompute everything
@@ -70,6 +78,26 @@ training_job = define_asset_job(
     tags={"batch": True, "frequency": "weekly"},
 )
 
+# Model training job - full pipeline
+model_training_job = define_asset_job(
+    name="model_training_job",
+    selection=[
+        # Training data
+        training_data_prepared,
+        synthetic_historical_data,
+        backtest_dataset,
+        baseline_model_metrics,
+        # Models
+        xgboost_trained_model,
+        model_evaluation,
+        optuna_tuning_results,
+        backtesting_results,
+        model_comparison,
+        model_readiness_check,
+    ],
+    tags={"batch": True, "frequency": "weekly"},
+)
+
 # Create main definitions
 defs = Definitions(
     assets=[
@@ -95,6 +123,13 @@ defs = Definitions(
         baseline_model_metrics,
         xgboost_model_metadata,
         model_training_status,
+        # Models (Layer 4)
+        xgboost_trained_model,
+        model_evaluation,
+        optuna_tuning_results,
+        backtesting_results,
+        model_comparison,
+        model_readiness_check,
     ],
-    jobs=[daily_batch_job, training_job],
+    jobs=[daily_batch_job, training_job, model_training_job],
 )
