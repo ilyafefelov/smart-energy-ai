@@ -12,17 +12,13 @@ export default defineNuxtConfig({
   // Module Configuration for Nuxt 4
   modules: [
     '@nuxtjs/tailwindcss',
-    '@nuxt/ui',
-    '@pinia/nuxt'
+    '@nuxt/ui'
   ],
 
-  // Pinia Store Configuration (Direct in Nuxt 4)
-  // @pinia/nuxt not needed - Pinia integrated into Nuxt 4 core
+  // Pinia configuration
   pinia: {
     storesDirs: ['./app/stores/**']
   },
-
-  // Build config
   nitro: {
     prerender: {
       crawlLinks: false,
