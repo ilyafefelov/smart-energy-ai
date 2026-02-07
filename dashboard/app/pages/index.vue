@@ -38,7 +38,7 @@
           :value="pricesStore.currentPriceFormatted"
           icon="📊"
           :color="pricesStore.priceStatus.color as any"
-          :tooltipInfo="metricsStore.getTooltip('averagePrice')"
+          :tooltipInfo="metricsStore.getTooltip('currentPrice')"
         />
 
         <!-- Battery SOC Card -->
@@ -70,6 +70,9 @@
           :tooltipInfo="metricsStore.getTooltip('forecastAccuracy')"
         />
       </div>
+
+      <!-- Documentation / Methodology -->
+      <MethodologyCard />
 
       <!-- Secondary Metrics Grid (3 cols) -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -507,6 +510,7 @@ import { usePricesStore } from '~/stores/pricesStore'
 import { useRetrainingStore } from '~/stores/retrainingStore'
 import { useSettingsStore } from '~/stores/settingsStore'
 import MetricCard from '~/components/DashboardCards/MetricCard.vue'
+import MethodologyCard from '~/components/Documentation/MethodologyCard.vue'
 
 const metricsStore = useMetricsStore()
 const batteryStore = useBatteryStore()
