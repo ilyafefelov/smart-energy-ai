@@ -36,6 +36,14 @@ from energy_ml.assets.models import (
     model_comparison,
     model_readiness_check,
 )
+from energy_ml.assets.recommendations import (
+    current_recommendation,
+    schedule_24h,
+    performance_monitoring,
+    retraining_triggers,
+    recommendation_metadata,
+    dashboard_recommendation_api_response,
+)
 
 # Define jobs
 # Daily batch job - recompute everything
@@ -130,6 +138,13 @@ defs = Definitions(
         backtesting_results,
         model_comparison,
         model_readiness_check,
+        # Recommendations (Layer 5)
+        current_recommendation,
+        schedule_24h,
+        performance_monitoring,
+        retraining_triggers,
+        recommendation_metadata,
+        dashboard_recommendation_api_response,
     ],
     jobs=[daily_batch_job, training_job, model_training_job],
 )
