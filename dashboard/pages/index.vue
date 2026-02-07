@@ -57,7 +57,7 @@
                 :style="{ width: batteryStore.soc + '%' }"
               ></div>
             </div>
-            <p class="text-xs text-slate-400 mt-2">{{ batteryStore.state.capacity }} kWh capacity</p>
+            <p class="text-xs text-slate-400 mt-2">{{ batteryStore.capacity }} kWh capacity</p>
           </div>
         </MetricCard>
 

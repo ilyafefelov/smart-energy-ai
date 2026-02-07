@@ -178,7 +178,7 @@
 
           <div class="bg-slate-900 rounded-lg p-4">
             <p class="text-xs text-slate-400 mb-2">Capacity</p>
-            <p class="text-2xl font-bold text-slate-200">{{ batteryStore.state.capacity }} kWh</p>
+            <p class="text-2xl font-bold text-slate-200">{{ batteryStore.capacity }} kWh</p>
           </div>
         </div>
       </div>

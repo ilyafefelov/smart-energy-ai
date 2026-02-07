@@ -47,9 +47,21 @@ export const useBatteryStore = defineStore('battery', () => {
   const temperature = computed(() => state.value.temperature)
   const health = computed(() => state.value.health)
   
-  // Get capacity from settings, not hardcoded
+  // Get capacity and limits from settings, not hardcoded
   const capacity = computed(() => {
     return settingsStore.batterySettings.capacity
+  })
+  
+  const minSOC = computed(() => {
+    return settingsStore.batterySettings.minSOC
+  })
+  
+  const maxChargeRate = computed(() => {
+    return settingsStore.batterySettings.maxChargeRate
+  })
+  
+  const maxDischargeRate = computed(() => {
+    return settingsStore.batterySettings.maxDischargeRate
   })
   
   const isCharging = computed(() => state.value.power > 0)
@@ -153,6 +165,9 @@ export const useBatteryStore = defineStore('battery', () => {
     temperature,
     health,
     capacity,
+    minSOC,
+    maxChargeRate,
+    maxDischargeRate,
     isCharging,
     isDischarging,
     isIdle,
