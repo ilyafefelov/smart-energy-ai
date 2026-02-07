@@ -38,7 +38,7 @@
           :value="pricesStore.currentPriceFormatted"
           icon="📊"
           :color="pricesStore.priceStatus.color as any"
-          :tooltipInfo="metricsStore.getTooltip('averagePrice')"
+          :tooltipInfo="metricsStore.getTooltip('currentPrice')"
         />
 
         <!-- Battery SOC Card -->

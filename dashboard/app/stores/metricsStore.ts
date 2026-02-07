@@ -44,11 +44,10 @@ const DEFAULT_METRICS: DashboardMetrics = {
     color: 'blue'
   },
   batteryHealth: {
-    label: 'Battery Health',
-    value: '95%',
+    label: 'Battery SOC',
+    value: '75%',
     unit: '%',
-    trend: 'down',
-    trendValue: -0.5,
+    trend: 'stable',
     color: 'yellow'
   },
   nextCycleIn: {
@@ -87,7 +86,7 @@ export interface TooltipInfo {
 const TOOLTIPS: TooltipInfo = {
   savingsToday: {
     title: 'Daily Savings',
-    description: 'Total UAH saved vs. baseline strategy today',
+    description: 'Total savings achieved today',
     formula: 'Baseline Cost - Optimized Cost'
   },
   savingsThisMonth: {
@@ -97,18 +96,23 @@ const TOOLTIPS: TooltipInfo = {
   },
   forecastAccuracy: {
     title: 'Forecast Accuracy',
-    description: 'Percentage of price predictions within 5% error margin',
+    description: 'Forecasting model accuracy',
     formula: '(Accurate Predictions / Total Predictions) × 100'
   },
   batteryHealth: {
-    title: 'Battery Health',
-    description: 'Current health status of the battery system',
-    formula: '(Current Cycles / Max Cycles) × 100'
+    title: 'Battery SOC',
+    description: 'Battery state of charge',
+    formula: 'Measured by battery telemetry (SOC%)'
   },
   nextCycleIn: {
-    title: 'Next Cycle In',
-    description: 'Time until the next AI-recommended charge/discharge cycle',
+    title: 'Next Cycle',
+    description: 'Time until next peak/off-peak cycle',
     formula: 'Based on price forecast and battery state'
+  },
+  currentPrice: {
+    title: 'Current Price',
+    description: 'Current electricity price',
+    formula: 'Real-time market price (₴/kWh)'
   },
   averagePrice: {
     title: 'Average Price',
@@ -117,12 +121,12 @@ const TOOLTIPS: TooltipInfo = {
   },
   peakPrice: {
     title: 'Peak Price',
-    description: 'Maximum electricity price today',
+    description: 'Highest price today',
     formula: 'Max hourly price'
   },
   offPeakPrice: {
     title: 'Off-Peak Price',
-    description: 'Minimum electricity price today',
+    description: 'Lowest price today',
     formula: 'Min hourly price'
   }
 }
@@ -178,7 +182,7 @@ export const useMetricsStore = defineStore('metrics', () => {
             color: 'blue'
           },
           batteryHealth: {
-            label: 'Battery Health',
+            label: 'Battery SOC',
             value: `${(m.batteryHealth || 95).toFixed(0)}%`,
             unit: '%',
             trend: 'stable',
