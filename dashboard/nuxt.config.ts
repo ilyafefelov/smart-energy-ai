@@ -11,7 +11,8 @@ export default defineNuxtConfig({
 
   // Module Configuration for Nuxt 4
   modules: [
-    '@nuxtjs/tailwindcss'
+    '@nuxtjs/tailwindcss',
+    '@nuxt/ui'
   ],
 
   // Pinia configuration
