@@ -434,6 +434,7 @@ import { useBatteryStore } from '~/stores/batteryStore'
 import { usePricesStore } from '~/stores/pricesStore'
 import { useRetrainingStore } from '~/stores/retrainingStore'
 import { useSettingsStore } from '~/stores/settingsStore'
+import MetricCard from '~/components/DashboardCards/MetricCard.vue'
 
 const metricsStore = useMetricsStore()
 const batteryStore = useBatteryStore()
