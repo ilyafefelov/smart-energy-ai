@@ -2,17 +2,25 @@
   <div class="relative group inline-block">
     <slot />
     
-    <!-- Tooltip - positioned top-right -->
-    <div class="absolute top-0 right-0 transform translate-x-full -translate-y-1/4 hidden group-hover:block z-50 ml-2">
-      <div class="bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg border border-slate-700 w-max max-w-xs whitespace-normal">
-        <p class="font-semibold text-sm mb-1">{{ title }}</p>
-        <p class="text-xs text-slate-300 mb-2 max-w-xs">{{ description }}</p>
-        <p v-if="formula" class="text-xs text-slate-400 italic">
-          <span class="font-semibold">Formula:</span> {{ formula }}
-        </p>
+    <!-- Tooltip - positioned top-right with better spacing -->
+    <div class="absolute bottom-full left-0 hidden group-hover:block z-50 mb-2 pointer-events-none">
+      <div class="bg-slate-900 text-white px-4 py-3 rounded-lg shadow-xl border border-slate-600 w-max max-w-sm whitespace-normal">
+        <!-- Title -->
+        <p class="font-semibold text-sm text-energy-400 mb-2">{{ title }}</p>
+        
+        <!-- Description -->
+        <p class="text-xs text-slate-300 mb-3 leading-relaxed">{{ description }}</p>
+        
+        <!-- Formula -->
+        <div v-if="formula" class="border-t border-slate-700 pt-2 mt-2">
+          <p class="text-xs text-slate-400">
+            <span class="font-semibold text-slate-300">Formula:</span>
+          </p>
+          <p class="text-xs text-slate-400 italic mt-1">{{ formula }}</p>
+        </div>
 
-        <!-- Arrow pointing left -->
-        <div class="absolute left-0 top-1/4 transform translate-x-full -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-r-4 border-t-transparent border-b-transparent border-r-slate-800"></div>
+        <!-- Arrow pointing down -->
+        <div class="absolute left-4 top-full transform -translate-y-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-slate-900"></div>
       </div>
     </div>
   </div>
@@ -31,7 +39,9 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <style scoped>
+/* Ensure tooltip stays visible */
 .group:hover > :last-child {
   display: block;
+  pointer-events: auto;
 }
 </style>
