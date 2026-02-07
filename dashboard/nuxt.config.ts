@@ -18,7 +18,7 @@ export default defineNuxtConfig({
   // Pinia Store Configuration (Direct in Nuxt 4)
   // @pinia/nuxt not needed - Pinia integrated into Nuxt 4 core
   pinia: {
-    storesDirs: ['./stores/**']
+    storesDirs: ['./app/stores/**']
   },
 
   // Build config
