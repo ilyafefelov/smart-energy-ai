@@ -233,6 +233,139 @@
         <p class="text-xs text-slate-400">Hover to see predicted SOC at specific hour • Drag to adjust forecast</p>
       </div>
 
+      <!-- Price History Table -->
+      <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 class="text-xl font-bold text-white">📊 Price History (Today)</h2>
+            <p class="text-sm text-slate-400 mt-1">24-hour pricing data with peak/off-peak classification</p>
+          </div>
+          <div class="flex gap-2">
+            <button class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">📥 Export</button>
+            <button class="px-3 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded transition">🔄 Refresh</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-700">
+                <th class="text-left py-3 px-4 text-slate-400 font-semibold">Hour</th>
+                <th class="text-right py-3 px-4 text-slate-400 font-semibold">Price (₴/kWh)</th>
+                <th class="text-left py-3 px-4 text-slate-400 font-semibold">Status</th>
+                <th class="text-right py-3 px-4 text-slate-400 font-semibold">vs Avg</th>
+                <th class="text-center py-3 px-4 text-slate-400 font-semibold">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(price, idx) in pricesStore.forecast.slice(0, 8)" :key="idx" class="border-b border-slate-800 hover:bg-slate-900 bg-opacity-30 transition">
+                <td class="py-3 px-4 text-white font-medium">{{ (new Date().getHours() + idx) % 24 }}:00</td>
+                <td class="text-right py-3 px-4">
+                  <span class="font-bold text-cyan-400">{{ price.price.toFixed(2) }}</span>
+                </td>
+                <td class="py-3 px-4">
+                  <span v-if="price.price > (pricesStore.todayAvg * 1.15)" class="px-2 py-1 bg-red-900 bg-opacity-40 text-red-300 rounded text-xs">📈 Peak</span>
+                  <span v-else-if="price.price < (pricesStore.todayAvg * 0.85)" class="px-2 py-1 bg-green-900 bg-opacity-40 text-green-300 rounded text-xs">📉 Off-Peak</span>
+                  <span v-else class="px-2 py-1 bg-yellow-900 bg-opacity-40 text-yellow-300 rounded text-xs">➡️ Normal</span>
+                </td>
+                <td class="text-right py-3 px-4" :class="price.price > pricesStore.todayAvg ? 'text-red-400' : 'text-green-400'">
+                  {{ ((price.price - pricesStore.todayAvg) / pricesStore.todayAvg * 100).toFixed(0) }}%
+                </td>
+                <td class="text-center py-3 px-4">
+                  <span v-if="price.price < (pricesStore.todayAvg * 0.85)" class="text-lg">💰 Buy</span>
+                  <span v-else-if="price.price > (pricesStore.todayAvg * 1.15)" class="text-lg">⚡ Sell</span>
+                  <span v-else class="text-lg">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="text-xs text-slate-400 mt-4">Showing first 8 hours • <a href="#" class="text-energy-400 hover:text-cyan-300">View all 24 hours</a></p>
+      </div>
+
+      <!-- Daily Savings Trend -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Savings Breakdown -->
+        <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
+          <h2 class="text-xl font-bold text-white mb-4">💰 Daily Savings Breakdown</h2>
+          
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm text-slate-300">Arbitrage Profit</span>
+                <span class="font-bold text-green-400">₴ 1,250</span>
+              </div>
+              <div class="w-full bg-slate-700 rounded-full h-2">
+                <div class="h-full bg-green-500 rounded-full" style="width: 65%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm text-slate-300">Avoided Peak Charges</span>
+                <span class="font-bold text-blue-400">₴ 450</span>
+              </div>
+              <div class="w-full bg-slate-700 rounded-full h-2">
+                <div class="h-full bg-blue-500 rounded-full" style="width: 23%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm text-slate-300">Efficiency Gains</span>
+                <span class="font-bold text-purple-400">₴ 220</span>
+              </div>
+              <div class="w-full bg-slate-700 rounded-full h-2">
+                <div class="h-full bg-purple-500 rounded-full" style="width: 11%"></div>
+              </div>
+            </div>
+
+            <div class="pt-4 mt-4 border-t border-slate-700">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-white">Total Daily Savings</span>
+                <span class="text-2xl font-bold text-energy-400">₴ 1,920</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Trend -->
+        <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
+          <h2 class="text-xl font-bold text-white mb-4">📈 7-Day Savings Trend</h2>
+          
+          <svg viewBox="0 0 600 250" class="w-full h-full">
+            <!-- Grid -->
+            <line x1="0" y1="50" x2="600" y2="50" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
+            <line x1="0" y1="100" x2="600" y2="100" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
+            <line x1="0" y1="150" x2="600" y2="150" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
+            <line x1="0" y1="200" x2="600" y2="200" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
+
+            <!-- Bar chart for 7 days -->
+            <g v-for="day in 7" :key="day">
+              <rect 
+                :x="(day - 1) * 85 + 10"
+                :y="200 - Math.random() * 150"
+                width="60"
+                height="150"
+                fill="#10b981"
+                opacity="0.7"
+              />
+              <text :x="(day - 1) * 85 + 40" y="230" font-size="11" fill="#94a3b8" text-anchor="middle">
+                {{ ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day - 1] }}
+              </text>
+            </g>
+
+            <!-- Y-axis labels -->
+            <text x="575" y="55" font-size="11" fill="#94a3b8">₴2K</text>
+            <text x="575" y="155" font-size="11" fill="#94a3b8">₴1K</text>
+            <text x="575" y="205" font-size="11" fill="#94a3b8">₴0</text>
+          </svg>
+
+          <p class="text-xs text-slate-400 mt-4">Average: <span class="text-green-400 font-bold">₴ 1,542/day</span> • Peak: <span class="text-green-400 font-bold">₴ 2,100 (Wed)</span></p>
+        </div>
+      </div>
+
       <!-- Active Retraining Section -->
       <div v-if="retrainingStore.isRunning" class="bg-yellow-900 bg-opacity-30 border border-yellow-700 rounded-lg p-6">
         <div class="flex items-center gap-3 mb-4">
