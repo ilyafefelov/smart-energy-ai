@@ -30,11 +30,21 @@ export interface ModelSettings {
   epochs: number
 }
 
+export interface UserConfigSettings {
+  battery_type: 'LFP' | 'Lead-Acid' | 'VRFB'
+  battery_capacity_kwh: number
+  battery_efficiency: number
+  load_profile_type: 'standard' | 'multi-shift' | '24/7' | 'custom'
+  load_peak_kw: number
+  tariff_region: string
+}
+
 export interface Settings {
   general: GeneralSettings
   battery: BatterySettings
   notifications: NotificationSettings
   model: ModelSettings
+  userConfig?: UserConfigSettings
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -62,6 +72,14 @@ const DEFAULT_SETTINGS: Settings = {
     learningRate: 0.0003,
     batchSize: 64,
     epochs: 20
+  },
+  userConfig: {
+    battery_type: 'LFP',
+    battery_capacity_kwh: 10.0,
+    battery_efficiency: 0.95,
+    load_profile_type: 'standard',
+    load_peak_kw: 10.0,
+    tariff_region: 'ukraine'
   }
 }
 
@@ -189,6 +207,94 @@ export const useSettingsStore = defineStore('settings', () => {
     error.value = null
   }
 
+  const loadConfig = async () => {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const response = await fetch('/api/config/current')
+      if (!response.ok) {
+        throw new Error('Failed to load config')
+      }
+
+      const data = await response.json()
+      if (data.success && data.data) {
+        settings.value.userConfig = data.data
+        isDirty.value = false
+      }
+    } catch (e) {
+      console.error('[SettingsStore] Error loading config:', e)
+      error.value = 'Failed to load configuration'
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const saveConfig = async (newConfig?: Partial<UserConfigSettings>) => {
+    isSaving.value = true
+    error.value = null
+
+    try {
+      const configToSave = newConfig
+        ? { ...settings.value.userConfig, ...newConfig }
+        : settings.value.userConfig
+
+      const response = await fetch('/api/config/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(configToSave)
+      })
+
+      if (!response.ok) {
+        const error_data = await response.json()
+        throw new Error(error_data.errors?.join(', ') || 'Failed to save config')
+      }
+
+      const data = await response.json()
+      if (data.success && data.data) {
+        settings.value.userConfig = data.data
+        isDirty.value = false
+        lastSaveTime.value = new Date()
+
+        // Also save to localStorage
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem('energy_config_v1', JSON.stringify(settings.value))
+        }
+
+        return { success: true }
+      }
+
+      throw new Error('No data in response')
+    } catch (e) {
+      const errorMsg = (e as Error).message
+      console.error('[SettingsStore] Save config failed:', e)
+      error.value = errorMsg
+      return { success: false, error: errorMsg }
+    } finally {
+      isSaving.value = false
+    }
+  }
+
+  const updateBatteryConfig = async (updates: Partial<Omit<UserConfigSettings, 'load_profile_type' | 'load_peak_kw' | 'tariff_region'>>) => {
+    if (!settings.value.userConfig) {
+      settings.value.userConfig = { ...DEFAULT_SETTINGS.userConfig! }
+    }
+    Object.assign(settings.value.userConfig, updates)
+    isDirty.value = true
+    return saveConfig()
+  }
+
+  const updateLoadConfig = async (updates: Partial<Omit<UserConfigSettings, 'battery_type' | 'battery_capacity_kwh' | 'battery_efficiency' | 'tariff_region'>>) => {
+    if (!settings.value.userConfig) {
+      settings.value.userConfig = { ...DEFAULT_SETTINGS.userConfig! }
+    }
+    Object.assign(settings.value.userConfig, updates)
+    isDirty.value = true
+    return saveConfig()
+  }
+
   return {
     // State
     settings,
@@ -214,6 +320,10 @@ export const useSettingsStore = defineStore('settings', () => {
     updateNotificationSettings,
     updateModelSettings,
     resetToDefaults,
-    clearError
+    clearError,
+    loadConfig,
+    saveConfig,
+    updateBatteryConfig,
+    updateLoadConfig
   }
 })
