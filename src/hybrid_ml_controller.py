@@ -51,7 +51,7 @@ class PatternBasedForecaster:
         """Add new price data to historical collection"""
         self.historical_prices.append({
             'timestamp': datetime.now(),
-            'prices': prices_df.copy(),
+            'prices': prices_df.clone(),
             'source': 'oree_scraper'
         })
         
