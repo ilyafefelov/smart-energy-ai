@@ -278,8 +278,8 @@ def test_simulator_seasonal_factor():
     # End of year (day 364)
     factor_late = sim.apply_seasonal_factor(364, factor=0.2)
     
-    # Mid-year should be at/near peak (1.0 to 1.2)
-    assert 0.98 <= factor_mid <= 1.02
+    # Mid-year should be at peak (1.18 to 1.22 - summer peak)
+    assert 1.18 <= factor_mid <= 1.22
     # Extremes should vary
     assert factor_early != factor_late
 

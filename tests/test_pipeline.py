@@ -6,7 +6,7 @@ Tests: validation, data parsing, integration flow (no DB required)
 import pytest
 from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
-import pandas as pd
+import polars as pl
 
 from src.data_pipeline.validate import DataValidator, WeatherDataModel, MarketPriceModel
 from src.data_pipeline.ingest_weather import WeatherIngester

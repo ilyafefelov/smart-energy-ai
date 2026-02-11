@@ -9,7 +9,7 @@ sys.path.insert(0, '.')
 
 from src.data_pipeline.ingest_weather import WeatherIngester
 from src.real_price_data import RealPriceDataFetcher
-import pandas as pd
+import polars as pl
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
@@ -55,7 +55,7 @@ price_fetcher = RealPriceDataFetcher()
 prices = price_fetcher.fetch_with_fallback()
 
 print(f"✅ REAL Price Data from European Market")
-print(f"   Source: {prices['source'].iloc[0]}")
+print(f"   Source: {prices['source'][0]}")
 print(f"   Records: {len(prices)}")
 print(f"   Price Range: {prices['price_eur_mwh'].min():.2f} - {prices['price_eur_mwh'].max():.2f} EUR/MWh")
 print(f"   Avg Price: {prices['price_eur_mwh'].mean():.2f} EUR/MWh")
@@ -63,11 +63,11 @@ print(f"   In UAH: {prices['price_uah_mwh'].min():.0f} - {prices['price_uah_mwh'
 
 print("\n   Sample Price Data:")
 print("   " + "-" * 66)
-display_prices = prices[['timestamp', 'price_eur_mwh', 'price_uah_mwh']].head(6)
-for idx, row in display_prices.iterrows():
+display_prices = prices.select(['timestamp', 'price_eur_mwh', 'price_uah_mwh']).head(6)
+for row in display_prices.iter_rows(named=True):
     print(f"   {row['timestamp'].strftime('%H:%M')}: {row['price_eur_mwh']:7.2f} EUR/MWh | {row['price_uah_mwh']:8.0f} UAH/MWh")
 
-if 'european_data' in prices['source'].iloc[0]:
+if 'european_data' in prices['source'][0]:
     print("\n   ✅ REAL: European energy market prices (today)")
     print("   ✅ SOURCE: Official European energy data")
     print("   ✅ NOT DEMO: Real-time market rates")
@@ -85,30 +85,30 @@ panel_efficiency = 0.20
 inverter_efficiency = 0.95
 
 solar_data = []
-for idx, row in weather_df.iterrows():
+for row in weather_df.iter_rows(named=True):
     cloud_reduction = 1 - (row['cloudcover'] / 100 * 0.8)
     solar_output = (row['solar_radiation'] / 1000) * solar_capacity * panel_efficiency * inverter_efficiency * cloud_reduction
     solar_output = max(0, solar_output)  # Can't be negative
     solar_data.append({
-        'hour': idx,
+        'hour': len(solar_data),
         'solar_output_kw': solar_output,
         'radiation': row['solar_radiation'],
         'cloudcover': row['cloudcover']
     })
 
-solar_df = pd.DataFrame(solar_data)
+solar_df = pl.DataFrame(solar_data)
 
 print(f"✅ REAL Solar Data (Calculated from REAL weather)")
 print(f"   Capacity: {solar_capacity} kW")
 print(f"   Panel efficiency: {panel_efficiency*100:.0f}%")
 print(f"   Inverter efficiency: {inverter_efficiency*100:.0f}%")
 print(f"   Total generation today: {solar_df['solar_output_kw'].sum():.1f} kWh")
-print(f"   Peak generation: {solar_df['solar_output_kw'].max():.2f} kW (hour {solar_df['solar_output_kw'].idxmax()})")
+print(f"   Peak generation: {solar_df['solar_output_kw'].max():.2f} kW (hour {solar_df.select(pl.col('solar_output_kw').arg_max())[0,0]})")
 
 print("\n   Sample Solar Output:")
 print("   " + "-" * 66)
 for idx in range(6, 12):  # Hours 6-11 (morning/midday)
-    row = solar_df.iloc[idx]
+    row = solar_df.row(idx, named=True)
     print(f"   Hour {idx:2d}: {row['solar_output_kw']:5.2f} kW | Radiation: {row['radiation']:6.0f} W/m² | Cloud: {row['cloudcover']:3.0f}%")
 
 print("\n   ✅ REAL: Based on actual weather radiation")

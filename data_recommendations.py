@@ -3,7 +3,7 @@
 Аналіз потреб в даних на основі державної статистики та OREE інтеграції
 """
 
-import pandas as pd
+import polars as pl
 from typing import Dict, List
 import logging
 

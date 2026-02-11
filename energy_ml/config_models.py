@@ -6,7 +6,7 @@ and business operation parameters that replace hard-coded values.
 
 from typing import Dict, List, Literal, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class BatteryConfig(BaseModel):
@@ -58,33 +58,32 @@ class BatteryConfig(BaseModel):
         description="Cycles to End of Life (80% capacity)"
     )
     
-    @validator('degradation_cost_per_cycle', pre=True, always=True)
-    def set_degradation_cost(cls, v, values):
-        """Set default degradation cost based on battery type."""
-        if v is not None:
-            return v
-        
-        battery_type = values.get('type')
-        defaults = {
-            'LFP': 1.35,          # $1.35/cycle, 8000 cycles
-            'Lead-Acid': 4.59,    # $4.59/cycle, 600 cycles  
-            'VRFB': 0.1           # Minimal degradation
-        }
-        return defaults.get(battery_type, 1.0)
-    
-    @validator('cycles_to_eol', pre=True, always=True)
-    def set_cycles_to_eol(cls, v, values):
-        """Set default cycles to EOL based on battery type."""
-        if v is not None:
-            return v
+    @model_validator(mode='before')
+    @classmethod
+    def set_battery_defaults(cls, values):
+        """Set defaults based on battery type for degradation and cycles."""
+        if isinstance(values, dict):
+            battery_type = values.get('type')
             
-        battery_type = values.get('type')
-        defaults = {
-            'LFP': 8000,
-            'Lead-Acid': 600,
-            'VRFB': 20000
-        }
-        return defaults.get(battery_type, 5000)
+            # Set degradation cost default
+            if values.get('degradation_cost_per_cycle') is None:
+                defaults = {
+                    'LFP': 1.35,          # $1.35/cycle, 8000 cycles
+                    'Lead-Acid': 4.59,    # $4.59/cycle, 600 cycles  
+                    'VRFB': 0.1           # Minimal degradation
+                }
+                values['degradation_cost_per_cycle'] = defaults.get(battery_type, 1.0)
+            
+            # Set cycles to EOL default
+            if values.get('cycles_to_eol') is None:
+                defaults = {
+                    'LFP': 8000,
+                    'Lead-Acid': 600,
+                    'VRFB': 20000
+                }
+                values['cycles_to_eol'] = defaults.get(battery_type, 5000)
+        
+        return values
 
 
 class LoadProfileConfig(BaseModel):
@@ -111,7 +110,8 @@ class LoadProfileConfig(BaseModel):
         description="Peak load during operating hours"
     )
     
-    @validator('hourly_coefficients')
+    @field_validator('hourly_coefficients')
+    @classmethod
     def validate_hourly_coefficients(cls, v):
         """Validate hourly coefficients."""
         if not isinstance(v, dict):

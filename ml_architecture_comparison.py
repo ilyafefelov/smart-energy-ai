@@ -6,7 +6,7 @@ Compares performance of different ML approaches
 import sys
 sys.path.append('.')
 
-import pandas as pd
+import polars as pl
 import numpy as np
 from datetime import datetime
 
@@ -61,7 +61,7 @@ def create_realistic_test_prices():
     
     prices = [max(25, base + var) for base, var in zip(hourly_base, variations)]
     
-    return pd.DataFrame({
+    return pl.DataFrame({
         'hour': range(24),
         'price_eur_mwh': prices,
         'price_uah_kwh': [(p * 40) / 1000 for p in prices]  # Convert to UAH/kWh
@@ -74,7 +74,7 @@ def test_naive_baseline(prices_df):
     facility_demand_kw = 50.0
     total_cost = 0.0
     
-    for _, row in prices_df.iterrows():
+    for row in prices_df.iter_rows(named=True):
         hourly_cost = facility_demand_kw * row['price_uah_kwh']
         total_cost += hourly_cost
     
@@ -99,7 +99,7 @@ def test_current_rl_approach(prices_df):
     total_cost = 0.0
     battery_cycles = 0.0
     
-    for idx, row in prices_df.iterrows():
+    for idx, row in enumerate(prices_df.iter_rows(named=True)):
         price_uah_kwh = row['price_uah_kwh']
         
         # Current RL: React to current price (no forecasting)

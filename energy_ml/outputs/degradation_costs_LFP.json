@@ -1,0 +1,14 @@
+{
+  "battery_type": "LFP",
+  "capacity_kwh": 10.0,
+  "one_year": {
+    "cycles": 365,
+    "soh": 0.9643054539481696,
+    "degradation_cost_usd": 0.47988263960643057
+  },
+  "fifty_year": {
+    "cycles": 18250,
+    "soh": 0.0,
+    "degradation_cost_usd": 88.57280176074991
+  }
+}

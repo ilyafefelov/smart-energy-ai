@@ -50,7 +50,7 @@ class BaseLoadSimulator:
         
         Uses sine curve: peak mid-year (day 182), valley at start/end.
         """
-        angle = 2 * math.pi * (day / 365.0)
+        angle = 2 * math.pi * ((day - 91) / 365.0)
         return 1.0 + factor * math.sin(angle)
     
     def apply_weekend_reduction(self, dow: int, coefficient: float, 

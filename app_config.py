@@ -4,7 +4,7 @@ Manage system constants and trigger retraining at runtime
 """
 
 import streamlit as st
-import pandas as pd
+import polars as pl
 import json
 from datetime import datetime
 import sys

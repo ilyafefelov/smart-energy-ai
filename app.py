@@ -1,5 +1,5 @@
 import streamlit as st
-import pandas as pd
+import polars as pl
 import plotly.express as px
 import plotly.graph_objects as go
 import os
@@ -18,8 +18,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 data_processed = os.path.join(current_dir, "data", "processed", file_map[scenario])
 data_raw = os.path.join(current_dir, "data", "raw", "weather_forecast.csv")
 
-df = pd.read_csv(data_processed)
-weather_df = pd.read_csv(data_raw)
+df = pl.read_csv(data_processed)
+weather_df = pl.read_csv(data_raw)
 
 # --- IMPORT TRAINING ANALYZER ---
 sys.path.insert(0, current_dir)
@@ -32,8 +32,8 @@ with tab_dashboard:
     current_hour_actual = datetime.now().hour
     current_hour = st.sidebar.slider("System Hour", 0, 23, current_hour_actual)
 
-    row = df[df['Hour'] == current_hour].iloc[0]
-    prev_row = df[df['Hour'] == (current_hour - 1 if current_hour > 0 else 0)].iloc[0]
+    row = df.filter(pl.col('Hour') == current_hour).row(0, named=True)
+    prev_row = df.filter(pl.col('Hour') == (current_hour - 1 if current_hour > 0 else 0)).row(0, named=True)
 
     action = row['Action']
     price = row['Price']
@@ -52,12 +52,12 @@ with tab_dashboard:
     with col_c: st.metric("Solar Production", f"{row['Solar']} kW")
     with col_d: st.metric("Battery State", f"{soc}%")
 
-    st.plotly_chart(px.bar(df, x='Hour', y=[1]*24, color='Action', title="Strategy Timeline"), use_container_width=True)
+    st.plotly_chart(px.bar(df.to_pandas(), x='Hour', y=[1]*24, color='Action', title="Strategy Timeline"), use_container_width=True)
     
     fig_full = go.Figure()
-    fig_full.add_trace(go.Scatter(x=df['Hour'], y=df['Price'], name="Price", yaxis="y2"))
-    fig_full.add_trace(go.Bar(x=df['Hour'], y=df['Solar'], name="Solar"))
-    fig_full.add_trace(go.Scatter(x=df['Hour'], y=df['SOC'], name="SOC %"))
+    fig_full.add_trace(go.Scatter(x=df['Hour'].to_list(), y=df['Price'].to_list(), name="Price", yaxis="y2"))
+    fig_full.add_trace(go.Bar(x=df['Hour'].to_list(), y=df['Solar'].to_list(), name="Solar"))
+    fig_full.add_trace(go.Scatter(x=df['Hour'].to_list(), y=df['SOC'].to_list(), name="SOC %"))
     fig_full.update_layout(yaxis2=dict(overlaying="y", side="right"))
     st.plotly_chart(fig_full, use_container_width=True)
 

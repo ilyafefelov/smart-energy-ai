@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple, Optional, Any
 import json
 from pathlib import Path
 
-import pandas as pd
+import polars as pl
 from pydantic import ValidationError
 
 from energy_ml.user_config import UserConfigModel, ConfigurationManager
@@ -338,7 +338,7 @@ class PipelineOrchestrator:
         is_valid = len(errors) == 0
         return is_valid, errors
     
-    def get_hourly_forecast(self, hours: int = 24) -> pd.DataFrame:
+    def get_hourly_forecast(self, hours: int = 24) -> pl.DataFrame:
         """Generate 24-hour forecast of recommendations.
         
         Args:
@@ -363,7 +363,7 @@ class PipelineOrchestrator:
                 'battery_impact': recommendation['battery_impact'],
             })
         
-        return pd.DataFrame(forecasts)
+        return pl.DataFrame(forecasts)
     def get_status(self) -> Dict[str, Any]:
         """Get current pipeline status and state.
         

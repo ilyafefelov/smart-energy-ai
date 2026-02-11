@@ -8,7 +8,7 @@ sys.path.append('.')
 
 from src.hybrid_ml_controller import create_hybrid_controller
 from src.oree_effective_scraper import OREEEffectiveScraper
-import pandas as pd
+import polars as pl
 from datetime import datetime
 import numpy as np
 
@@ -29,17 +29,17 @@ def test_with_real_oree_data():
         
         if real_prices is not None and len(real_prices) > 0:
             # Convert to DataFrame format expected by controller
-            prices_df = pd.DataFrame(real_prices)
+            prices_df = pl.DataFrame(real_prices)
             
             # Ensure required columns exist
             if 'price_eur_mwh' not in prices_df.columns:
                 if 'price_uah_mwh' in prices_df.columns:
-                    prices_df['price_eur_mwh'] = prices_df['price_uah_mwh'] / 40.0  # EUR conversion
+                    prices_df = prices_df.with_columns((pl.col('price_uah_mwh') / 40.0).alias('price_eur_mwh'))
                 else:
-                    prices_df['price_eur_mwh'] = 100.0  # Fallback
+                    prices_df = prices_df.with_columns(pl.lit(100.0).alias('price_eur_mwh'))
             
             if 'hour' not in prices_df.columns:
-                prices_df['hour'] = range(len(prices_df))
+                prices_df = prices_df.with_columns(pl.int_range(pl.len()).alias('hour'))
                 
             print(f"✅ Got {len(prices_df)} real price points from OREE")
             print(f"   Price range: {prices_df['price_eur_mwh'].min():.1f}-{prices_df['price_eur_mwh'].max():.1f} EUR/MWh")
@@ -117,7 +117,7 @@ def create_fallback_realistic_prices():
     variations = np.random.normal(0, 15, 24)  # ±15 EUR/MWh variation
     prices = [max(30, base + var) for base, var in zip(base_pattern, variations)]
     
-    return pd.DataFrame({
+    return pl.DataFrame({
         'hour': range(24),
         'price_eur_mwh': prices,
         'source': 'realistic_fallback'
@@ -129,7 +129,7 @@ def calculate_naive_baseline(prices_df):
     facility_demand_kw = 50.0
     total_cost = 0.0
     
-    for _, row in prices_df.iterrows():
+    for row in prices_df.iter_rows(named=True):
         price_eur_kwh = row['price_eur_mwh'] / 1000
         price_uah_kwh = price_eur_kwh * 40  # Convert to UAH
         hourly_cost = facility_demand_kw * price_uah_kwh

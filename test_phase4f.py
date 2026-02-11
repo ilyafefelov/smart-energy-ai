@@ -1,7 +1,6 @@
 """Phase 4F: Full Pipeline Integration & Feature Engineering - Comprehensive Tests"""
 import pytest
 import polars as pl
-import pandas as pd
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Any
@@ -95,7 +94,7 @@ class TestPipelineOrchestrator:
         orchestrator = PipelineOrchestrator()
         forecast = orchestrator.get_hourly_forecast(hours=24)
         
-        assert isinstance(forecast, pd.DataFrame)
+        assert isinstance(forecast, pl.DataFrame)
         assert len(forecast) == 24
         assert 'hour' in forecast.columns
         assert 'action' in forecast.columns
@@ -403,7 +402,7 @@ class TestIntegration:
         forecast = orchestrator.get_hourly_forecast(hours=24)
         
         assert len(forecast) == 24
-        assert all(forecast['action'].isin(['BUY', 'SELL', 'HOLD']))
+        assert all(forecast['action'].is_in(['BUY', 'SELL', 'HOLD']))
         assert all((forecast['confidence'] >= 0.0) & (forecast['confidence'] <= 1.0))
     
     def test_savings_estimation_consistency(self):

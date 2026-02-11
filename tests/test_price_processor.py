@@ -3,7 +3,7 @@ Test price processor transformations for RL training
 """
 
 import pytest
-import pandas as pd
+import polars as pl
 import numpy as np
 from src.price_processor import PriceProcessor, prepare_prices_for_rl
 
@@ -18,7 +18,7 @@ class TestPriceProcessor:
         eur_prices = [2.5, 2.2, 2.1, 2.0, 2.1, 2.8, 4.5, 6.2, 7.5, 6.8, 5.5, 5.0,
                       4.8, 4.5, 4.2, 5.0, 7.5, 9.2, 11.5, 10.5, 8.5, 6.0, 4.5, 3.5]
         uah_prices = [p * 35 for p in eur_prices]  # EUR to UAH (approximate rate)
-        return pd.Series(uah_prices)
+        return pl.Series(uah_prices)
 
     def test_initialization(self, sample_prices):
         """Test processor initialization"""
