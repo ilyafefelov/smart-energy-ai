@@ -74,6 +74,15 @@
       <!-- Documentation / Methodology -->
       <MethodologyCard />
 
+      <!-- ML Recommendations Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- AI Recommendation Card -->
+        <MLRecommendationCard />
+        
+        <!-- 24-Hour Forecast Chart -->
+        <MLForecastChart />
+      </div>
+
       <!-- Secondary Metrics Grid (3 cols) -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <MetricCard
@@ -509,14 +518,18 @@ import { useBatteryStore } from '~/stores/batteryStore'
 import { usePricesStore } from '~/stores/pricesStore'
 import { useRetrainingStore } from '~/stores/retrainingStore'
 import { useSettingsStore } from '~/stores/settingsStore'
+import { useMLStore } from '~/stores/mlStore'
 import MetricCard from '~/components/DashboardCards/MetricCard.vue'
 import MethodologyCard from '~/components/Documentation/MethodologyCard.vue'
+import MLRecommendationCard from '~/components/ML/RecommendationCard.vue'
+import MLForecastChart from '~/components/ML/ForecastChart.vue'
 
 const metricsStore = useMetricsStore()
 const batteryStore = useBatteryStore()
 const pricesStore = usePricesStore()
 const retrainingStore = useRetrainingStore()
 const settingsStore = useSettingsStore()
+const mlStore = useMLStore()
 
 const showRetrainingComplete = ref(false)
 const chartZoom = ref(1)

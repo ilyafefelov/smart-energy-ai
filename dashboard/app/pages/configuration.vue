@@ -189,6 +189,53 @@
           </div>
         </div>
 
+        <!-- ML Impact Preview -->
+        <div v-if="mlStore.currentRecommendation" class="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900 dark:to-purple-900 border border-blue-200 dark:border-blue-700 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span class="text-2xl">🤖</span>
+            ML Impact Preview
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center">
+              <p class="text-sm text-gray-600 dark:text-gray-400">Current Action</p>
+              <p class="text-xl font-bold" :class="{
+                'text-green-600': mlStore.recommendationColor === 'green',
+                'text-blue-600': mlStore.recommendationColor === 'blue', 
+                'text-gray-600': mlStore.recommendationColor === 'gray'
+              }">
+                {{ mlStore.currentRecommendation.action }}
+              </p>
+              <p class="text-sm text-gray-500">{{ Math.round(mlStore.currentRecommendation.confidence * 100) }}% confidence</p>
+            </div>
+            <div class="text-center">
+              <p class="text-sm text-gray-600 dark:text-gray-400">Estimated Monthly Savings</p>
+              <p class="text-xl font-bold text-green-600">
+                {{ mlStore.getFormattedSavings('monthly') }}
+              </p>
+              <p class="text-sm text-gray-500">With current settings</p>
+            </div>
+            <div class="text-center">
+              <p class="text-sm text-gray-600 dark:text-gray-400">Battery Health Impact</p>
+              <p class="text-xl font-bold" :class="{
+                'text-green-600': mlStore.getBatteryHealthPercent() > 90,
+                'text-yellow-600': mlStore.getBatteryHealthPercent() > 70,
+                'text-red-600': mlStore.getBatteryHealthPercent() <= 70
+              }">
+                {{ Math.round(mlStore.getBatteryHealthPercent()) }}%
+              </p>
+              <p class="text-sm text-gray-500">Health remaining</p>
+            </div>
+          </div>
+          <div v-if="configChanged" class="mt-4 p-3 bg-yellow-100 dark:bg-yellow-900 border border-yellow-300 dark:border-yellow-700 rounded-md">
+            <p class="text-sm text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+              Configuration changed. Save to update ML recommendations.
+            </p>
+          </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="flex justify-between items-center bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
           <div class="flex space-x-4">
@@ -224,10 +271,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useSettingsStore } from '~/stores/settingsStore'
+import { useMLStore } from '~/stores/mlStore'
 
 const settingsStore = useSettingsStore()
+const mlStore = useMLStore()
 
 const formData = reactive({
   battery_type: 'LFP' as 'LFP' | 'Lead-Acid' | 'VRFB',
@@ -240,6 +289,20 @@ const formData = reactive({
 const successMessage = ref('')
 const errorMessage = ref('')
 const validationErrors = ref<string[]>([])
+
+// Track if config has changed from saved version
+const configChanged = computed(() => {
+  if (!settingsStore.settings.userConfig) return false
+  
+  const saved = settingsStore.settings.userConfig
+  return (
+    formData.battery_type !== saved.battery_type ||
+    formData.battery_capacity_kwh !== saved.battery_capacity_kwh ||
+    formData.battery_efficiency !== saved.battery_efficiency ||
+    formData.load_profile_type !== saved.load_profile_type ||
+    formData.load_peak_kw !== saved.load_peak_kw
+  )
+})
 
 const batteryDescriptions: Record<string, string> = {
   'LFP': 'Lithium Iron Phosphate - 8000+ cycles, best for daily cycling',
@@ -299,6 +362,12 @@ async function handleSave() {
 
   if (result.success) {
     successMessage.value = 'Configuration saved successfully!'
+    
+    // Refresh ML recommendations with new config
+    setTimeout(() => {
+      mlStore.fetchRecommendation()
+    }, 500)
+    
     setTimeout(() => {
       successMessage.value = ''
     }, 5000)
@@ -321,6 +390,11 @@ onMounted(async () => {
 
   if (settingsStore.settings.userConfig) {
     Object.assign(formData, settingsStore.settings.userConfig)
+  }
+  
+  // Initialize ML recommendations
+  if (!mlStore.currentRecommendation) {
+    mlStore.fetchRecommendation()
   }
 })
 </script>
