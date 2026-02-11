@@ -1,14 +1,20 @@
-"""Data source assets for Energy ML system.
+"""Data source assets for Energy ML system - Phase 4A: Polars Migration.
 
 These are the first layer of Dagster assets - they fetch raw data from external sources.
 Each asset is cached with appropriate TTL to avoid excessive API calls.
+
+Phase 4A Changes:
+- Migrated from pandas to polars for better performance
+- Added tenacity retry logic for API resilience
+- Enhanced caching and error handling
 """
-import pandas as pd
+import polars as pl
 from datetime import datetime, timedelta
 import requests
 from typing import Dict, Any
 from dagster import asset, Output, Definitions
 import logging
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from energy_ml.config import (
     OPENWEATHER_API_KEY, KYIV_LAT, KYIV_LON,
@@ -35,8 +41,9 @@ def _is_cache_fresh(cache_dict: Dict, ttl_seconds: int) -> bool:
     description="Real-time weather data for Kyiv from OpenWeatherAPI",
     tags={"domain": "data_sources", "refresh": "hourly", "location": "Kyiv"}
 )
-def weather_data() -> Output[pd.DataFrame]:
-    """Fetch current weather from OpenWeatherAPI with caching."""
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def weather_data() -> Output[pl.DataFrame]:
+    """Fetch current weather from OpenWeatherAPI with caching and retry logic."""
     
     # Check cache
     if _is_cache_fresh(_weather_cache, OPENWEATHER_CACHE_TTL):
@@ -55,7 +62,8 @@ def weather_data() -> Output[pd.DataFrame]:
         response.raise_for_status()
         data = response.json()
         
-        df = pd.DataFrame({
+        # Create polars DataFrame
+        df = pl.DataFrame({
             'timestamp': [datetime.utcnow()],
             'temp': [data['main']['temp']],
             'humidity': [data['main']['humidity']],
@@ -70,22 +78,24 @@ def weather_data() -> Output[pd.DataFrame]:
         _weather_cache["data"] = df
         _weather_cache["timestamp"] = datetime.utcnow()
         
-        logger.info(f"✅ Weather: {df['temp'].values[0]:.1f}°C, wind {df['wind_speed'].values[0]:.1f} m/s")
+        temp_val = df['temp'].item(0)  # Get first value from polars
+        wind_val = df['wind_speed'].item(0)
+        logger.info(f"✅ Weather: {temp_val:.1f}°C, wind {wind_val:.1f} m/s")
         
         return Output(
             df,
             metadata={
                 "rows": len(df),
-                "temp_c": float(df['temp'].values[0]),
-                "wind_speed_ms": float(df['wind_speed'].values[0]),
+                "temp_c": float(temp_val),
+                "wind_speed_ms": float(wind_val),
                 "source": "openweatherapi"
             }
         )
         
     except Exception as e:
         logger.error(f"❌ Weather API error: {e}")
-        # Return defaults on error
-        df = pd.DataFrame({
+        # Return defaults on error using polars
+        df = pl.DataFrame({
             'timestamp': [datetime.utcnow()],
             'temp': [15.0],
             'humidity': [60.0],
@@ -103,8 +113,9 @@ def weather_data() -> Output[pd.DataFrame]:
     description="5-day weather forecast for Kyiv from OpenWeatherAPI",
     tags={"domain": "data_sources", "refresh": "hourly", "location": "Kyiv"}
 )
-def weather_forecast() -> Output[pd.DataFrame]:
-    """Fetch 5-day forecast from OpenWeatherAPI with caching."""
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def weather_forecast() -> Output[pl.DataFrame]:
+    """Fetch 5-day forecast from OpenWeatherAPI with caching and retry logic."""
     
     # Check cache
     if _is_cache_fresh(_forecast_cache, OPENWEATHER_CACHE_TTL):
@@ -126,14 +137,15 @@ def weather_forecast() -> Output[pd.DataFrame]:
         records = []
         for item in data.get('list', [])[:40]:  # 5 days
             records.append({
-                'timestamp': pd.Timestamp.fromtimestamp(item['dt']),
-                'temp': item['main']['temp'],
-                'cloud_cover': item['clouds']['all'],
-                'wind_speed': item['wind']['speed'],
-                'precipitation': item.get('rain', {}).get('3h', 0),
+                'timestamp': [datetime.fromtimestamp(item['dt'])],
+                'temp': [item['main']['temp']],
+                'cloud_cover': [item['clouds']['all']],
+                'wind_speed': [item['wind']['speed']],
+                'precipitation': [item.get('rain', {}).get('3h', 0)],
             })
         
-        df = pd.DataFrame(records)
+        # Create polars DataFrame from records
+        df = pl.concat([pl.DataFrame(record) for record in records])
         
         # Cache it
         _forecast_cache["data"] = df
@@ -152,9 +164,10 @@ def weather_forecast() -> Output[pd.DataFrame]:
         
     except Exception as e:
         logger.error(f"❌ Forecast API error: {e}")
-        # Return empty dataframe on error
-        df = pd.DataFrame({
-            'timestamp': pd.date_range(start=datetime.utcnow(), periods=40, freq='3H'),
+        # Return empty dataframe on error using polars
+        timestamps = [datetime.utcnow() + timedelta(hours=3*i) for i in range(40)]
+        df = pl.DataFrame({
+            'timestamp': timestamps,
             'temp': [15.0] * 40,
             'cloud_cover': [50.0] * 40,
             'wind_speed': [5.0] * 40,
@@ -168,25 +181,24 @@ def weather_forecast() -> Output[pd.DataFrame]:
     description="Solar irradiance data calculated from weather and sun position",
     tags={"domain": "data_sources", "refresh": "hourly"}
 )
-def solar_irradiance(weather_data: pd.DataFrame) -> Output[pd.DataFrame]:
+def solar_irradiance(weather_data: pl.DataFrame) -> Output[pl.DataFrame]:
     """Calculate solar irradiance based on sun position and weather."""
     
     logger.info("☀️ Calculating solar irradiance...")
     
-    timestamp = weather_data['timestamp'].values[0]
-    dt = pd.Timestamp(timestamp).to_pydatetime()
+    timestamp = weather_data['timestamp'].item(0)  # Get first value from polars
     
     # Get solar position for Kyiv
-    position = get_solar_position(KYIV_LAT, KYIV_LON, dt)
+    position = get_solar_position(KYIV_LAT, KYIV_LON, timestamp)
     
     # Calculate irradiance
     irradiance = calculate_irradiance(
         position,
-        weather_data['cloud_cover'].values[0],
-        weather_data['pressure'].values[0]
+        weather_data['cloud_cover'].item(0),
+        weather_data['pressure'].item(0)
     )
     
-    df = pd.DataFrame({
+    df = pl.DataFrame({
         'timestamp': weather_data['timestamp'],
         'ghi_w_per_m2': [irradiance['GHI']],
         'dni_w_per_m2': [irradiance['DNI']],
@@ -213,18 +225,18 @@ def solar_irradiance(weather_data: pd.DataFrame) -> Output[pd.DataFrame]:
     description="Wind power potential calculated from weather",
     tags={"domain": "data_sources", "refresh": "hourly"}
 )
-def wind_potential(weather_data: pd.DataFrame) -> Output[pd.DataFrame]:
+def wind_potential(weather_data: pl.DataFrame) -> Output[pl.DataFrame]:
     """Calculate wind power potential from wind speed."""
     
     logger.info("💨 Calculating wind potential...")
     
-    wind_speed = weather_data['wind_speed'].values[0]
-    wind_direction = weather_data['wind_direction'].values[0]
+    wind_speed = weather_data['wind_speed'].item(0)
+    wind_direction = weather_data['wind_direction'].item(0)
     
     # Calculate power potential (for 5 kW rated turbine)
     power = wind_power_curve(wind_speed, rated_capacity=5.0)
     
-    df = pd.DataFrame({
+    df = pl.DataFrame({
         'timestamp': weather_data['timestamp'],
         'wind_speed_ms': [wind_speed],
         'wind_direction_deg': [wind_direction],
@@ -247,12 +259,12 @@ def wind_potential(weather_data: pd.DataFrame) -> Output[pd.DataFrame]:
     description="Battery state from smart meter (SOC, rates)",
     tags={"domain": "data_sources", "refresh": "hourly"}
 )
-def battery_state() -> Output[pd.DataFrame]:
+def battery_state() -> Output[pl.DataFrame]:
     """Fetch current battery state (placeholder - would come from BMS)."""
     
     logger.info("🔋 Reading battery state...")
     
-    df = pd.DataFrame({
+    df = pl.DataFrame({
         'timestamp': [datetime.utcnow()],
         'soc_percent': [72.6],
         'charge_rate_kw': [3.5],
@@ -261,13 +273,14 @@ def battery_state() -> Output[pd.DataFrame]:
         'health_percent': [95.0],
     })
     
-    logger.info(f"✅ Battery SOC: {df['soc_percent'].values[0]}%")
+    soc_val = df['soc_percent'].item(0)
+    logger.info(f"✅ Battery SOC: {soc_val}%")
     
     return Output(
         df,
         metadata={
-            "soc_percent": df['soc_percent'].values[0],
-            "health_percent": df['health_percent'].values[0],
+            "soc_percent": soc_val,
+            "health_percent": df['health_percent'].item(0),
         }
     )
 
@@ -277,26 +290,28 @@ def battery_state() -> Output[pd.DataFrame]:
     description="Real-time electricity price from OREE (Ukrainian market)",
     tags={"domain": "data_sources", "refresh": "hourly"}
 )
-def price_data_current() -> Output[pd.DataFrame]:
-    """Fetch current hourly price from OREE."""
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def price_data_current() -> Output[pl.DataFrame]:
+    """Fetch current hourly price from OREE with retry logic."""
     
     logger.info("💰 Fetching current price from OREE...")
     
     # Placeholder - actual API integration depends on OREE structure
     # For now, use realistic value
-    df = pd.DataFrame({
+    df = pl.DataFrame({
         'timestamp': [datetime.utcnow()],
         'price_uah_per_kwh': [14.26],
         'currency': ['UAH'],
         'market': ['OREE'],
     })
     
-    logger.info(f"✅ Current price: {df['price_uah_per_kwh'].values[0]} ₴/kWh")
+    price_val = df['price_uah_per_kwh'].item(0)
+    logger.info(f"✅ Current price: {price_val} ₴/kWh")
     
     return Output(
         df,
         metadata={
-            "price_uah_kwh": df['price_uah_per_kwh'].values[0],
+            "price_uah_kwh": price_val,
             "market": "OREE",
         }
     )

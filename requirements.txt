@@ -1,14 +1,18 @@
-# Smart Energy AI V2 - Python Dependencies
+# Smart Energy AI V2 - Python Dependencies (Phase 4 SaaS Upgrade)
 
 # Core frameworks
-dagster>=1.6.0
+dagster>=1.12.14
 polars>=0.20.0
 numpy>=1.24.0
-pandas>=2.0.0
+pandas>=2.0.0  # Keep during migration, remove later
 requests>=2.31.0
-pydantic>=2.0.0
+pydantic>=2.6.0
 pyyaml>=6.0
 beautifulsoup4>=4.12.0
+
+# Phase 4A: New SaaS libraries
+tenacity>=8.0.0  # API resilience & retry logic
+duckdb>=0.10.0   # Analytics OLAP queries
 
 # Data processing engines
 # NVTabular is optional (GPU systems only)
@@ -16,7 +20,7 @@ beautifulsoup4>=4.12.0
 
 # Machine learning
 scikit-learn>=1.3.0
-optuna>=3.5.0
+optuna>=4.7.0  # Upgraded for multi-objective optimization
 xgboost>=2.0.0
 
 # Time series and forecasting
