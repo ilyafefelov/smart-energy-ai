@@ -6,7 +6,7 @@ produces a JSON file with hourly series and statistics.
 from dagster import asset, AssetIn
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from energy_ml.load_simulation import generate_yearly_load, simple_generation_hourly, estimate_self_consumption
 from energy_ml.config_models import UserProfile
@@ -30,7 +30,7 @@ def simulate_load_profile(user_profile: UserProfile):
         'metadata': {
             'profile_name': profile.name,
             'profile_type': profile.profile_type,
-            'generated_at': datetime.utcnow().isoformat() + 'Z'
+            'generated_at': datetime.now(timezone.utc).isoformat()
         },
         'simulation': sim,
         'generation': {
