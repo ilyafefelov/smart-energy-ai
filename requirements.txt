@@ -28,7 +28,7 @@ streamlit==1.29.0
 plotly==5.18.0
 
 # Orchestration
-apache-airflow==2.7.1
+apache-airflow==3.0.6
 apache-airflow-providers-postgres==5.8.0
 
 # Testing
