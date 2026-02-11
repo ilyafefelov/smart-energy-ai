@@ -1,9 +1,5 @@
-import json
-from pathlib import Path
-from datetime import datetime
-
-# API endpoint to get recommendations from Dagster ML pipeline
-# This connects the dashboard to the ML recommendation engine
+// API endpoint to get recommendations from Dagster ML pipeline
+// This connects the dashboard to the ML recommendation engine
 
 export default defineEventHandler(async (event) => {
   try {

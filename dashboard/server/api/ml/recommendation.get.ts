@@ -43,11 +43,13 @@ interface MLRecommendationResponse {
 
 export default defineEventHandler(async (event): Promise<MLRecommendationResponse> => {
   try {
-    // Get the project root path
-    const projectRoot = path.resolve(process.cwd(), '../..')
+    // Get the project root path (dashboard/../ = project root)
+    const projectRoot = path.resolve(process.cwd(), '..')
     const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
     
-    console.log(`[ML API] Calling ML pipeline at ${pythonScript}`)
+    console.log(`[ML API] Project root: ${projectRoot}`)
+    console.log(`[ML API] Python script: ${pythonScript}`)
+    console.log(`[ML API] Calling ML pipeline...`)
     
     // Call the Python ML pipeline
     const { stdout, stderr } = await execAsync(
