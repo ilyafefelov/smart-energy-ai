@@ -1,0 +1,20 @@
+{
+  "battery_metrics": {
+    "cycles_remaining": 7561,
+    "health_percentage": 89.1,
+    "degradation_cost_today": 24.38
+  },
+  "cost_analytics": {
+    "daily_arbitrage_profit": 41.74,
+    "peak_avoidance_savings": 31.25,
+    "degradation_cost": 24.38,
+    "net_savings": 48.62
+  },
+  "ml_metrics": {
+    "model_accuracy": 0.842,
+    "confidence_score": 0.926,
+    "last_training": "2026-02-11T22:31:13.296669",
+    "features_used": 0
+  },
+  "cache_timestamp": "2026-02-11T22:31:13.296669"
+}

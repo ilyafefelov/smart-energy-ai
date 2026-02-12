@@ -4,7 +4,7 @@ Integrates MLflow model for energy trading recommendations.
 """
 import logging
 from datetime import datetime
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Any
 import json
 
 import polars as pl
@@ -356,3 +356,45 @@ class PredictionService:
             'expected_features': self.EXPECTED_FEATURES,
             'valid_actions': self.VALID_ACTIONS,
         }
+    
+    def generate_prediction(self, features: pl.DataFrame, user_strategy: str = "balanced") -> Dict[str, Any]:
+        """Generate ML prediction with user optimization strategy.
+        
+        Args:
+            features: Input features DataFrame
+            user_strategy: User optimization strategy
+            
+        Returns:
+            Optimized prediction dict
+        """
+        # Get base prediction
+        base_prediction = self.predict(features)
+        
+        # Apply user optimization preferences if available
+        try:
+            from energy_ml.mlops.optimization_engine import OptimizationEngine
+            optimization_engine = OptimizationEngine()
+            
+            # Mock user config for optimization
+            from energy_ml.user_config import ConfigurationManager
+            config_manager = ConfigurationManager()
+            config = config_manager.load_config()
+            
+            # Set strategy in config
+            setattr(config, 'optimization_strategy', user_strategy)
+            
+            # Get user preferences
+            user_preferences = optimization_engine.get_user_strategy(config)
+            
+            # Apply optimization
+            optimized_prediction = optimization_engine.optimize_decision(
+                base_prediction, 
+                user_strategy,
+                weights=user_preferences.get('weights', {})
+            )
+            
+            return optimized_prediction
+            
+        except Exception as e:
+            logger.warning(f"Optimization failed, returning base prediction: {e}")
+            return base_prediction

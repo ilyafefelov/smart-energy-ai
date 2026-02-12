@@ -117,62 +117,27 @@
 
         <!-- Battery Settings -->
         <div v-if="activeTab === 'battery'" class="space-y-6">
-          <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
-            <h2 class="text-xl font-bold text-white mb-6">Battery Configuration</h2>
+          <BatteryConfigPanel />
+        </div>
 
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-semibold text-slate-300 mb-2">Capacity (kWh)</label>
-                <input 
-                  v-model.number="settingsStore.settings.battery.capacity"
-                  type="number"
-                  min="1"
-                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
-                />
-                <p class="text-xs text-slate-400 mt-1">Total usable capacity of your battery system</p>
-              </div>
+        <!-- Generation Settings -->
+        <div v-if="activeTab === 'generation'" class="space-y-6">
+          <GenerationSolarWindConfig />
+        </div>
 
-              <div>
-                <label class="block text-sm font-semibold text-slate-300 mb-2">Minimum SOC (%)</label>
-                <input 
-                  v-model.number="settingsStore.settings.battery.minSOC"
-                  type="number"
-                  min="0"
-                  max="100"
-                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
-                />
-                <p class="text-xs text-slate-400 mt-1">Minimum safe charge level to maintain</p>
-              </div>
+        <!-- Battery Control -->
+        <div v-if="activeTab === 'control'" class="space-y-6">
+          <BatteryPhysicsSimulator />
+        </div>
 
-              <div>
-                <label class="block text-sm font-semibold text-slate-300 mb-2">Max Charge Rate (kW)</label>
-                <input 
-                  v-model.number="settingsStore.settings.battery.maxChargeRate"
-                  type="number"
-                  min="0"
-                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
-                />
-              </div>
+        <!-- Scenario Management -->
+        <div v-if="activeTab === 'scenarios'" class="space-y-6">
+          <ScenarioManager />
+        </div>
 
-              <div>
-                <label class="block text-sm font-semibold text-slate-300 mb-2">Max Discharge Rate (kW)</label>
-                <input 
-                  v-model.number="settingsStore.settings.battery.maxDischargeRate"
-                  type="number"
-                  min="0"
-                  class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-energy-400"
-                />
-              </div>
-            </div>
-
-            <button 
-              @click="saveBatterySettings"
-              :disabled="settingsStore.isSaving"
-              class="mt-6 px-6 py-2 bg-energy-400 hover:bg-cyan-300 text-slate-950 font-semibold rounded-lg transition disabled:opacity-50"
-            >
-              {{ settingsStore.isSaving ? 'Saving...' : 'Save Changes' }}
-            </button>
-          </div>
+        <!-- Optimization Preferences -->
+        <div v-if="activeTab === 'preferences'" class="space-y-6">
+          <PreferencesOptimizationProfile />
         </div>
 
         <!-- Notification Settings -->
@@ -341,6 +306,11 @@
 import { ref, onMounted } from 'vue'
 import { useSettingsStore } from '~/stores/settingsStore'
 import { useRetrainingStore } from '~/stores/retrainingStore'
+import BatteryConfigPanel from '~/components/Battery/ConfigPanel.vue'
+import GenerationSolarWindConfig from '~/components/Generation/SolarWindConfig.vue'
+import BatteryPhysicsSimulator from '~/components/Battery/PhysicsSimulator.vue'
+import ScenarioManager from '~/components/Scenario/Manager.vue'
+import PreferencesOptimizationProfile from '~/components/Preferences/OptimizationProfile.vue'
 
 const settingsStore = useSettingsStore()
 const retrainingStore = useRetrainingStore()
@@ -351,6 +321,10 @@ const saveSuccess = ref(false)
 const tabs = [
   { id: 'general', label: 'General', icon: '🌍' },
   { id: 'battery', label: 'Battery', icon: '🔋' },
+  { id: 'generation', label: 'Generation', icon: '⚡' },
+  { id: 'control', label: 'Control', icon: '🎮' },
+  { id: 'scenarios', label: 'Scenarios', icon: '📋' },
+  { id: 'preferences', label: 'Optimization', icon: '🎯' },
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
   { id: 'model', label: 'Model', icon: '🤖' }
 ]

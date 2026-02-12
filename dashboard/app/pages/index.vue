@@ -110,6 +110,107 @@
         />
       </div>
 
+      <!-- Battery Control Section -->
+      <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-2xl font-bold text-white mb-2">🔋 Battery Control System</h2>
+            <p class="text-sm text-slate-400">Real-time battery physics simulation and control</p>
+          </div>
+          <NuxtLink 
+            to="/settings?tab=control" 
+            class="px-4 py-2 bg-energy-400 hover:bg-cyan-300 text-slate-950 font-semibold rounded-lg transition"
+          >
+            ⚙️ Full Control
+          </NuxtLink>
+        </div>
+
+        <!-- Compact Battery Status -->
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+          <!-- SOC -->
+          <div class="bg-slate-900 bg-opacity-50 rounded-lg p-4 text-center">
+            <div class="text-2xl font-bold mb-2" :class="batteryPhysicsStore.socColor">
+              {{ batteryPhysicsStore.state.socPercentage.toFixed(1) }}%
+            </div>
+            <div class="text-sm text-slate-400">State of Charge</div>
+          </div>
+
+          <!-- Power -->
+          <div class="bg-slate-900 bg-opacity-50 rounded-lg p-4 text-center">
+            <div class="text-2xl font-bold mb-2" :class="getPowerColor(batteryPhysicsStore.state.power)">
+              {{ batteryPhysicsStore.state.power.toFixed(1) }} kW
+            </div>
+            <div class="text-sm text-slate-400">
+              {{ batteryPhysicsStore.state.power > 0 ? 'Charging' : batteryPhysicsStore.state.power < 0 ? 'Discharging' : 'Idle' }}
+            </div>
+          </div>
+
+          <!-- Health -->
+          <div class="bg-slate-900 bg-opacity-50 rounded-lg p-4 text-center">
+            <div class="text-2xl font-bold mb-2" :class="batteryPhysicsStore.healthStatus.color">
+              {{ batteryPhysicsStore.state.health }}%
+            </div>
+            <div class="text-sm text-slate-400">Battery Health</div>
+          </div>
+
+          <!-- Temperature -->
+          <div class="bg-slate-900 bg-opacity-50 rounded-lg p-4 text-center">
+            <div class="text-2xl font-bold mb-2" :class="getTemperatureColor(batteryPhysicsStore.state.temperature)">
+              {{ batteryPhysicsStore.state.temperature.toFixed(1) }}°C
+            </div>
+            <div class="text-sm text-slate-400">Temperature</div>
+          </div>
+
+          <!-- Status -->
+          <div class="bg-slate-900 bg-opacity-50 rounded-lg p-4 text-center">
+            <div class="text-2xl mb-2">{{ batteryPhysicsStore.powerStatus.icon }}</div>
+            <div class="text-sm font-semibold" :class="batteryPhysicsStore.powerStatus.color">
+              {{ batteryPhysicsStore.powerStatus.text }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Control Buttons -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <button 
+            @click="quickCharge"
+            :disabled="!batteryPhysicsStore.canCharge"
+            class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            ⚡ Quick Charge
+          </button>
+          
+          <button 
+            @click="quickDischarge"
+            :disabled="!batteryPhysicsStore.canDischarge"
+            class="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            🔋 Quick Discharge
+          </button>
+          
+          <button 
+            @click="stopPower"
+            class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white font-semibold rounded-lg transition"
+          >
+            ⏸️ Stop
+          </button>
+          
+          <button 
+            @click="autoOptimize"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition"
+          >
+            🤖 Auto Mode
+          </button>
+          
+          <button 
+            @click="emergencyStop"
+            class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg transition"
+          >
+            🛑 Emergency Stop
+          </button>
+        </div>
+      </div>
+
       <!-- Price Forecast Chart (Interactive) -->
       <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
         <div class="flex justify-between items-start mb-4">
@@ -519,6 +620,7 @@ import { usePricesStore } from '~/stores/pricesStore'
 import { useRetrainingStore } from '~/stores/retrainingStore'
 import { useSettingsStore } from '~/stores/settingsStore'
 import { useMLStore } from '~/stores/mlStore'
+import { useBatteryPhysicsStore } from '~/stores/batteryPhysicsStore'
 import MetricCard from '~/components/DashboardCards/MetricCard.vue'
 import MethodologyCard from '~/components/Documentation/MethodologyCard.vue'
 import MLRecommendationCard from '~/components/ML/RecommendationCard.vue'
@@ -526,6 +628,7 @@ import MLForecastChart from '~/components/ML/ForecastChart.vue'
 
 const metricsStore = useMetricsStore()
 const batteryStore = useBatteryStore()
+const batteryPhysicsStore = useBatteryPhysicsStore()
 const pricesStore = usePricesStore()
 const retrainingStore = useRetrainingStore()
 const settingsStore = useSettingsStore()
@@ -717,6 +820,43 @@ const refreshChartData = async () => {
 }
 
 
+// Battery Physics Control Functions
+const getPowerColor = (power: number) => {
+  if (power > 0) return 'text-green-400'
+  if (power < 0) return 'text-orange-400'
+  return 'text-slate-400'
+}
+
+const getTemperatureColor = (temp: number) => {
+  if (temp > 40) return 'text-red-400'
+  if (temp > 30) return 'text-yellow-400'
+  if (temp < 0) return 'text-blue-400'
+  return 'text-green-400'
+}
+
+const quickCharge = () => {
+  const chargePower = batteryPhysicsStore.state.maxChargePower * 0.8
+  batteryPhysicsStore.charge(chargePower)
+}
+
+const quickDischarge = () => {
+  const dischargePower = batteryPhysicsStore.state.maxDischargePower * 0.8
+  batteryPhysicsStore.discharge(dischargePower)
+}
+
+const stopPower = () => {
+  batteryPhysicsStore.idle()
+}
+
+const autoOptimize = () => {
+  batteryPhysicsStore.startBalancedOperation()
+}
+
+const emergencyStop = () => {
+  batteryPhysicsStore.idle()
+  // In a real system, this would trigger additional safety protocols
+}
+
 onMounted(async () => {
   // Load settings FIRST so battery capacity is available
   await settingsStore.loadSettings()
@@ -730,6 +870,7 @@ onMounted(async () => {
 
   // Start real-time updates
   batteryStore.startRealTimeUpdates(5000)
+  batteryPhysicsStore.startRealTimeUpdates(5000)
   pricesStore.startRealTimeUpdates(60000)
   metricsStore.startRealTimeUpdates(30000)
 })
@@ -737,6 +878,7 @@ onMounted(async () => {
 // Cleanup on unmount
 onUnmounted(() => {
   batteryStore.stopRealTimeUpdates()
+  batteryPhysicsStore.stopRealTimeUpdates()
   pricesStore.stopRealTimeUpdates()
   metricsStore.stopRealTimeUpdates()
 })
