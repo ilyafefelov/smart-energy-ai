@@ -1,11 +1,44 @@
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 
-const BATTERY_FILE = path.join(process.cwd(), 'data', 'battery_state.json')
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const PROJECT_ROOT = path.resolve(__dirname, '../../../')
+
+const BATTERY_FILE = path.join(PROJECT_ROOT, 'data', 'battery_state.json')
+
+// Find ML config file
+const ML_CONFIG_PATHS = [
+  path.join(PROJECT_ROOT, 'energy_ml/configs/user_config.json'),
+  path.join(PROJECT_ROOT, '../energy_ml/configs/user_config.json'),
+  path.join(PROJECT_ROOT, '../../energy_ml/configs/user_config.json'),
+  'C:/Users/ilyaf/clawd/projects/smart-energy-ai/energy_ml/configs/user_config.json'
+]
+
+let ML_CONFIG_FILE = ML_CONFIG_PATHS[0]
+for (const p of ML_CONFIG_PATHS) {
+  if (fs.existsSync(p)) {
+    ML_CONFIG_FILE = p
+    break
+  }
+}
+
+// Get capacity from ML config or use default
+const getMLConfigCapacity = (): number => {
+  try {
+    if (fs.existsSync(ML_CONFIG_FILE)) {
+      const config = JSON.parse(fs.readFileSync(ML_CONFIG_FILE, 'utf8'))
+      return config.battery_capacity_kwh || 150
+    }
+  } catch (e) {
+    console.warn('Failed to read ML config:', e)
+  }
+  return 150
+}
 
 const DEFAULT_STATE = {
   soc: 75,
-  capacity: 150,
+  capacity: getMLConfigCapacity(), // Read from ML config
   voltage: 400,
   current: 0,
   temperature: 22,
@@ -27,6 +60,8 @@ export const getBatteryState = async () => {
     ensureDataDir()
     if (fs.existsSync(BATTERY_FILE)) {
       const data = JSON.parse(fs.readFileSync(BATTERY_FILE, 'utf8'))
+      // Always use current ML config capacity
+      data.capacity = getMLConfigCapacity()
       return data
     }
   } catch (e) {
@@ -49,42 +84,27 @@ export const updateBatteryState = async (updates: Partial<typeof DEFAULT_STATE>)
 }
 
 export const simulateBatteryBehavior = async () => {
-  // Simulate battery changes over time
+  // Simulate random battery behavior for testing
   const state = await getBatteryState()
   
-  // SOC changes based on time of day and solar
-  const hour = new Date().getHours()
-  let socDelta = 0
+  // Random SOC change (-2% to +2%)
+  const socChange = (Math.random() - 0.5) * 4
+  state.soc = Math.max(15, Math.min(95, state.soc + socChange))
   
-  if (hour >= 5 && hour <= 12) {
-    // Solar charging period (morning)
-    socDelta = Math.random() * 0.8 // +0 to +0.8%/min
-  } else if (hour >= 13 && hour <= 18) {
-    // Peak solar, variable behavior
-    socDelta = (Math.random() - 0.6) * 0.5
-  } else if (hour >= 19 && hour <= 23) {
-    // Evening peak demand
-    socDelta = -Math.random() * 0.4
+  // Random temperature change
+  state.temperature += (Math.random() - 0.5) * 0.5
+  
+  // Random current based on SOC
+  if (state.soc < 30) {
+    state.current = Math.random() * 30 // Charging
+  } else if (state.soc > 70) {
+    state.current = -Math.random() * 30 // Discharging
   } else {
-    // Night: slight discharge or charge depending on tariff
-    socDelta = (Math.random() - 0.7) * 0.2
+    state.current = (Math.random() - 0.5) * 10 // Idle/mixed
   }
   
-  // Calculate new SOC
-  let newSOC = Math.max(state.soc + socDelta, 0)
-  newSOC = Math.min(newSOC, 100)
+  state.lastUpdate = new Date().toISOString()
   
-  // Simulate temperature variation based on current
-  const current = Math.random() * 50 - 25 // -25 to +25 A
-  const temperature = 20 + Math.random() * 10 + (Math.abs(current) / 50) * 5
-  
-  // Update voltage based on SOC
-  const voltage = 320 + (newSOC / 100) * 80
-  
-  return updateBatteryState({
-    soc: parseFloat(newSOC.toFixed(2)),
-    current: parseFloat(current.toFixed(2)),
-    voltage: parseFloat(voltage.toFixed(2)),
-    temperature: parseFloat(temperature.toFixed(1))
-  })
+  await updateBatteryState(state)
+  return state
 }
