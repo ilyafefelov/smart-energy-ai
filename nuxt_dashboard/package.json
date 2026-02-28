@@ -1,0 +1,35 @@
+{
+  "name": "smart-energy-dashboard",
+  "version": "1.0.0",
+  "description": "Premium Nuxt3 dashboard for Smart Energy AI",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxi dev",
+    "build": "nuxi build",
+    "generate": "nuxi generate",
+    "preview": "nuxi preview",
+    "postinstall": "nuxi prepare",
+    "lint": "eslint . --fix"
+  },
+  "dependencies": {
+    "@heroicons/vue": "^2.2.0",
+    "@nuxtjs/tailwindcss": "^6.11.0",
+    "axios": "^1.7.2",
+    "chart.js": "^4.4.1",
+    "dayjs": "^1.11.10",
+    "nuxt": "^4.3.0",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.19",
+    "vue-chartjs": "^5.3.1"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "^1.0.8",
+    "@types/node": "^20.10.6",
+    "eslint": "^8.56.0",
+    "postcss": "^8.4.32",
+    "tailwindcss": "~3.4.17",
+    "typescript": "^5.3.3",
+    "vite": "^5.4.21"
+  }
+}

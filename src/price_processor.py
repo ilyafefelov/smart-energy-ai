@@ -160,19 +160,6 @@ class PriceProcessor:
             denormalized = (standardized_prices * self.price_std) + self.price_mean
             return denormalized
 
-    def destandardize_prices(self, standardized_prices: np.ndarray) -> np.ndarray:
-        """
-        Convert standardized prices back to UAH/MWh
-
-        Args:
-            standardized_prices: Standardized price values (z-score)
-
-        Returns:
-            Prices in UAH/MWh
-        """
-        denormalized = (standardized_prices * self.price_std) + self.price_mean
-        return denormalized
-
     def process_for_training(self) -> pl.DataFrame:
         """
         Full pipeline: smoothing → noise → normalization
@@ -260,12 +247,15 @@ if __name__ == "__main__":
     print("🔄 Fetching REAL price data from OREE Ukraine...\n")
 
     # Import real data fetcher
-    from src.data_pipeline.ingest_prices import PriceIngester
+    try:
+        from src.data_pipeline.ingest_prices import PriceIngester
 
-    ingester = PriceIngester()
-    prices_df = ingester.fetch_oree_prices()
+        ingester = PriceIngester()
+        prices_df = ingester.fetch_oree_prices()
+    except:
+        prices_df = None
 
-    if prices_df is None or prices_df.empty:
+    if prices_df is None or prices_df.is_empty():
         print("⚠️  OREE not available, using realistic simulation...\n")
         # Fallback: realistic market pattern
         base_prices_eur = [
@@ -295,7 +285,7 @@ if __name__ == "__main__":
             3.5,
         ]
         prices_uah = [p * 35 for p in base_prices_eur]
-        sample_df = pd.DataFrame(
+        sample_df = pl.DataFrame(
             {
                 "hour": range(24),
                 "price_uah_mwh": prices_uah,
@@ -304,13 +294,13 @@ if __name__ == "__main__":
         )
         print(f"Using realistic prices (UAH): {prices_uah}\n")
     else:
-        sample_df = prices_df.copy()
+        sample_df = prices_df.clone()
         print(f"✅ Got REAL prices from OREE")
         print(f"   Hours: {len(sample_df)}")
         print(
             f"   Range: {sample_df['price_uah_mwh'].min():.2f} - {sample_df['price_uah_mwh'].max():.2f} UAH/MWh"
         )
-        print(f"   Source: {sample_df.get('source', ['real_oree'])[0]}\n")
+        print(f"   Source: {sample_df.get_column('source').to_list()[0]}\n")
 
     # Process for RL training
     processed, stats = prepare_prices_for_rl(sample_df, normalize=True, add_noise=True)
