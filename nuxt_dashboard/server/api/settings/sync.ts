@@ -1,8 +1,10 @@
 // Sync settings from Nuxt to ML pipeline config
+// Also triggers recalculation pipeline after saving
 
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { spawn } from 'child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = path.resolve(__dirname, '../../../../../')
@@ -19,6 +21,49 @@ for (const p of POSSIBLE_PATHS) {
   if (fs.existsSync(p)) {
     CONFIG_FILE = p
     break
+  }
+}
+
+// Find recalculate script
+const RECALCULATE_PATHS = [
+  path.join(PROJECT_ROOT, 'recalculate_pipeline.py'),
+  path.join(PROJECT_ROOT, '../recalculate_pipeline.py'),
+  path.join(PROJECT_ROOT, '../../recalculate_pipeline.py'),
+  'C:/Users/ilyaf/clawd/projects/smart-energy-ai/recalculate_pipeline.py'
+]
+
+let RECALCULATE_SCRIPT = RECALCULATE_PATHS[0]
+for (const p of RECALCULATE_PATHS) {
+  if (fs.existsSync(p)) {
+    RECALCULATE_SCRIPT = p
+    break
+  }
+}
+
+// Trigger recalculation in background (fire and forget)
+const triggerRecalculation = () => {
+  if (!fs.existsSync(RECALCULATE_SCRIPT)) {
+    console.log('[settings/sync] Recalculate script not found, skipping')
+    return
+  }
+  
+  console.log('[settings/sync] Triggering ML pipeline recalculation...')
+  
+  const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
+  
+  try {
+    // Run in background without waiting
+    const child = spawn(pythonCmd, [RECALCULATE_SCRIPT], {
+      cwd: PROJECT_ROOT,
+      detached: true,
+      stdio: 'ignore'
+    })
+    
+    child.unref()
+    
+    console.log('[settings/sync] Recalculation job started')
+  } catch (e: any) {
+    console.warn('[settings/sync] Failed to start recalculation:', e.message)
   }
 }
 
@@ -44,8 +89,7 @@ export default defineEventHandler(async (event) => {
         config.battery_soc_max = (body.battery.maxSOC ?? 95) / 100
       }
       
-      // Generation settings - handle both formats
-      // Nuxt sends: { solarCapacity: 50, windCapacity: 10 }
+      // Generation settings
       if (body.generation) {
         config.solar_capacity_kw = body.generation.solarCapacity ?? body.generation.solar?.capacity ?? config.solar_capacity_kw
         config.wind_capacity_kw = body.generation.windCapacity ?? body.generation.wind?.capacity ?? config.wind_capacity_kw
@@ -59,7 +103,14 @@ export default defineEventHandler(async (event) => {
       fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2))
       console.log('[settings/sync] Updated config:', JSON.stringify(config, null, 2))
       
-      return { success: true, config }
+      // Trigger recalculation in background
+      triggerRecalculation()
+      
+      return { 
+        success: true, 
+        config,
+        recalculation: { status: 'triggered', message: 'ML pipeline recalculation started' }
+      }
     } catch (error: any) {
       console.error('[settings/sync] Error:', error)
       return { success: false, error: error.message }
