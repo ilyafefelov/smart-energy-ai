@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useSettingsStore } from '~/stores/settingsStore'
-import Navigation from './components/Navigation/NavigationMenu.vue'
+import Navigation from './components/Navigation/PageMenu.vue'
 
 const globalError = ref('')
 

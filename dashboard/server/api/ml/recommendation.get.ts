@@ -51,9 +51,9 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
     console.log(`[ML API] Python script: ${pythonScript}`)
     console.log(`[ML API] Calling ML pipeline...`)
     
-    // Call the Python ML pipeline
+    // Call the Python ML pipeline with enhanced features
     const { stdout, stderr } = await execAsync(
-      `python "${pythonScript}" --action=get_recommendation --format=json`,
+      `python "${pythonScript}" --action=get_recommendation --format=json --enhanced=true`,
       { 
         cwd: projectRoot,
         timeout: 30000 // 30 second timeout

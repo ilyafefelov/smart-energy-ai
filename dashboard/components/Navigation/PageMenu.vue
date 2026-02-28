@@ -84,7 +84,8 @@ const navLinks = [
   { path: '/', label: 'Dashboard', icon: '📊' },
   { path: '/control', label: 'Control', icon: '🎮' },
   { path: '/analytics', label: 'Analytics', icon: '📈' },
-  { path: '/settings', label: 'Settings', icon: '⚙️' }
+  { path: '/settings', label: 'Configuration', icon: '⚙️' },
+  { path: '/configuration', label: 'Settings', icon: '🔧' }
 ]
 
 const isActive = (path: string) => {

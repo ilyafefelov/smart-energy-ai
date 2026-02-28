@@ -17,6 +17,9 @@ from energy_ml.config_models import BatteryConfig, LoadProfileConfig
 from energy_ml.battery_degradation import BatteryModel
 from energy_ml.load_simulation import StandardWorkSimulator
 from energy_ml.tariff_models import UkraineTariffModel
+from energy_ml.mlops.optimization_engine import OptimizationEngine
+from energy_ml.mlops.battery_physics import BatteryPhysicsEngine
+from energy_ml.mlops.renewable_forecasting import RenewableForecaster
 
 
 logger = logging.getLogger(__name__)
@@ -56,6 +59,11 @@ class PipelineOrchestrator:
         self.battery = BatteryModel(self.battery_config)
         self.load_profile = StandardWorkSimulator(self.load_config)
         self.tariff = UkraineTariffModel()
+        
+        # Initialize new MLOps components
+        self.optimization_engine = OptimizationEngine()
+        self.physics_engine = BatteryPhysicsEngine()
+        self.renewable_forecaster = RenewableForecaster()
         
         # State tracking
         self._last_recommendation = None

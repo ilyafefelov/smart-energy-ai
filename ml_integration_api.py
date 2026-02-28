@@ -17,6 +17,9 @@ sys.path.insert(0, str(Path(__file__).parent))
 try:
     from energy_ml.pipeline import PipelineOrchestrator
     from energy_ml.user_config import ConfigurationManager
+    from energy_ml.mlops.optimization_engine import OptimizationEngine
+    from energy_ml.mlops.battery_physics import BatteryPhysicsEngine
+    from energy_ml.mlops.renewable_forecasting import RenewableForecaster
 except ImportError:
     # Fallback: try direct imports from the energy_ml directory
     sys.path.insert(0, str(Path(__file__).parent / "energy_ml"))
@@ -32,7 +35,7 @@ def setup_logging():
     )
 
 
-def get_recommendation() -> Dict[str, Any]:
+def get_recommendation(enhanced: bool = False) -> Dict[str, Any]:
     """Get current ML recommendation using Pipeline Orchestrator."""
     try:
         # Load user configuration
@@ -44,6 +47,41 @@ def get_recommendation() -> Dict[str, Any]:
         
         # Get current recommendation
         current_recommendation = orchestrator.calculate_recommendation()
+        
+        # If enhanced mode, apply optimization and physics
+        if enhanced:
+            try:
+                # Apply optimization engine
+                optimization_engine = OptimizationEngine()
+                user_preferences = optimization_engine.get_user_strategy(user_config)
+                optimized_recommendation = optimization_engine.optimize_decision(
+                    current_recommendation,
+                    user_config.optimization_strategy,
+                    weights=user_preferences.get('weights', {})
+                )
+                
+                # Apply physics constraints
+                physics_engine = BatteryPhysicsEngine()
+                physics_data = physics_engine.simulate_battery_behavior(user_config)
+                physics_constrained = physics_engine.apply_physics_constraints(
+                    optimized_recommendation, 
+                    {'physics_constraints': physics_data.get('physics_constraints', {}),
+                     'current_state': physics_data.get('current_state', {}),
+                     'power_limits': physics_data.get('power_limits', {}),
+                     'status': 'success'}
+                )
+                
+                # Apply renewable integration
+                renewable_forecaster = RenewableForecaster()
+                renewable_data = renewable_forecaster.generate_forecasts(user_config)
+                final_recommendation = renewable_forecaster.integrate_with_prediction(
+                    physics_constrained, renewable_data
+                )
+                
+                current_recommendation = final_recommendation
+                
+            except Exception as e:
+                logger.warning(f"Enhanced recommendation failed, using base: {e}")
         
         # Get 24-hour forecast
         forecast_df = orchestrator.get_hourly_forecast(24)
@@ -159,29 +197,168 @@ def get_pipeline_status() -> Dict[str, Any]:
         }
 
 
+def set_optimization_strategy(strategy: str, custom_weights: Dict[str, float] = None) -> Dict[str, Any]:
+    """Set user optimization strategy."""
+    try:
+        config_manager = ConfigurationManager()
+        user_config = config_manager.load_config()
+        
+        # Update optimization strategy in user config
+        user_config.optimization_strategy = strategy
+        if custom_weights:
+            user_config.custom_optimization_weights = custom_weights
+        
+        # Save updated config
+        config_manager.save_config(user_config)
+        
+        # Get strategy details
+        optimization_engine = OptimizationEngine()
+        strategy_info = optimization_engine.get_strategy_info(strategy)
+        
+        return {
+            'success': True,
+            'strategy': strategy,
+            'description': strategy_info.get('description', f'Strategy: {strategy}'),
+            'weights': strategy_info.get('weights', {}),
+            'constraints': strategy_info.get('constraints', {}),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logging.error(f"Error setting optimization strategy: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
+
+
+def get_optimization_strategy() -> Dict[str, Any]:
+    """Get current optimization strategy."""
+    try:
+        config_manager = ConfigurationManager()
+        user_config = config_manager.load_config()
+        
+        optimization_engine = OptimizationEngine()
+        strategy_info = optimization_engine.get_strategy_info(user_config.optimization_strategy)
+        
+        return {
+            'success': True,
+            'strategy': user_config.optimization_strategy,
+            'description': strategy_info.get('description', ''),
+            'weights': strategy_info.get('weights', {}),
+            'constraints': strategy_info.get('constraints', {}),
+            'available_strategies': strategy_info.get('available_strategies', []),
+            'current_cycles': strategy_info.get('current_cycles', 0),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logging.error(f"Error getting optimization strategy: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
+
+
+def get_battery_physics() -> Dict[str, Any]:
+    """Get battery physics simulation data."""
+    try:
+        config_manager = ConfigurationManager()
+        user_config = config_manager.load_config()
+        
+        physics_engine = BatteryPhysicsEngine()
+        physics_data = physics_engine.simulate_battery_behavior(user_config)
+        
+        return {
+            'success': True,
+            'physics_data': physics_data,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logging.error(f"Error getting battery physics: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
+
+
+def get_renewable_forecast() -> Dict[str, Any]:
+    """Get renewable energy forecast data."""
+    try:
+        config_manager = ConfigurationManager()
+        user_config = config_manager.load_config()
+        
+        renewable_forecaster = RenewableForecaster()
+        forecast_data = renewable_forecaster.generate_forecasts(user_config)
+        
+        return {
+            'success': True,
+            'forecast_data': forecast_data,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logging.error(f"Error getting renewable forecast: {e}")
+        return {
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }
+
+
 def main():
     """Main entry point for CLI interface."""
     setup_logging()
     
     parser = argparse.ArgumentParser(description='ML Integration API Bridge')
     parser.add_argument('--action', 
-                       choices=['get_recommendation', 'get_forecast', 'get_status'],
+                       choices=['get_recommendation', 'get_forecast', 'get_status',
+                               'set_optimization_strategy', 'get_optimization_strategy',
+                               'get_battery_physics', 'get_renewable_forecast'],
                        default='get_recommendation',
                        help='Action to perform')
     parser.add_argument('--hours', type=int, default=24,
                        help='Number of hours for forecast (default: 24)')
     parser.add_argument('--format', choices=['json', 'pretty'], default='json',
                        help='Output format')
+    parser.add_argument('--strategy', type=str, 
+                       help='Optimization strategy (for set_optimization_strategy)')
+    parser.add_argument('--custom_weights', type=str,
+                       help='Custom optimization weights as JSON string')
+    parser.add_argument('--enhanced', type=bool, default=False,
+                       help='Use enhanced recommendation with optimization and physics')
     
     args = parser.parse_args()
     
     # Execute the requested action
     if args.action == 'get_recommendation':
-        result = get_recommendation()
+        result = get_recommendation(enhanced=args.enhanced)
     elif args.action == 'get_forecast':
         result = get_forecast(args.hours)
     elif args.action == 'get_status':
         result = get_pipeline_status()
+    elif args.action == 'set_optimization_strategy':
+        if not args.strategy:
+            result = {'success': False, 'error': 'Strategy is required for set_optimization_strategy'}
+        else:
+            custom_weights = None
+            if args.custom_weights:
+                try:
+                    custom_weights = json.loads(args.custom_weights)
+                except json.JSONDecodeError:
+                    result = {'success': False, 'error': 'Invalid JSON for custom_weights'}
+                    return result
+            result = set_optimization_strategy(args.strategy, custom_weights)
+    elif args.action == 'get_optimization_strategy':
+        result = get_optimization_strategy()
+    elif args.action == 'get_battery_physics':
+        result = get_battery_physics()
+    elif args.action == 'get_renewable_forecast':
+        result = get_renewable_forecast()
     else:
         result = {'success': False, 'error': f'Unknown action: {args.action}'}
     

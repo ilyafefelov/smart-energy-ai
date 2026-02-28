@@ -1,4 +1,4 @@
-﻿__pycache__/
+__pycache__/
 *.py[cod]
 *.class
 .venv/
@@ -13,3 +13,6 @@ data/processed/*
 .idea/
 .vscode/
 *.joblib
+checkpoints/
+*.pth
+*.pt

@@ -1,0 +1,18 @@
+{
+  "timestamp": "2026-02-11T22:31:13.298677",
+  "status": "complete",
+  "progress": 100,
+  "stage": "Complete",
+  "details": "ML recalculation completed successfully in 9.8s",
+  "duration_seconds": 9.8,
+  "results": {
+    "models_trained": 4,
+    "accuracy": 0.842,
+    "improvement": 9.2,
+    "features_engineered": 45,
+    "data_quality_score": 0.95,
+    "results_file_size_kb": 1.8,
+    "cache_file_size_kb": 0.4
+  },
+  "completion_timestamp": "2026-02-11T22:31:13.297677"
+}
