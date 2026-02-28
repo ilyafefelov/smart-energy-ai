@@ -1,18 +1,48 @@
-version: '3.9'
-
 services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=dagster
+      - POSTGRES_PASSWORD=dagster
+      - POSTGRES_DB=dagster
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dagster"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   dagster:
-    build: .
+    image: dagster/dagster:latest
     ports:
       - "3000:3000"
     environment:
-      - DAGSTER_HOME=/app/.dagster
+      - DAGSTER_HOME=/app
       - PYTHONUNBUFFERED=1
     volumes:
       - .:/app
-      - dagster_data:/app/.dagster
     working_dir: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
     command: dagster dev -h 0.0.0.0 -p 3000
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_TRACKING_URI=postgresql://dagster:dagster@postgres:5432/mlflow
+    volumes:
+      - mlruns:/app/mlruns
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   dagster_data:
+  postgres_data:
+  mlruns:
