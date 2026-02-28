@@ -82,7 +82,6 @@ const mobileMenuOpen = ref(false)
 
 const navLinks = [
   { path: '/', label: 'Dashboard', icon: '📊' },
-  { path: '/control', label: 'Control', icon: '🎮' },
   { path: '/analytics', label: 'Analytics', icon: '📈' },
   { path: '/settings', label: 'Settings', icon: '⚙️' }
 ]

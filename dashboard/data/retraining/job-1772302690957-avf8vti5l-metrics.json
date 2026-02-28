@@ -1,0 +1,11 @@
+{
+  "jobId": "job-1772302690957-avf8vti5l",
+  "completedAt": "2026-02-28T20:18:18.913552",
+  "previousAccuracy": 0.852,
+  "newAccuracy": 0.928,
+  "improvementPercent": 8.9,
+  "trainingTime": 45,
+  "epochsCompleted": 20,
+  "finalLoss": 0.045,
+  "convergenceRate": 0.95
+}

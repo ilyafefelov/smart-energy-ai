@@ -64,6 +64,7 @@ export const usePricesStore = defineStore('prices', () => {
   // Getters
   const currentPrice = computed(() => data.value.current.price)
   const currentPriceFormatted = computed(() => `${data.value.current.price.toFixed(2)} ₴`)
+  const currentPriceTimestamp = computed(() => data.value.current.timestamp)
   const todayMin = computed(() => data.value.today.min)
   const todayMax = computed(() => data.value.today.max)
   const todayAvg = computed(() => data.value.today.avg)
@@ -75,10 +76,11 @@ export const usePricesStore = defineStore('prices', () => {
   const priceStatus = computed(() => {
     const current = data.value.current.price
     const avg = data.value.today.avg
+    const trend = data.value.current.trend || 'stable'
 
-    if (current < avg * 0.8) return { status: 'low', icon: '📉', color: 'green' }
-    if (current > avg * 1.2) return { status: 'high', icon: '📈', color: 'red' }
-    return { status: 'normal', icon: '➡️', color: 'yellow' }
+    if (current < avg * 0.8) return { status: 'low', icon: '📉', color: 'green', trend }
+    if (current > avg * 1.2) return { status: 'high', icon: '📈', color: 'red', trend }
+    return { status: 'normal', icon: '➡️', color: 'yellow', trend }
   })
 
   const arbitrageOpportunity = computed(() => {
@@ -180,6 +182,7 @@ export const usePricesStore = defineStore('prices', () => {
 
     // Getters
     currentPrice,
+    currentPriceTimestamp,
     currentPriceFormatted,
     todayMin,
     todayMax,

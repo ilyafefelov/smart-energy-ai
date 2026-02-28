@@ -1,4 +1,4 @@
-import { getBatteryState, simulateBatteryBehavior } from '~/server/utils/battery'
+import { getBatteryState, simulateBatteryBehavior } from '../../utils/battery'
 
 export default defineEventHandler(async (event) => {
   // GET /api/battery/status

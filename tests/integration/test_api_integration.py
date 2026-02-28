@@ -20,11 +20,11 @@ class TestControlAPIIntegration:
             import subprocess
 
             api_process = subprocess.Popen(
-                ["python", "ml_integration_api.py"], cwd="energy_ml"
+                [sys.executable, "ml_integration_api.py"], cwd="energy_ml"
             )
 
             # Wait for server to start
-            time.sleep(3)
+            time.sleep(5)
 
             yield "http://localhost:8000"
 

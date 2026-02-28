@@ -1,0 +1,9 @@
+{
+  "jobId": "job-1772306241567-9nxssv1cy",
+  "status": "completed",
+  "progress": 100,
+  "startTime": 1772306241568,
+  "endTime": 1772306249552,
+  "error": null,
+  "message": "Training completed successfully!"
+}

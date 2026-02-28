@@ -1,102 +1,18 @@
-version: '3.8'
+version: '3.9'
 
 services:
-  # Dagster webserver and daemon
   dagster:
-    build:
-      context: .
-      target: development
+    build: .
     ports:
-      - "3000:3000"  # Dagster webserver
-      - "8888:8888"  # Jupyter (optional)
+      - "3000:3000"
     environment:
-      - DAGSTER_HOME=/opt/dagster/dagster_home
-      - DAGSTER_POSTGRES_HOST=postgres
-      - DAGSTER_POSTGRES_USER=dagster
-      - DAGSTER_POSTGRES_PASSWORD=dagster123
-      - DAGSTER_POSTGRES_DB=dagster
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - DAGSTER_HOME=/app/.dagster
+      - PYTHONUNBUFFERED=1
     volumes:
-      - ./src:/app/src
-      - ./customers.yaml:/app/customers.yaml
-      - dagster_home:/opt/dagster/dagster_home
-    depends_on:
-      - postgres
-      - mlflow
-    command: |
-      bash -c "
-        dagster-daemon run &
-        dagster-webserver -h 0.0.0.0 -p 3000
-      "
-    restart: unless-stopped
-
-  # PostgreSQL for Dagster metadata
-  postgres:
-    image: postgres:15
-    environment:
-      - POSTGRES_USER=dagster
-      - POSTGRES_PASSWORD=dagster123
-      - POSTGRES_DB=dagster
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
-    restart: unless-stopped
-
-  # MLflow for experiment tracking
-  mlflow:
-    image: python:3.11-slim
-    ports:
-      - "5000:5000"
-    environment:
-      - BACKEND_STORE_URI=postgresql://mlflow:mlflow123@postgres:5432/mlflow
-      - DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
-    volumes:
-      - mlflow_artifacts:/mlflow/artifacts
-    depends_on:
-      - postgres
-    command: |
-      bash -c "
-        pip install mlflow psycopg2-binary &&
-        mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri postgresql://mlflow:mlflow123@postgres:5432/mlflow --default-artifact-root /mlflow/artifacts
-      "
-    restart: unless-stopped
-
-  # Redis for caching (optional)
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-
-  # Jupyter for development (optional)
-  jupyter:
-    build:
-      context: .
-      target: development
-    ports:
-      - "8889:8888"
-    environment:
-      - JUPYTER_ENABLE_LAB=yes
-    volumes:
-      - ./notebooks:/app/notebooks
-      - ./src:/app/src
-      - ./data:/app/data
-    command: |
-      bash -c "
-        pip install jupyter jupyterlab &&
-        jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root --NotebookApp.token='' --NotebookApp.password=''
-      "
-    restart: unless-stopped
+      - .:/app
+      - dagster_data:/app/.dagster
+    working_dir: /app
+    command: dagster dev -h 0.0.0.0 -p 3000
 
 volumes:
-  postgres_data:
-  mlflow_artifacts:
-  redis_data:
-  dagster_home:
+  dagster_data:

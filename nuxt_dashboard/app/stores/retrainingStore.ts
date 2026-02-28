@@ -230,6 +230,11 @@ export const useRetrainingStore = defineStore('retraining', () => {
     error.value = null
   }
 
+  const dismissRetraining = () => {
+    stopProgressPolling()
+    job.value = { ...DEFAULT_JOB }
+  }
+
   const clearError = () => {
     error.value = null
   }
@@ -263,6 +268,7 @@ export const useRetrainingStore = defineStore('retraining', () => {
     stopProgressPolling,
     cancelRetraining,
     resetJob,
+    dismissRetraining,
     clearError,
     getLastSuccess
   }

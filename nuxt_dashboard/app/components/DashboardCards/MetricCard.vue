@@ -32,14 +32,14 @@
       <div class="text-3xl font-bold text-white">{{ value }}</div>
 
       <!-- Trend indicator -->
-      <div v-if="trend" class="flex items-center gap-2">
-        <span :class="trendColor">
-          {{ trendIcon }}
-        </span>
-        <span v-if="trendValue" :class="trendColor" class="text-sm font-semibold">
-          {{ trendValue > 0 ? '+' : '' }}{{ trendValue }}%
-        </span>
-      </div>
+       <div v-if="trend" class="flex items-center gap-2">
+         <span :class="trendColor">
+           {{ trendIcon }}
+         </span>
+         <span v-if="trendValue !== undefined" :class="trendColor" class="text-sm font-semibold">
+           {{ formattedTrendValue }}
+         </span>
+       </div>
 
       <!-- Description -->
       <p v-if="description" class="text-xs text-slate-400 mt-2">{{ description }}</p>
@@ -95,6 +95,20 @@ const trendIcon = computed(() => {
     default:
       return '➡️'
   }
+})
+
+const formattedTrendValue = computed(() => {
+  if (props.trendValue === undefined) return ''
+  const v = props.trendValue
+  // If value is > 100 (like 100.2), it's likely a ratio - convert to percentage change
+  // Otherwise just format as-is
+  let displayValue: number
+  if (v > 100) {
+    displayValue = v - 100 // Convert ratio to percentage change
+  } else {
+    displayValue = v
+  }
+  return `${displayValue > 0 ? '+' : ''}${displayValue.toFixed(1)}%`
 })
 
 const trendColor = computed(() => {

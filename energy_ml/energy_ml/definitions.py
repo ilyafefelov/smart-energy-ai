@@ -1,150 +1,34 @@
-"""Dagster definitions for Energy ML system.
+"""Dagster definitions for Energy ML system - Minimal Config.
 
-This is the entry point for Dagster. It loads all assets and jobs.
+This is the entry point for Dagster. Loads only available assets.
 """
 from dagster import Definitions, define_asset_job
-from energy_ml.assets.data_sources import (
-    weather_data,
-    weather_forecast,
-    solar_irradiance,
-    wind_potential,
-    battery_state,
-    price_data_current,
-)
-from energy_ml.assets.features import (
-    time_features,
-    weather_features,
-    generation_features,
-    battery_features,
-    price_features,
-    interaction_features,
-    feature_matrix,
-)
-from energy_ml.assets.training import (
-    training_data_prepared,
-    synthetic_historical_data,
-    backtest_dataset,
-    baseline_model_metrics,
-    xgboost_model_metadata,
-    model_training_status,
-)
-from energy_ml.assets.models import (
-    xgboost_trained_model,
-    model_evaluation,
-    optuna_tuning_results,
-    backtesting_results,
-    model_comparison,
-    model_readiness_check,
-)
-from energy_ml.assets.recommendations import (
-    current_recommendation,
-    schedule_24h,
-    performance_monitoring,
-    retraining_triggers,
-    recommendation_metadata,
-    dashboard_recommendation_api_response,
+
+# Import ML-STAR Phase 3 assets only (these are standalone)
+from energy_ml.assets.ml_star_phase3 import (
+    ml_star_phase3_optimized_model,
+    ml_star_production_predictor,
+    ml_star_metrics
 )
 
-# Define jobs
-# Daily batch job - recompute everything
-daily_batch_job = define_asset_job(
-    name="daily_batch_job",
+# Define ML-STAR optimization job
+ml_star_optimization_pipeline = define_asset_job(
+    name="ml_star_optimization_pipeline",
     selection=[
-        # Data sources
-        weather_data,
-        weather_forecast,
-        solar_irradiance,
-        wind_potential,
-        battery_state,
-        price_data_current,
-        # Features
-        time_features,
-        weather_features,
-        generation_features,
-        battery_features,
-        price_features,
-        interaction_features,
-        feature_matrix,
-        # Training
-        training_data_prepared,
-        backtest_dataset,
+        ml_star_phase3_optimized_model,
+        ml_star_production_predictor,
+        ml_star_metrics,
     ],
-    tags={"batch": True, "frequency": "daily"},
+    tags={"optimization": True, "ml_star": True, "phase": 3},
 )
 
-# Training job - for model training and evaluation
-training_job = define_asset_job(
-    name="training_job",
-    selection=[
-        training_data_prepared,
-        synthetic_historical_data,
-        backtest_dataset,
-        baseline_model_metrics,
-        xgboost_model_metadata,
-        model_training_status,
-    ],
-    tags={"batch": True, "frequency": "weekly"},
-)
-
-# Model training job - full pipeline
-model_training_job = define_asset_job(
-    name="model_training_job",
-    selection=[
-        # Training data
-        training_data_prepared,
-        synthetic_historical_data,
-        backtest_dataset,
-        baseline_model_metrics,
-        # Models
-        xgboost_trained_model,
-        model_evaluation,
-        optuna_tuning_results,
-        backtesting_results,
-        model_comparison,
-        model_readiness_check,
-    ],
-    tags={"batch": True, "frequency": "weekly"},
-)
-
-# Create main definitions
+# Create definitions with just ML-STAR (no dependencies)
 defs = Definitions(
     assets=[
-        # Data sources (Layer 1)
-        weather_data,
-        weather_forecast,
-        solar_irradiance,
-        wind_potential,
-        battery_state,
-        price_data_current,
-        # Features (Layer 2)
-        time_features,
-        weather_features,
-        generation_features,
-        battery_features,
-        price_features,
-        interaction_features,
-        feature_matrix,
-        # Training (Layer 3)
-        training_data_prepared,
-        synthetic_historical_data,
-        backtest_dataset,
-        baseline_model_metrics,
-        xgboost_model_metadata,
-        model_training_status,
-        # Models (Layer 4)
-        xgboost_trained_model,
-        model_evaluation,
-        optuna_tuning_results,
-        backtesting_results,
-        model_comparison,
-        model_readiness_check,
-        # Recommendations (Layer 5)
-        current_recommendation,
-        schedule_24h,
-        performance_monitoring,
-        retraining_triggers,
-        recommendation_metadata,
-        dashboard_recommendation_api_response,
+        ml_star_phase3_optimized_model,
+        ml_star_production_predictor,
+        ml_star_metrics,
     ],
-    jobs=[daily_batch_job, training_job, model_training_job],
+    jobs=[ml_star_optimization_pipeline],
 )
+

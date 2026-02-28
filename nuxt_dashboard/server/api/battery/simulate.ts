@@ -1,4 +1,4 @@
-import { createBatteryPhysics, type BatteryConfig, type BatteryState } from '~/server/utils/batteryPhysics'
+import { createBatteryPhysics, type BatteryConfig, type BatteryState } from '../../utils/batteryPhysics'
 
 // In-memory battery simulation state
 let batteryEngine: any = null

@@ -16,14 +16,23 @@ from typing import Dict, Any
 sys.path.insert(0, str(Path(__file__).parent))
 
 try:
-    from pipeline import PipelineOrchestrator
-    from user_config import ConfigurationManager
-    from mlops.optimization_engine import OptimizationEngine
-    from mlops.battery_physics import BatteryPhysicsEngine
-    from mlops.renewable_forecasting import RenewableForecaster
-except ImportError as e:
-    logging.error(f"Failed to import modules: {e}")
-    sys.exit(1)
+    # Try relative imports first
+    from .pipeline import PipelineOrchestrator
+    from .user_config import ConfigurationManager
+    from .mlops.optimization_engine import OptimizationEngine
+    from .mlops.battery_physics import BatteryPhysicsEngine
+    from .mlops.renewable_forecasting import RenewableForecaster
+except ImportError:
+    # Fallback to absolute imports
+    try:
+        from pipeline import PipelineOrchestrator
+        from user_config import ConfigurationManager
+        from mlops.optimization_engine import OptimizationEngine
+        from mlops.battery_physics import BatteryPhysicsEngine
+        from mlops.renewable_forecasting import RenewableForecaster
+    except ImportError as e:
+        logging.error(f"Failed to import modules: {e}")
+        sys.exit(1)
 
 
 def setup_logging():

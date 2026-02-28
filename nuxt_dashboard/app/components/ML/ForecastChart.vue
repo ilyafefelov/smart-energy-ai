@@ -53,19 +53,34 @@
   </div>
 </template>
 
-<script setup>
-// Sample forecast data - in real app this would come from API
-const sampleForecast = ref([
-  { time: 0, action: 'HOLD', price: 0.82, status: 'Off-peak' },
-  { time: 1, action: 'HOLD', price: 0.82, status: 'Off-peak' },
-  { time: 2, action: 'HOLD', price: 0.82, status: 'Off-peak' },
-  { time: 6, action: 'HOLD', price: 0.85, status: 'Peak' },
-  { time: 7, action: 'HOLD', price: 0.85, status: 'Peak' },
-  { time: 8, action: 'HOLD', price: 0.85, status: 'Peak' },
-  { time: 12, action: 'HOLD', price: 0.85, status: 'Peak' },
-  { time: 18, action: 'HOLD', price: 0.85, status: 'Peak' },
-  { time: 23, action: 'HOLD', price: 0.82, status: 'Off-peak' },
-])
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { usePricesStore } from '~/stores/pricesStore'
+
+const pricesStore = usePricesStore()
+
+const sampleForecast = computed(() => {
+  if (!pricesStore.forecast || pricesStore.forecast.length === 0) {
+    return [
+      { time: 0, action: 'HOLD', price: 0.82, status: 'Off-peak' },
+      { time: 1, action: 'HOLD', price: 0.82, status: 'Off-peak' },
+      { time: 2, action: 'HOLD', price: 0.82, status: 'Off-peak' },
+      { time: 6, action: 'HOLD', price: 0.85, status: 'Peak' },
+      { time: 7, action: 'HOLD', price: 0.85, status: 'Peak' },
+      { time: 8, action: 'HOLD', price: 0.85, status: 'Peak' },
+      { time: 12, action: 'HOLD', price: 0.85, status: 'Peak' },
+      { time: 18, action: 'HOLD', price: 0.85, status: 'Peak' },
+      { time: 23, action: 'HOLD', price: 0.82, status: 'Off-peak' },
+    ]
+  }
+  // Transform pricesStore.forecast to the expected format
+  return pricesStore.forecast.map((f, idx) => ({
+    time: (new Date().getHours() + idx) % 24,
+    action: f.price < pricesStore.todayAvg * 0.85 ? 'BUY' : f.price > pricesStore.todayAvg * 1.15 ? 'SELL' : 'HOLD',
+    price: f.price,
+    status: f.price < pricesStore.todayAvg * 0.85 ? 'Good buy' : f.price > pricesStore.todayAvg * 1.15 ? 'Good sell' : 'Normal'
+  }))
+})
 
 const buyHours = computed(() => sampleForecast.value.filter(h => h.action === 'BUY').length)
 const sellHours = computed(() => sampleForecast.value.filter(h => h.action === 'SELL').length)
