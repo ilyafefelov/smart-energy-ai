@@ -11,6 +11,7 @@ export interface GeneralSettings {
 export interface BatterySettings {
   capacity: number
   minSOC: number
+  maxSOC: number
   maxChargeRate: number
   maxDischargeRate: number
 }
@@ -24,17 +25,29 @@ export interface NotificationSettings {
   systemAlerts: boolean
 }
 
+export interface GenerationSettings {
+  solarCapacity: number
+  windCapacity: number
+}
+
 export interface ModelSettings {
   learningRate: number
   batchSize: number
   epochs: number
 }
 
+export interface OptimizationSettings {
+  strategy: 'savings' | 'balanced' | 'longevity'
+  currentElectricityCost: number  // ₴/kWh - non-optimized baseline cost
+}
+
 export interface Settings {
   general: GeneralSettings
   battery: BatterySettings
+  generation: GenerationSettings
   notifications: NotificationSettings
   model: ModelSettings
+  optimization: OptimizationSettings
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -47,8 +60,13 @@ const DEFAULT_SETTINGS: Settings = {
   battery: {
     capacity: 150,
     minSOC: 15,
+    maxSOC: 95,
     maxChargeRate: 50,
     maxDischargeRate: 50
+  },
+  generation: {
+    solarCapacity: 50,
+    windCapacity: 10
   },
   notifications: {
     highPrice: true,
@@ -62,6 +80,10 @@ const DEFAULT_SETTINGS: Settings = {
     learningRate: 0.0003,
     batchSize: 64,
     epochs: 20
+  },
+  optimization: {
+    strategy: 'balanced',
+    currentElectricityCost: 12.0  // ₴/kWh baseline cost
   }
 }
 
@@ -78,8 +100,10 @@ export const useSettingsStore = defineStore('settings', () => {
   // Getters
   const generalSettings = computed(() => settings.value.general)
   const batterySettings = computed(() => settings.value.battery)
+  const generationSettings = computed(() => settings.value.generation)
   const notificationSettings = computed(() => settings.value.notifications)
   const modelSettings = computed(() => settings.value.model)
+  const optimizationSettings = computed(() => settings.value.optimization)
 
   const hasError = computed(() => error.value !== null)
   const isModified = computed(() => isDirty.value)
@@ -100,8 +124,10 @@ export const useSettingsStore = defineStore('settings', () => {
             settings.value = {
               general: { ...DEFAULT_SETTINGS.general, ...parsed.general },
               battery: { ...DEFAULT_SETTINGS.battery, ...parsed.battery },
+              generation: { ...DEFAULT_SETTINGS.generation, ...parsed.generation },
               notifications: { ...DEFAULT_SETTINGS.notifications, ...parsed.notifications },
-              model: { ...DEFAULT_SETTINGS.model, ...parsed.model }
+              model: { ...DEFAULT_SETTINGS.model, ...parsed.model },
+              optimization: { ...DEFAULT_SETTINGS.optimization, ...parsed.optimization }
             }
             isDirty.value = false
             return
@@ -123,6 +149,21 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
+  const syncToML = async () => {
+    try {
+      await $fetch("/api/settings/sync", {
+        method: "POST",
+        body: {
+          battery: settings.value.battery,
+          optimization: settings.value.optimization,
+          generation: settings.value.generation
+        }
+      })
+    } catch (e) {
+      console.warn("Failed to sync to ML:", e)
+    }
+  }
+
   const saveSettings = async (newSettings?: Partial<Settings>) => {
     isSaving.value = true
     error.value = null
@@ -133,9 +174,8 @@ export const useSettingsStore = defineStore('settings', () => {
       // Save to localStorage
       if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
-        console.log('[SettingsStore] Saved to localStorage:', dataToSave)
-      } else {
-        throw new Error('localStorage not available')
+        // Sync to ML pipeline
+        syncToML()
       }
 
       // Update state
@@ -161,6 +201,12 @@ export const useSettingsStore = defineStore('settings', () => {
     return saveSettings()
   }
 
+  const updateGenerationSettings = async (updates: Partial<GenerationSettings>) => {
+    settings.value.generation = { ...settings.value.generation, ...updates }
+    isDirty.value = true
+    return saveSettings()
+  }
+
   const updateBatterySettings = async (updates: Partial<BatterySettings>) => {
     settings.value.battery = { ...settings.value.battery, ...updates }
     isDirty.value = true
@@ -177,6 +223,11 @@ export const useSettingsStore = defineStore('settings', () => {
     settings.value.model = { ...settings.value.model, ...updates }
     isDirty.value = true
     return saveSettings()
+  }
+
+  const updateOptimization = (updates: Partial<OptimizationSettings>) => {
+    settings.value.optimization = { ...settings.value.optimization, ...updates }
+    saveSettings()
   }
 
   const resetToDefaults = async () => {
@@ -201,8 +252,10 @@ export const useSettingsStore = defineStore('settings', () => {
     // Getters
     generalSettings,
     batterySettings,
+    generationSettings,
     notificationSettings,
     modelSettings,
+    optimizationSettings,
     hasError,
     isModified,
 
@@ -211,8 +264,10 @@ export const useSettingsStore = defineStore('settings', () => {
     saveSettings,
     updateGeneralSettings,
     updateBatterySettings,
+    updateGenerationSettings,
     updateNotificationSettings,
     updateModelSettings,
+    updateOptimization,
     resetToDefaults,
     clearError
   }
