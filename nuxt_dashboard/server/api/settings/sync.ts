@@ -4,7 +4,6 @@
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { spawn } from 'child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PROJECT_ROOT = path.resolve(__dirname, '../../../../../')
@@ -24,47 +23,49 @@ for (const p of POSSIBLE_PATHS) {
   }
 }
 
-// Find recalculate script
-const RECALCULATE_PATHS = [
-  path.join(PROJECT_ROOT, 'recalculate_pipeline.py'),
-  path.join(PROJECT_ROOT, '../recalculate_pipeline.py'),
-  path.join(PROJECT_ROOT, '../../recalculate_pipeline.py'),
-  'C:/Users/ilyaf/clawd/projects/smart-energy-ai/recalculate_pipeline.py'
-]
-
-let RECALCULATE_SCRIPT = RECALCULATE_PATHS[0]
-for (const p of RECALCULATE_PATHS) {
-  if (fs.existsSync(p)) {
-    RECALCULATE_SCRIPT = p
-    break
-  }
-}
-
-// Trigger recalculation in background (fire and forget)
+// Trigger recalculation in background using setTimeout (safer on Windows)
 const triggerRecalculation = () => {
+  const RECALCULATE_PATHS = [
+    path.join(PROJECT_ROOT, 'recalculate_pipeline.py'),
+    path.join(PROJECT_ROOT, '../recalculate_pipeline.py'),
+    path.join(PROJECT_ROOT, '../../recalculate_pipeline.py'),
+    'C:/Users/ilyaf/clawd/projects/smart-energy-ai/recalculate_pipeline.py'
+  ]
+  
+  let RECALCULATE_SCRIPT = RECALCULATE_PATHS[0]
+  for (const p of RECALCULATE_PATHS) {
+    if (fs.existsSync(p)) {
+      RECALCULATE_SCRIPT = p
+      break
+    }
+  }
+  
   if (!fs.existsSync(RECALCULATE_SCRIPT)) {
     console.log('[settings/sync] Recalculate script not found, skipping')
     return
   }
   
-  console.log('[settings/sync] Triggering ML pipeline recalculation...')
+  console.log('[settings/sync] Scheduling ML pipeline recalculation...')
   
-  const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
-  
-  try {
-    // Run in background without waiting
-    const child = spawn(pythonCmd, [RECALCULATE_SCRIPT], {
-      cwd: PROJECT_ROOT,
-      detached: true,
-      stdio: 'ignore'
-    })
-    
-    child.unref()
-    
-    console.log('[settings/sync] Recalculation job started')
-  } catch (e: any) {
-    console.warn('[settings/sync] Failed to start recalculation:', e.message)
-  }
+  // Schedule recalculation to run in background
+  setTimeout(() => {
+    try {
+      const { exec } = require('child_process')
+      const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
+      exec(`${pythonCmd} "${RECALCULATE_SCRIPT}"`, {
+        cwd: PROJECT_ROOT,
+        windowsHide: true
+      }, (error: any, stdout: any, stderr: any) => {
+        if (error) {
+          console.warn('[settings/sync] Recalculation error:', error.message)
+        } else {
+          console.log('[settings/sync] Recalculation completed')
+        }
+      })
+    } catch (e: any) {
+      console.warn('[settings/sync] Failed to start recalculation:', e.message)
+    }
+  }, 100)
 }
 
 export default defineEventHandler(async (event) => {
@@ -103,7 +104,7 @@ export default defineEventHandler(async (event) => {
       fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2))
       console.log('[settings/sync] Updated config:', JSON.stringify(config, null, 2))
       
-      // Trigger recalculation in background
+      // Trigger recalculation
       triggerRecalculation()
       
       return { 
