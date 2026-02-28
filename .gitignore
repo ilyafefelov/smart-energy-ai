@@ -16,3 +16,4 @@ data/processed/*
 checkpoints/
 *.pth
 *.pt
+.tmp_dagster_home_*/
