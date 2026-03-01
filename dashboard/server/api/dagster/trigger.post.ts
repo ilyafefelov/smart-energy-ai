@@ -14,13 +14,17 @@ export default defineEventHandler(async (event) => {
     
     const startTime = Date.now()
     
+    // Get project root (parent of dashboard)
+    const path = await import('path')
+    const projectRoot = path.resolve(process.cwd(), '..')
+    
     try {
       const output = execSync(
         `python -m dagster asset materialize --select "${assetName}" -m src.assets`,
         { 
           encoding: 'utf-8',
           timeout: 120000,
-          cwd: process.cwd()
+          cwd: projectRoot
         }
       )
       
