@@ -87,13 +87,23 @@ def engine_benchmark_asset(
     """
     logger.info("Starting engine benchmark comparison...")
 
+    # Ensure src is in path for subprocess execution
+    _ensure_src_in_path()
+
     # Import engines
     from engines.polars_engine import PolarsEngine
-    from engines.nvtabular_engine import NVTabularEngine
 
     # Initialize engines
     polars_engine = PolarsEngine()
-    nvtabular_engine = NVTabularEngine()
+
+    # Try to import NVTabular (optional - may not be installed)
+    nvtabular_engine = None
+    try:
+        from engines.nvtabular_engine import NVTabularEngine
+
+        nvtabular_engine = NVTabularEngine()
+    except ImportError as e:
+        logger.warning(f"NVTabular not available, skipping: {e}")
 
     # Combine input data for benchmarking
     combined_data = market_data.join(weather_data, on="timestamp", how="inner")
@@ -116,14 +126,15 @@ def engine_benchmark_asset(
         )
         benchmark_results.append(polars_metrics)
 
-        # Benchmark NVTabular Engine
-        nvtabular_metrics = _benchmark_engine(
-            engine=nvtabular_engine,
-            data=test_data,
-            engine_name="nvtabular",
-            data_size=size,
-        )
-        benchmark_results.append(nvtabular_metrics)
+        # Benchmark NVTabular Engine (if available)
+        if nvtabular_engine is not None:
+            nvtabular_metrics = _benchmark_engine(
+                engine=nvtabular_engine,
+                data=test_data,
+                engine_name="nvtabular",
+                data_size=size,
+            )
+            benchmark_results.append(nvtabular_metrics)
 
         # Memory cleanup between tests
         import gc
