@@ -47,12 +47,9 @@ def engine_benchmark_asset(market_data: pl.DataFrame, weather_data: pl.DataFrame
     logger.info("Starting engine benchmark comparison...")
     
     # Import engines
-    import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from engines.polars_engine import PolarsEngine
+    from engines.polars_engine import PolarsEngine
     from engines.nvtabular_engine import NVTabularEngine
-    
+
     # Initialize engines
     polars_engine = PolarsEngine()
     nvtabular_engine = NVTabularEngine()
