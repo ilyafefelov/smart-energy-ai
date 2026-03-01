@@ -8,6 +8,11 @@ Thesis Relevance: Demonstrates systematic performance evaluation of different
 data processing approaches in production energy systems.
 """
 
+import sys
+from pathlib import Path
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 from dagster import asset, AssetIn, MetadataValue
 import polars as pl
 from datetime import datetime, timedelta
@@ -42,7 +47,10 @@ def engine_benchmark_asset(market_data: pl.DataFrame, weather_data: pl.DataFrame
     logger.info("Starting engine benchmark comparison...")
     
     # Import engines
-    from engines.polars_engine import PolarsEngine
+    import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from engines.polars_engine import PolarsEngine
     from engines.nvtabular_engine import NVTabularEngine
     
     # Initialize engines
