@@ -1,98 +1,83 @@
-// MLflow tracking and model registry integration
-// Monitors model performance, tracks experiments, manages model versions
+// MLflow API integration via REST API
+// MLflow provides HTTP REST endpoints at /api/2.0/mlflow/*
 
-const MLFLOW_API = process.env.MLFLOW_API_URL || 'http://localhost:5000'
+const MLFLOW_URI = process.env.MLFLOW_API_URL || 'http://localhost:5000'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Fetch real MLflow data
-    let experiments = []
-    let runs = []
-    let models = []
+    // Fetch experiments via MLflow REST API
+    const expResponse = await $fetch(`${MLFLOW_URI}/ajax-api/2.0/mlflow/experiments/search`, {
+      method: 'POST',
+      body: { max_results: 10 }
+    })
     
-    try {
-      // Get experiments
-      const expResponse = await $fetch(`${MLFLOW_API}/ajax-api/2.0/mlflow/experiments/search?max_results=10`)
-      experiments = expResponse.experiments?.map(e => ({
-        id: e.experiment_id,
-        name: e.name,
-        last_update: new Date(e.last_update_time).toISOString(),
-        creation_time: new Date(e.creation_time).toISOString(),
-        lifecycle_stage: e.lifecycle_stage
-      })) || []
-      
-      // Get runs from first experiment
-      if (experiments.length > 0) {
-        const runsResponse = await $fetch(`${MLFLOW_API}/ajax-api/2.0/mlflow/runs/search`, {
-          method: 'POST',
-          body: {
-            experiment_ids: [experiments[0].id],
-            max_results: 10
-          }
-        })
-        runs = runsResponse.runs?.map(r => ({
-          id: r.info.run_id,
-          name: r.info.run_name,
-          status: r.info.status,
-          start_time: r.info.start_time ? new Date(r.info.start_time).toISOString() : null,
-          end_time: r.info.end_time ? new Date(r.info.end_time).toISOString() : null,
-          metrics: r.data?.metrics || {},
-          params: r.data?.params || {},
-          tags: r.data?.tags || {}
-        })) || []
-      }
-    } catch (e) {
-      console.warn('[mlflow-status] Error fetching MLflow data:', e.message)
+    const experiments = (expResponse as any).experiments || []
+    
+    // Get runs from first experiment
+    let runs = []
+    if (experiments.length > 0) {
+      const runsResponse = await $fetch(`${MLFLOW_URI}/ajax-api/2.0/mlflow/runs/search`, {
+        method: 'POST',
+        body: {
+          experiment_ids: [experiments[0].experiment_id],
+          max_results: 5
+        }
+      })
+      runs = (runsResponse as any).runs || []
     }
-
-    // Build response with real data + fallbacks
-    const activeModel = runs.length > 0 ? {
-      name: runs[0].name || 'energy-recommendation-xgboost',
-      version: '1.0.0',
-      stage: 'Production',
-      last_updated: runs[0].start_time || new Date().toISOString(),
-      metrics: runs[0].metrics || { accuracy: 0.725 },
-    } : {
-      name: 'energy-recommendation-xgboost',
-      version: '1.0.0',
-      stage: 'Production',
-      last_updated: new Date().toISOString(),
-      metrics: { accuracy: 0.725 }
-    }
-
+    
+    // Format response
+    const activeRun = runs.length > 0 ? runs[0] : null
+    
     return {
       status: 'success',
       timestamp: new Date().toISOString(),
-      mlflow_connected: experiments.length > 0,
+      mlflow_connected: true,
+      mlflow_version: '3.x',
       
-      active_model: activeModel,
-      
-      experiments,
-      runs,
-      
-      model_history: [
-        { version: '1.0.0', stage: 'Production', created: new Date().toISOString() },
-      ],
-      
-      registry: {
-        total_experiments: experiments.length,
-        total_runs: runs.length,
-        mlflow_version: '2.x'
+      active_model: activeRun ? {
+        name: activeRun.info.run_name || activeRun.info.run_uuid,
+        version: '1.0.0',
+        stage: 'Production',
+        metrics: activeRun.data?.metrics || {},
+        params: activeRun.data?.params || {},
+        last_updated: new Date(activeRun.info.start_time).toISOString(),
+      } : {
+        name: 'No runs yet',
+        version: '1.0.0',
+        stage: 'Development',
       },
+      
+      experiments: experiments.map((e: any) => ({
+        id: e.experiment_id,
+        name: e.name,
+        lifecycle_stage: e.lifecycle_stage,
+        last_update_time: new Date(e.last_update_time).toISOString()
+      })),
+      
+      runs: runs.map((r: any) => ({
+        id: r.info.run_id,
+        name: r.info.run_name,
+        status: r.info.status,
+        start_time: new Date(r.info.start_time).toISOString(),
+        metrics: r.data?.metrics || {},
+        params: r.data?.params || {}
+      })),
       
       monitoring: {
         last_evaluation: new Date().toISOString(),
         drift_detected: false,
         recommendations: experiments.length > 0 
-          ? ['MLflow connected successfully', `${experiments.length} experiments found`]
-          : ['No experiments found - start training to see metrics']
+          ? [`Connected to MLflow`, `${experiments.length} experiments`, `${runs.length} recent runs`]
+          : ['No experiments found']
       }
     }
-  } catch (error) {
-    console.error('[mlflow-status] Error:', error)
+  } catch (error: any) {
+    console.error('[mlflow-status] Error:', error.message)
     return {
       status: 'error',
       error: error.message,
+      mlflow_connected: false
     }
   }
 })
