@@ -1,5 +1,5 @@
 """
-Asset service - integrates Dagster with SQLite for result storage.
+Asset service - integrates Dagster with PostgreSQL for result storage.
 """
 
 import os
@@ -35,7 +35,7 @@ class AssetService:
                    execution_time_ms, error_message
             FROM asset_results
             ORDER BY materialization_time DESC
-            LIMIT ?
+            LIMIT %s
         """, (limit,))
     
     def get_asset_result(self, asset_name: str, limit: int = 1) -> Optional[AssetResult]:
@@ -44,17 +44,17 @@ class AssetService:
             SELECT asset_name, run_id, materialization_time, data, 
                    status, error_message, execution_time_ms
             FROM asset_results
-            WHERE asset_name = ?
+            WHERE asset_name = %s
             ORDER BY materialization_time DESC
-            LIMIT ?
-        """, (asset_name, limit))
+            LIMIT 1
+        """, (asset_name,))
         
         if row:
             return AssetResult(
                 asset_name=row['asset_name'],
                 run_id=row['run_id'],
-                materialization_time=datetime.fromisoformat(row['materialization_time']),
-                data=json.loads(row['data']) if row['data'] else {},
+                materialization_time=row['materialization_time'],
+                data=row['data'] if isinstance(row['data'], dict) else json.loads(row['data']),
                 status=row['status'],
                 error_message=row['error_message'],
                 execution_time_ms=row['execution_time_ms']
@@ -67,17 +67,17 @@ class AssetService:
             SELECT asset_name, run_id, materialization_time, data,
                    status, error_message, execution_time_ms
             FROM asset_results
-            WHERE asset_name = ?
+            WHERE asset_name = %s
             ORDER BY materialization_time DESC
-            LIMIT ?
+            LIMIT %s
         """, (asset_name, limit))
         
         return [
             AssetResult(
                 asset_name=r['asset_name'],
                 run_id=r['run_id'],
-                materialization_time=datetime.fromisoformat(r['materialization_time']),
-                data=json.loads(r['data']) if r['data'] else {},
+                materialization_time=r['materialization_time'],
+                data=r['data'] if isinstance(r['data'], dict) else json.loads(r['data']),
                 status=r['status'],
                 error_message=r['error_message'],
                 execution_time_ms=r['execution_time_ms']
@@ -99,17 +99,17 @@ class AssetService:
             self.db.execute("""
                 INSERT INTO asset_results 
                 (asset_name, run_id, materialization_time, data, status, error_message, execution_time_ms)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(asset_name, run_id) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (asset_name, run_id) 
                 DO UPDATE SET 
-                    data = excluded.data,
-                    status = excluded.status,
-                    error_message = excluded.error_message,
-                    execution_time_ms = excluded.execution_time_ms
+                    data = EXCLUDED.data,
+                    status = EXCLUDED.status,
+                    error_message = EXCLUDED.error_message,
+                    execution_time_ms = EXCLUDED.execution_time_ms
             """, (
                 asset_name,
                 run_id,
-                datetime.now().isoformat(),
+                datetime.now(),
                 json.dumps(data),
                 status,
                 error_message,
