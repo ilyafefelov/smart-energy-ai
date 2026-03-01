@@ -1,0 +1,3 @@
+# Dagster configuration using local filesystem storage
+telemetry:
+  enabled: false
