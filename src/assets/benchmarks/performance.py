@@ -20,6 +20,7 @@ from typing import Dict, List, Tuple, Any
 import time
 import tracemalloc
 import numpy as np
+import mlflow
 
 
 def _ensure_src_in_path():
@@ -480,13 +481,24 @@ def mlflow_tracking_asset(
     """
     logger.info("Logging benchmark results to MLflow...")
 
-    # In production, this would use actual MLflow
-    # For now, we'll simulate the tracking format
+    mlflow.set_tracking_uri("http://localhost:5000")
 
     mlflow_logs = []
 
-    # Process engine benchmarks
     for row in engine_benchmark.to_dicts():
+        with mlflow.start_run(run_name=f"{row['engine_name']}_size_{row['data_size']}"):
+            mlflow.log_param("engine_name", row["engine_name"])
+            mlflow.log_param("data_size", row["data_size"])
+
+            mlflow.log_metric("processing_time_seconds", row["processing_time_seconds"])
+            mlflow.log_metric("memory_peak_mb", row["memory_peak_mb"])
+            mlflow.log_metric(
+                "throughput_records_per_second", row["throughput_records_per_second"]
+            )
+
+            mlflow.set_tag("benchmark_type", "engine_performance")
+            mlflow.set_tag("success", str(row["success"]))
+
         log_entry = {
             "experiment_name": "engine_benchmarks",
             "run_name": f"{row['engine_name']}_size_{row['data_size']}",
@@ -501,9 +513,23 @@ def mlflow_tracking_asset(
         }
         mlflow_logs.append(log_entry)
 
-    # Process accuracy benchmarks
     for row in accuracy_benchmark.to_dicts():
         if row["success"]:
+            with mlflow.start_run(
+                run_name=f"{row['scenario_name']}_{row['metric_type']}"
+            ):
+                mlflow.log_param("scenario_name", row["scenario_name"])
+                mlflow.log_param("metric_type", row["metric_type"])
+                mlflow.log_param("expected_value", row["expected_value"])
+
+                mlflow.log_metric("absolute_error", row["absolute_error"])
+                mlflow.log_metric(
+                    "relative_error_percent", row["relative_error_percent"]
+                )
+
+                mlflow.set_tag("benchmark_type", "accuracy_validation")
+                mlflow.set_tag("success", str(row["success"]))
+
             log_entry = {
                 "experiment_name": "accuracy_benchmarks",
                 "run_name": f"{row['scenario_name']}_{row['metric_type']}",
@@ -518,7 +544,6 @@ def mlflow_tracking_asset(
             }
             mlflow_logs.append(log_entry)
 
-    # Convert to tracking DataFrame
     tracking_df = pl.DataFrame(mlflow_logs)
 
     logger.info(f"MLflow tracking complete: {len(tracking_df)} experiment logs")

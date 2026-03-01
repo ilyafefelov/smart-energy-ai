@@ -1,7 +1,7 @@
 // API endpoint to get recommendations from Dagster ML pipeline
 // Connects dashboard to ML recommendation engine via Dagster/MLflow APIs
 
-const DAGSTER_API = process.env.DAGSTER_API_URL || 'http://localhost:3000'
+const DAGSTER_API = process.env.DAGSTER_API_URL || 'http://localhost:3600'
 const MLFLOW_API = process.env.MLFLOW_API_URL || 'http://localhost:5000'
 
 export default defineEventHandler(async (event) => {
