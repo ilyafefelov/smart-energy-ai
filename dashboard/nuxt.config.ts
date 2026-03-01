@@ -16,13 +16,13 @@ export default defineNuxtConfig({
     storesDirs: ['./app/stores/**']
   },
   
-  // Server configuration - use port 3600
+  // Server configuration - use port 3000 (Nuxt takes priority)
   nitro: {
     prerender: {
       crawlLinks: false,
       routes: [],
     },
-    port: 3600,
+    port: 3000,
     host: '0.0.0.0'
   },
 
