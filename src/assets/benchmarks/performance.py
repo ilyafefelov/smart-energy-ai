@@ -9,9 +9,21 @@ data processing approaches in production energy systems.
 """
 
 import sys
+import os
 from pathlib import Path
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Add project root to path - check multiple possible locations
+possible_roots = [
+    Path(__file__).resolve().parent.parent.parent,
+    Path.cwd(),
+    Path.cwd().parent,
+]
+for root in possible_roots:
+    src_path = root / 'src'
+    if src_path.exists():
+        sys.path.insert(0, str(root))
+        sys.path.insert(0, str(src_path))
+        break
 
 from dagster import asset, AssetIn, MetadataValue
 import polars as pl
