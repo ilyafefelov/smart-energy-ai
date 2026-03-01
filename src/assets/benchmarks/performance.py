@@ -254,7 +254,7 @@ def accuracy_benchmark_asset(market_data: pl.DataFrame) -> pl.DataFrame:
     """
     logger.info("Starting accuracy benchmark for economic models...")
     
-    from physics.economics import EconomicsCalculator
+    from physics.economics import EconomicModel
     
     # Create synthetic test scenarios with known ground truth
     test_scenarios = _create_economic_test_scenarios()
@@ -271,13 +271,13 @@ def accuracy_benchmark_asset(market_data: pl.DataFrame) -> pl.DataFrame:
         
         try:
             # Calculate LCOS
-            calc = EconomicsCalculator()
-            calculated_lcos = calc.calculate_lcos(**params['lcos'])
+            model = EconomicModel()
+            calculated_lcos = model.calculate_lcos(**params['lcos'])
             lcos_error = abs(calculated_lcos - expected_lcos) / expected_lcos
             
             # Calculate arbitrage value
             arbitrage_params = params['arbitrage']
-            calculated_arbitrage = calc.calculate_arbitrage_value(**arbitrage_params)
+            calculated_arbitrage = model.calculate_arbitrage_value(**arbitrage_params)
             arbitrage_error = abs(calculated_arbitrage - expected_arbitrage) / expected_arbitrage
             
             # Record results
