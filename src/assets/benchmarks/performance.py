@@ -12,20 +12,6 @@ import sys
 import os
 from pathlib import Path
 
-# Get project root - go up from src/assets/benchmarks/
-# File: .../src/assets/benchmarks/performance.py
-# Need: .../ (project root)
-current_file = Path(__file__).resolve()
-# src/assets/benchmarks/performance.py -> src/assets/benchmarks/ -> src/assets/ -> src/ -> project root
-project_root = current_file.parent.parent.parent.parent
-src_path = project_root / "src"
-
-if src_path.exists():
-    if str(src_path) not in sys.path:
-        sys.path.insert(0, str(src_path))
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-
 from dagster import asset, AssetIn, MetadataValue
 import polars as pl
 from datetime import datetime, timedelta
@@ -34,6 +20,46 @@ from typing import Dict, List, Tuple, Any
 import time
 import tracemalloc
 import numpy as np
+
+
+def _ensure_src_in_path():
+    """Ensure src/ is in sys.path for subprocess execution."""
+    import sys
+    from pathlib import Path
+
+    # Check if already importable
+    try:
+        import physics.economics
+
+        return  # Already in path
+    except ImportError:
+        pass
+
+    # Try multiple approaches to find project root
+    possible_roots = []
+
+    # 1. From __file__
+    try:
+        current_file = Path(__file__).resolve()
+        possible_roots.append(current_file.parent.parent.parent.parent)
+    except Exception:
+        pass
+
+    # 2. From cwd
+    possible_roots.append(Path.cwd())
+
+    # 3. Try parent of cwd
+    possible_roots.append(Path.cwd().parent)
+
+    for root in possible_roots:
+        src_path = root / "src"
+        if src_path.exists():
+            if str(src_path) not in sys.path:
+                sys.path.insert(0, str(src_path))
+            if str(root) not in sys.path:
+                sys.path.insert(0, str(root))
+            break
+
 
 logger = logging.getLogger(__name__)
 
@@ -277,6 +303,7 @@ def accuracy_benchmark_asset(market_data: pl.DataFrame) -> pl.DataFrame:
     """
     logger.info("Starting accuracy benchmark for economic models...")
 
+    _ensure_src_in_path()
     from physics.economics import EconomicModel, BatteryTechnology, OperationProfile
 
     test_scenarios = _create_economic_test_scenarios()
