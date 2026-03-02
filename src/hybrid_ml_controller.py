@@ -44,8 +44,8 @@ class PatternBasedForecaster:
     def __init__(self, config: ForecastConfig):
         self.config = config
         self.historical_prices = []
-        self.daily_patterns = {}
-        self.weekly_patterns = {}
+        self.daily_patterns = {'mean': {}, 'std': {}}
+        self.weekly_patterns = {'mean': {}, 'std': {}}
         
     def add_historical_data(self, prices_df: pd.DataFrame):
         """Add new price data to historical collection"""

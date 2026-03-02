@@ -959,6 +959,10 @@
           "importers": 8
         },
         {
+          "file": "src/assets/benchmarks/performance.py",
+          "importers": 4
+        },
+        {
           "file": "energy_ml/mlops/model_registry.py",
           "importers": 4
         },
@@ -967,23 +971,19 @@
           "importers": 4
         },
         {
-          "file": "src/assets/benchmarks/performance.py",
-          "importers": 4
+          "file": "src/dagster_api/asset_service.py",
+          "importers": 3
+        },
+        {
+          "file": "src/assets/core/market.py",
+          "importers": 3
         },
         {
           "file": "src/assets/core/client_state.py",
           "importers": 3
         },
         {
-          "file": "src/dagster_api/asset_service.py",
-          "importers": 3
-        },
-        {
           "file": "src/dagster_api/database.py",
-          "importers": 3
-        },
-        {
-          "file": "src/assets/core/market.py",
           "importers": 3
         },
         {
@@ -1013,8 +1013,7 @@
           "avg_fan_in": 0.0,
           "avg_fan_out": 1.4,
           "zones": {
-            "production": 7,
-            "script": 2,
+            "production": 9,
             "test": 1
           },
           "imports_from_dirs": {
@@ -1079,8 +1078,7 @@
           "avg_fan_in": 1.4,
           "avg_fan_out": 2.4,
           "zones": {
-            "production": 5,
-            "script": 2
+            "production": 7
           },
           "imports_from_dirs": {
             "energy_ml/": 11,
@@ -1108,10 +1106,10 @@
           "imported_by_dirs": {
             "energy_ml/": 1,
             "tests\\performance/": 1,
-            "tests\\unit/": 1,
+            "tests\\integration/": 1,
             "scripts\\archive/": 1,
             "tests/": 1,
-            "tests\\integration/": 1
+            "tests\\unit/": 1
           }
         },
         "energy_ml\\energy_ml/": {
@@ -1199,8 +1197,8 @@
           },
           "imported_by_dirs": {
             "energy_ml/": 1,
-            "tests\\unit/": 1,
-            "scripts\\archive/": 1
+            "scripts\\archive/": 1,
+            "tests\\unit/": 1
           }
         },
         "energy_ml\\scripts/": {
@@ -1233,9 +1231,9 @@
             "tests\\unit/": 2,
             "energy_ml/": 1,
             "tests\\performance/": 1,
+            "tests\\integration/": 1,
             "scripts\\archive/": 1,
-            "tests/": 1,
-            "tests\\integration/": 1
+            "tests/": 1
           }
         },
         "scripts/": {
@@ -1309,9 +1307,9 @@
             "energy_ml\\assets/": 4,
             "energy_ml\\mlops/": 3,
             "src\\data_pipeline/": 3,
-            "energy_ml\\control/": 1,
             "energy_ml\\simulator/": 1,
-            "energy_ml\\optimizer/": 1
+            "energy_ml\\optimizer/": 1,
+            "energy_ml\\control/": 1
           }
         },
         "src/": {
@@ -1357,13 +1355,13 @@
           "imports_from_dirs": {
             "src\\data_pipeline/": 10,
             "src\\assets\\core/": 3,
+            "src\\engines/": 1,
             "src\\assets\\multi_tenant/": 1,
-            "src\\assets\\benchmarks/": 1,
-            "src\\engines/": 1
+            "src\\assets\\benchmarks/": 1
           },
           "imported_by_dirs": {
-            ".": 5,
             "scripts/": 5,
+            ".": 5,
             "scripts\\archive/": 4,
             "src\\data_pipeline/": 4,
             "streamlit_dashboard/": 3,
@@ -1384,8 +1382,8 @@
           },
           "imported_by_dirs": {
             "src\\dagster_api/": 2,
-            "src\\assets/": 1,
-            "src/": 1
+            "src/": 1,
+            "src\\assets/": 1
           }
         },
         "src\\assets\\core/": {
@@ -1404,8 +1402,8 @@
           },
           "imported_by_dirs": {
             "src\\dagster_api/": 4,
-            "src\\assets/": 3,
-            "src/": 3
+            "src/": 3,
+            "src\\assets/": 3
           }
         },
         "src\\assets\\multi_tenant/": {
@@ -1464,8 +1462,8 @@
           },
           "imported_by_dirs": {
             "src/": 10,
-            "tests/": 3,
             "scripts\\archive/": 3,
+            "tests/": 3,
             "scripts/": 1
           }
         },
@@ -1531,8 +1529,8 @@
           },
           "imports_from_dirs": {
             "src\\data_pipeline/": 3,
-            "energy_ml\\control/": 1,
             "energy_ml\\simulator/": 1,
+            "energy_ml\\control/": 1,
             "src/": 1
           }
         },
@@ -1562,9 +1560,9 @@
             "test": 2
           },
           "imports_from_dirs": {
-            "energy_ml\\control/": 1,
+            "energy_ml/": 1,
             "energy_ml\\simulator/": 1,
-            "energy_ml/": 1
+            "energy_ml\\control/": 1
           }
         },
         "tests\\performance/": {
@@ -1580,8 +1578,8 @@
             "test": 2
           },
           "imports_from_dirs": {
-            "energy_ml\\control/": 1,
-            "energy_ml\\simulator/": 1
+            "energy_ml\\simulator/": 1,
+            "energy_ml\\control/": 1
           }
         },
         "tests\\unit/": {
@@ -1945,10 +1943,10 @@
       }
     },
     "zone_distribution": {
-      "production": 108,
-      "script": 27,
+      "production": 112,
       "test": 35,
-      "config": 2
+      "config": 2,
+      "script": 23
     },
     "existing_findings": {
       "scripts/archive/test_phase4c.py": [
@@ -1966,7 +1964,8 @@
         "dict_keys: Dict key \"voting\" written to `self.ensembles` at line 294 but never read",
         "dict_keys: Dict key \"leakage_detected\" overwritten on `report` at line 370 (previously set ",
         "dict_keys: Schema drift: 4/5 dict literals use different key, but energy_ml/optimizer/ml_st",
-        "dict_keys: Schema drift: 4/5 dict literals use different key, but energy_ml/optimizer/ml_st"
+        "dict_keys: Schema drift: 4/5 dict literals use different key, but energy_ml/optimizer/ml_st",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/energy_ml/assets/models.py": [
         "structural: Needs decomposition: large (682 LOC) / complexity score 60",
@@ -1977,7 +1976,8 @@
         "dict_keys: Dict key \"Test accuracy > 60%\" overwritten on `checks` at line 610 (previously s",
         "dict_keys: Dict key \"No overfitting (gap < 15%)\" overwritten on `checks` at line 623 (previ",
         "dict_keys: Dict key \"Backtesting profitable\" overwritten on `checks` at line 634 (previousl",
-        "dict_keys: Dict key \"Better than baseline\" overwritten on `checks` at line 642 (previously "
+        "dict_keys: Dict key \"Better than baseline\" overwritten on `checks` at line 642 (previously ",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/mlops/retraining_pipeline.py": [
         "structural: Needs decomposition: large (673 LOC) / complexity score 50",
@@ -1994,10 +1994,12 @@
         "dict_keys: Dict key \"success\" overwritten on `training_result` at line 415 (previously set ",
         "dict_keys: Dict key \"new_model_version\" overwritten on `training_result` at line 402 (previ",
         "dict_keys: Dict key \"metrics\" overwritten on `training_result` at line 390 (previously set ",
-        "dict_keys: Dict key \"error\" overwritten on `training_result` at line 421 (previously set at"
+        "dict_keys: Dict key \"error\" overwritten on `training_result` at line 421 (previously set at",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/simulator/battery_physics.py": [
-        "structural: Needs decomposition: large (612 LOC) / complexity score 30"
+        "structural: Needs decomposition: large (612 LOC) / complexity score 30",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/assets/benchmarks/performance.py": [
         "structural: Needs decomposition: large (595 LOC) / complexity score 28",
@@ -2006,19 +2008,22 @@
         "smells: 3x Catch block that only logs (swallowed error)",
         "smells: 2x Except handler silently suppresses error (pass/continue, no log)",
         "smells: 1x Empty except block (except: pass)",
-        "smells: 1x Hardcoded URL in source code"
+        "smells: 1x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/engines/nvtabular_engine.py": [
         "structural: Needs decomposition: large (575 LOC)",
         "orphaned: Orphaned file (575 LOC): zero importers, not an entry point",
         "test_coverage: Untested module (575 LOC, 0 importers)",
         "smells: 1x Catch block that only logs (swallowed error)",
-        "smells: 1x sys.exit() outside CLI entry point \u2014 use exceptions"
+        "smells: 1x sys.exit() outside CLI entry point \u2014 use exceptions",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/assets/pipeline.py": [
         "structural: Needs decomposition: large (572 LOC)",
         "responsibility_cohesion: Mixed responsibilities: 8 top-level funcs across 8 disconnected clusters (1, 1, ",
         "dict_keys: Dict key \"action\" read at line 552 but never written to `enhanced_prediction`",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`",
         "test_coverage: Untested module (572 LOC, 0 importers)"
       ],
       "energy_ml/mlops/monitoring_dashboard.py": [
@@ -2026,12 +2031,14 @@
         "test_coverage: Untested module (557 LOC, 0 importers)",
         "smells: 1x Catch block that only logs (swallowed error)",
         "smells: 1x Loose type annotation \u2014 use specific types",
-        "global_mutable_config: Module-level mutable '_dashboard_instance' (line 550) modified from 1 site(s)"
+        "global_mutable_config: Module-level mutable '_dashboard_instance' (line 550) modified from 1 site(s)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/user_config.py": [
         "structural: Needs decomposition: large (550 LOC)",
         "smells: 4x Magic numbers (>1000 in logic)",
-        "smells: 2x Function-level import (possible circular import workaround)"
+        "smells: 2x Function-level import (possible circular import workaround)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/archive/test_phase4e.py": [
         "structural: Needs decomposition: large (537 LOC)",
@@ -2046,41 +2053,48 @@
         "smells: 1x Monster function (>150 LOC)",
         "smells: 7x Loose type annotation \u2014 use specific types",
         "smells: 2x Magic numbers (>1000 in logic)",
-        "smells: 3x Function-level import (possible circular import workaround)"
+        "smells: 3x Function-level import (possible circular import workaround)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/enhanced_price_ingester.py": [
         "structural: Needs decomposition: large (522 LOC)",
         "orphaned: Orphaned file (522 LOC): zero importers, not an entry point",
         "test_coverage: Untested module (522 LOC, 0 importers)",
         "smells: 5x Except handler silently suppresses error (pass/continue, no log)",
-        "smells: 5x Hardcoded URL in source code"
+        "smells: 5x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/energy_ml/assets/features.py": [
         "structural: Needs decomposition: large (520 LOC)",
         "orphaned: Orphaned file (520 LOC): zero importers, not an entry point",
         "test_coverage: Untested module (520 LOC, 0 importers)",
-        "smells: 3x Magic numbers (>1000 in logic)"
+        "smells: 3x Magic numbers (>1000 in logic)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/assets/core/client_state.py": [
         "structural: Needs decomposition: large (515 LOC)",
         "test_coverage: Untested module (515 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`",
         "dupes: Near dupe: _load_client_configurations (src/assets/core/client_state.py:90) <-> "
       ],
       "energy_ml/energy_ml/assets/recommendations.py": [
         "structural: Needs decomposition: large (513 LOC)",
         "orphaned: Orphaned file (513 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (513 LOC, 0 importers)"
+        "test_coverage: Untested module (513 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/mlops/model_registry.py": [
         "structural: Needs decomposition: large (505 LOC)",
         "test_coverage: Untested module (505 LOC, 0 importers)",
         "smells: 3x Catch block that only logs (swallowed error)",
         "smells: 1x Magic numbers (>1000 in logic)",
-        "global_mutable_config: Module-level mutable '_registry_instance' (line 498) modified from 1 site(s)"
+        "global_mutable_config: Module-level mutable '_registry_instance' (line 498) modified from 1 site(s)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/mlops/battery_physics.py": [
         "structural: Needs decomposition: large (502 LOC)",
-        "smells: 1x Magic numbers (>1000 in logic)"
+        "smells: 1x Magic numbers (>1000 in logic)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/mlops/feature_store.py": [
         "structural: Needs decomposition: large (499 LOC)",
@@ -2088,7 +2102,8 @@
         "smells: 2x Catch block that only logs (swallowed error)",
         "smells: 1x Except handler silently suppresses error (pass/continue, no log)",
         "smells: 2x Loose type annotation \u2014 use specific types",
-        "global_mutable_config: Module-level mutable '_feature_store_instance' (line 474) modified from 1 site(s"
+        "global_mutable_config: Module-level mutable '_feature_store_instance' (line 474) modified from 1 site(s",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/archive/test_phase4f.py": [
         "structural: Needs decomposition: large (498 LOC)",
@@ -2098,14 +2113,16 @@
       "src/physics/economics.py": [
         "structural: Needs decomposition: large (474 LOC)",
         "orphaned: Orphaned file (474 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (474 LOC, 0 importers)"
+        "test_coverage: Untested module (474 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/optimizer/run_optimization.py": [
         "structural: Needs decomposition: large (462 LOC) / complexity score 97",
         "orphaned: Orphaned file (462 LOC): zero importers, not an entry point",
         "test_coverage: Untested critical module (462 LOC, 0 importers) \u2014 high blast radius",
         "smells: 1x sys.path mutation at import time (boundary purity leak)",
-        "smells: 1x Runtime initialization at import time (boundary purity leak)"
+        "smells: 1x Runtime initialization at import time (boundary purity leak)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/demo_complete_mlops_system.py": [
         "structural: Needs decomposition: large (455 LOC)",
@@ -2121,7 +2138,8 @@
         "test_coverage: Assertion-free test: test_mlops_integration.py has 4 test functions but 0 assert",
         "dict_keys: Dict key \"solar\" overwritten on `capacity_factors` at line 242 (previously set a",
         "dict_keys: Dict key \"wind\" overwritten on `capacity_factors` at line 250 (previously set at",
-        "dict_keys: Dict key \"combined\" overwritten on `capacity_factors` at line 260 (previously se"
+        "dict_keys: Dict key \"combined\" overwritten on `capacity_factors` at line 260 (previously se",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/comprehensive_energy_scraper.py": [
         "structural: Needs decomposition: large (428 LOC) / complexity score 41",
@@ -2129,7 +2147,8 @@
         "test_coverage: Untested critical module (428 LOC, 0 importers) \u2014 high blast radius",
         "smells: 2x Hardcoded URL in source code",
         "dict_keys: Dict key \"february_2026\" overwritten on `results` at line 88 (previously set at ",
-        "dict_keys: Dict key \"january_2026\" overwritten on `results` at line 99 (previously set at l"
+        "dict_keys: Dict key \"january_2026\" overwritten on `results` at line 99 (previously set at l",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/ml_integration_api.py": [
         "structural: Needs decomposition: large (423 LOC) / complexity score 36",
@@ -2138,40 +2157,48 @@
         "smells: 1x Catch block that only logs (swallowed error)",
         "smells: 1x sys.path mutation at import time (boundary purity leak)",
         "smells: 2x sys.exit() outside CLI entry point \u2014 use exceptions",
-        "smells: 1x Loose type annotation \u2014 use specific types"
+        "smells: 1x Loose type annotation \u2014 use specific types",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/engines/polars_engine.py": [
         "structural: Needs decomposition: large (421 LOC)",
-        "test_coverage: Untested module (421 LOC, 0 importers)"
+        "test_coverage: Untested module (421 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "app_config.py": [
         "structural: Needs decomposition: large (418 LOC)",
-        "smells: 1x sys.path mutation at import time (boundary purity leak)"
+        "smells: 1x sys.path mutation at import time (boundary purity leak)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "streamlit_dashboard/app_config.py": [
         "structural: Needs decomposition: large (418 LOC)",
-        "smells: 1x sys.path mutation at import time (boundary purity leak)"
+        "smells: 1x sys.path mutation at import time (boundary purity leak)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "tests/test_pipeline.py": [
         "structural: Needs decomposition: large (409 LOC)"
       ],
       "energy_ml/pipeline.py": [
         "structural: Needs decomposition: large (404 LOC) / complexity score 42 / PipelineOrchestrato",
-        "smells: 4x Magic numbers (>1000 in logic)"
+        "smells: 4x Magic numbers (>1000 in logic)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/ml_integration.py": [
         "structural: Needs decomposition: large (400 LOC)",
-        "smells: 1x Function-level import (possible circular import workaround)"
+        "smells: 1x Function-level import (possible circular import workaround)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/mlops/optimization_engine.py": [
         "structural: Needs decomposition: large (392 LOC) / complexity score 32",
-        "test_coverage: Assertion-free test: test_mlops_integration.py has 4 test functions but 0 assert"
+        "test_coverage: Assertion-free test: test_mlops_integration.py has 4 test functions but 0 assert",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/control/inverter_controller.py": [
         "structural: Needs decomposition: large (390 LOC) / VirtualInverterController (17 methods, 1 ",
         "smells: 1x Catch block that only logs (swallowed error)",
         "smells: 1x Loose type annotation \u2014 use specific types",
-        "global_mutable_config: Module-level mutable '_controller_instance' (line 378) modified from 2 site(s)"
+        "global_mutable_config: Module-level mutable '_controller_instance' (line 378) modified from 2 site(s)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/oree_playwright_scraper.py": [
         "structural: Needs decomposition: large (380 LOC) / complexity score 112",
@@ -2179,7 +2206,8 @@
         "smells: 4x Catch block that only logs (swallowed error)",
         "smells: 5x Except handler silently suppresses error (pass/continue, no log)",
         "smells: 3x Empty except block (except: pass)",
-        "smells: 1x Hardcoded URL in source code"
+        "smells: 1x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/assets/ml_star_optimized_pipeline.py": [
         "structural: Needs decomposition: large (377 LOC) / complexity score 36",
@@ -2187,7 +2215,8 @@
         "test_coverage: Untested critical module (377 LOC, 0 importers) \u2014 high blast radius",
         "smells: 9x Loose type annotation \u2014 use specific types",
         "smells: 3x Function-level import (possible circular import workaround)",
-        "smells: Signature variance: predict() has 2 different signatures across 5 files"
+        "smells: Signature variance: predict() has 2 different signatures across 5 files",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "ml_integration_api.py": [
         "structural: Needs decomposition: large (376 LOC) / complexity score 30",
@@ -2195,18 +2224,21 @@
         "test_coverage: Untested critical module (376 LOC, 0 importers) \u2014 high blast radius",
         "smells: 1x Catch block that only logs (swallowed error)",
         "smells: 2x sys.path mutation at import time (boundary purity leak)",
-        "smells: 1x sys.exit() outside CLI entry point \u2014 use exceptions"
+        "smells: 1x sys.exit() outside CLI entry point \u2014 use exceptions",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/energy_ml/assets/training.py": [
         "structural: Needs decomposition: large (362 LOC)",
         "orphaned: Orphaned file (362 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (362 LOC, 0 importers)"
+        "test_coverage: Untested module (362 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/optimizer_real.py": [
         "structural: Needs decomposition: large (362 LOC) / complexity score 48",
         "orphaned: Orphaned file (362 LOC): zero importers, not an entry point",
         "test_coverage: Untested critical module (362 LOC, 0 importers) \u2014 high blast radius",
-        "smells: 1x Catch block that only logs (swallowed error)"
+        "smells: 1x Catch block that only logs (swallowed error)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/optimizer/test_ml_star.py": [
         "structural: Needs decomposition: large (359 LOC)",
@@ -2220,24 +2252,28 @@
         "orphaned: Orphaned file (353 LOC): zero importers, not an entry point",
         "test_coverage: Untested critical module (353 LOC, 0 importers) \u2014 high blast radius",
         "smells: 1x Except handler silently suppresses error (pass/continue, no log)",
-        "smells: 1x traceback.print_exc() bypasses structured logging"
+        "smells: 1x traceback.print_exc() bypasses structured logging",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "execute_ml_star_phase3.py": [
         "structural: Needs decomposition: large (350 LOC)",
         "orphaned: Orphaned file (350 LOC): zero importers, not an entry point",
         "test_coverage: Untested module (350 LOC, 0 importers)",
         "smells: 1x sys.exit() outside CLI entry point \u2014 use exceptions",
-        "smells: 3x Vestigial debug tag in log/print"
+        "smells: 3x Vestigial debug tag in log/print",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "app.py": [
         "structural: Needs decomposition: large (347 LOC)",
         "orphaned: Orphaned file (347 LOC): zero importers, not an entry point",
-        "smells: 1x sys.path mutation at import time (boundary purity leak)"
+        "smells: 1x sys.path mutation at import time (boundary purity leak)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "streamlit_dashboard/app.py": [
         "structural: Needs decomposition: large (347 LOC)",
         "orphaned: Orphaned file (347 LOC): zero importers, not an entry point",
-        "smells: 1x sys.path mutation at import time (boundary purity leak)"
+        "smells: 1x sys.path mutation at import time (boundary purity leak)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/load_simulation.py": [
         "structural: Needs decomposition: large (345 LOC)",
@@ -2248,15 +2284,18 @@
         "dict_keys: Dict key \"annual_peak_kW\" written to `overall` at line 243 but never read",
         "dict_keys: Dict key \"base_load_estimated_kw\" written to `overall` at line 243 but never rea",
         "dict_keys: Dict key \"daily_average_kwh\" written to `overall` at line 243 but never read",
-        "dict_keys: Dict key \"peak_load_configured_kw\" written to `overall` at line 243 but never re"
+        "dict_keys: Dict key \"peak_load_configured_kw\" written to `overall` at line 243 but never re",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/hybrid_ml_controller.py": [
         "structural: Needs decomposition: large (350 LOC)",
         "test_coverage: Assertion-free test: test_hybrid_ml_integration.py has 1 test functions but 0 as",
-        "smells: 1x TODO/FIXME/HACK comments"
+        "smells: 1x TODO/FIXME/HACK comments",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/features.py": [
-        "structural: Needs decomposition: large (337 LOC)"
+        "structural: Needs decomposition: large (337 LOC)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/create_dashboard_page.py": [
         "structural: Needs decomposition: large (338 LOC) / complexity score 250",
@@ -2278,12 +2317,14 @@
         "smells: 1x Non-trivial function whose body does nothing",
         "smells: 6x Loose type annotation \u2014 use specific types",
         "smells: 1x Function-level import (possible circular import workaround)",
-        "dict_keys: Dict key \"LFP\" read at line 154 but never written to `models`"
+        "dict_keys: Dict key \"LFP\" read at line 154 but never written to `models`",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/data_pipeline/ingest_prices.py": [
         "structural: Needs decomposition: large (331 LOC)",
         "smells: 2x Except handler silently suppresses error (pass/continue, no log)",
-        "smells: 2x Hardcoded URL in source code"
+        "smells: 2x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/energy_ml/assets/data_sources.py": [
         "structural: Needs decomposition: large (330 LOC)",
@@ -2291,24 +2332,28 @@
         "test_coverage: Untested module (330 LOC, 0 importers)",
         "smells: 2x Hardcoded URL in source code",
         "global_mutable_config: Module-level mutable '_weather_cache' (line 28) modified from 2 site(s)",
-        "global_mutable_config: Module-level mutable '_forecast_cache' (line 29) modified from 2 site(s)"
+        "global_mutable_config: Module-level mutable '_forecast_cache' (line 29) modified from 2 site(s)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/assets/core/weather.py": [
         "structural: Needs decomposition: large (328 LOC)",
         "responsibility_cohesion: Mixed responsibilities: 8 top-level funcs across 2 disconnected clusters (7, 1)",
-        "smells: 2x Hardcoded URL in source code"
+        "smells: 2x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/oree_effective_scraper.py": [
         "structural: Needs decomposition: large (328 LOC)",
         "test_coverage: Assertion-free test: test_hybrid_ml_integration.py has 1 test functions but 0 as",
-        "smells: 1x Hardcoded URL in source code"
+        "smells: 1x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "tests/performance/test_load.py": [
         "structural: Needs decomposition: large (328 LOC)"
       ],
       "energy_ml/config_models.py": [
         "structural: Needs decomposition: large (324 LOC)",
-        "smells: 2x Loose type annotation \u2014 use specific types"
+        "smells: 2x Loose type annotation \u2014 use specific types",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/real_price_data.py": [
         "structural: Needs decomposition: large (324 LOC)",
@@ -2316,14 +2361,16 @@
         "smells: 3x Catch block that only logs (swallowed error)",
         "smells: 4x Except handler silently suppresses error (pass/continue, no log)",
         "smells: 3x Empty except block (except: pass)",
-        "smells: 4x Hardcoded URL in source code"
+        "smells: 4x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/optimizer/dagster_integration.py": [
         "structural: Needs decomposition: large (321 LOC)",
         "responsibility_cohesion: Mixed responsibilities: 8 top-level funcs across 8 disconnected clusters (1, 1, ",
         "orphaned: Orphaned file (321 LOC): zero importers, not an entry point",
         "test_coverage: Untested module (321 LOC, 0 importers)",
-        "smells: 5x Function-level import (possible circular import workaround)"
+        "smells: 5x Function-level import (possible circular import workaround)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "recalculate_pipeline.py": [
         "structural: Needs decomposition: large (316 LOC)",
@@ -2333,14 +2380,17 @@
         "smells: 1x sys.exit() outside CLI entry point \u2014 use exceptions",
         "smells: 1x Runtime initialization at import time (boundary purity leak)",
         "smells: 5x Magic numbers (>1000 in logic)",
-        "smells: 1x Function-level import (possible circular import workaround)"
+        "smells: 1x Function-level import (possible circular import workaround)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/price_processor.py": [
-        "structural: Needs decomposition: large (315 LOC)"
+        "structural: Needs decomposition: large (315 LOC)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/assets/multi_tenant/asset_factory.py": [
         "structural: Needs decomposition: large (311 LOC)",
-        "test_coverage: Untested module (311 LOC, 0 importers)"
+        "test_coverage: Untested module (311 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "run_ml_star_phase3_realdata.py": [
         "structural: Needs decomposition: large (308 LOC)",
@@ -2349,14 +2399,16 @@
         "smells: 1x sys.path mutation at import time (boundary purity leak)",
         "smells: 2x sys.exit() outside CLI entry point \u2014 use exceptions",
         "smells: 1x traceback.print_exc() bypasses structured logging",
-        "smells: 1x Vestigial debug tag in log/print"
+        "smells: 1x Vestigial debug tag in log/print",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "data_recommendations.py": [
         "structural: Needs decomposition: large (302 LOC) / complexity score 26",
         "orphaned: Orphaned file (302 LOC): zero importers, not an entry point",
         "test_coverage: Untested critical module (302 LOC, 0 importers) \u2014 high blast radius",
         "smells: 3x Loose type annotation \u2014 use specific types",
-        "smells: 8x Hardcoded URL in source code"
+        "smells: 8x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/oree_selenium_scraper.py": [
         "structural: Needs decomposition: complexity score 124",
@@ -2364,7 +2416,8 @@
         "test_coverage: Untested critical module (212 LOC, 0 importers) \u2014 high blast radius",
         "smells: 1x Catch block that only logs (swallowed error)",
         "smells: 1x Except handler silently suppresses error (pass/continue, no log)",
-        "smells: 1x Hardcoded URL in source code"
+        "smells: 1x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/oree_real_prices.py": [
         "structural: Needs decomposition: complexity score 83",
@@ -2372,7 +2425,8 @@
         "test_coverage: Untested critical module (210 LOC, 0 importers) \u2014 high blast radius",
         "smells: 3x Except handler silently suppresses error (pass/continue, no log)",
         "smells: 3x Empty except block (except: pass)",
-        "smells: 1x Hardcoded URL in source code"
+        "smells: 1x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/assets/ml_star_phase3.py": [
         "structural: Needs decomposition: complexity score 78",
@@ -2381,7 +2435,8 @@
         "smells: 1x Monster function (>150 LOC)",
         "smells: 3x Loose type annotation \u2014 use specific types",
         "smells: 1x Class defined inside a function",
-        "smells: 1x Function-level import (possible circular import workaround)"
+        "smells: 1x Function-level import (possible circular import workaround)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/demo_upgrades.py": [
         "structural: Needs decomposition: complexity score 72",
@@ -2390,13 +2445,15 @@
       "src/data_fetcher.py": [
         "structural: Needs decomposition: complexity score 72",
         "orphaned: Orphaned file (110 LOC): zero importers, not an entry point",
-        "test_coverage: Untested critical module (110 LOC, 0 importers) \u2014 high blast radius"
+        "test_coverage: Untested critical module (110 LOC, 0 importers) \u2014 high blast radius",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/energy_ml/utils.py": [
         "structural: Needs decomposition: complexity score 57",
         "orphaned: Orphaned file (153 LOC): zero importers, not an entry point",
         "test_coverage: Untested critical module (153 LOC, 0 importers) \u2014 high blast radius",
-        "smells: 2x Magic numbers (>1000 in logic)"
+        "smells: 2x Magic numbers (>1000 in logic)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/scripts/get_battery_physics.py": [
         "structural: Needs decomposition: complexity score 43",
@@ -2413,7 +2470,8 @@
       ],
       "src/rl_environment.py": [
         "structural: Needs decomposition: SmartEnergyEnv (14 attributes, 1 long methods (>50 LOC))",
-        "test_coverage: Untested module (262 LOC, 0 importers)"
+        "test_coverage: Untested module (262 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src": [
         "flat_dirs: Flat directory: 29 files \u2014 consider grouping by domain"
@@ -2430,11 +2488,13 @@
         "test_coverage: Untested module (233 LOC, 0 importers)",
         "smells: 1x sys.exit() outside CLI entry point \u2014 use exceptions",
         "smells: 1x subprocess call without timeout (can hang forever)",
-        "smells: 1x Function-level import (possible circular import workaround)"
+        "smells: 1x Function-level import (possible circular import workaround)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/rl_training.py": [
         "orphaned: Orphaned file (299 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (299 LOC, 0 importers)"
+        "test_coverage: Untested module (299 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/run_tests.py": [
         "orphaned: Orphaned file (293 LOC): zero importers, not an entry point",
@@ -2448,13 +2508,15 @@
       ],
       "src/physics/battery_lfp.py": [
         "orphaned: Orphaned file (286 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (286 LOC, 0 importers)"
+        "test_coverage: Untested module (286 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "ml_architecture_comparison.py": [
         "orphaned: Orphaned file (220 LOC): zero importers, not an entry point",
         "test_coverage: Untested module (220 LOC, 0 importers)",
         "smells: 1x sys.path mutation at import time (boundary purity leak)",
-        "smells: 1x Magic numbers (>1000 in logic)"
+        "smells: 1x Magic numbers (>1000 in logic)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/generate_sample_data.py": [
         "orphaned: Orphaned file (210 LOC): zero importers, not an entry point",
@@ -2472,7 +2534,8 @@
       ],
       "src/improved_price_fetcher.py": [
         "orphaned: Orphaned file (178 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (178 LOC, 0 importers)"
+        "test_coverage: Untested module (178 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/validation_check.py": [
         "orphaned: Orphaned file (176 LOC): zero importers, not an entry point",
@@ -2505,7 +2568,8 @@
       ],
       "src/dagster_api/trigger.py": [
         "orphaned: Orphaned file (151 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (151 LOC, 0 importers)"
+        "test_coverage: Untested module (151 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/notion_sync.py": [
         "orphaned: Orphaned file (125 LOC): zero importers, not an entry point",
@@ -2524,11 +2588,13 @@
         "smells: 1x Hardcoded URL in source code"
       ],
       "src/definitions.py": [
-        "orphaned: Orphaned file (98 LOC): zero importers, not an entry point"
+        "orphaned: Orphaned file (98 LOC): zero importers, not an entry point",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/optimizer_v2.py": [
         "orphaned: Orphaned file (98 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (98 LOC, 0 importers)"
+        "test_coverage: Untested module (98 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/scripts/execute_control_command.py": [
         "orphaned: Orphaned file (91 LOC): zero importers, not an entry point",
@@ -2545,17 +2611,20 @@
         "test_coverage: Untested module (82 LOC, 0 importers)"
       ],
       "src/optimizer.py": [
-        "orphaned: Orphaned file (78 LOC): zero importers, not an entry point"
+        "orphaned: Orphaned file (78 LOC): zero importers, not an entry point",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/dagster_api/store_results.py": [
         "orphaned: Orphaned file (75 LOC): zero importers, not an entry point",
         "test_coverage: Untested module (75 LOC, 0 importers)",
         "smells: 1x sys.path mutation at import time (boundary purity leak)",
-        "smells: 1x Runtime initialization at import time (boundary purity leak)"
+        "smells: 1x Runtime initialization at import time (boundary purity leak)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/generate_business_plot.py": [
         "orphaned: Orphaned file (73 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (73 LOC, 0 importers)"
+        "test_coverage: Untested module (73 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/scripts/get_control_status.py": [
         "orphaned: Orphaned file (69 LOC): zero importers, not an entry point",
@@ -2565,7 +2634,8 @@
       ],
       "src/generate_plots_mpl.py": [
         "orphaned: Orphaned file (40 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (40 LOC, 0 importers)"
+        "test_coverage: Untested module (40 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/analyze_hourly_prices.py": [
         "orphaned: Orphaned file (39 LOC): zero importers, not an entry point",
@@ -2577,23 +2647,28 @@
       "src/weather_fetcher.py": [
         "orphaned: Orphaned file (27 LOC): zero importers, not an entry point",
         "test_coverage: Untested module (27 LOC, 0 importers)",
-        "smells: 1x Hardcoded URL in source code"
+        "smells: 1x Hardcoded URL in source code",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/generate_plots.py": [
         "orphaned: Orphaned file (25 LOC): zero importers, not an entry point",
-        "test_coverage: Untested module (25 LOC, 0 importers)"
+        "test_coverage: Untested module (25 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/__init__.py": [
-        "facade: Re-export facade (28 LOC): imports from pipeline, user_config (0 importers)"
+        "facade: Re-export facade (28 LOC): imports from pipeline, user_config (0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/assets/multi_tenant/__init__.py": [
         "facade: Re-export facade (7 LOC): imports from asset_factory (0 importers)"
       ],
       "energy_ml/simulator/__init__.py": [
-        "facade: Re-export facade (26 LOC): imports from battery_physics (1 importers)"
+        "facade: Re-export facade (26 LOC): imports from battery_physics (1 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/control/__init__.py": [
-        "facade: Re-export facade (22 LOC): imports from inverter_controller (1 importers)"
+        "facade: Re-export facade (22 LOC): imports from inverter_controller (1 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/dagster_api/__init__.py": [
         "facade: Re-export facade (13 LOC): imports from database, asset_service, models (1 impor"
@@ -2609,33 +2684,41 @@
       ],
       "src/dagster_api/cli.py": [
         "test_coverage: Untested module (147 LOC, 0 importers)",
-        "smells: 1x subprocess call without timeout (can hang forever)"
+        "smells: 1x subprocess call without timeout (can hang forever)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/assets/core/market.py": [
         "test_coverage: Untested module (217 LOC, 0 importers)",
         "smells: 2x Hardcoded URL in source code",
         "dict_keys: Schema drift: 16/18 dict literals use different key, but src/assets/core/market.",
-        "dict_keys: Schema drift: 16/18 dict literals use different key, but src/assets/core/market."
+        "dict_keys: Schema drift: 16/18 dict literals use different key, but src/assets/core/market.",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/dagster_api/database.py": [
         "test_coverage: Untested module (130 LOC, 0 importers)",
-        "global_mutable_config: Module-level mutable '_db' (line 122) modified from 1 site(s)"
+        "global_mutable_config: Module-level mutable '_db' (line 122) modified from 1 site(s)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/dagster_api/models.py": [
-        "test_coverage: Untested module (47 LOC, 0 importers)"
+        "test_coverage: Untested module (47 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/dagster_api/asset_service.py": [
         "test_coverage: Untested module (158 LOC, 0 importers)",
-        "global_mutable_config: Module-level mutable '_service' (line 151) modified from 1 site(s)"
+        "global_mutable_config: Module-level mutable '_service' (line 151) modified from 1 site(s)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/train_baseline.py": [
-        "test_coverage: Untested module (115 LOC, 0 importers)"
+        "test_coverage: Untested module (115 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/assets/__init__.py": [
-        "test_coverage: Untested module (21 LOC, 0 importers)"
+        "test_coverage: Untested module (21 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "src/db.py": [
-        "test_coverage: Untested module (81 LOC, 0 importers)"
+        "test_coverage: Untested module (81 LOC, 0 importers)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/test_assets.py": [
         "smells: 1x Catch block that only logs (swallowed error)",
@@ -2715,24 +2798,29 @@
       ],
       "energy_ml/assets/battery_models.py": [
         "smells: 1x Loose type annotation \u2014 use specific types",
-        "smells: 1x Constant defined identically in multiple modules"
+        "smells: 1x Constant defined identically in multiple modules",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/assets/load_profiles.py": [
-        "smells: 1x Loose type annotation \u2014 use specific types"
+        "smells: 1x Loose type annotation \u2014 use specific types",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/assets/tariff_optimization.py": [
         "smells: 1x Loose type annotation \u2014 use specific types",
         "smells: 1x Constant defined identically in multiple modules",
-        "smells: 1x Function-level import (possible circular import workaround)"
+        "smells: 1x Function-level import (possible circular import workaround)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/energy_ml/config.py": [
         "smells: 1x Environment loading at import time (boundary purity leak)"
       ],
       "energy_ml/battery_degradation.py": [
-        "smells: 2x Magic numbers (>1000 in logic)"
+        "smells: 2x Magic numbers (>1000 in logic)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "energy_ml/tariff_models.py": [
-        "smells: 4x Magic numbers (>1000 in logic)"
+        "smells: 4x Magic numbers (>1000 in logic)",
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
       ],
       "scripts/archive/test_phase4b.py": [
         "smells: 1x Magic numbers (>1000 in logic)",
@@ -2744,19 +2832,29 @@
       "src/config.py": [
         "global_mutable_config: Module-level mutable '_config' (line 174) modified from 1 site(s)"
       ],
+      "energy_ml/energy_ml/definitions.py": [
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
+      ],
+      "energy_ml/optimizer/multi_objective.py": [
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
+      ],
+      "src/baseline_calculator.py": [
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
+      ],
+      "src/data_pipeline/ingest_weather.py": [
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
+      ],
+      "src/data_pipeline/validate.py": [
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
+      ],
+      "src/models.py": [
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
+      ],
+      "src/training_analyzer.py": [
+        "subjective_review: No design review on record \u2014 run `desloppify review --prepare`"
+      ],
       ".": [
-        "review: Multiple directories with 20+ files indicate potential hub modules creating coup",
-        "review: Mixed naming conventions across the codebase",
-        "review: Mixed error handling strategies across codebase",
-        "review: Facade modules with re-exports but no concrete implementations being used",
-        "review: sys.path mutations at import time detected in multiple files",
-        "review: 78 production modules lack test coverage",
-        "review: Demo and prototype files may not be production-ready",
-        "review: Orphaned files with entry points but no importers",
-        "review: Complex nested directory structure with mixed purposes",
-        "review: Module-level mutable state patterns detected",
-        "review: Large monster functions detected that could be refactored",
-        "review: Mixed design patterns across similar modules"
+        "subjective_review: No holistic codebase review on record \u2014 run `desloppify review --prepare`"
       ]
     },
     "codebase_stats": {
@@ -3196,13 +3294,13 @@
       "files_to_read": [
         "energy_ml/mlops/optimization_engine.py",
         "energy_ml/mlops/renewable_forecasting.py",
+        "src/assets/benchmarks/performance.py",
         "energy_ml/mlops/model_registry.py",
         "src/db.py",
-        "src/assets/benchmarks/performance.py",
-        "src/assets/core/client_state.py",
         "src/dagster_api/asset_service.py",
-        "src/dagster_api/database.py",
         "src/assets/core/market.py",
+        "src/assets/core/client_state.py",
+        "src/dagster_api/database.py",
         "energy_ml/mlops/feature_store.py"
       ],
       "why": "critical untested paths, API inconsistency"
@@ -3556,7 +3654,353 @@
     "requested": [],
     "default": []
   },
+  "narrative": {
+    "phase": "stagnation",
+    "headline": "Score plateaued at 30.0 for 5 scans. Error consistency (0.0%) is where the breakthrough is.",
+    "dimensions": {
+      "lowest_dimensions": [
+        {
+          "name": "Error consistency",
+          "strict": 0.0,
+          "issues": 0,
+          "impact": 0.0,
+          "subjective": true,
+          "impact_description": "re-review to improve"
+        },
+        {
+          "name": "Abstraction fit",
+          "strict": 0.0,
+          "issues": 0,
+          "impact": 0.0,
+          "subjective": true,
+          "impact_description": "re-review to improve"
+        },
+        {
+          "name": "AI generated debt",
+          "strict": 0.0,
+          "issues": 0,
+          "impact": 0.0,
+          "subjective": true,
+          "impact_description": "re-review to improve"
+        }
+      ],
+      "biggest_gap_dimensions": [],
+      "stagnant_dimensions": [
+        {
+          "name": "File health",
+          "strict": 67.1,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Code quality",
+          "strict": 84.8,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Duplication",
+          "strict": 100.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Error consistency",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Abstraction fit",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "AI generated debt",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "High elegance",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Mid elegance",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Low elegance",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Cross-module arch",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Convention drift",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Dep health",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Test strategy",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Structure nav",
+          "strict": 0.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Design coherence",
+          "strict": 0.0,
+          "stuck_scans": 5
+        }
+      ]
+    },
+    "actions": [
+      {
+        "type": "reorganize",
+        "detector": "orphaned",
+        "count": 64,
+        "description": "64 orphaned findings \u2014 delete dead files or relocate with `desloppify move`",
+        "command": "desloppify show orphaned --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 1,
+        "lane": "restructure"
+      },
+      {
+        "type": "reorganize",
+        "detector": "flat_dirs",
+        "count": 2,
+        "description": "2 flat_dirs findings \u2014 create subdirectories and use `desloppify move`",
+        "command": "desloppify show flat_dirs --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 2,
+        "lane": "restructure"
+      },
+      {
+        "type": "reorganize",
+        "detector": "single_use",
+        "count": 1,
+        "description": "1 single_use findings \u2014 inline or relocate with `desloppify move`",
+        "command": "desloppify show single_use --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 3,
+        "lane": "restructure"
+      },
+      {
+        "type": "reorganize",
+        "detector": "facade",
+        "count": 8,
+        "description": "8 facade findings \u2014 flatten re-export facades or consolidate barrel files",
+        "command": "desloppify show facade --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 4,
+        "lane": "restructure"
+      },
+      {
+        "type": "refactor",
+        "detector": "structural",
+        "count": 71,
+        "description": "71 structural findings \u2014 decompose large files \u2014 extract logic into focused modules",
+        "command": "desloppify show structural --status open",
+        "impact": 0.0,
+        "dimension": "File health",
+        "priority": 5,
+        "lane": "refactor"
+      },
+      {
+        "type": "refactor",
+        "detector": "dupes",
+        "count": 1,
+        "description": "1 dupes findings \u2014 extract shared utility or consolidate duplicates",
+        "command": "desloppify show dupes --status open",
+        "impact": 0.0,
+        "dimension": "Duplication",
+        "priority": 6,
+        "lane": "refactor"
+      },
+      {
+        "type": "refactor",
+        "detector": "dict_keys",
+        "count": 47,
+        "description": "47 dict_keys findings \u2014 fix dict key mismatches \u2014 dead writes are likely dead code, schema drift suggests a typo or missed rename",
+        "command": "desloppify show dict_keys --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 7,
+        "lane": "refactor"
+      },
+      {
+        "type": "refactor",
+        "detector": "test_coverage",
+        "count": 79,
+        "description": "79 test_coverage findings \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "command": "desloppify show test_coverage --status open",
+        "impact": 0.0,
+        "dimension": "Test health",
+        "priority": 8,
+        "lane": "test_coverage"
+      },
+      {
+        "type": "refactor",
+        "detector": "responsibility_cohesion",
+        "count": 8,
+        "description": "8 responsibility_cohesion findings \u2014 split modules with too many responsibilities \u2014 extract focused sub-modules",
+        "command": "desloppify show responsibility_cohesion --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 9,
+        "lane": "refactor"
+      },
+      {
+        "type": "manual_fix",
+        "detector": "smells",
+        "count": 209,
+        "description": "209 smells findings \u2014 inspect with `desloppify next` and fix manually",
+        "command": "desloppify show smells --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 10,
+        "lane": "refactor"
+      },
+      {
+        "type": "manual_fix",
+        "detector": "global_mutable_config",
+        "count": 11,
+        "description": "11 global_mutable_config findings \u2014 refactor module-level mutable state \u2014 use explicit init functions or dependency injection",
+        "command": "desloppify show global_mutable_config --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 11,
+        "lane": "refactor"
+      },
+      {
+        "type": "manual_fix",
+        "detector": "subjective_review",
+        "count": 98,
+        "description": "98 files need design review \u2014 run design review with dimension templates",
+        "command": "desloppify fix review",
+        "impact": 0.0,
+        "dimension": "Test health",
+        "priority": 12,
+        "lane": "refactor"
+      }
+    ],
+    "strategy": {
+      "fixer_leverage": {
+        "auto_fixable_count": 0,
+        "total_count": 599,
+        "coverage": 0.0,
+        "impact_ratio": 0.0,
+        "recommendation": "none"
+      },
+      "lanes": {
+        "restructure": {
+          "actions": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "file_count": 75,
+          "total_impact": 0.0,
+          "automation": "manual",
+          "run_first": false
+        },
+        "refactor": {
+          "actions": [
+            5,
+            6,
+            7,
+            9,
+            10,
+            11,
+            12
+          ],
+          "file_count": 143,
+          "total_impact": 0.0,
+          "automation": "manual",
+          "run_first": false
+        },
+        "test_coverage": {
+          "actions": [
+            8
+          ],
+          "file_count": 79,
+          "total_impact": 0.0,
+          "automation": "manual",
+          "run_first": false
+        }
+      },
+      "can_parallelize": true,
+      "hint": "3 independent workstreams, safe to parallelize. Rescan after each phase to verify."
+    },
+    "tools": {
+      "fixers": [],
+      "move": {
+        "available": true,
+        "relevant": true,
+        "reason": "64 orphaned files + 1 single-use files + 2 flat directories",
+        "usage": "desloppify move <source> <dest> [--dry-run]"
+      },
+      "plan": {
+        "command": "desloppify plan",
+        "description": "Generate prioritized markdown cleanup plan"
+      },
+      "badge": {
+        "generated": true,
+        "in_readme": false,
+        "path": "scorecard.png",
+        "recommendation": "Add to README: <img src=\"scorecard.png\" width=\"100%\">"
+      }
+    },
+    "debt": {
+      "overall_gap": 0.0,
+      "wontfix_count": 0,
+      "worst_dimension": null,
+      "worst_gap": 0.0,
+      "trend": "stable"
+    },
+    "milestone": null,
+    "primary_action": {
+      "command": "desloppify show orphaned --status open",
+      "description": "64 orphaned findings \u2014 delete dead files or relocate with `desloppify move`"
+    },
+    "why_now": "3 independent workstreams, safe to parallelize. Rescan after each phase to verify.",
+    "verification_step": {
+      "command": "desloppify scan",
+      "reason": "revalidate after changes"
+    },
+    "risk_flags": [],
+    "strict_target": {
+      "target": 95.0,
+      "current": 30.0,
+      "gap": 65.0,
+      "state": "below",
+      "warning": null
+    },
+    "reminders": [],
+    "reminder_history": {
+      "zone_classification": 3,
+      "report_scores": 5,
+      "feedback_nudge": 3,
+      "stagnant_nudge": 15
+    }
+  },
+  "next_command": "desloppify review --external-submit --session-id <id> --import <file>",
   "config": {
+    "target_strict_score": 95,
     "review_max_age_days": 30,
     "review_batch_max_files": 80,
     "holistic_max_age_days": 30,
@@ -3565,12 +4009,7 @@
     "exclude": [],
     "ignore": [],
     "ignore_metadata": {},
-    "zone_overrides": {
-      "data_recommendations.py": "script",
-      "energy_ml/assets/ml_star_optimized_pipeline.py": "script",
-      "energy_ml/assets/ml_star_phase3.py": "script",
-      "ml_integration_api.py": "script"
-    },
+    "zone_overrides": {},
     "review_dimensions": [],
     "large_files_threshold": 0,
     "props_threshold": 0,

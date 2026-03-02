@@ -1,0 +1,130 @@
+{
+  "session": {
+    "id": "ext_20260302_203822_d8cd5cc8",
+    "token": "5902d63e57f10f4a8bdbdffd5bd53ea0"
+  },
+  "assessments": {
+    "cross_module_architecture": 65,
+    "convention_outlier": 70,
+    "error_consistency": 65,
+    "abstraction_fitness": 65,
+    "dependency_health": 75,
+    "test_strategy": 55,
+    "ai_generated_debt": 60,
+    "package_organization": 65,
+    "high_level_elegance": 65,
+    "mid_level_elegance": 70,
+    "low_level_elegance": 70,
+    "design_coherence": 65
+  },
+  "findings": [
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "arch_1",
+      "summary": "Some directory flattening could improve modularity",
+      "related_files": ["src/", "energy_ml/"],
+      "evidence": ["Two directories with 20+ files detected"],
+      "suggestion": "Consider splitting large directories into subpackages with clear responsibilities",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "convention_outlier",
+      "identifier": "conv_1",
+      "summary": "Minor naming variations but mostly consistent",
+      "related_files": ["energy_ml/", "src/"],
+      "evidence": ["Most files follow snake_case convention"],
+      "suggestion": "Continue enforcing naming standards in code reviews",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "error_consistency",
+      "identifier": "error_1",
+      "summary": "Error handling mostly consistent with some areas for improvement",
+      "related_files": ["src/hybrid_ml_controller.py"],
+      "evidence": ["Some catch blocks log and return defaults"],
+      "suggestion": "Standardize error handling with custom exceptions in core modules",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "abstraction_fitness",
+      "identifier": "abs_1",
+      "summary": "Most abstractions are appropriate for the domain",
+      "related_files": ["energy_ml/__init__.py"],
+      "evidence": ["Some facade modules exist but serve a purpose"],
+      "suggestion": "Review facades for actual usage and remove unused re-exports",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "dependency_health",
+      "identifier": "dep_1",
+      "summary": "Dependencies are mostly well-managed with minor sys.path issues",
+      "related_files": ["energy_ml/demo_complete_system.py"],
+      "evidence": ["4 files with sys.path mutations"],
+      "suggestion": "Use proper relative imports or install package in dev mode",
+      "confidence": "high"
+    },
+    {
+      "dimension": "test_strategy",
+      "identifier": "test_1",
+      "summary": "Test coverage exists but could be expanded",
+      "related_files": ["tests/"],
+      "evidence": ["35 test files found", "79 production modules lack tests"],
+      "suggestion": "Add tests for high-blast-radius production modules",
+      "confidence": "high"
+    },
+    {
+      "dimension": "ai_generated_debt",
+      "identifier": "ai_1",
+      "summary": "Most code is well-structured despite AI generation",
+      "related_files": ["energy_ml/demo_complete_system.py"],
+      "evidence": ["Some demo files exist but have entry points"],
+      "suggestion": "Move pure demo code to scripts/ directory",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "package_organization",
+      "identifier": "pkg_1",
+      "summary": "Package structure is reasonable with some orphaned files",
+      "related_files": ["energy_ml/demo_complete_system.py"],
+      "evidence": ["64 orphaned file findings"],
+      "suggestion": "Move standalone scripts to scripts/ folder",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "high_1",
+      "summary": "Overall architecture is clean and well-organized",
+      "related_files": ["energy_ml/", "src/"],
+      "evidence": ["Clear separation between ML, physics, and data layers"],
+      "suggestion": "Consider further flattening of nested directories",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "mid_1",
+      "summary": "Module organization is mostly clean",
+      "related_files": ["src/hybrid_ml_controller.py"],
+      "evidence": ["11 global mutable config findings"],
+      "suggestion": "Use dependency injection for configuration",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "low_level_elegance",
+      "identifier": "low_1",
+      "summary": "Most functions are well-written with minor exceptions",
+      "related_files": ["energy_ml/assets/ml_star_phase3.py"],
+      "evidence": ["One monster function >150 LOC"],
+      "suggestion": "Break down the large function into smaller units",
+      "confidence": "high"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "design_1",
+      "summary": "Design is mostly coherent across modules",
+      "related_files": ["energy_ml/", "src/"],
+      "evidence": ["Some schema drift in dict literals"],
+      "suggestion": "Use TypedDict or dataclasses for dict schemas",
+      "confidence": "medium"
+    }
+  ]
+}

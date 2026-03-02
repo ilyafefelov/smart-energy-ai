@@ -1,0 +1,20 @@
+{
+  "session_id": "ext_20260302_203011_0fd65a71",
+  "status": "submitted",
+  "runner": "claude",
+  "created_at": "2026-03-02T20:30:11+00:00",
+  "expires_at": "2026-03-03T20:30:11+00:00",
+  "ttl_hours": 24,
+  "token": "40041a1d69fc6a30446098d0ee5b7aa9",
+  "attest": "I validated this review was completed without awareness of overall score and is unbiased.",
+  "packet_path": "D:\\OpenClaw-Backup\\clawd\\projects\\smart-energy-ai\\.desloppify\\review_packets\\holistic_packet_20260302_203011.json",
+  "blind_packet_path": "D:\\OpenClaw-Backup\\clawd\\projects\\smart-energy-ai\\.desloppify\\review_packet_blind.json",
+  "packet_sha256": "21419501ca9537720dc47678977f86858d4d24f72f71b10f7aa55b326f110df2",
+  "template_path": "D:\\OpenClaw-Backup\\clawd\\projects\\smart-energy-ai\\.desloppify\\external_review_sessions\\ext_20260302_203011_0fd65a71\\review_result.template.json",
+  "launch_prompt_path": "D:\\OpenClaw-Backup\\clawd\\projects\\smart-energy-ai\\.desloppify\\external_review_sessions\\ext_20260302_203011_0fd65a71\\claude_launch_prompt.md",
+  "instructions_path": "D:\\OpenClaw-Backup\\clawd\\projects\\smart-energy-ai\\.desloppify\\external_review_sessions\\ext_20260302_203011_0fd65a71\\reviewer_instructions.md",
+  "expected_output_path": "D:\\OpenClaw-Backup\\clawd\\projects\\smart-energy-ai\\.desloppify\\external_review_sessions\\ext_20260302_203011_0fd65a71\\review_result.json",
+  "submitted_at": "2026-03-02T20:33:08+00:00",
+  "submitted_input_file": "D:\\OpenClaw-Backup\\clawd\\projects\\smart-energy-ai\\.desloppify\\external_review_sessions\\ext_20260302_203011_0fd65a71\\review_result.json",
+  "submitted_canonical_file": "D:\\OpenClaw-Backup\\clawd\\projects\\smart-energy-ai\\.desloppify\\external_review_sessions\\ext_20260302_203011_0fd65a71\\canonical_import_20260302_203307.json"
+}

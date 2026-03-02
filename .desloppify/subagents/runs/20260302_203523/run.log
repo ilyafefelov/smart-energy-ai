@@ -1,0 +1,18 @@
+2026-03-02T20:35:30+00:00 run-start runner=codex parallel=True max_parallel=3 timeout=1200s heartbeat=15.0s stall_warning=0s stall_kill=120s retries=1 retry_backoff=2.0s upper_bound=40m selected=[1, 2, 3, 4]
+2026-03-02T20:35:30+00:00 run-path D:\OpenClaw-Backup\clawd\projects\smart-energy-ai\.desloppify\subagents\runs\20260302_203523
+2026-03-02T20:35:30+00:00 packet D:\OpenClaw-Backup\clawd\projects\smart-energy-ai\.desloppify\review_packets\holistic_packet_20260302_203523.json
+2026-03-02T20:35:30+00:00 blind-packet D:\OpenClaw-Backup\clawd\projects\smart-energy-ai\.desloppify\review_packet_blind.json
+2026-03-02T20:35:30+00:00 batch-queued batch=1 position=1/4
+2026-03-02T20:35:30+00:00 batch-queued batch=2 position=2/4
+2026-03-02T20:35:30+00:00 batch-start batch=1 position=1/4
+2026-03-02T20:35:30+00:00 batch-start batch=2 position=2/4
+2026-03-02T20:35:30+00:00 batch-queued batch=3 position=3/4
+2026-03-02T20:35:30+00:00 batch-start batch=3 position=3/4
+2026-03-02T20:35:30+00:00 batch-queued batch=4 position=4/4
+2026-03-02T20:35:32+00:00 batch-done batch=2 position=2/4 code=127 elapsed=2
+2026-03-02T20:35:32+00:00 batch-start batch=4 position=4/4
+2026-03-02T20:35:33+00:00 batch-done batch=3 position=3/4 code=127 elapsed=2
+2026-03-02T20:35:33+00:00 batch-done batch=1 position=1/4 code=127 elapsed=3
+2026-03-02T20:35:35+00:00 batch-done batch=4 position=4/4 code=127 elapsed=2
+2026-03-02T20:35:35+00:00 run-summary D:\OpenClaw-Backup\clawd\projects\smart-energy-ai\.desloppify\subagents\runs\20260302_203523\run_summary.json
+2026-03-02T20:35:35+00:00 run-finished failures=[1, 2, 3, 4] mode=exit

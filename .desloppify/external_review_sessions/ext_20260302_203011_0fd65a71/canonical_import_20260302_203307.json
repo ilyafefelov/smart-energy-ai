@@ -1,0 +1,210 @@
+{
+  "assessments": {
+    "cross_module_architecture": 50,
+    "convention_outlier": 60,
+    "error_consistency": 55,
+    "abstraction_fitness": 50,
+    "dependency_health": 70,
+    "test_strategy": 40,
+    "ai_generated_debt": 45,
+    "package_organization": 55,
+    "high_level_elegance": 50,
+    "mid_level_elegance": 55,
+    "low_level_elegance": 60,
+    "design_coherence": 55
+  },
+  "findings": [
+    {
+      "dimension": "cross_module_architecture",
+      "identifier": "arch_1",
+      "summary": "Multiple directories with 20+ files indicate potential hub modules creating coupling issues",
+      "related_files": [
+        "src/",
+        "energy_ml/"
+      ],
+      "evidence": [
+        "Flat directories with many files detected by desloppify structural analysis"
+      ],
+      "suggestion": "Consider splitting large directories into subpackages with clear responsibilities",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "convention_outlier",
+      "identifier": "conv_1",
+      "summary": "Mixed naming conventions across the codebase",
+      "related_files": [
+        "energy_ml/",
+        "src/"
+      ],
+      "evidence": [
+        "Inconsistent naming patterns observed in file structure"
+      ],
+      "suggestion": "Standardize on snake_case for all Python files",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "error_consistency",
+      "identifier": "error_1",
+      "summary": "Mixed error handling strategies across codebase",
+      "related_files": [
+        "src/hybrid_ml_controller.py",
+        "energy_ml/demo_complete_system.py"
+      ],
+      "evidence": [
+        "Multiple catch blocks that only log errors without re-raising",
+        "Some functions return None on error, others raise exceptions"
+      ],
+      "suggestion": "Standardize error handling with custom exceptions and consistent propagation",
+      "confidence": "high"
+    },
+    {
+      "dimension": "abstraction_fitness",
+      "identifier": "abs_1",
+      "summary": "Facade modules with re-exports but no concrete implementations being used",
+      "related_files": [
+        "energy_ml/__init__.py",
+        "src/assets/multi_tenant/__init__.py"
+      ],
+      "evidence": [
+        "Re-export facades with 0 importers detected",
+        "8 facade findings in codebase"
+      ],
+      "suggestion": "Remove unused re-exports or ensure they're properly imported elsewhere",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "dependency_health",
+      "identifier": "dep_1",
+      "summary": "sys.path mutations at import time detected in multiple files",
+      "related_files": [
+        "energy_ml/demo_complete_system.py",
+        "app.py",
+        "app_config.py",
+        "energy_ml/ml_integration_api.py"
+      ],
+      "evidence": [
+        "sys.path.append() calls at module level in 4 files",
+        "sys.path.insert() calls at import time"
+      ],
+      "suggestion": "Use proper relative imports or install package in development mode",
+      "confidence": "high"
+    },
+    {
+      "dimension": "test_strategy",
+      "identifier": "test_1",
+      "summary": "78 production modules lack test coverage",
+      "related_files": [
+        "data_recommendations.py",
+        "energy_ml/assets/ml_star_optimized_pipeline.py",
+        "energy_ml/assets/ml_star_phase3.py"
+      ],
+      "evidence": [
+        "78 open test_coverage findings",
+        "Multiple files with 0 tests and high LOC"
+      ],
+      "suggestion": "Add unit tests for critical production modules, especially high-blast-radius files",
+      "confidence": "high"
+    },
+    {
+      "dimension": "ai_generated_debt",
+      "identifier": "ai_1",
+      "summary": "Demo and prototype files may not be production-ready",
+      "related_files": [
+        "energy_ml/demo_complete_system.py",
+        "data_recommendations.py",
+        "ml_integration_api.py"
+      ],
+      "evidence": [
+        "Files with if __main__ but zero importers",
+        "64 orphaned file findings"
+      ],
+      "suggestion": "Move demo/prototype code to scripts/ directory or add proper tests",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "package_organization",
+      "identifier": "pkg_1",
+      "summary": "Orphaned files with entry points but no importers",
+      "related_files": [
+        "energy_ml/demo_complete_system.py",
+        "data_recommendations.py",
+        "app.py"
+      ],
+      "evidence": [
+        "64 orphaned file findings",
+        "Files have if __name__ == '__main__' but no imports"
+      ],
+      "suggestion": "Move standalone scripts to scripts/ folder or add proper module imports",
+      "confidence": "high"
+    },
+    {
+      "dimension": "high_level_elegance",
+      "identifier": "high_1",
+      "summary": "Complex nested directory structure with mixed purposes",
+      "related_files": [
+        "energy_ml/",
+        "src/"
+      ],
+      "evidence": [
+        "Multiple levels of nesting detected",
+        "energy_ml/energy_ml/ duplicate nesting"
+      ],
+      "suggestion": "Flatten or reorganize package structure to reduce nesting",
+      "confidence": "medium"
+    },
+    {
+      "dimension": "mid_level_elegance",
+      "identifier": "mid_1",
+      "summary": "Module-level mutable state patterns detected",
+      "related_files": [
+        "src/hybrid_ml_controller.py",
+        "src/config.py"
+      ],
+      "evidence": [
+        "11 global_mutable_config findings",
+        "Module-level variables being modified"
+      ],
+      "suggestion": "Use dependency injection or class-based configuration instead of globals",
+      "confidence": "high"
+    },
+    {
+      "dimension": "low_level_elegance",
+      "identifier": "low_1",
+      "summary": "Large monster functions detected that could be refactored",
+      "related_files": [
+        "energy_ml/assets/ml_star_phase3.py"
+      ],
+      "evidence": [
+        "Monster function (>150 LOC) at line 21",
+        "208 smell findings total"
+      ],
+      "suggestion": "Break down large functions into smaller, focused units",
+      "confidence": "high"
+    },
+    {
+      "dimension": "design_coherence",
+      "identifier": "design_1",
+      "summary": "Mixed design patterns across similar modules",
+      "related_files": [
+        "energy_ml/",
+        "src/"
+      ],
+      "evidence": [
+        "Different approaches to similar problems across modules",
+        "Schema drift in dict literals"
+      ],
+      "suggestion": "Document and enforce consistent design patterns across codebase",
+      "confidence": "medium"
+    }
+  ],
+  "provenance": {
+    "kind": "blind_review_batch_import",
+    "blind": true,
+    "runner": "claude",
+    "run_stamp": "ext_20260302_203011_0fd65a71",
+    "created_at": "2026-03-02T20:33:07+00:00",
+    "packet_path": "D:\\OpenClaw-Backup\\clawd\\projects\\smart-energy-ai\\.desloppify\\review_packet_blind.json",
+    "packet_sha256": "21419501ca9537720dc47678977f86858d4d24f72f71b10f7aa55b326f110df2",
+    "external_session_id": "ext_20260302_203011_0fd65a71"
+  }
+}
