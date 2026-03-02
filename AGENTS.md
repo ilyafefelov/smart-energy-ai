@@ -1,4 +1,8 @@
+<<<<<<< Updated upstream
 # Smart Energy AI - Agent Instructions
+=======
+# Agent Instructions
+>>>>>>> Stashed changes
 
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
@@ -12,6 +16,7 @@ bd close <id>         # Complete work
 bd sync               # Sync with git
 ```
 
+<<<<<<< Updated upstream
 ## Project Overview
 
 The Smart Energy AI system is a comprehensive platform designed to optimize energy storage and consumption for commercial and industrial clients using reinforcement learning (RL) and machine learning (ML) techniques. The system integrates real-time data from electricity markets, weather APIs, and client-specific configurations to provide intelligent energy management solutions.
@@ -150,3 +155,31 @@ The project uses **bd** (beads) for issue tracking. All issues are stored in `.b
 - **API Documentation**: `API_DOCUMENTATION_IMPORT_EXPORT.md`
 - **ML Pipeline**: `ML_PIPELINE_PLAN.md`
 - **Testing Guide**: `TEST_PIPELINE_GUIDE.md`
+=======
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
+
+>>>>>>> Stashed changes
