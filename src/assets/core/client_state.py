@@ -98,10 +98,48 @@ def _load_client_configurations() -> List[Dict]:
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config_data = yaml.safe_load(f)
-            return config_data.get('customers', [])
+            raw_customers = config_data.get('customers', []) if isinstance(config_data, dict) else []
+            normalized_customers = [_normalize_client_config(customer) for customer in raw_customers]
+            return [customer for customer in normalized_customers if customer]
     except Exception as e:
         logger.error(f"Failed to load customer configurations: {e}")
         return []
+
+
+def _normalize_client_config(raw_config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Normalize customer config to flat keys expected by synthetic state generator."""
+    if not isinstance(raw_config, dict):
+        logger.warning("Skipping invalid customer config row: expected object")
+        return None
+
+    energy_system = raw_config.get("energy_system")
+    if not isinstance(energy_system, dict):
+        energy_system = {}
+
+    client_id = raw_config.get("id")
+    if not client_id:
+        logger.warning("Skipping customer config without 'id'")
+        return None
+
+    normalized: Dict[str, Any] = dict(raw_config)
+    normalized["battery_type"] = energy_system.get("battery_type", raw_config.get("battery_type", "LFP_280Ah"))
+    normalized["battery_capacity_kwh"] = float(
+        energy_system.get("battery_capacity_kwh", raw_config.get("battery_capacity_kwh", 200.0))
+    )
+    normalized["solar_capacity_kw"] = float(
+        energy_system.get("solar_capacity_kw", raw_config.get("solar_capacity_kw", 0.0))
+    )
+    normalized["peak_load_kw"] = float(
+        energy_system.get("peak_load_kw", raw_config.get("peak_load_kw", 120.0))
+    )
+    normalized["base_load_kw"] = float(
+        energy_system.get("base_load_kw", raw_config.get("base_load_kw", 30.0))
+    )
+    normalized["load_profile"] = energy_system.get(
+        "load_profile",
+        raw_config.get("load_profile", raw_config.get("type", "commercial")),
+    )
+    return normalized
 
 
 def _get_default_client_configs() -> List[Dict]:
@@ -145,7 +183,7 @@ def _get_default_client_configs() -> List[Dict]:
 
 def _generate_client_state(config: Dict, weather_df: pl.DataFrame, market_df: pl.DataFrame) -> List[Dict]:
     """Generate synthetic state data for a specific client."""
-    client_id = config['id']
+    client_id = config.get('id', 'unknown_client')
     logger.info(f"Generating state data for client: {client_id}")
     
     # Get weather data for client location (simplified - use first available)
@@ -194,7 +232,7 @@ def _generate_client_state(config: Dict, weather_df: pl.DataFrame, market_df: pl
             'client_id': client_id,
             'battery_soc': current_soc,
             'battery_temp': battery_temp,
-            'battery_voltage': _calculate_battery_voltage(current_soc, config['battery_type']),
+            'battery_voltage': _calculate_battery_voltage(current_soc, config.get('battery_type', 'LFP_280Ah')),
             'solar_gen_actual': solar_gen,
             'load_actual': load_actual,
             'grid_power': grid_power,
@@ -211,7 +249,7 @@ def _generate_client_state(config: Dict, weather_df: pl.DataFrame, market_df: pl
 
 def _calculate_solar_generation(config: Dict, solar_radiation: float, cloudcover: float) -> float:
     """Calculate solar generation based on weather conditions."""
-    solar_capacity = config['solar_capacity_kw']
+    solar_capacity = float(config.get('solar_capacity_kw', 0.0))
     
     # Convert solar radiation (W/m²) to generation factor
     # Typical solar panel efficiency: ~20%, system losses: ~15%
@@ -233,9 +271,9 @@ def _calculate_solar_generation(config: Dict, solar_radiation: float, cloudcover
 
 def _calculate_load_consumption(config: Dict, timestamp: datetime) -> float:
     """Calculate load consumption based on time and load profile."""
-    base_load = config['base_load_kw']
-    peak_load = config['peak_load_kw']
-    load_profile = config['load_profile']
+    base_load = float(config.get('base_load_kw', 30.0))
+    peak_load = float(config.get('peak_load_kw', 120.0))
+    load_profile = config.get('load_profile', 'commercial')
     
     hour = timestamp.hour
     day_of_week = timestamp.weekday()
@@ -297,7 +335,7 @@ def _calculate_load_consumption(config: Dict, timestamp: datetime) -> float:
 def _simulate_battery_behavior(config: Dict, current_soc: float, price: float, 
                              solar_gen: float, load: float) -> tuple[str, float]:
     """Simulate battery charging/discharging behavior."""
-    battery_capacity = config['battery_capacity_kwh']
+    battery_capacity = float(config.get('battery_capacity_kwh', 200.0))
     
     # Simple arbitrage strategy
     # Charge when prices are low or excess solar
@@ -345,7 +383,7 @@ def _simulate_battery_behavior(config: Dict, current_soc: float, price: float,
 def _update_battery_state(current_soc: float, current_temp: float, power_flow: float,
                          config: Dict, ambient_temp: float) -> tuple[float, float]:
     """Update battery SoC and temperature based on power flow."""
-    battery_capacity = config['battery_capacity_kwh']
+    battery_capacity = float(config.get('battery_capacity_kwh', 200.0))
     
     # Update SoC (assuming 1-hour time step)
     # Positive power_flow = charging, negative = discharging

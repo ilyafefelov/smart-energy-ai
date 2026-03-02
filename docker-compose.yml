@@ -29,8 +29,14 @@ services:
     image: ghcr.io/mlflow/mlflow:latest
     ports:
       - "5000:5000"
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --port 5000
+      --backend-store-uri postgresql://dagster:dagster@postgres:5432/dagster
+      --default-artifact-root /app/mlruns
     environment:
-      - MLFLOW_TRACKING_URI=postgresql://dagster:dagster@postgres:5432/mlflow
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
     volumes:
       - mlruns:/app/mlruns
     depends_on:
