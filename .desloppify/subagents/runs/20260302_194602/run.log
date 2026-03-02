@@ -1,0 +1,36 @@
+2026-03-02T19:46:09+00:00 run-start runner=codex parallel=True max_parallel=3 timeout=1200s heartbeat=15.0s stall_warning=0s stall_kill=120s retries=1 retry_backoff=2.0s upper_bound=80m selected=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+2026-03-02T19:46:09+00:00 run-path D:\OpenClaw-Backup\clawd\projects\smart-energy-ai\.desloppify\subagents\runs\20260302_194602
+2026-03-02T19:46:09+00:00 packet D:\OpenClaw-Backup\clawd\projects\smart-energy-ai\.desloppify\review_packets\holistic_packet_20260302_194602.json
+2026-03-02T19:46:09+00:00 blind-packet D:\OpenClaw-Backup\clawd\projects\smart-energy-ai\.desloppify\review_packet_blind.json
+2026-03-02T19:46:09+00:00 batch-queued batch=1 position=1/10
+2026-03-02T19:46:09+00:00 batch-start batch=1 position=1/10
+2026-03-02T19:46:09+00:00 batch-queued batch=2 position=2/10
+2026-03-02T19:46:09+00:00 batch-start batch=2 position=2/10
+2026-03-02T19:46:09+00:00 batch-queued batch=3 position=3/10
+2026-03-02T19:46:09+00:00 batch-queued batch=4 position=4/10
+2026-03-02T19:46:09+00:00 batch-start batch=3 position=3/10
+2026-03-02T19:46:09+00:00 batch-queued batch=5 position=5/10
+2026-03-02T19:46:09+00:00 batch-queued batch=6 position=6/10
+2026-03-02T19:46:09+00:00 batch-queued batch=7 position=7/10
+2026-03-02T19:46:09+00:00 batch-queued batch=8 position=8/10
+2026-03-02T19:46:09+00:00 batch-queued batch=9 position=9/10
+2026-03-02T19:46:09+00:00 batch-queued batch=10 position=10/10
+2026-03-02T19:46:11+00:00 batch-start batch=4 position=4/10
+2026-03-02T19:46:11+00:00 batch-done batch=1 position=1/10 code=127 elapsed=2
+2026-03-02T19:46:11+00:00 batch-start batch=5 position=5/10
+2026-03-02T19:46:11+00:00 batch-done batch=2 position=2/10 code=127 elapsed=2
+2026-03-02T19:46:11+00:00 batch-start batch=6 position=6/10
+2026-03-02T19:46:11+00:00 batch-done batch=3 position=3/10 code=127 elapsed=2
+2026-03-02T19:46:13+00:00 batch-start batch=7 position=7/10
+2026-03-02T19:46:13+00:00 batch-done batch=4 position=4/10 code=127 elapsed=2
+2026-03-02T19:46:13+00:00 batch-start batch=8 position=8/10
+2026-03-02T19:46:13+00:00 batch-done batch=5 position=5/10 code=127 elapsed=2
+2026-03-02T19:46:14+00:00 batch-start batch=9 position=9/10
+2026-03-02T19:46:14+00:00 batch-done batch=6 position=6/10 code=127 elapsed=2
+2026-03-02T19:46:16+00:00 batch-start batch=10 position=10/10
+2026-03-02T19:46:16+00:00 batch-done batch=8 position=8/10 code=127 elapsed=2
+2026-03-02T19:46:16+00:00 batch-done batch=7 position=7/10 code=127 elapsed=2
+2026-03-02T19:46:17+00:00 batch-done batch=9 position=9/10 code=127 elapsed=2
+2026-03-02T19:46:19+00:00 batch-done batch=10 position=10/10 code=127 elapsed=2
+2026-03-02T19:46:19+00:00 run-summary D:\OpenClaw-Backup\clawd\projects\smart-energy-ai\.desloppify\subagents\runs\20260302_194602\run_summary.json
+2026-03-02T19:46:19+00:00 run-finished failures=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10] mode=exit
