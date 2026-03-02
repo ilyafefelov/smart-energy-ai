@@ -81,8 +81,10 @@ class PolarsEngine:
         # Join all features on timestamp
         feature_matrix = (
             market_features
-            .join(weather_features, on="timestamp", how="inner")
-            .join(client_features, on="timestamp", how="inner")
+            # Use explicit suffixes to avoid duplicate-name collisions when
+            # different sources share metadata columns (for example `source`).
+            .join(weather_features, on="timestamp", how="inner", suffix="_weather")
+            .join(client_features, on="timestamp", how="inner", suffix="_client")
         )
         
         # Add derived features

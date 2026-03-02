@@ -102,6 +102,10 @@ def run_all():
         'market_data_asset',
         'weather_asset',
         'client_state_asset',
+        'feature_matrix_asset',
+        'price_forecast_asset',
+        'optimization_schedule_asset',
+        'optimization_schedule_milp_asset',
         'accuracy_benchmark_asset',
         'engine_benchmark_asset',
         'mlflow_tracking_asset'

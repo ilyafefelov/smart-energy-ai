@@ -36,13 +36,17 @@ class DagsterTrigger:
     def materialize_asset(self, asset_name: str) -> Dict[str, Any]:
         """Materialize a single asset and store result."""
         from src.assets.benchmarks import performance
-        from src.assets.core import market, weather, client_state
+        from src.assets.core import market, weather, client_state, feature_matrix, price_forecast, optimization_schedule, optimization_schedule_milp
         
         # Load assets
         assets_map = {
             'market_data_asset': market.market_data_asset,
             'weather_asset': weather.weather_asset,
             'client_state_asset': client_state.client_state_asset,
+            'feature_matrix_asset': feature_matrix.feature_matrix_asset,
+            'price_forecast_asset': price_forecast.price_forecast_asset,
+            'optimization_schedule_asset': optimization_schedule.optimization_schedule_asset,
+            'optimization_schedule_milp_asset': optimization_schedule_milp.optimization_schedule_milp_asset,
             'accuracy_benchmark_asset': performance.accuracy_benchmark_asset,
             'engine_benchmark_asset': performance.engine_benchmark_asset,
             'mlflow_tracking_asset': performance.mlflow_tracking_asset,
@@ -100,6 +104,10 @@ class DagsterTrigger:
             'market_data_asset',
             'weather_asset', 
             'client_state_asset',
+            'feature_matrix_asset',
+            'price_forecast_asset',
+            'optimization_schedule_asset',
+            'optimization_schedule_milp_asset',
             'accuracy_benchmark_asset',
             'engine_benchmark_asset',
             'mlflow_tracking_asset'

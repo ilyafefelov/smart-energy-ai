@@ -9,11 +9,16 @@ for scalable data orchestration in energy systems.
 """
 
 from dagster import Definitions, AssetSelection, define_asset_job, ScheduleDefinition
+import logging
 
 # Import core assets
 from .assets.core.market import market_data_asset
 from .assets.core.weather import weather_asset  
 from .assets.core.client_state import client_state_asset
+from .assets.core.feature_matrix import feature_matrix_asset
+from .assets.core.price_forecast import price_forecast_asset
+from .assets.core.optimization_schedule import optimization_schedule_asset
+from .assets.core.optimization_schedule_milp import optimization_schedule_milp_asset
 
 # Import Phase 2 assets
 from .assets.benchmarks.performance import (
@@ -24,7 +29,10 @@ from .assets.benchmarks.performance import (
 from .assets.multi_tenant.asset_factory import create_all_assets, multi_client_analytics
 
 # Import engines for feature processing
-from .engines.polars_engine import PolarsEngine
+from .engines import select_feature_engine
+from .engines.polars_engine import create_polars_engine
+
+logger = logging.getLogger(__name__)
 
 # Generate dynamic client assets using the asset factory
 client_assets = create_all_assets()
@@ -35,7 +43,11 @@ daily_data_refresh_job = define_asset_job(
     selection=AssetSelection.assets(
         market_data_asset,
         weather_asset,
-        client_state_asset
+        client_state_asset,
+        feature_matrix_asset,
+        price_forecast_asset,
+        optimization_schedule_asset,
+        optimization_schedule_milp_asset,
     ),
     description="Daily refresh of market, weather, and client state data"
 )
@@ -70,9 +82,18 @@ weekly_benchmark_schedule = ScheduleDefinition(
 )
 
 # Resources (simplified for Stage 1)
+selected_engine, engine_selection = select_feature_engine({"execution_mode": "auto"})
+logger.info(
+    "Selected feature engine: %s (requested=%s, fallback_reason=%s)",
+    engine_selection["selected_engine"],
+    engine_selection["requested_engine"],
+    engine_selection["fallback_reason"],
+)
 resources = {
-    # Will add S3 and MLflow in later phases
-    "polars_engine": PolarsEngine()
+    # Existing resource name kept for compatibility.
+    "polars_engine": create_polars_engine({}) or selected_engine,
+    # Explicit generic selector output for new assets.
+    "feature_engine": selected_engine,
 }
 
 # Collect all assets
@@ -81,6 +102,10 @@ all_assets = [
     market_data_asset,
     weather_asset, 
     client_state_asset,
+    feature_matrix_asset,
+    price_forecast_asset,
+    optimization_schedule_asset,
+    optimization_schedule_milp_asset,
     # Benchmark assets
     engine_benchmark_asset,
     accuracy_benchmark_asset,

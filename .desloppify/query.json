@@ -1,31 +1,31 @@
 {
   "command": "scan",
   "overall_score": 76.6,
-  "objective_score": 75.9,
+  "objective_score": 76.2,
   "strict_score": 76.6,
-  "verified_strict_score": 75.9,
+  "verified_strict_score": 76.2,
   "prev_overall_score": 76.6,
-  "prev_objective_score": 76.2,
+  "prev_objective_score": 75.9,
   "prev_strict_score": 76.6,
-  "prev_verified_strict_score": 76.2,
+  "prev_verified_strict_score": 75.9,
   "profile": "full",
   "noise_budget": 10,
   "noise_global_budget": 0,
   "hidden_by_detector": {
     "smells": 199,
-    "test_coverage": 69,
+    "test_coverage": 68,
     "structural": 61,
     "orphaned": 54,
     "dict_keys": 36,
     "review": 2,
     "global_mutable_config": 1
   },
-  "hidden_total": 422,
+  "hidden_total": 421,
   "diff": {
     "new": 0,
-    "auto_resolved": 0,
-    "reopened": 1,
-    "total_current": 500,
+    "auto_resolved": 1,
+    "reopened": 0,
+    "total_current": 499,
     "suspect_detectors": [
       "review"
     ],
@@ -46,36 +46,11 @@
         "status": "open",
         "note": "Reopened (\u00d74) \u2014 reappeared in scan (was fixed)",
         "first_seen": "2026-03-02T19:35:06+00:00",
-        "last_seen": "2026-03-02T21:06:51+00:00",
+        "last_seen": "2026-03-02T21:08:37+00:00",
         "resolved_at": null,
         "reopen_count": 4,
         "lang": "python",
         "zone": "script",
-        "suppressed": false,
-        "suppressed_at": null,
-        "suppression_pattern": null
-      },
-      {
-        "id": "test_coverage::energy_ml/assets/pipeline.py::untested_module",
-        "detector": "test_coverage",
-        "file": "energy_ml/assets/pipeline.py",
-        "tier": 3,
-        "confidence": "high",
-        "summary": "Untested module (573 LOC, 0 importers)",
-        "detail": {
-          "kind": "untested_module",
-          "loc": 573,
-          "importer_count": 0,
-          "loc_weight": 23.93741840717165
-        },
-        "status": "open",
-        "note": "Reopened (\u00d77) \u2014 reappeared in scan (was auto_resolved)",
-        "first_seen": "2026-03-02T19:42:27+00:00",
-        "last_seen": "2026-03-02T21:06:51+00:00",
-        "resolved_at": null,
-        "reopen_count": 7,
-        "lang": "python",
-        "zone": "production",
         "suppressed": false,
         "suppressed_at": null,
         "suppression_pattern": null
@@ -85,14 +60,14 @@
     "skipped_out_of_scope": 0,
     "ignored": 0,
     "ignore_patterns": 0,
-    "raw_findings": 507,
+    "raw_findings": 506,
     "suppressed_pct": 0.0
   },
   "stats": {
     "total": 641,
-    "open": 512,
+    "open": 511,
     "fixed": 0,
-    "auto_resolved": 129,
+    "auto_resolved": 130,
     "wontfix": 0,
     "false_positive": 0,
     "by_tier": {
@@ -104,9 +79,9 @@
         "false_positive": 0
       },
       "3": {
-        "open": 365,
+        "open": 364,
         "fixed": 0,
-        "auto_resolved": 25,
+        "auto_resolved": 26,
         "wontfix": 0,
         "false_positive": 0
       },
@@ -120,12 +95,12 @@
     }
   },
   "open_scope": {
-    "in_scope": 512,
+    "in_scope": 511,
     "out_of_scope": 0,
-    "global": 512
+    "global": 511
   },
   "warnings": [
-    "\u27f3 2 chronic reopeners (reopened 2+ times). These keep bouncing \u2014 fix properly or wontfix. Run: `desloppify show --chronic` to see them.",
+    "\u27f3 1 chronic reopener (reopened 2+ times). These keep bouncing \u2014 fix properly or wontfix. Run: `desloppify show --chronic` to see them.",
     "Coverage reduced (security): bandit is not installed \u2014 Python-specific security checks will be skipped. | bandit is not installed \u2014 Python-specific security checks were skipped. Repercussion: Python-specific security coverage is reduced; clean security output may miss shell injection, unsafe deserialization, and risky SQL/subprocess patterns. | Python-specific security checks were skipped; this can miss shell injection, unsafe deserialization, and risky SQL/subprocess patterns. Fix: Install Bandit: pip install bandit"
   ],
   "dimension_scores": {
@@ -223,18 +198,18 @@
       "strict": 100.0
     },
     "Test health": {
-      "score": 27.6,
-      "strict_score": 27.6,
-      "verified_strict_score": 27.6,
+      "score": 28.9,
+      "strict_score": 28.9,
+      "verified_strict_score": 28.9,
       "checks": 1763,
-      "issues": 79,
+      "issues": 78,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1674,
-          "pass_rate": 0.23723452903151393,
-          "issues": 79,
-          "weighted_failures": 1276.8693984012457
+          "pass_rate": 0.25153406213018276,
+          "issues": 78,
+          "weighted_failures": 1252.931979994074
         },
         "subjective_review": {
           "potential": 89,
@@ -243,7 +218,7 @@
           "weighted_failures": 0.0
         }
       },
-      "strict": 27.6
+      "strict": 28.9
     },
     "Security": {
       "score": 100.0,
@@ -550,7 +525,7 @@
     "overall_score": 76.6,
     "mechanical_fraction": 0.4,
     "subjective_fraction": 0.6,
-    "mechanical_avg": 75.94859813084113,
+    "mechanical_avg": 76.19158878504673,
     "subjective_avg": 76.95402298850574,
     "entries": [
       {
@@ -595,15 +570,15 @@
       {
         "name": "Test health",
         "pool": "mechanical",
-        "score": 27.6,
+        "score": 28.9,
         "checks": 1763.0,
         "sample_factor": 1.0,
         "configured_weight": 1.0,
         "effective_weight": 1.0,
         "pool_share": 0.1869158878504673,
         "overall_per_point": 0.07476635514018692,
-        "overall_contribution": 2.063551401869159,
-        "overall_drag": 5.413084112149534
+        "overall_contribution": 2.160747663551402,
+        "overall_drag": 5.3158878504672895
       },
       {
         "name": "Security",
@@ -854,7 +829,7 @@
           "reason": "missing_dependency"
         }
       ],
-      "updated_at": "2026-03-02T21:06:51+00:00"
+      "updated_at": "2026-03-02T21:08:37+00:00"
     }
   },
   "zone_distribution": {
@@ -864,14 +839,14 @@
     "config": 2
   },
   "narrative": {
-    "phase": "middle_grind",
-    "headline": "512 findings open. Test health (27.6%) needs attention \u2014 run `desloppify next` to start. (12 review findings \u2014 run `desloppify issues`)",
+    "phase": "stagnation",
+    "headline": "Score plateaued at 76.6 for 5 scans. Test health (28.9%) is where the breakthrough is. (12 review findings \u2014 run `desloppify issues`)",
     "dimensions": {
       "lowest_dimensions": [
         {
           "name": "Test health",
-          "strict": 27.6,
-          "issues": 79,
+          "strict": 28.9,
+          "issues": 78,
           "impact": 0.0
         },
         {
@@ -1005,8 +980,8 @@
       {
         "type": "refactor",
         "detector": "test_coverage",
-        "count": 79,
-        "description": "79 test_coverage findings \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "count": 78,
+        "description": "78 test_coverage findings \u2014 add tests for untested production modules \u2014 prioritize by import count",
         "command": "desloppify show test_coverage --status open",
         "impact": 0.0,
         "dimension": "Test health",
@@ -1050,7 +1025,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 536,
+        "total_count": 535,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -1095,7 +1070,7 @@
           "actions": [
             9
           ],
-          "file_count": 79,
+          "file_count": 78,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -1160,7 +1135,7 @@
     ],
     "reminder_history": {
       "zone_classification": 3,
-      "report_scores": 20,
+      "report_scores": 21,
       "feedback_nudge": 3,
       "stagnant_nudge": 15,
       "review_findings_pending": 3

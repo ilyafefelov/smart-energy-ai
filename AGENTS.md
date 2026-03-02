@@ -2,6 +2,21 @@
 
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
+## Mandatory Beads-First Protocol (All Agents)
+
+Before writing code, editing docs, or running cleanup actions, agents MUST:
+
+1. Run `bd ready --json` and select an unblocked issue.
+2. If no issue exists for the requested work, create one with `bd create ... --json`.
+3. Claim work with `bd update <id> --claim --json` (or set `--status in_progress`).
+4. Record discovered follow-up work using linked issues (`--deps discovered-from:<id>`).
+5. Only close work with `bd close <id> --reason "..." --json` after validation.
+
+Non-compliant behavior:
+- Starting implementation without a Beads issue
+- Tracking work in markdown TODO lists instead of Beads
+- Ending a session with completed work but open/untouched Beads status
+
 ## Quick Reference
 
 ```bash
@@ -147,9 +162,10 @@ The project uses **bd** (beads) for issue tracking. All issues are stored in `.b
 ## Resources
 
 - **Project Schematic**: `PROJECT_SCHEMATIC.md` - Comprehensive architecture overview
-- **API Documentation**: `API_DOCUMENTATION_IMPORT_EXPORT.md`
+- **API Documentation**: `docs/API_DOCUMENTATION_IMPORT_EXPORT.md`
 - **ML Pipeline**: `ML_PIPELINE_PLAN.md`
 - **Testing Guide**: `TEST_PIPELINE_GUIDE.md`
+- **Archived Legacy Reports**: `docs/archive/root-cleanup-20260302/`
 
 <!-- BEGIN BEADS INTEGRATION -->
 ## Issue Tracking with bd (beads)

@@ -3,97 +3,11 @@
   "mode": "holistic",
   "language": "python",
   "dimensions": [
-    "cross_module_architecture",
-    "convention_outlier",
-    "error_consistency",
-    "abstraction_fitness",
-    "dependency_health",
     "test_strategy",
     "ai_generated_debt",
-    "package_organization",
-    "high_level_elegance",
-    "mid_level_elegance",
-    "low_level_elegance",
-    "design_coherence"
+    "abstraction_fitness"
   ],
   "dimension_prompts": {
-    "cross_module_architecture": {
-      "description": "Dependency direction, cycles, hub modules, and boundary integrity",
-      "look_for": [
-        "Layer/dependency direction violations repeated across multiple modules",
-        "Cycles or hub modules that create large blast radius for common changes",
-        "Documented architecture contracts drifting from runtime (e.g. dynamic import boundaries)",
-        "Cross-module coordination through shared mutable state or import-time side effects",
-        "Compatibility shim paths that persist without active external need and blur boundaries",
-        "Cross-package duplication that indicates a missing shared boundary"
-      ],
-      "skip": [
-        "Intentional facades/re-exports with clear API purpose",
-        "Framework-required patterns (Django settings, plugin registries)",
-        "Package naming/placement tidy-ups without boundary harm (belongs to package_organization)",
-        "Local readability/craft issues (belongs to low_level_elegance)"
-      ]
-    },
-    "convention_outlier": {
-      "description": "Naming convention drift, inconsistent file organization, style islands",
-      "look_for": [
-        "Naming convention drift: snake_case functions in a camelCase codebase or vice versa",
-        "Inconsistent file organization: some dirs use index files, others don't",
-        "Mixed export patterns across sibling modules (named vs default, class vs function)",
-        "Style islands: one directory uses a completely different pattern than the rest",
-        "Sibling modules following different behavioral protocols (e.g. most call a shared function, one doesn't)",
-        "Inconsistent plugin organization: sibling plugins structured differently",
-        "Large __init__.py re-export surfaces that obscure internal module structure"
-      ],
-      "skip": [
-        "Intentional variation for different module types (config vs logic)",
-        "Third-party code or generated files following their own conventions"
-      ]
-    },
-    "error_consistency": {
-      "description": "Consistent error strategies, preserved context, predictable failure modes",
-      "look_for": [
-        "Mixed error strategies: some functions throw, others return null, others use Result types",
-        "Error context lost at boundaries: catch-and-rethrow without wrapping original",
-        "Inconsistent error types: custom error classes in some modules, bare strings in others",
-        "Silent error swallowing: catches that log but don't propagate or recover",
-        "Missing error handling on I/O boundaries (file, network, parse operations)"
-      ],
-      "skip": [
-        "Intentional error boundaries at top-level handlers",
-        "Different strategies for different layers (e.g. Result in core, throw in CLI)"
-      ]
-    },
-    "abstraction_fitness": {
-      "description": "Python abstraction fitness: favor direct modules, explicit domain APIs, and bounded packages over indirection and generic helper surfaces.",
-      "look_for": [
-        "Functions that only forward args/kwargs to another function without policy or translation",
-        "Protocol/base-class abstractions with one concrete implementation and no extension pressure",
-        "Cross-module wrapper chains where calls hop through helper layers before reaching real logic",
-        "Project-wide reliance on generic helper modules instead of bounded domain packages",
-        "Over-broad dict/config/context parameters used as implicit parameter bags"
-      ],
-      "skip": [
-        "Django/FastAPI/SQLAlchemy framework boundaries that require adapters or dependency hooks",
-        "Wrappers that add retries, metrics, auth checks, caching, or tracing",
-        "Intentional package facades used to stabilize public import paths",
-        "Migration shims with active callers and clear sunset plan"
-      ]
-    },
-    "dependency_health": {
-      "description": "Unused deps, version conflicts, multiple libs for same purpose, heavy deps",
-      "look_for": [
-        "Multiple libraries for the same purpose (e.g. moment + dayjs, axios + fetch wrapper)",
-        "Heavy dependencies pulled in for light use (e.g. lodash for one function)",
-        "Circular dependency cycles visible in the import graph",
-        "Unused dependencies in package.json/requirements.txt",
-        "Version conflicts or pinning issues visible in lock files"
-      ],
-      "skip": [
-        "Dev dependencies (test, build, lint tools)",
-        "Peer dependencies required by frameworks"
-      ]
-    },
     "test_strategy": {
       "description": "Untested critical paths, coupling, snapshot overuse, fragility patterns",
       "look_for": [
@@ -126,93 +40,21 @@
         "Wrapper functions that add auth, logging, metrics, or caching"
       ]
     },
-    "package_organization": {
-      "description": "Directory layout quality and navigability: whether placement matches ownership and change boundaries",
+    "abstraction_fitness": {
+      "description": "Python abstraction fitness: favor direct modules, explicit domain APIs, and bounded packages over indirection and generic helper surfaces.",
       "look_for": [
-        "Use holistic_context.structure as objective evidence: root_files (fan_in/fan_out + role), directory_profiles (file_count/avg fan-in/out), and coupling_matrix (cross-directory edges)",
-        "Straggler roots: root-level files with low fan-in (<5 importers) that share concern/theme with other files should move under a focused package",
-        "Import-affinity mismatch: file imports/references are mostly from one sibling domain (>60%), but file lives outside that domain",
-        "Coupling-direction failures: reciprocal/bidirectional directory edges or obvious downstream\u2192upstream imports indicate boundary placement problems",
-        "Flat directory overload: >10 files with mixed concerns and low cohesion should be split into purpose-driven subfolders",
-        "Ambiguous folder naming: directory names do not reflect contained responsibilities"
+        "Functions that only forward args/kwargs to another function without policy or translation",
+        "Protocol/base-class abstractions with one concrete implementation and no extension pressure",
+        "Cross-module wrapper chains where calls hop through helper layers before reaching real logic",
+        "Project-wide reliance on generic helper modules instead of bounded domain packages",
+        "Over-broad dict/config/context parameters used as implicit parameter bags"
       ],
       "skip": [
-        "Root-level files that ARE genuinely core \u2014 high fan-in (\u22655 importers), imported across multiple subdirectories (cli.py, state.py, utils.py, config.py)",
-        "Small projects (<20 files) where flat structure is appropriate",
-        "Framework-imposed directory layouts (src/, lib/, dist/, __pycache__/)",
-        "Test directories mirroring production structure",
-        "Aesthetic preferences without measurable navigation, ownership, or coupling impact"
+        "Django/FastAPI/SQLAlchemy framework boundaries that require adapters or dependency hooks",
+        "Wrappers that add retries, metrics, auth checks, caching, or tracing",
+        "Intentional package facades used to stabilize public import paths",
+        "Migration shims with active callers and clear sunset plan"
       ]
-    },
-    "high_level_elegance": {
-      "description": "Clear decomposition, coherent ownership, domain-aligned structure",
-      "look_for": [
-        "Top-level packages/files map to domain capabilities rather than historical accidents",
-        "Ownership and change boundaries are predictable \u2014 a new engineer can explain why this exists",
-        "Public surface (exports/entry points) is small and consistent with stated responsibility",
-        "Project contracts and reference docs match runtime reality (README/structure/philosophy are trustworthy)",
-        "Subsystem decomposition localizes change without surprising ripple edits",
-        "A small set of architectural patterns is used consistently across major areas"
-      ],
-      "skip": [
-        "When dependency direction/cycle/hub failures are the PRIMARY issue, report under cross_module_architecture (still include here if they materially blur ownership/decomposition)",
-        "When handoff mechanics are the PRIMARY issue, report under mid_level_elegance (still include here if they materially affect top-level role clarity)",
-        "When function/class internals are the PRIMARY issue, report under low_level_elegance or logic_clarity",
-        "Pure naming/style nits with no impact on role clarity"
-      ]
-    },
-    "mid_level_elegance": {
-      "description": "Quality of handoffs and integration seams across modules and layers",
-      "look_for": [
-        "Inputs/outputs across boundaries are explicit, minimal, and unsurprising",
-        "Data translation at boundaries happens in one obvious place",
-        "Error and lifecycle propagation across boundaries follows predictable patterns",
-        "Orchestration reads as composition of collaborators, not tangled back-and-forth calls",
-        "Integration seams avoid glue-code entropy (ad-hoc mappers and boundary conditionals)"
-      ],
-      "skip": [
-        "When top-level decomposition/package shape is the PRIMARY issue, report under high_level_elegance",
-        "When implementation craft inside one function/class is the PRIMARY issue, report under low_level_elegance",
-        "Pure API/type contract defects with no seam design impact (belongs to contract_coherence)",
-        "Standalone naming/style preferences that do not affect handoffs"
-      ]
-    },
-    "low_level_elegance": {
-      "description": "Direct, precise function and class internals",
-      "look_for": [
-        "Control flow is direct and intention-revealing; branches are necessary and distinct",
-        "State mutation and side effects are explicit, local, and bounded",
-        "Edge-case handling is precise without defensive sprawl",
-        "Extraction level is balanced: avoids both monoliths and micro-fragmentation",
-        "Helper extraction style is consistent across related modules"
-      ],
-      "skip": [
-        "When file responsibility/package role is the PRIMARY issue, report under high_level_elegance",
-        "When inter-module seam choreography is the PRIMARY issue, report under mid_level_elegance",
-        "When dependency topology is the PRIMARY issue, report under cross_module_architecture",
-        "Provable logic/type/error defects already captured by logic_clarity, type_safety, or error_consistency"
-      ]
-    },
-    "design_coherence": {
-      "description": "Are structural design decisions sound \u2014 functions focused, abstractions earned, patterns consistent?",
-      "look_for": [
-        "Functions doing too many things \u2014 multiple distinct responsibilities in one body",
-        "Parameter lists that should be config/context objects \u2014 many related params passed together",
-        "Files accumulating issues across many dimensions \u2014 likely mixing unrelated concerns",
-        "Deep nesting that could be flattened with early returns or extraction",
-        "Repeated structural patterns that should be data-driven"
-      ],
-      "skip": [
-        "Functions that are long but have a single coherent responsibility",
-        "Parameter lists where grouping would obscure meaning",
-        "Files that are large because their domain is genuinely complex, not because they mix concerns",
-        "Nesting that is inherent to the problem (e.g., recursive tree processing)"
-      ],
-      "meta": {
-        "display_name": "Design coherence",
-        "weight": 10.0,
-        "reset_on_scan": true
-      }
     }
   },
   "lang_guidance": {
@@ -959,6 +801,10 @@
           "importers": 8
         },
         {
+          "file": "src/db.py",
+          "importers": 4
+        },
+        {
           "file": "energy_ml/mlops/model_registry.py",
           "importers": 4
         },
@@ -967,11 +813,7 @@
           "importers": 4
         },
         {
-          "file": "src/db.py",
-          "importers": 4
-        },
-        {
-          "file": "src/assets/core/market.py",
+          "file": "src/assets/core/client_state.py",
           "importers": 3
         },
         {
@@ -983,11 +825,11 @@
           "importers": 3
         },
         {
-          "file": "energy_ml/mlops/feature_store.py",
+          "file": "src/dagster_api/asset_service.py",
           "importers": 3
         },
         {
-          "file": "src/assets/core/client_state.py",
+          "file": "src/assets/core/market.py",
           "importers": 3
         }
       ]
@@ -1051,10 +893,10 @@
           },
           "imports_from_dirs": {
             "energy_ml\\mlops/": 8,
-            "energy_ml\\simulator/": 1,
-            "energy_ml\\assets/": 1,
             "energy_ml\\control/": 1,
-            "energy_ml\\optimizer/": 1
+            "energy_ml\\optimizer/": 1,
+            "energy_ml\\assets/": 1,
+            "energy_ml\\simulator/": 1
           },
           "imported_by_dirs": {
             "scripts\\archive/": 21,
@@ -1108,10 +950,10 @@
           },
           "imported_by_dirs": {
             "energy_ml/": 1,
-            "tests\\integration/": 1,
-            "tests/": 1,
             "scripts\\archive/": 1,
             "tests\\unit/": 1,
+            "tests\\integration/": 1,
+            "tests/": 1,
             "tests\\performance/": 1
           }
         },
@@ -1177,8 +1019,8 @@
             "scripts/": 11,
             "energy_ml/": 8,
             ".": 5,
-            "energy_ml\\assets/": 3,
-            "scripts\\archive/": 3
+            "scripts\\archive/": 3,
+            "energy_ml\\assets/": 3
           }
         },
         "energy_ml\\optimizer/": {
@@ -1233,9 +1075,9 @@
           "imported_by_dirs": {
             "tests\\unit/": 2,
             "energy_ml/": 1,
+            "scripts\\archive/": 1,
             "tests\\integration/": 1,
             "tests/": 1,
-            "scripts\\archive/": 1,
             "tests\\performance/": 1
           }
         },
@@ -1310,8 +1152,8 @@
             "energy_ml\\assets/": 4,
             "energy_ml\\mlops/": 3,
             "src\\data_pipeline/": 3,
-            "energy_ml\\optimizer/": 1,
             "energy_ml\\simulator/": 1,
+            "energy_ml\\optimizer/": 1,
             "energy_ml\\control/": 1
           }
         },
@@ -1358,13 +1200,13 @@
           "imports_from_dirs": {
             "src\\data_pipeline/": 10,
             "src\\assets\\core/": 3,
-            "src\\assets\\multi_tenant/": 1,
+            "src\\engines/": 1,
             "src\\assets\\benchmarks/": 1,
-            "src\\engines/": 1
+            "src\\assets\\multi_tenant/": 1
           },
           "imported_by_dirs": {
-            ".": 5,
             "scripts/": 5,
+            ".": 5,
             "scripts\\archive/": 4,
             "src\\data_pipeline/": 4,
             "streamlit_dashboard/": 3,
@@ -1385,8 +1227,8 @@
           },
           "imported_by_dirs": {
             "src\\dagster_api/": 2,
-            "src/": 1,
-            "src\\assets/": 1
+            "src\\assets/": 1,
+            "src/": 1
           }
         },
         "src\\assets\\core/": {
@@ -1405,8 +1247,8 @@
           },
           "imported_by_dirs": {
             "src\\dagster_api/": 4,
-            "src/": 3,
-            "src\\assets/": 3
+            "src\\assets/": 3,
+            "src/": 3
           }
         },
         "src\\assets\\multi_tenant/": {
@@ -1563,8 +1405,8 @@
             "test": 2
           },
           "imports_from_dirs": {
-            "energy_ml/": 1,
             "energy_ml\\simulator/": 1,
+            "energy_ml/": 1,
             "energy_ml\\control/": 1
           }
         },
@@ -3061,85 +2903,9 @@
   ],
   "investigation_batches": [
     {
-      "name": "Architecture & Coupling",
-      "dimensions": [
-        "cross_module_architecture",
-        "high_level_elegance"
-      ],
-      "files_to_read": [
-        "energy_ml/user_config.py",
-        "energy_ml/config_models.py",
-        "energy_ml/mlops/optimization_engine.py",
-        "energy_ml/mlops/battery_physics.py",
-        "energy_ml/pipeline.py",
-        "energy_ml/mlops/renewable_forecasting.py",
-        "src/data_pipeline/ingest_weather.py",
-        "src/data_pipeline/ingest_prices.py",
-        "energy_ml/load_simulation.py",
-        "energy_ml/simulator/battery_physics.py",
-        "energy_ml/assets/battery_models.py",
-        "energy_ml/assets/load_profiles.py",
-        "final_integration_verification.py",
-        "recalculate_pipeline.py",
-        "run_ml_star_phase3_realdata.py",
-        "scripts/archive/test_api_endpoint.py",
-        "scripts/archive/test_dashboard_components.py",
-        "scripts/archive/test_dashboard_ml_integration.py",
-        "scripts/archive/test_oree_apis.py",
-        "scripts/archive/test_phase4_complete.py",
-        "scripts/check_oree_structure.py",
-        "scripts/create_notion_docs.py",
-        "scripts/debug_oree_structure.py"
-      ],
-      "why": "god modules, import-time side effects"
-    },
-    {
-      "name": "Conventions & Errors",
-      "dimensions": [
-        "convention_outlier",
-        "error_consistency",
-        "mid_level_elegance"
-      ],
-      "files_to_read": [
-        "src/__init__.py",
-        "src/assets/__init__.py",
-        "src/assets/benchmarks/__init__.py",
-        "src/assets/core/__init__.py",
-        "src/assets/multi_tenant/__init__.py",
-        "src/dagster_api/__init__.py",
-        "src/dagster_api/cli.py",
-        "src/dagster_api/models.py",
-        "src/definitions.py",
-        "src/engines/__init__.py",
-        "src/generate_business_plot.py",
-        "src/generate_plots.py",
-        "src/generate_plots_mpl.py",
-        "src/models.py",
-        "src/optimizer.py",
-        "src/optimizer_v2.py",
-        "src/physics/__init__.py",
-        "src/physics/battery_lfp.py",
-        "src/physics/economics.py",
-        "src/weather_fetcher.py",
-        "tests/e2e/__init__.py",
-        "tests/integration/__init__.py",
-        "tests/performance/__init__.py",
-        "tests/unit/__init__.py",
-        "energy_ml/__init__.py",
-        "energy_ml/api_bridge_test.py",
-        "energy_ml/battery_degradation.py",
-        "src/baseline_calculator.py",
-        "src/comprehensive_energy_scraper.py"
-      ],
-      "why": "naming drift, behavioral outliers, mixed error strategies"
-    },
-    {
       "name": "Abstractions & Dependencies",
       "dimensions": [
-        "abstraction_fitness",
-        "dependency_health",
-        "mid_level_elegance",
-        "low_level_elegance"
+        "abstraction_fitness"
       ],
       "files_to_read": [
         "energy_ml/energy_ml/utils.py",
@@ -3189,38 +2955,26 @@
     {
       "name": "Testing & API",
       "dimensions": [
-        "test_strategy",
-        "mid_level_elegance"
+        "test_strategy"
       ],
       "files_to_read": [
         "energy_ml/mlops/optimization_engine.py",
         "energy_ml/mlops/renewable_forecasting.py",
+        "src/db.py",
         "energy_ml/mlops/model_registry.py",
         "src/assets/benchmarks/performance.py",
-        "src/db.py",
-        "src/assets/core/market.py",
+        "src/assets/core/client_state.py",
         "src/dagster_api/database.py",
         "energy_ml/mlops/retraining_pipeline.py",
-        "energy_ml/mlops/feature_store.py",
-        "src/assets/core/client_state.py"
+        "src/dagster_api/asset_service.py",
+        "src/assets/core/market.py"
       ],
       "why": "critical untested paths, API inconsistency"
     },
     {
-      "name": "Authorization",
-      "dimensions": [
-        "mid_level_elegance"
-      ],
-      "files_to_read": [
-        "energy_ml/mlops/serving_api.py"
-      ],
-      "why": "auth gaps, service role usage, RLS coverage"
-    },
-    {
       "name": "AI Debt & Migrations",
       "dimensions": [
-        "ai_generated_debt",
-        "low_level_elegance"
+        "ai_generated_debt"
       ],
       "files_to_read": [
         "energy_ml/demo_complete_system.py",
@@ -3250,47 +3004,9 @@
       "why": "AI-generated patterns, deprecated markers, migration TODOs"
     },
     {
-      "name": "Package Organization",
-      "dimensions": [
-        "package_organization",
-        "high_level_elegance"
-      ],
-      "files_to_read": [
-        "app.py",
-        "app_config.py",
-        "data_recommendations.py",
-        "execute_ml_star_phase3.py",
-        "final_integration_verification.py",
-        "ml_architecture_comparison.py",
-        "ml_integration_api.py",
-        "quick_test.py",
-        "recalculate_pipeline.py",
-        "run_ml_star_phase3_realdata.py",
-        "src/__init__.py",
-        "src/baseline_calculator.py",
-        "src/comprehensive_energy_scraper.py",
-        "scripts/analyze_hourly_prices.py",
-        "scripts/baseline_fix_summary.py",
-        "scripts/check_oree_structure.py",
-        "scripts\\archive/test_api_endpoint.py",
-        "scripts\\archive/test_dashboard_components.py",
-        "scripts\\archive/test_dashboard_ml_integration.py",
-        "src\\data_pipeline/ingest_prices.py",
-        "src\\data_pipeline/ingest_weather.py",
-        "energy_ml/__init__.py",
-        "energy_ml/api_bridge_test.py",
-        "energy_ml\\mlops/__init__.py",
-        "energy_ml\\mlops/battery_physics.py"
-      ],
-      "why": "file placement, directory boundaries, architectural layering"
-    },
-    {
       "name": "Governance & Contracts",
       "dimensions": [
-        "cross_module_architecture",
-        "high_level_elegance",
-        "test_strategy",
-        "package_organization"
+        "test_strategy"
       ],
       "files_to_read": [
         "README.md",
@@ -3301,261 +3017,309 @@
         "energy_ml/pipeline.py"
       ],
       "why": "architecture contracts, compatibility policy, docs-vs-runtime scope, and quality-gate coverage"
-    },
-    {
-      "name": "Design coherence \u2014 Mechanical Concern Signals",
-      "dimensions": [
-        "design_coherence"
-      ],
-      "files_to_read": [
-        "app_config.py",
-        "energy_ml/config_models.py",
-        "energy_ml/energy_ml/assets/recommendations.py",
-        "energy_ml/energy_ml/assets/training.py",
-        "energy_ml/ml_integration.py",
-        "energy_ml/mlops/battery_physics.py",
-        "energy_ml/mlops/renewable_forecasting.py",
-        "energy_ml/optimizer/test_ml_star.py",
-        "energy_ml/pipeline.py",
-        "energy_ml/scripts/execute_control_command.py",
-        "energy_ml/scripts/get_control_status.py",
-        "energy_ml/user_config.py",
-        "ml_architecture_comparison.py",
-        "scripts/analyze_hourly_prices.py",
-        "scripts/archive/test_phase4e.py",
-        "scripts/archive/test_phase4f.py",
-        "scripts/check_oree_structure.py",
-        "scripts/create_notion_docs.py",
-        "scripts/debug_oree_structure.py",
-        "scripts/demo_upgrades.py",
-        "scripts/generate_nuxt_structure.py",
-        "scripts/notion_sync.py",
-        "scripts/parse_oree_indices.py",
-        "scripts/train_model.py",
-        "scripts/validate_deployment.py",
-        "scripts/verify_real_data.py",
-        "src/assets/core/market.py",
-        "src/dagster_api/store_results.py",
-        "src/data_fetcher.py",
-        "src/data_pipeline/ingest_prices.py",
-        "src/hybrid_ml_controller.py",
-        "src/oree_effective_scraper.py",
-        "src/oree_playwright_scraper.py",
-        "src/physics/economics.py",
-        "src/real_price_data.py",
-        "src/weather_fetcher.py",
-        "streamlit_dashboard/app_config.py",
-        "src/assets/core/client_state.py",
-        "app.py",
-        "data_recommendations.py",
-        "energy_ml/assets/ml_star_optimized_pipeline.py",
-        "energy_ml/assets/ml_star_phase3.py",
-        "energy_ml/assets/pipeline.py",
-        "energy_ml/control/inverter_controller.py",
-        "energy_ml/demo_complete_system.py",
-        "energy_ml/energy_ml/assets/data_sources.py",
-        "energy_ml/energy_ml/assets/features.py",
-        "energy_ml/energy_ml/assets/models.py",
-        "energy_ml/energy_ml/utils.py",
-        "energy_ml/load_simulation.py",
-        "energy_ml/ml_integration_api.py",
-        "energy_ml/mlops/feature_store.py",
-        "energy_ml/mlops/model_registry.py",
-        "energy_ml/mlops/monitoring_dashboard.py",
-        "energy_ml/mlops/retraining_pipeline.py",
-        "energy_ml/mlops/serving_api.py",
-        "energy_ml/optimizer/dagster_integration.py",
-        "energy_ml/optimizer/ml_star_optimizer.py",
-        "energy_ml/optimizer/run_optimization.py",
-        "energy_ml/scripts/get_battery_physics.py",
-        "execute_ml_star_phase3.py",
-        "final_integration_verification.py",
-        "ml_integration_api.py",
-        "recalculate_pipeline.py",
-        "run_ml_star_phase3_realdata.py",
-        "scripts/archive/test_phase4c.py",
-        "scripts/create_dashboard_page.py",
-        "scripts/demo_complete_mlops_system.py",
-        "scripts/run_tests.py",
-        "scripts/validation_check.py",
-        "src/assets/benchmarks/performance.py",
-        "src/assets/core/weather.py",
-        "src/comprehensive_energy_scraper.py",
-        "src/engines/nvtabular_engine.py",
-        "src/enhanced_price_ingester.py",
-        "src/optimizer_real.py",
-        "src/oree_real_prices.py",
-        "src/oree_selenium_scraper.py",
-        "src/ukraine_stats_analyzer.py",
-        "streamlit_dashboard/app.py",
-        "tests/conftest.py"
-      ],
-      "why": "mechanical detectors identified structural patterns needing judgment; concern types: design_concern, duplication_design, mixed_responsibilities, systemic_pattern",
-      "total_candidate_files": 81
-    },
-    {
-      "name": "Full Codebase Sweep",
-      "dimensions": [
-        "cross_module_architecture",
-        "convention_outlier",
-        "error_consistency",
-        "abstraction_fitness",
-        "dependency_health",
-        "test_strategy",
-        "ai_generated_debt",
-        "package_organization",
-        "high_level_elegance",
-        "mid_level_elegance",
-        "low_level_elegance",
-        "design_coherence"
-      ],
-      "files_to_read": [
-        "app.py",
-        "app_config.py",
-        "data_recommendations.py",
-        "energy_ml/__init__.py",
-        "energy_ml/assets/__init__.py",
-        "energy_ml/assets/battery_models.py",
-        "energy_ml/assets/load_profiles.py",
-        "energy_ml/assets/ml_star_optimized_pipeline.py",
-        "energy_ml/assets/ml_star_phase3.py",
-        "energy_ml/assets/pipeline.py",
-        "energy_ml/assets/tariff_optimization.py",
-        "energy_ml/battery_degradation.py",
-        "energy_ml/config_models.py",
-        "energy_ml/control/__init__.py",
-        "energy_ml/control/inverter_controller.py",
-        "energy_ml/demo_complete_system.py",
-        "energy_ml/energy_ml/__init__.py",
-        "energy_ml/energy_ml/assets/__init__.py",
-        "energy_ml/energy_ml/assets/data_sources.py",
-        "energy_ml/energy_ml/assets/features.py",
-        "energy_ml/energy_ml/assets/models.py",
-        "energy_ml/energy_ml/assets/recommendations.py",
-        "energy_ml/energy_ml/assets/training.py",
-        "energy_ml/energy_ml/config.py",
-        "energy_ml/energy_ml/definitions.py",
-        "energy_ml/energy_ml/io_managers/__init__.py",
-        "energy_ml/energy_ml/jobs/__init__.py",
-        "energy_ml/energy_ml/resources/__init__.py",
-        "energy_ml/energy_ml/utils.py",
-        "energy_ml/features.py",
-        "energy_ml/load_simulation.py",
-        "energy_ml/ml_integration.py",
-        "energy_ml/ml_integration_api.py",
-        "energy_ml/mlops/__init__.py",
-        "energy_ml/mlops/battery_physics.py",
-        "energy_ml/mlops/feature_store.py",
-        "energy_ml/mlops/model_registry.py",
-        "energy_ml/mlops/monitoring_dashboard.py",
-        "energy_ml/mlops/optimization_engine.py",
-        "energy_ml/mlops/renewable_forecasting.py",
-        "energy_ml/mlops/retraining_pipeline.py",
-        "energy_ml/mlops/serving_api.py",
-        "energy_ml/optimizer/__init__.py",
-        "energy_ml/optimizer/dagster_integration.py",
-        "energy_ml/optimizer/ml_star_optimizer.py",
-        "energy_ml/optimizer/multi_objective.py",
-        "energy_ml/optimizer/run_optimization.py",
-        "energy_ml/pipeline.py",
-        "energy_ml/scripts/execute_control_command.py",
-        "energy_ml/scripts/get_battery_physics.py",
-        "energy_ml/scripts/get_control_status.py",
-        "energy_ml/simulator/__init__.py",
-        "energy_ml/simulator/battery_physics.py",
-        "energy_ml/tariff_models.py",
-        "energy_ml/user_config.py",
-        "execute_ml_star_phase3.py",
-        "final_integration_verification.py",
-        "ml_architecture_comparison.py",
-        "ml_integration_api.py",
-        "recalculate_pipeline.py",
-        "run_ml_star_phase3_realdata.py",
-        "scripts/analyze_hourly_prices.py",
-        "scripts/baseline_fix_summary.py",
-        "scripts/check_oree_structure.py",
-        "scripts/combine_datasets.py",
-        "scripts/create_dashboard_page.py",
-        "scripts/create_notion_docs.py",
-        "scripts/debug_import.py",
-        "scripts/debug_oree_structure.py",
-        "scripts/demo_complete_mlops_system.py",
-        "scripts/demo_upgrades.py",
-        "scripts/generate_nuxt_structure.py",
-        "scripts/generate_sample_data.py",
-        "scripts/notion_sync.py",
-        "scripts/parse_oree_indices.py",
-        "scripts/run_tests.py",
-        "scripts/train_model.py",
-        "scripts/validate_deployment.py",
-        "scripts/validate_ppo_oree.py",
-        "scripts/validation_check.py",
-        "scripts/verify_real_data.py",
-        "src/__init__.py",
-        "src/assets/__init__.py",
-        "src/assets/benchmarks/__init__.py",
-        "src/assets/benchmarks/performance.py",
-        "src/assets/core/__init__.py",
-        "src/assets/core/client_state.py",
-        "src/assets/core/market.py",
-        "src/assets/core/weather.py",
-        "src/assets/multi_tenant/__init__.py",
-        "src/assets/multi_tenant/asset_factory.py",
-        "src/baseline_calculator.py",
-        "src/comprehensive_energy_scraper.py",
-        "src/config.py",
-        "src/dagster_api/__init__.py",
-        "src/dagster_api/asset_service.py",
-        "src/dagster_api/cli.py",
-        "src/dagster_api/database.py",
-        "src/dagster_api/models.py",
-        "src/dagster_api/store_results.py",
-        "src/dagster_api/trigger.py",
-        "src/data_fetcher.py",
-        "src/data_pipeline/ingest_prices.py",
-        "src/data_pipeline/ingest_weather.py",
-        "src/data_pipeline/validate.py",
-        "src/db.py",
-        "src/definitions.py",
-        "src/engines/__init__.py",
-        "src/engines/nvtabular_engine.py",
-        "src/engines/polars_engine.py",
-        "src/enhanced_price_ingester.py",
-        "src/generate_business_plot.py",
-        "src/generate_plots.py",
-        "src/generate_plots_mpl.py",
-        "src/hybrid_ml_controller.py",
-        "src/improved_price_fetcher.py",
-        "src/models.py",
-        "src/optimizer.py",
-        "src/optimizer_real.py",
-        "src/optimizer_v2.py",
-        "src/oree_effective_scraper.py",
-        "src/oree_playwright_scraper.py",
-        "src/oree_real_prices.py",
-        "src/oree_selenium_scraper.py",
-        "src/physics/__init__.py",
-        "src/physics/battery_lfp.py",
-        "src/physics/economics.py",
-        "src/price_processor.py",
-        "src/real_price_data.py",
-        "src/rl_environment.py",
-        "src/rl_training.py",
-        "src/train_baseline.py",
-        "src/training_analyzer.py",
-        "src/ukraine_stats_analyzer.py",
-        "src/weather_fetcher.py",
-        "streamlit_dashboard/app.py",
-        "streamlit_dashboard/app_config.py"
-      ],
-      "why": "thorough default: evaluate cross-cutting quality across all production files"
     }
   ],
   "invalid_dimensions": {
     "requested": [],
     "default": []
   },
+  "narrative": {
+    "phase": "stagnation",
+    "headline": "Score plateaued at 76.6 for 5 scans. Test health (28.9%) is where the breakthrough is. (12 review findings \u2014 run `desloppify issues`)",
+    "dimensions": {
+      "lowest_dimensions": [
+        {
+          "name": "Test health",
+          "strict": 28.9,
+          "issues": 78,
+          "impact": 0.0
+        },
+        {
+          "name": "Test strategy",
+          "strict": 65.0,
+          "issues": 1,
+          "impact": 0.0,
+          "subjective": true,
+          "impact_description": "re-review to improve"
+        },
+        {
+          "name": "File health",
+          "strict": 69.5,
+          "issues": 65,
+          "impact": 0.0
+        }
+      ],
+      "biggest_gap_dimensions": [],
+      "stagnant_dimensions": [
+        {
+          "name": "File health",
+          "strict": 69.5,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Code quality",
+          "strict": 84.9,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Duplication",
+          "strict": 100.0,
+          "stuck_scans": 5
+        },
+        {
+          "name": "Security",
+          "strict": 100.0,
+          "stuck_scans": 5
+        }
+      ]
+    },
+    "actions": [
+      {
+        "type": "issue_queue",
+        "detector": "review",
+        "count": 12,
+        "description": "12 review findings need investigation \u2014 run `desloppify issues` to see the work queue",
+        "command": "desloppify issues",
+        "impact": 0.0,
+        "dimension": "Unknown",
+        "priority": 1,
+        "lane": "refactor_0"
+      },
+      {
+        "type": "reorganize",
+        "detector": "orphaned",
+        "count": 64,
+        "description": "64 orphaned findings \u2014 delete dead files or relocate with `desloppify move`",
+        "command": "desloppify show orphaned --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 2,
+        "lane": "restructure"
+      },
+      {
+        "type": "reorganize",
+        "detector": "flat_dirs",
+        "count": 2,
+        "description": "2 flat_dirs findings \u2014 create subdirectories and use `desloppify move`",
+        "command": "desloppify show flat_dirs --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 3,
+        "lane": "restructure"
+      },
+      {
+        "type": "reorganize",
+        "detector": "single_use",
+        "count": 1,
+        "description": "1 single_use findings \u2014 inline or relocate with `desloppify move`",
+        "command": "desloppify show single_use --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 4,
+        "lane": "restructure"
+      },
+      {
+        "type": "reorganize",
+        "detector": "facade",
+        "count": 8,
+        "description": "8 facade findings \u2014 flatten re-export facades or consolidate barrel files",
+        "command": "desloppify show facade --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 5,
+        "lane": "restructure"
+      },
+      {
+        "type": "refactor",
+        "detector": "structural",
+        "count": 71,
+        "description": "71 structural findings \u2014 decompose large files \u2014 extract logic into focused modules",
+        "command": "desloppify show structural --status open",
+        "impact": 0.0,
+        "dimension": "File health",
+        "priority": 6,
+        "lane": "refactor_1"
+      },
+      {
+        "type": "refactor",
+        "detector": "dupes",
+        "count": 1,
+        "description": "1 dupes findings \u2014 extract shared utility or consolidate duplicates",
+        "command": "desloppify show dupes --status open",
+        "impact": 0.0,
+        "dimension": "Duplication",
+        "priority": 7,
+        "lane": "refactor_1"
+      },
+      {
+        "type": "refactor",
+        "detector": "dict_keys",
+        "count": 46,
+        "description": "46 dict_keys findings \u2014 fix dict key mismatches \u2014 dead writes are likely dead code, schema drift suggests a typo or missed rename",
+        "command": "desloppify show dict_keys --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 8,
+        "lane": "refactor_1"
+      },
+      {
+        "type": "refactor",
+        "detector": "test_coverage",
+        "count": 78,
+        "description": "78 test_coverage findings \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "command": "desloppify show test_coverage --status open",
+        "impact": 0.0,
+        "dimension": "Test health",
+        "priority": 9,
+        "lane": "test_coverage"
+      },
+      {
+        "type": "refactor",
+        "detector": "responsibility_cohesion",
+        "count": 8,
+        "description": "8 responsibility_cohesion findings \u2014 split modules with too many responsibilities \u2014 extract focused sub-modules",
+        "command": "desloppify show responsibility_cohesion --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 10,
+        "lane": "refactor_1"
+      },
+      {
+        "type": "manual_fix",
+        "detector": "smells",
+        "count": 209,
+        "description": "209 smells findings \u2014 inspect with `desloppify next` and fix manually",
+        "command": "desloppify show smells --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 11,
+        "lane": "refactor_1"
+      },
+      {
+        "type": "manual_fix",
+        "detector": "global_mutable_config",
+        "count": 11,
+        "description": "11 global_mutable_config findings \u2014 refactor module-level mutable state \u2014 use explicit init functions or dependency injection",
+        "command": "desloppify show global_mutable_config --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 12,
+        "lane": "refactor_1"
+      }
+    ],
+    "strategy": {
+      "fixer_leverage": {
+        "auto_fixable_count": 0,
+        "total_count": 535,
+        "coverage": 0.0,
+        "impact_ratio": 0.0,
+        "recommendation": "none"
+      },
+      "lanes": {
+        "restructure": {
+          "actions": [
+            2,
+            3,
+            4,
+            5
+          ],
+          "file_count": 75,
+          "total_impact": 0.0,
+          "automation": "manual",
+          "run_first": false
+        },
+        "refactor_0": {
+          "actions": [
+            1
+          ],
+          "file_count": 1,
+          "total_impact": 0.0,
+          "automation": "manual",
+          "run_first": false
+        },
+        "refactor_1": {
+          "actions": [
+            6,
+            7,
+            8,
+            10,
+            11,
+            12
+          ],
+          "file_count": 118,
+          "total_impact": 0.0,
+          "automation": "manual",
+          "run_first": false
+        },
+        "test_coverage": {
+          "actions": [
+            9
+          ],
+          "file_count": 78,
+          "total_impact": 0.0,
+          "automation": "manual",
+          "run_first": false
+        }
+      },
+      "can_parallelize": true,
+      "hint": "4 independent workstreams, safe to parallelize. Rescan after each phase to verify. Review: 12 finding(s) \u2014 `desloppify issues`."
+    },
+    "tools": {
+      "fixers": [],
+      "move": {
+        "available": true,
+        "relevant": true,
+        "reason": "64 orphaned files + 1 single-use files + 2 flat directories",
+        "usage": "desloppify move <source> <dest> [--dry-run]"
+      },
+      "plan": {
+        "command": "desloppify plan",
+        "description": "Generate prioritized markdown cleanup plan"
+      },
+      "badge": {
+        "generated": true,
+        "in_readme": false,
+        "path": "scorecard.png",
+        "recommendation": "Add to README: <img src=\"scorecard.png\" width=\"100%\">"
+      }
+    },
+    "debt": {
+      "overall_gap": 0.0,
+      "wontfix_count": 0,
+      "worst_dimension": null,
+      "worst_gap": 0.0,
+      "trend": "stable"
+    },
+    "milestone": null,
+    "primary_action": {
+      "command": "desloppify issues",
+      "description": "12 review findings need investigation \u2014 run `desloppify issues` to see the work queue"
+    },
+    "why_now": "4 independent workstreams, safe to parallelize. Rescan after each phase to verify. Review: 12 finding(s) \u2014 `desloppify issues`.",
+    "verification_step": {
+      "command": "desloppify scan",
+      "reason": "revalidate after changes"
+    },
+    "risk_flags": [],
+    "strict_target": {
+      "target": 95.0,
+      "current": 76.6,
+      "gap": 18.4,
+      "state": "below",
+      "warning": null
+    },
+    "reminders": [],
+    "reminder_history": {
+      "zone_classification": 3,
+      "report_scores": 22,
+      "feedback_nudge": 3,
+      "stagnant_nudge": 15,
+      "review_findings_pending": 3
+    }
+  },
+  "next_command": "desloppify review --run-batches --runner codex --parallel",
   "config": {
+    "target_strict_score": 95,
     "review_max_age_days": 30,
     "review_batch_max_files": 80,
     "holistic_max_age_days": 30,
