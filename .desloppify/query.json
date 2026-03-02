@@ -1,22 +1,22 @@
 {
   "command": "scan",
-  "overall_score": 70.5,
+  "overall_score": 73.6,
   "objective_score": 75.9,
-  "strict_score": 70.5,
+  "strict_score": 73.6,
   "verified_strict_score": 75.9,
-  "prev_overall_score": 70.5,
+  "prev_overall_score": 73.6,
   "prev_objective_score": 75.9,
-  "prev_strict_score": 70.5,
+  "prev_strict_score": 73.6,
   "prev_verified_strict_score": 75.9,
   "profile": "full",
   "noise_budget": 10,
   "noise_global_budget": 0,
   "hidden_by_detector": {
     "smells": 199,
-    "test_coverage": 68,
+    "test_coverage": 69,
     "structural": 61,
     "orphaned": 54,
-    "dict_keys": 37,
+    "dict_keys": 36,
     "review": 2,
     "global_mutable_config": 1
   },
@@ -30,31 +30,6 @@
       "review"
     ],
     "chronic_reopeners": [
-      {
-        "id": "dict_keys::energy_ml/assets/pipeline.py::phantom_read::enhanced_prediction::action",
-        "detector": "dict_keys",
-        "file": "energy_ml/assets/pipeline.py",
-        "tier": 2,
-        "confidence": "high",
-        "summary": "Dict key \"action\" read at line 552 but never written to `enhanced_prediction`",
-        "detail": {
-          "kind": "phantom_read",
-          "key": "action",
-          "line": 552,
-          "info": "Created at line 542 in enhanced_ml_predictions_asset() \u2014 will raise KeyError or return None via .get()"
-        },
-        "status": "open",
-        "note": "Reopened (\u00d74) \u2014 reappeared in scan (was fixed)",
-        "first_seen": "2026-03-02T19:35:06+00:00",
-        "last_seen": "2026-03-02T20:41:00+00:00",
-        "resolved_at": null,
-        "reopen_count": 4,
-        "lang": "python",
-        "zone": "production",
-        "suppressed": false,
-        "suppressed_at": null,
-        "suppression_pattern": null
-      },
       {
         "id": "dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP",
         "detector": "dict_keys",
@@ -71,9 +46,34 @@
         "status": "open",
         "note": "Reopened (\u00d73) \u2014 reappeared in scan (was fixed)",
         "first_seen": "2026-03-02T19:35:06+00:00",
-        "last_seen": "2026-03-02T20:41:00+00:00",
+        "last_seen": "2026-03-02T20:53:54+00:00",
         "resolved_at": null,
         "reopen_count": 3,
+        "lang": "python",
+        "zone": "script",
+        "suppressed": false,
+        "suppressed_at": null,
+        "suppression_pattern": null
+      },
+      {
+        "id": "test_coverage::energy_ml/assets/pipeline.py::untested_module",
+        "detector": "test_coverage",
+        "file": "energy_ml/assets/pipeline.py",
+        "tier": 3,
+        "confidence": "high",
+        "summary": "Untested module (573 LOC, 0 importers)",
+        "detail": {
+          "kind": "untested_module",
+          "loc": 573,
+          "importer_count": 0,
+          "loc_weight": 23.93741840717165
+        },
+        "status": "open",
+        "note": "Reopened (\u00d74) \u2014 reappeared in scan (was auto_resolved)",
+        "first_seen": "2026-03-02T19:42:27+00:00",
+        "last_seen": "2026-03-02T20:53:54+00:00",
+        "resolved_at": null,
+        "reopen_count": 4,
         "lang": "python",
         "zone": "production",
         "suppressed": false,
@@ -89,24 +89,24 @@
     "suppressed_pct": 0.0
   },
   "stats": {
-    "total": 628,
+    "total": 640,
     "open": 512,
     "fixed": 0,
-    "auto_resolved": 116,
+    "auto_resolved": 128,
     "wontfix": 0,
     "false_positive": 0,
     "by_tier": {
       "2": {
-        "open": 145,
+        "open": 144,
         "fixed": 0,
-        "auto_resolved": 5,
+        "auto_resolved": 6,
         "wontfix": 0,
         "false_positive": 0
       },
       "3": {
-        "open": 364,
+        "open": 365,
         "fixed": 0,
-        "auto_resolved": 13,
+        "auto_resolved": 24,
         "wontfix": 0,
         "false_positive": 0
       },
@@ -130,28 +130,28 @@
   ],
   "dimension_scores": {
     "File health": {
-      "score": 68.3,
-      "strict_score": 68.3,
-      "verified_strict_score": 68.3,
+      "score": 69.5,
+      "strict_score": 69.5,
+      "verified_strict_score": 69.5,
       "checks": 135,
       "issues": 65,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 135,
-          "pass_rate": 0.6829629629629629,
+          "pass_rate": 0.6948148148148148,
           "issues": 65,
-          "weighted_failures": 42.800000000000004
+          "weighted_failures": 41.2
         }
       },
-      "strict": 68.3
+      "strict": 69.5
     },
     "Code quality": {
-      "score": 84.8,
-      "strict_score": 84.8,
-      "verified_strict_score": 84.8,
+      "score": 84.9,
+      "strict_score": 84.9,
+      "verified_strict_score": 84.9,
       "checks": 975,
-      "issues": 283,
+      "issues": 282,
       "tier": 3,
       "detectors": {
         "unused": {
@@ -168,9 +168,9 @@
         },
         "dict_keys": {
           "potential": 135,
-          "pass_rate": 0.8725925925925926,
-          "issues": 47,
-          "weighted_failures": 17.2
+          "pass_rate": 0.88,
+          "issues": 46,
+          "weighted_failures": 16.2
         },
         "global_mutable_config": {
           "potential": 135,
@@ -203,7 +203,7 @@
           "weighted_failures": 0.0
         }
       },
-      "strict": 84.8
+      "strict": 84.9
     },
     "Duplication": {
       "score": 100.0,
@@ -223,27 +223,27 @@
       "strict": 100.0
     },
     "Test health": {
-      "score": 29.1,
-      "strict_score": 29.1,
-      "verified_strict_score": 29.1,
-      "checks": 1767,
-      "issues": 78,
+      "score": 27.6,
+      "strict_score": 27.6,
+      "verified_strict_score": 27.6,
+      "checks": 1763,
+      "issues": 79,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1674,
-          "pass_rate": 0.25153406213018276,
-          "issues": 78,
-          "weighted_failures": 1252.931979994074
+          "pass_rate": 0.23723452903151393,
+          "issues": 79,
+          "weighted_failures": 1276.8693984012457
         },
         "subjective_review": {
-          "potential": 93,
+          "potential": 89,
           "pass_rate": 1.0,
           "issues": 0,
           "weighted_failures": 0.0
         }
       },
-      "strict": 29.1
+      "strict": 27.6
     },
     "Security": {
       "score": 100.0,
@@ -282,182 +282,94 @@
       ]
     },
     "Error consistency": {
-      "score": 65.0,
-      "strict_score": 65.0,
-      "verified_strict_score": 65.0,
+      "score": 70.0,
+      "strict_score": 70.0,
+      "verified_strict_score": 70.0,
       "checks": 10,
       "issues": 1,
       "tier": 4,
       "detectors": {
         "subjective_assessment": {
           "potential": 10,
-          "pass_rate": 0.65,
+          "pass_rate": 0.7,
           "issues": 1,
-          "weighted_failures": 3.5,
-          "assessment_score": 65.0,
+          "weighted_failures": 3.0,
+          "assessment_score": 70.0,
           "placeholder": false,
           "dimension_key": "error_consistency",
           "configured_weight": 3.0,
           "components": []
         }
       },
-      "strict": 65.0
+      "strict": 70.0
     },
     "Abstraction fit": {
-      "score": 65.0,
-      "strict_score": 65.0,
-      "verified_strict_score": 65.0,
+      "score": 70.0,
+      "strict_score": 70.0,
+      "verified_strict_score": 70.0,
       "checks": 10,
       "issues": 1,
       "tier": 4,
       "detectors": {
         "subjective_assessment": {
           "potential": 10,
-          "pass_rate": 0.65,
+          "pass_rate": 0.7,
           "issues": 1,
-          "weighted_failures": 3.5,
-          "assessment_score": 65.0,
+          "weighted_failures": 3.0,
+          "assessment_score": 70.0,
           "placeholder": false,
           "dimension_key": "abstraction_fitness",
           "configured_weight": 8.0,
           "components": []
         }
       },
-      "strict": 65.0
+      "strict": 70.0
     },
     "AI generated debt": {
-      "score": 60.0,
-      "strict_score": 60.0,
-      "verified_strict_score": 60.0,
+      "score": 65.0,
+      "strict_score": 65.0,
+      "verified_strict_score": 65.0,
       "checks": 10,
       "issues": 1,
       "tier": 4,
       "detectors": {
         "subjective_assessment": {
           "potential": 10,
-          "pass_rate": 0.6,
+          "pass_rate": 0.65,
           "issues": 1,
-          "weighted_failures": 4.0,
-          "assessment_score": 60.0,
+          "weighted_failures": 3.5,
+          "assessment_score": 65.0,
           "placeholder": false,
           "dimension_key": "ai_generated_debt",
           "configured_weight": 1.0,
           "components": []
         }
       },
-      "strict": 60.0
+      "strict": 65.0
     },
     "High elegance": {
-      "score": 65.0,
-      "strict_score": 65.0,
-      "verified_strict_score": 65.0,
+      "score": 70.0,
+      "strict_score": 70.0,
+      "verified_strict_score": 70.0,
       "checks": 10,
       "issues": 1,
       "tier": 4,
       "detectors": {
         "subjective_assessment": {
           "potential": 10,
-          "pass_rate": 0.65,
+          "pass_rate": 0.7,
           "issues": 1,
-          "weighted_failures": 3.5,
-          "assessment_score": 65.0,
+          "weighted_failures": 3.0,
+          "assessment_score": 70.0,
           "placeholder": false,
           "dimension_key": "high_level_elegance",
           "configured_weight": 22.0,
           "components": []
         }
       },
-      "strict": 65.0
+      "strict": 70.0
     },
     "Mid elegance": {
-      "score": 70.0,
-      "strict_score": 70.0,
-      "verified_strict_score": 70.0,
-      "checks": 10,
-      "issues": 1,
-      "tier": 4,
-      "detectors": {
-        "subjective_assessment": {
-          "potential": 10,
-          "pass_rate": 0.7,
-          "issues": 1,
-          "weighted_failures": 3.0,
-          "assessment_score": 70.0,
-          "placeholder": false,
-          "dimension_key": "mid_level_elegance",
-          "configured_weight": 22.0,
-          "components": []
-        }
-      },
-      "strict": 70.0
-    },
-    "Low elegance": {
-      "score": 70.0,
-      "strict_score": 70.0,
-      "verified_strict_score": 70.0,
-      "checks": 10,
-      "issues": 1,
-      "tier": 4,
-      "detectors": {
-        "subjective_assessment": {
-          "potential": 10,
-          "pass_rate": 0.7,
-          "issues": 1,
-          "weighted_failures": 3.0,
-          "assessment_score": 70.0,
-          "placeholder": false,
-          "dimension_key": "low_level_elegance",
-          "configured_weight": 12.0,
-          "components": []
-        }
-      },
-      "strict": 70.0
-    },
-    "Cross-module arch": {
-      "score": 65.0,
-      "strict_score": 65.0,
-      "verified_strict_score": 65.0,
-      "checks": 10,
-      "issues": 1,
-      "tier": 4,
-      "detectors": {
-        "subjective_assessment": {
-          "potential": 10,
-          "pass_rate": 0.65,
-          "issues": 1,
-          "weighted_failures": 3.5,
-          "assessment_score": 65.0,
-          "placeholder": false,
-          "dimension_key": "cross_module_architecture",
-          "configured_weight": 1.0,
-          "components": []
-        }
-      },
-      "strict": 65.0
-    },
-    "Convention drift": {
-      "score": 70.0,
-      "strict_score": 70.0,
-      "verified_strict_score": 70.0,
-      "checks": 10,
-      "issues": 1,
-      "tier": 4,
-      "detectors": {
-        "subjective_assessment": {
-          "potential": 10,
-          "pass_rate": 0.7,
-          "issues": 1,
-          "weighted_failures": 3.0,
-          "assessment_score": 70.0,
-          "placeholder": false,
-          "dimension_key": "convention_outlier",
-          "configured_weight": 1.0,
-          "components": []
-        }
-      },
-      "strict": 70.0
-    },
-    "Dep health": {
       "score": 75.0,
       "strict_score": 75.0,
       "verified_strict_score": 75.0,
@@ -472,112 +384,200 @@
           "weighted_failures": 2.5,
           "assessment_score": 75.0,
           "placeholder": false,
-          "dimension_key": "dependency_health",
+          "dimension_key": "mid_level_elegance",
+          "configured_weight": 22.0,
+          "components": []
+        }
+      },
+      "strict": 75.0
+    },
+    "Low elegance": {
+      "score": 75.0,
+      "strict_score": 75.0,
+      "verified_strict_score": 75.0,
+      "checks": 10,
+      "issues": 1,
+      "tier": 4,
+      "detectors": {
+        "subjective_assessment": {
+          "potential": 10,
+          "pass_rate": 0.75,
+          "issues": 1,
+          "weighted_failures": 2.5,
+          "assessment_score": 75.0,
+          "placeholder": false,
+          "dimension_key": "low_level_elegance",
+          "configured_weight": 12.0,
+          "components": []
+        }
+      },
+      "strict": 75.0
+    },
+    "Cross-module arch": {
+      "score": 70.0,
+      "strict_score": 70.0,
+      "verified_strict_score": 70.0,
+      "checks": 10,
+      "issues": 1,
+      "tier": 4,
+      "detectors": {
+        "subjective_assessment": {
+          "potential": 10,
+          "pass_rate": 0.7,
+          "issues": 1,
+          "weighted_failures": 3.0,
+          "assessment_score": 70.0,
+          "placeholder": false,
+          "dimension_key": "cross_module_architecture",
+          "configured_weight": 1.0,
+          "components": []
+        }
+      },
+      "strict": 70.0
+    },
+    "Convention drift": {
+      "score": 75.0,
+      "strict_score": 75.0,
+      "verified_strict_score": 75.0,
+      "checks": 10,
+      "issues": 1,
+      "tier": 4,
+      "detectors": {
+        "subjective_assessment": {
+          "potential": 10,
+          "pass_rate": 0.75,
+          "issues": 1,
+          "weighted_failures": 2.5,
+          "assessment_score": 75.0,
+          "placeholder": false,
+          "dimension_key": "convention_outlier",
           "configured_weight": 1.0,
           "components": []
         }
       },
       "strict": 75.0
     },
-    "Test strategy": {
-      "score": 55.0,
-      "strict_score": 55.0,
-      "verified_strict_score": 55.0,
+    "Dep health": {
+      "score": 80.0,
+      "strict_score": 80.0,
+      "verified_strict_score": 80.0,
       "checks": 10,
       "issues": 1,
       "tier": 4,
       "detectors": {
         "subjective_assessment": {
           "potential": 10,
-          "pass_rate": 0.55,
+          "pass_rate": 0.8,
           "issues": 1,
-          "weighted_failures": 4.5,
-          "assessment_score": 55.0,
+          "weighted_failures": 2.0,
+          "assessment_score": 80.0,
+          "placeholder": false,
+          "dimension_key": "dependency_health",
+          "configured_weight": 1.0,
+          "components": []
+        }
+      },
+      "strict": 80.0
+    },
+    "Test strategy": {
+      "score": 60.0,
+      "strict_score": 60.0,
+      "verified_strict_score": 60.0,
+      "checks": 10,
+      "issues": 1,
+      "tier": 4,
+      "detectors": {
+        "subjective_assessment": {
+          "potential": 10,
+          "pass_rate": 0.6,
+          "issues": 1,
+          "weighted_failures": 4.0,
+          "assessment_score": 60.0,
           "placeholder": false,
           "dimension_key": "test_strategy",
           "configured_weight": 1.0,
           "components": []
         }
       },
-      "strict": 55.0
+      "strict": 60.0
     },
     "Structure nav": {
-      "score": 65.0,
-      "strict_score": 65.0,
-      "verified_strict_score": 65.0,
+      "score": 70.0,
+      "strict_score": 70.0,
+      "verified_strict_score": 70.0,
       "checks": 10,
       "issues": 1,
       "tier": 4,
       "detectors": {
         "subjective_assessment": {
           "potential": 10,
-          "pass_rate": 0.65,
+          "pass_rate": 0.7,
           "issues": 1,
-          "weighted_failures": 3.5,
-          "assessment_score": 65.0,
+          "weighted_failures": 3.0,
+          "assessment_score": 70.0,
           "placeholder": false,
           "dimension_key": "package_organization",
           "configured_weight": 5.0,
           "components": []
         }
       },
-      "strict": 65.0
+      "strict": 70.0
     },
     "Design coherence": {
-      "score": 65.0,
-      "strict_score": 65.0,
-      "verified_strict_score": 65.0,
+      "score": 70.0,
+      "strict_score": 70.0,
+      "verified_strict_score": 70.0,
       "checks": 10,
       "issues": 1,
       "tier": 4,
       "detectors": {
         "subjective_assessment": {
           "potential": 10,
-          "pass_rate": 0.65,
+          "pass_rate": 0.7,
           "issues": 1,
-          "weighted_failures": 3.5,
-          "assessment_score": 65.0,
+          "weighted_failures": 3.0,
+          "assessment_score": 70.0,
           "placeholder": false,
           "dimension_key": "design_coherence",
           "configured_weight": 10.0,
           "components": []
         }
       },
-      "strict": 65.0
+      "strict": 70.0
     }
   },
   "score_breakdown": {
-    "overall_score": 70.5,
+    "overall_score": 73.6,
     "mechanical_fraction": 0.4,
     "subjective_fraction": 0.6,
-    "mechanical_avg": 75.90747663551403,
-    "subjective_avg": 66.95402298850574,
+    "mechanical_avg": 75.94859813084113,
+    "subjective_avg": 71.95402298850574,
     "entries": [
       {
         "name": "File health",
         "pool": "mechanical",
-        "score": 68.3,
+        "score": 69.5,
         "checks": 135.0,
         "sample_factor": 0.675,
         "configured_weight": 2.0,
         "effective_weight": 1.35,
         "pool_share": 0.25233644859813087,
         "overall_per_point": 0.10093457943925235,
-        "overall_contribution": 6.893831775700935,
-        "overall_drag": 3.1996261682242997
+        "overall_contribution": 7.0149532710280385,
+        "overall_drag": 3.0785046728971968
       },
       {
         "name": "Code quality",
         "pool": "mechanical",
-        "score": 84.8,
+        "score": 84.9,
         "checks": 975.0,
         "sample_factor": 1.0,
         "configured_weight": 1.0,
         "effective_weight": 1.0,
         "pool_share": 0.1869158878504673,
         "overall_per_point": 0.07476635514018692,
-        "overall_contribution": 6.340186915887851,
-        "overall_drag": 1.1364485981308414
+        "overall_contribution": 6.347663551401871,
+        "overall_drag": 1.1289719626168222
       },
       {
         "name": "Duplication",
@@ -595,15 +595,15 @@
       {
         "name": "Test health",
         "pool": "mechanical",
-        "score": 29.1,
-        "checks": 1767.0,
+        "score": 27.6,
+        "checks": 1763.0,
         "sample_factor": 1.0,
         "configured_weight": 1.0,
         "effective_weight": 1.0,
         "pool_share": 0.1869158878504673,
         "overall_per_point": 0.07476635514018692,
-        "overall_contribution": 2.1757009345794396,
-        "overall_drag": 5.300934579439254
+        "overall_contribution": 2.063551401869159,
+        "overall_drag": 5.413084112149534
       },
       {
         "name": "Security",
@@ -621,83 +621,31 @@
       {
         "name": "Error consistency",
         "pool": "subjective",
-        "score": 65.0,
+        "score": 70.0,
         "checks": 0.0,
         "sample_factor": 1.0,
         "configured_weight": 3.0,
         "effective_weight": 3.0,
         "pool_share": 0.034482758620689655,
         "overall_per_point": 0.020689655172413793,
-        "overall_contribution": 1.3448275862068966,
-        "overall_drag": 0.7241379310344828
+        "overall_contribution": 1.4482758620689655,
+        "overall_drag": 0.6206896551724138
       },
       {
         "name": "Abstraction fit",
         "pool": "subjective",
-        "score": 65.0,
+        "score": 70.0,
         "checks": 0.0,
         "sample_factor": 1.0,
         "configured_weight": 8.0,
         "effective_weight": 8.0,
         "pool_share": 0.09195402298850575,
         "overall_per_point": 0.05517241379310345,
-        "overall_contribution": 3.586206896551724,
-        "overall_drag": 1.9310344827586206
+        "overall_contribution": 3.862068965517241,
+        "overall_drag": 1.6551724137931034
       },
       {
         "name": "AI generated debt",
-        "pool": "subjective",
-        "score": 60.0,
-        "checks": 0.0,
-        "sample_factor": 1.0,
-        "configured_weight": 1.0,
-        "effective_weight": 1.0,
-        "pool_share": 0.011494252873563218,
-        "overall_per_point": 0.006896551724137931,
-        "overall_contribution": 0.41379310344827586,
-        "overall_drag": 0.27586206896551724
-      },
-      {
-        "name": "High elegance",
-        "pool": "subjective",
-        "score": 65.0,
-        "checks": 0.0,
-        "sample_factor": 1.0,
-        "configured_weight": 22.0,
-        "effective_weight": 22.0,
-        "pool_share": 0.25287356321839083,
-        "overall_per_point": 0.15172413793103448,
-        "overall_contribution": 9.862068965517242,
-        "overall_drag": 5.310344827586206
-      },
-      {
-        "name": "Mid elegance",
-        "pool": "subjective",
-        "score": 70.0,
-        "checks": 0.0,
-        "sample_factor": 1.0,
-        "configured_weight": 22.0,
-        "effective_weight": 22.0,
-        "pool_share": 0.25287356321839083,
-        "overall_per_point": 0.15172413793103448,
-        "overall_contribution": 10.620689655172413,
-        "overall_drag": 4.551724137931035
-      },
-      {
-        "name": "Low elegance",
-        "pool": "subjective",
-        "score": 70.0,
-        "checks": 0.0,
-        "sample_factor": 1.0,
-        "configured_weight": 12.0,
-        "effective_weight": 12.0,
-        "pool_share": 0.13793103448275862,
-        "overall_per_point": 0.08275862068965517,
-        "overall_contribution": 5.793103448275862,
-        "overall_drag": 2.4827586206896552
-      },
-      {
-        "name": "Cross-module arch",
         "pool": "subjective",
         "score": 65.0,
         "checks": 0.0,
@@ -710,7 +658,46 @@
         "overall_drag": 0.24137931034482757
       },
       {
-        "name": "Convention drift",
+        "name": "High elegance",
+        "pool": "subjective",
+        "score": 70.0,
+        "checks": 0.0,
+        "sample_factor": 1.0,
+        "configured_weight": 22.0,
+        "effective_weight": 22.0,
+        "pool_share": 0.25287356321839083,
+        "overall_per_point": 0.15172413793103448,
+        "overall_contribution": 10.620689655172413,
+        "overall_drag": 4.551724137931035
+      },
+      {
+        "name": "Mid elegance",
+        "pool": "subjective",
+        "score": 75.0,
+        "checks": 0.0,
+        "sample_factor": 1.0,
+        "configured_weight": 22.0,
+        "effective_weight": 22.0,
+        "pool_share": 0.25287356321839083,
+        "overall_per_point": 0.15172413793103448,
+        "overall_contribution": 11.379310344827585,
+        "overall_drag": 3.793103448275862
+      },
+      {
+        "name": "Low elegance",
+        "pool": "subjective",
+        "score": 75.0,
+        "checks": 0.0,
+        "sample_factor": 1.0,
+        "configured_weight": 12.0,
+        "effective_weight": 12.0,
+        "pool_share": 0.13793103448275862,
+        "overall_per_point": 0.08275862068965517,
+        "overall_contribution": 6.206896551724138,
+        "overall_drag": 2.0689655172413794
+      },
+      {
+        "name": "Cross-module arch",
         "pool": "subjective",
         "score": 70.0,
         "checks": 0.0,
@@ -723,7 +710,7 @@
         "overall_drag": 0.20689655172413793
       },
       {
-        "name": "Dep health",
+        "name": "Convention drift",
         "pool": "subjective",
         "score": 75.0,
         "checks": 0.0,
@@ -736,43 +723,56 @@
         "overall_drag": 0.1724137931034483
       },
       {
-        "name": "Test strategy",
+        "name": "Dep health",
         "pool": "subjective",
-        "score": 55.0,
+        "score": 80.0,
         "checks": 0.0,
         "sample_factor": 1.0,
         "configured_weight": 1.0,
         "effective_weight": 1.0,
         "pool_share": 0.011494252873563218,
         "overall_per_point": 0.006896551724137931,
-        "overall_contribution": 0.3793103448275862,
-        "overall_drag": 0.3103448275862069
+        "overall_contribution": 0.5517241379310345,
+        "overall_drag": 0.13793103448275862
+      },
+      {
+        "name": "Test strategy",
+        "pool": "subjective",
+        "score": 60.0,
+        "checks": 0.0,
+        "sample_factor": 1.0,
+        "configured_weight": 1.0,
+        "effective_weight": 1.0,
+        "pool_share": 0.011494252873563218,
+        "overall_per_point": 0.006896551724137931,
+        "overall_contribution": 0.41379310344827586,
+        "overall_drag": 0.27586206896551724
       },
       {
         "name": "Structure nav",
         "pool": "subjective",
-        "score": 65.0,
+        "score": 70.0,
         "checks": 0.0,
         "sample_factor": 1.0,
         "configured_weight": 5.0,
         "effective_weight": 5.0,
         "pool_share": 0.05747126436781609,
         "overall_per_point": 0.034482758620689655,
-        "overall_contribution": 2.2413793103448274,
-        "overall_drag": 1.206896551724138
+        "overall_contribution": 2.413793103448276,
+        "overall_drag": 1.0344827586206897
       },
       {
         "name": "Design coherence",
         "pool": "subjective",
-        "score": 65.0,
+        "score": 70.0,
         "checks": 0.0,
         "sample_factor": 1.0,
         "configured_weight": 10.0,
         "effective_weight": 10.0,
         "pool_share": 0.11494252873563218,
         "overall_per_point": 0.06896551724137931,
-        "overall_contribution": 4.482758620689655,
-        "overall_drag": 2.413793103448276
+        "overall_contribution": 4.827586206896552,
+        "overall_drag": 2.0689655172413794
       }
     ]
   },
@@ -821,7 +821,7 @@
       "security": 135,
       "private_imports": 135,
       "dict_keys": 135,
-      "subjective_review": 93,
+      "subjective_review": 89,
       "dupes": 723,
       "stale_wontfix": 0
     }
@@ -854,29 +854,29 @@
           "reason": "missing_dependency"
         }
       ],
-      "updated_at": "2026-03-02T20:41:00+00:00"
+      "updated_at": "2026-03-02T20:53:54+00:00"
     }
   },
   "zone_distribution": {
-    "production": 108,
-    "script": 27,
+    "script": 31,
+    "production": 104,
     "test": 35,
     "config": 2
   },
   "narrative": {
-    "phase": "stagnation",
-    "headline": "Score plateaued at 70.5 for 5 scans. Test health (29.1%) is where the breakthrough is. (12 review findings \u2014 run `desloppify issues`)",
+    "phase": "middle_grind",
+    "headline": "512 findings open. Test health (27.6%) needs attention \u2014 run `desloppify next` to start. (12 review findings \u2014 run `desloppify issues`)",
     "dimensions": {
       "lowest_dimensions": [
         {
           "name": "Test health",
-          "strict": 29.1,
-          "issues": 78,
+          "strict": 27.6,
+          "issues": 79,
           "impact": 0.0
         },
         {
           "name": "Test strategy",
-          "strict": 55.0,
+          "strict": 60.0,
           "issues": 1,
           "impact": 0.0,
           "subjective": true,
@@ -884,7 +884,7 @@
         },
         {
           "name": "AI generated debt",
-          "strict": 60.0,
+          "strict": 65.0,
           "issues": 1,
           "impact": 0.0,
           "subjective": true,
@@ -895,7 +895,7 @@
       "stagnant_dimensions": [
         {
           "name": "Code quality",
-          "strict": 84.8,
+          "strict": 84.9,
           "stuck_scans": 5
         },
         {
@@ -991,8 +991,8 @@
       {
         "type": "refactor",
         "detector": "dict_keys",
-        "count": 47,
-        "description": "47 dict_keys findings \u2014 fix dict key mismatches \u2014 dead writes are likely dead code, schema drift suggests a typo or missed rename",
+        "count": 46,
+        "description": "46 dict_keys findings \u2014 fix dict key mismatches \u2014 dead writes are likely dead code, schema drift suggests a typo or missed rename",
         "command": "desloppify show dict_keys --status open",
         "impact": 0.0,
         "dimension": "Code quality",
@@ -1002,8 +1002,8 @@
       {
         "type": "refactor",
         "detector": "test_coverage",
-        "count": 78,
-        "description": "78 test_coverage findings \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "count": 79,
+        "description": "79 test_coverage findings \u2014 add tests for untested production modules \u2014 prioritize by import count",
         "command": "desloppify show test_coverage --status open",
         "impact": 0.0,
         "dimension": "Test health",
@@ -1092,7 +1092,7 @@
           "actions": [
             9
           ],
-          "file_count": 78,
+          "file_count": 79,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -1140,8 +1140,8 @@
     "risk_flags": [],
     "strict_target": {
       "target": 95.0,
-      "current": 70.5,
-      "gap": 24.5,
+      "current": 73.6,
+      "gap": 21.4,
       "state": "below",
       "warning": null
     },
@@ -1157,7 +1157,7 @@
     ],
     "reminder_history": {
       "zone_classification": 3,
-      "report_scores": 10,
+      "report_scores": 14,
       "feedback_nudge": 3,
       "stagnant_nudge": 15,
       "review_findings_pending": 3
@@ -1177,7 +1177,11 @@
       "data_recommendations.py": "script",
       "energy_ml/assets/ml_star_optimized_pipeline.py": "script",
       "energy_ml/assets/ml_star_phase3.py": "script",
-      "ml_integration_api.py": "script"
+      "ml_integration_api.py": "script",
+      "energy_ml/demo_complete_system.py": "script",
+      "app.py": "script",
+      "app_config.py": "script",
+      "energy_ml/ml_integration_api.py": "script"
     },
     "review_dimensions": [],
     "large_files_threshold": 0,

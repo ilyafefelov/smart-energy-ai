@@ -541,6 +541,7 @@ def enhanced_ml_predictions_asset(
         # Combine all enhancements
         enhanced_prediction = {
             **renewable_enhanced,
+            'action': renewable_enhanced.get('action', 'HOLD'),
             'base_prediction': base_prediction,
             'optimization_applied': strategy,
             'physics_constraints': battery_physics_simulation.get('constraints', {}),
@@ -549,7 +550,7 @@ def enhanced_ml_predictions_asset(
             'status': 'success'
         }
         
-        logger.info(f"Enhanced ML prediction: {enhanced_prediction.get('action', 'UNKNOWN')} (strategy: {strategy})")
+        logger.info(f"Enhanced ML prediction: {enhanced_prediction['action']} (strategy: {strategy})")
         
         return enhanced_prediction
     

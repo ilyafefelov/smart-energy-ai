@@ -12,7 +12,11 @@
     "data_recommendations.py": "script",
     "energy_ml/assets/ml_star_optimized_pipeline.py": "script",
     "energy_ml/assets/ml_star_phase3.py": "script",
-    "ml_integration_api.py": "script"
+    "ml_integration_api.py": "script",
+    "energy_ml/demo_complete_system.py": "script",
+    "app.py": "script",
+    "app_config.py": "script",
+    "energy_ml/ml_integration_api.py": "script"
   },
   "review_dimensions": [],
   "large_files_threshold": 0,
