@@ -1,6 +1,6 @@
 {
   "command": "show",
-  "query": "smells",
+  "query": "test_coverage",
   "status_filter": "open",
   "total": 10,
   "summary": {
@@ -8,174 +8,168 @@
       "T2": 10
     },
     "by_detector": {
-      "smells": 10
+      "test_coverage": 10
     },
-    "files": 6
+    "files": 10
   },
   "by_file": {
-    "energy_ml/demo_complete_system.py": [
+    "data_recommendations.py": [
       {
-        "id": "smells::energy_ml/demo_complete_system.py::import_path_mutation",
+        "id": "test_coverage::data_recommendations.py::untested_critical",
         "tier": 2,
-        "confidence": "medium",
-        "summary": "1x sys.path mutation at import time (boundary purity leak)",
+        "confidence": "high",
+        "summary": "Untested critical module (302 LOC, 0 importers) \u2014 high blast radius",
         "detail": {
-          "smell_id": "import_path_mutation",
-          "severity": "high",
-          "count": 1,
-          "lines": [
-            22
-          ]
-        }
-      },
-      {
-        "id": "smells::energy_ml/demo_complete_system.py::noop_function",
-        "tier": 2,
-        "confidence": "medium",
-        "summary": "1x Non-trivial function whose body does nothing",
-        "detail": {
-          "smell_id": "noop_function",
-          "severity": "high",
-          "count": 1,
-          "lines": [
-            44
-          ]
-        }
-      },
-      {
-        "id": "smells::energy_ml/demo_complete_system.py::stderr_traceback",
-        "tier": 2,
-        "confidence": "medium",
-        "summary": "1x traceback.print_exc() bypasses structured logging",
-        "detail": {
-          "smell_id": "stderr_traceback",
-          "severity": "high",
-          "count": 1,
-          "lines": [
-            326
-          ]
-        }
-      },
-      {
-        "id": "smells::energy_ml/demo_complete_system.py::swallowed_error",
-        "tier": 2,
-        "confidence": "medium",
-        "summary": "4x Catch block that only logs (swallowed error)",
-        "detail": {
-          "smell_id": "swallowed_error",
-          "severity": "high",
-          "count": 4,
-          "lines": [
-            105,
-            219,
-            248,
-            263
-          ]
-        }
-      },
-      {
-        "id": "smells::energy_ml/demo_complete_system.py::sys_exit_in_library",
-        "tier": 2,
-        "confidence": "medium",
-        "summary": "2x sys.exit() outside CLI entry point \u2014 use exceptions",
-        "detail": {
-          "smell_id": "sys_exit_in_library",
-          "severity": "high",
-          "count": 2,
-          "lines": [
-            334,
-            337
-          ]
+          "kind": "untested_critical",
+          "loc": 302,
+          "importer_count": 0,
+          "loc_weight": 17.378147196982766,
+          "complexity_score": 26
         }
       }
     ],
-    "app.py": [
+    "energy_ml/assets/ml_star_optimized_pipeline.py": [
       {
-        "id": "smells::app.py::import_path_mutation",
+        "id": "test_coverage::energy_ml/assets/ml_star_optimized_pipeline.py::untested_critical",
         "tier": 2,
-        "confidence": "medium",
-        "summary": "1x sys.path mutation at import time (boundary purity leak)",
+        "confidence": "high",
+        "summary": "Untested critical module (377 LOC, 0 importers) \u2014 high blast radius",
         "detail": {
-          "smell_id": "import_path_mutation",
-          "severity": "high",
-          "count": 1,
-          "lines": [
-            25
-          ]
-        }
-      }
-    ],
-    "app_config.py": [
-      {
-        "id": "smells::app_config.py::import_path_mutation",
-        "tier": 2,
-        "confidence": "medium",
-        "summary": "1x sys.path mutation at import time (boundary purity leak)",
-        "detail": {
-          "smell_id": "import_path_mutation",
-          "severity": "high",
-          "count": 1,
-          "lines": [
-            14
-          ]
+          "kind": "untested_critical",
+          "loc": 377,
+          "importer_count": 0,
+          "loc_weight": 19.4164878389476,
+          "complexity_score": 36
         }
       }
     ],
     "energy_ml/assets/ml_star_phase3.py": [
       {
-        "id": "smells::energy_ml/assets/ml_star_phase3.py::monster_function",
+        "id": "test_coverage::energy_ml/assets/ml_star_phase3.py::untested_critical",
         "tier": 2,
-        "confidence": "medium",
-        "summary": "1x Monster function (>150 LOC)",
+        "confidence": "high",
+        "summary": "Untested critical module (214 LOC, 0 importers) \u2014 high blast radius",
         "detail": {
-          "smell_id": "monster_function",
-          "severity": "high",
-          "count": 1,
-          "lines": [
-            21
-          ]
+          "kind": "untested_critical",
+          "loc": 214,
+          "importer_count": 0,
+          "loc_weight": 14.628738838327793,
+          "complexity_score": 78
         }
       }
     ],
-    "energy_ml/control/inverter_controller.py": [
+    "energy_ml/energy_ml/assets/models.py": [
       {
-        "id": "smells::energy_ml/control/inverter_controller.py::swallowed_error",
+        "id": "test_coverage::energy_ml/energy_ml/assets/models.py::untested_critical",
         "tier": 2,
-        "confidence": "medium",
-        "summary": "1x Catch block that only logs (swallowed error)",
+        "confidence": "high",
+        "summary": "Untested critical module (682 LOC, 0 importers) \u2014 high blast radius",
         "detail": {
-          "smell_id": "swallowed_error",
-          "severity": "high",
-          "count": 1,
-          "lines": [
-            374
-          ]
+          "kind": "untested_critical",
+          "loc": 682,
+          "importer_count": 0,
+          "loc_weight": 26.115129714401192,
+          "complexity_score": 60
+        }
+      }
+    ],
+    "energy_ml/energy_ml/utils.py": [
+      {
+        "id": "test_coverage::energy_ml/energy_ml/utils.py::untested_critical",
+        "tier": 2,
+        "confidence": "high",
+        "summary": "Untested critical module (153 LOC, 0 importers) \u2014 high blast radius",
+        "detail": {
+          "kind": "untested_critical",
+          "loc": 153,
+          "importer_count": 0,
+          "loc_weight": 12.36931687685298,
+          "complexity_score": 57
         }
       }
     ],
     "energy_ml/ml_integration_api.py": [
       {
-        "id": "smells::energy_ml/ml_integration_api.py::import_path_mutation",
+        "id": "test_coverage::energy_ml/ml_integration_api.py::untested_critical",
         "tier": 2,
-        "confidence": "medium",
-        "summary": "1x sys.path mutation at import time (boundary purity leak)",
+        "confidence": "high",
+        "summary": "Untested critical module (423 LOC, 0 importers) \u2014 high blast radius",
         "detail": {
-          "smell_id": "import_path_mutation",
-          "severity": "high",
-          "count": 1,
-          "lines": [
-            16
-          ]
+          "kind": "untested_critical",
+          "loc": 423,
+          "importer_count": 0,
+          "loc_weight": 20.566963801203133,
+          "complexity_score": 36
+        }
+      }
+    ],
+    "energy_ml/mlops/retraining_pipeline.py": [
+      {
+        "id": "test_coverage::energy_ml/mlops/retraining_pipeline.py::untested_critical",
+        "tier": 2,
+        "confidence": "high",
+        "summary": "Untested critical module (673 LOC, 0 importers) \u2014 high blast radius",
+        "detail": {
+          "kind": "untested_critical",
+          "loc": 673,
+          "importer_count": 0,
+          "loc_weight": 25.942243542145693,
+          "complexity_score": 50
+        }
+      }
+    ],
+    "energy_ml/mlops/serving_api.py": [
+      {
+        "id": "test_coverage::energy_ml/mlops/serving_api.py::untested_critical",
+        "tier": 2,
+        "confidence": "high",
+        "summary": "Untested critical module (535 LOC, 0 importers) \u2014 high blast radius",
+        "detail": {
+          "kind": "untested_critical",
+          "loc": 535,
+          "importer_count": 0,
+          "loc_weight": 23.130067012440755,
+          "complexity_score": 197
+        }
+      }
+    ],
+    "energy_ml/optimizer/run_optimization.py": [
+      {
+        "id": "test_coverage::energy_ml/optimizer/run_optimization.py::untested_critical",
+        "tier": 2,
+        "confidence": "high",
+        "summary": "Untested critical module (462 LOC, 0 importers) \u2014 high blast radius",
+        "detail": {
+          "kind": "untested_critical",
+          "loc": 462,
+          "importer_count": 0,
+          "loc_weight": 21.494185260204677,
+          "complexity_score": 97
+        }
+      }
+    ],
+    "energy_ml/scripts/get_battery_physics.py": [
+      {
+        "id": "test_coverage::energy_ml/scripts/get_battery_physics.py::untested_critical",
+        "tier": 2,
+        "confidence": "high",
+        "summary": "Untested critical module (171 LOC, 0 importers) \u2014 high blast radius",
+        "detail": {
+          "kind": "untested_critical",
+          "loc": 171,
+          "importer_count": 0,
+          "loc_weight": 13.076696830622021,
+          "complexity_score": 43
         }
       }
     ]
   },
-  "total_matching": 209,
+  "total_matching": 78,
   "hidden": {
     "by_detector": {
-      "smells": 199
+      "test_coverage": 68
     },
-    "total": 199
+    "total": 68
   },
   "noise_budget": 10,
   "noise_global_budget": 0,
