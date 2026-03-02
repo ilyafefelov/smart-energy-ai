@@ -549,7 +549,7 @@ def enhanced_ml_predictions_asset(
             'status': 'success'
         }
         
-        logger.info(f"Enhanced ML prediction: {enhanced_prediction['action']} (strategy: {strategy})")
+        logger.info(f"Enhanced ML prediction: {enhanced_prediction.get('action', 'UNKNOWN')} (strategy: {strategy})")
         
         return enhanced_prediction
     

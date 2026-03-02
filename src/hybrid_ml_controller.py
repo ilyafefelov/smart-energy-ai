@@ -86,10 +86,18 @@ class PatternBasedForecaster:
         df = pd.DataFrame(all_prices)
         
         # Extract daily patterns (average price by hour)
-        self.daily_patterns = df.groupby('hour')['price'].agg(['mean', 'std']).to_dict()
+        daily_df = df.groupby('hour')['price'].agg(['mean', 'std']).reset_index()
+        self.daily_patterns = {
+            'mean': dict(zip(daily_df['hour'], daily_df['mean'])),
+            'std': dict(zip(daily_df['hour'], daily_df['std']))
+        }
         
         # Extract weekly patterns (average by day of week + hour)
-        self.weekly_patterns = df.groupby(['day_of_week', 'hour'])['price'].agg(['mean', 'std']).to_dict()
+        weekly_df = df.groupby(['day_of_week', 'hour'])['price'].agg(['mean', 'std']).reset_index()
+        self.weekly_patterns = {
+            'mean': {(row['day_of_week'], row['hour']): row['mean'] for _, row in weekly_df.iterrows()},
+            'std': {(row['day_of_week'], row['hour']): row['std'] for _, row in weekly_df.iterrows()}
+        }
         
         return {
             'daily_patterns_extracted': len(self.daily_patterns.get('mean', {})),

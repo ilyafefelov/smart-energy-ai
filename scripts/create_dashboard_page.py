@@ -5,7 +5,9 @@ Create Smart Energy AI documentation page under Clawd Dashboard
 import requests
 from datetime import datetime
 
-NOTION_TOKEN = "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"
+import os
+
+NOTION_TOKEN = os.environ.get("NOTION_TOKEN")
 NOTION_VERSION = "2025-09-03"
 
 def create_smart_energy_page():

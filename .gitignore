@@ -17,3 +17,7 @@ checkpoints/
 *.pth
 *.pt
 .tmp_dagster_home_*/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db

@@ -151,14 +151,17 @@ def demo_physics_simulator():
     
     # Demonstrate SOC effects
     print(f"\n📊 SOC-dependent Performance (LFP battery):")
-    lfp_model = models['LFP']
+    lfp_model = models.get('LFP')
     
-    soc_levels = [0.1, 0.3, 0.5, 0.8, 0.95]
-    for soc in soc_levels:
-        efficiency = lfp_model.get_efficiency(2.0, soc)  # 2kW charge
-        max_charge = lfp_model.get_max_power(soc, 'charge')
-        
-        print(f"   SOC {soc*100:2.0f}%: Efficiency {efficiency*100:.1f}%, Max Charge {max_charge:.1f}kW")
+    if lfp_model is None:
+        print("   LFP model not available")
+    else:
+        soc_levels = [0.1, 0.3, 0.5, 0.8, 0.95]
+        for soc in soc_levels:
+            efficiency = lfp_model.get_efficiency(2.0, soc)  # 2kW charge
+            max_charge = lfp_model.get_max_power(soc, 'charge')
+            
+            print(f"   SOC {soc*100:2.0f}%: Efficiency {efficiency*100:.1f}%, Max Charge {max_charge:.1f}kW")
     
     return models
 

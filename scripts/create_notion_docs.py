@@ -7,7 +7,7 @@ import requests
 import os
 from datetime import datetime
 
-NOTION_TOKEN = "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"
+NOTION_TOKEN = os.environ.get("NOTION_TOKEN")
 NOTION_VERSION = "2025-09-03"
 
 

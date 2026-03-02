@@ -1,0 +1,554 @@
+{
+  "command": "next",
+  "items": [
+    {
+      "id": "dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP",
+      "kind": "finding",
+      "tier": 2,
+      "effective_tier": 2,
+      "confidence": "high",
+      "detector": "dict_keys",
+      "file": "energy_ml/demo_complete_system.py",
+      "summary": "Dict key \"LFP\" read at line 154 but never written to `models`",
+      "detail": {
+        "kind": "phantom_read",
+        "key": "LFP",
+        "line": 154,
+        "info": "Created at line 125 in demo_physics_simulator() \u2014 will raise KeyError or return None via .get()"
+      },
+      "status": "open",
+      "primary_command": "desloppify resolve fixed \"dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP\" --note \"<what you did>\" --attest \"I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing.\""
+    },
+    {
+      "id": "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::schema_drift::gamma::166",
+      "kind": "finding",
+      "tier": 2,
+      "effective_tier": 2,
+      "confidence": "high",
+      "detector": "dict_keys",
+      "file": "energy_ml/optimizer/ml_star_optimizer.py",
+      "summary": "Schema drift: 4/5 dict literals use different key, but energy_ml/optimizer/ml_star_optimizer.py:166 uses \"gamma\".",
+      "detail": {
+        "kind": "schema_drift",
+        "key": "gamma",
+        "line": 166,
+        "info": "Cluster of 5 similar dict literals. Key \"gamma\" appears in only 1. Consensus keys: ['colsample_bytree', 'learning_rate', 'max_depth', 'n_estimators', 'random_state', 'reg_alpha', 'reg_lambda', 'subsample', 'tree_method']"
+      },
+      "status": "open",
+      "primary_command": "desloppify resolve fixed \"dict_keys::energy_ml/optimizer/ml_star_optimizer.py::schema_drift::gamma::166\" --note \"<what you did>\" --attest \"I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing.\""
+    },
+    {
+      "id": "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::schema_drift::min_child_weight::166",
+      "kind": "finding",
+      "tier": 2,
+      "effective_tier": 2,
+      "confidence": "high",
+      "detector": "dict_keys",
+      "file": "energy_ml/optimizer/ml_star_optimizer.py",
+      "summary": "Schema drift: 4/5 dict literals use different key, but energy_ml/optimizer/ml_star_optimizer.py:166 uses \"min_child_weight\".",
+      "detail": {
+        "kind": "schema_drift",
+        "key": "min_child_weight",
+        "line": 166,
+        "info": "Cluster of 5 similar dict literals. Key \"min_child_weight\" appears in only 1. Consensus keys: ['colsample_bytree', 'learning_rate', 'max_depth', 'n_estimators', 'random_state', 'reg_alpha', 'reg_lambda', 'subsample', 'tree_method']"
+      },
+      "status": "open",
+      "primary_command": "desloppify resolve fixed \"dict_keys::energy_ml/optimizer/ml_star_optimizer.py::schema_drift::min_child_weight::166\" --note \"<what you did>\" --attest \"I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing.\""
+    },
+    {
+      "id": "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::114",
+      "kind": "finding",
+      "tier": 2,
+      "effective_tier": 2,
+      "confidence": "high",
+      "detector": "dict_keys",
+      "file": "src/assets/core/market.py",
+      "summary": "Schema drift: 16/18 dict literals use different key, but src/assets/core/market.py:114 uses \"volume_mwh\".",
+      "detail": {
+        "kind": "schema_drift",
+        "key": "volume_mwh",
+        "line": 114,
+        "info": "Cluster of 18 similar dict literals. Key \"volume_mwh\" appears in only 2. Consensus keys: ['price_eur_mwh', 'price_uah_mwh', 'source', 'timestamp']"
+      },
+      "status": "open",
+      "primary_command": "desloppify resolve fixed \"dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::114\" --note \"<what you did>\" --attest \"I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing.\""
+    },
+    {
+      "id": "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::153",
+      "kind": "finding",
+      "tier": 2,
+      "effective_tier": 2,
+      "confidence": "high",
+      "detector": "dict_keys",
+      "file": "src/assets/core/market.py",
+      "summary": "Schema drift: 16/18 dict literals use different key, but src/assets/core/market.py:153 uses \"volume_mwh\".",
+      "detail": {
+        "kind": "schema_drift",
+        "key": "volume_mwh",
+        "line": 153,
+        "info": "Cluster of 18 similar dict literals. Key \"volume_mwh\" appears in only 2. Consensus keys: ['price_eur_mwh', 'price_uah_mwh', 'source', 'timestamp']"
+      },
+      "status": "open",
+      "primary_command": "desloppify resolve fixed \"dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::153\" --note \"<what you did>\" --attest \"I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing.\""
+    },
+    {
+      "id": "facade::energy_ml/__init__.py",
+      "kind": "finding",
+      "tier": 2,
+      "effective_tier": 2,
+      "confidence": "high",
+      "detector": "facade",
+      "file": "energy_ml/__init__.py",
+      "summary": "Re-export facade (28 LOC): imports from pipeline, user_config (0 importers)",
+      "detail": {
+        "loc": 28,
+        "importers": 0,
+        "imports_from": [
+          "pipeline",
+          "user_config"
+        ],
+        "kind": "file"
+      },
+      "status": "open",
+      "primary_command": "desloppify resolve fixed \"facade::energy_ml/__init__.py\" --note \"<what you did>\" --attest \"I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing.\""
+    },
+    {
+      "id": "facade::src/assets/multi_tenant/__init__.py",
+      "kind": "finding",
+      "tier": 2,
+      "effective_tier": 2,
+      "confidence": "high",
+      "detector": "facade",
+      "file": "src/assets/multi_tenant/__init__.py",
+      "summary": "Re-export facade (7 LOC): imports from asset_factory (0 importers)",
+      "detail": {
+        "loc": 7,
+        "importers": 0,
+        "imports_from": [
+          "asset_factory"
+        ],
+        "kind": "file"
+      },
+      "status": "open",
+      "primary_command": "desloppify resolve fixed \"facade::src/assets/multi_tenant/__init__.py\" --note \"<what you did>\" --attest \"I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing.\""
+    },
+    {
+      "id": "test_coverage::data_recommendations.py::untested_critical",
+      "kind": "finding",
+      "tier": 2,
+      "effective_tier": 2,
+      "confidence": "high",
+      "detector": "test_coverage",
+      "file": "data_recommendations.py",
+      "summary": "Untested critical module (302 LOC, 0 importers) \u2014 high blast radius",
+      "detail": {
+        "kind": "untested_critical",
+        "loc": 302,
+        "importer_count": 0,
+        "loc_weight": 17.378147196982766,
+        "complexity_score": 26
+      },
+      "status": "open",
+      "primary_command": "desloppify resolve fixed \"test_coverage::data_recommendations.py::untested_critical\" --note \"<what you did>\" --attest \"I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing.\""
+    },
+    {
+      "id": "test_coverage::energy_ml/assets/ml_star_optimized_pipeline.py::untested_critical",
+      "kind": "finding",
+      "tier": 2,
+      "effective_tier": 2,
+      "confidence": "high",
+      "detector": "test_coverage",
+      "file": "energy_ml/assets/ml_star_optimized_pipeline.py",
+      "summary": "Untested critical module (377 LOC, 0 importers) \u2014 high blast radius",
+      "detail": {
+        "kind": "untested_critical",
+        "loc": 377,
+        "importer_count": 0,
+        "loc_weight": 19.4164878389476,
+        "complexity_score": 36
+      },
+      "status": "open",
+      "primary_command": "desloppify resolve fixed \"test_coverage::energy_ml/assets/ml_star_optimized_pipeline.py::untested_critical\" --note \"<what you did>\" --attest \"I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing.\""
+    },
+    {
+      "id": "test_coverage::energy_ml/assets/ml_star_phase3.py::untested_critical",
+      "kind": "finding",
+      "tier": 2,
+      "effective_tier": 2,
+      "confidence": "high",
+      "detector": "test_coverage",
+      "file": "energy_ml/assets/ml_star_phase3.py",
+      "summary": "Untested critical module (214 LOC, 0 importers) \u2014 high blast radius",
+      "detail": {
+        "kind": "untested_critical",
+        "loc": 214,
+        "importer_count": 0,
+        "loc_weight": 14.628738838327793,
+        "complexity_score": 78
+      },
+      "status": "open",
+      "primary_command": "desloppify resolve fixed \"test_coverage::energy_ml/assets/ml_star_phase3.py::untested_critical\" --note \"<what you did>\" --attest \"I have actually [DESCRIBE THE CONCRETE CHANGE YOU MADE] and I am not gaming the score by resolving without fixing.\""
+    }
+  ],
+  "queue": {
+    "tier_counts": {
+      "1": 0,
+      "2": 144,
+      "3": 353,
+      "4": 101
+    },
+    "requested_tier": null,
+    "selected_tier": null,
+    "fallback_reason": null,
+    "available_tiers": [
+      2,
+      3,
+      4
+    ],
+    "total": 598
+  },
+  "narrative": {
+    "phase": "middle_grind",
+    "headline": "598 findings open. Error consistency (0.0%) needs attention \u2014 run `desloppify next` to start.",
+    "dimensions": {
+      "lowest_dimensions": [
+        {
+          "name": "Error consistency",
+          "strict": 0.0,
+          "issues": 0,
+          "impact": 0.0,
+          "subjective": true,
+          "impact_description": "re-review to improve"
+        },
+        {
+          "name": "Abstraction fit",
+          "strict": 0.0,
+          "issues": 0,
+          "impact": 0.0,
+          "subjective": true,
+          "impact_description": "re-review to improve"
+        },
+        {
+          "name": "AI generated debt",
+          "strict": 0.0,
+          "issues": 0,
+          "impact": 0.0,
+          "subjective": true,
+          "impact_description": "re-review to improve"
+        }
+      ],
+      "biggest_gap_dimensions": [],
+      "stagnant_dimensions": []
+    },
+    "actions": [
+      {
+        "type": "reorganize",
+        "detector": "orphaned",
+        "count": 64,
+        "description": "64 orphaned findings \u2014 delete dead files or relocate with `desloppify move`",
+        "command": "desloppify show orphaned --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 1,
+        "lane": "restructure"
+      },
+      {
+        "type": "reorganize",
+        "detector": "flat_dirs",
+        "count": 2,
+        "description": "2 flat_dirs findings \u2014 create subdirectories and use `desloppify move`",
+        "command": "desloppify show flat_dirs --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 2,
+        "lane": "restructure"
+      },
+      {
+        "type": "reorganize",
+        "detector": "single_use",
+        "count": 1,
+        "description": "1 single_use findings \u2014 inline or relocate with `desloppify move`",
+        "command": "desloppify show single_use --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 3,
+        "lane": "restructure"
+      },
+      {
+        "type": "reorganize",
+        "detector": "facade",
+        "count": 8,
+        "description": "8 facade findings \u2014 flatten re-export facades or consolidate barrel files",
+        "command": "desloppify show facade --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 4,
+        "lane": "restructure"
+      },
+      {
+        "type": "refactor",
+        "detector": "structural",
+        "count": 71,
+        "description": "71 structural findings \u2014 decompose large files \u2014 extract logic into focused modules",
+        "command": "desloppify show structural --status open",
+        "impact": 0.0,
+        "dimension": "File health",
+        "priority": 5,
+        "lane": "refactor"
+      },
+      {
+        "type": "refactor",
+        "detector": "dupes",
+        "count": 1,
+        "description": "1 dupes findings \u2014 extract shared utility or consolidate duplicates",
+        "command": "desloppify show dupes --status open",
+        "impact": 0.0,
+        "dimension": "Duplication",
+        "priority": 6,
+        "lane": "refactor"
+      },
+      {
+        "type": "refactor",
+        "detector": "dict_keys",
+        "count": 46,
+        "description": "46 dict_keys findings \u2014 fix dict key mismatches \u2014 dead writes are likely dead code, schema drift suggests a typo or missed rename",
+        "command": "desloppify show dict_keys --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 7,
+        "lane": "refactor"
+      },
+      {
+        "type": "refactor",
+        "detector": "test_coverage",
+        "count": 79,
+        "description": "79 test_coverage findings \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "command": "desloppify show test_coverage --status open",
+        "impact": 0.0,
+        "dimension": "Test health",
+        "priority": 8,
+        "lane": "test_coverage"
+      },
+      {
+        "type": "refactor",
+        "detector": "responsibility_cohesion",
+        "count": 8,
+        "description": "8 responsibility_cohesion findings \u2014 split modules with too many responsibilities \u2014 extract focused sub-modules",
+        "command": "desloppify show responsibility_cohesion --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 9,
+        "lane": "refactor"
+      },
+      {
+        "type": "manual_fix",
+        "detector": "smells",
+        "count": 209,
+        "description": "209 smells findings \u2014 inspect with `desloppify next` and fix manually",
+        "command": "desloppify show smells --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 10,
+        "lane": "refactor"
+      },
+      {
+        "type": "manual_fix",
+        "detector": "global_mutable_config",
+        "count": 11,
+        "description": "11 global_mutable_config findings \u2014 refactor module-level mutable state \u2014 use explicit init functions or dependency injection",
+        "command": "desloppify show global_mutable_config --status open",
+        "impact": 0.0,
+        "dimension": "Code quality",
+        "priority": 11,
+        "lane": "refactor"
+      },
+      {
+        "type": "manual_fix",
+        "detector": "subjective_review",
+        "count": 98,
+        "description": "98 files need design review \u2014 run design review with dimension templates",
+        "command": "desloppify fix review",
+        "impact": 0.0,
+        "dimension": "Test health",
+        "priority": 12,
+        "lane": "refactor"
+      }
+    ],
+    "strategy": {
+      "fixer_leverage": {
+        "auto_fixable_count": 0,
+        "total_count": 598,
+        "coverage": 0.0,
+        "impact_ratio": 0.0,
+        "recommendation": "none"
+      },
+      "lanes": {
+        "restructure": {
+          "actions": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "file_count": 75,
+          "total_impact": 0.0,
+          "automation": "manual",
+          "run_first": false
+        },
+        "refactor": {
+          "actions": [
+            5,
+            6,
+            7,
+            9,
+            10,
+            11,
+            12
+          ],
+          "file_count": 143,
+          "total_impact": 0.0,
+          "automation": "manual",
+          "run_first": false
+        },
+        "test_coverage": {
+          "actions": [
+            8
+          ],
+          "file_count": 79,
+          "total_impact": 0.0,
+          "automation": "manual",
+          "run_first": false
+        }
+      },
+      "can_parallelize": true,
+      "hint": "3 independent workstreams, safe to parallelize. Rescan after each phase to verify."
+    },
+    "tools": {
+      "fixers": [],
+      "move": {
+        "available": true,
+        "relevant": true,
+        "reason": "64 orphaned files + 1 single-use files + 2 flat directories",
+        "usage": "desloppify move <source> <dest> [--dry-run]"
+      },
+      "plan": {
+        "command": "desloppify plan",
+        "description": "Generate prioritized markdown cleanup plan"
+      },
+      "badge": {
+        "generated": true,
+        "in_readme": false,
+        "path": "scorecard.png",
+        "recommendation": "Add to README: <img src=\"scorecard.png\" width=\"100%\">"
+      }
+    },
+    "debt": {
+      "overall_gap": 0.0,
+      "wontfix_count": 0,
+      "worst_dimension": null,
+      "worst_gap": 0.0,
+      "trend": "stable"
+    },
+    "milestone": null,
+    "primary_action": {
+      "command": "desloppify show orphaned --status open",
+      "description": "64 orphaned findings \u2014 delete dead files or relocate with `desloppify move`"
+    },
+    "why_now": "3 independent workstreams, safe to parallelize. Rescan after each phase to verify.",
+    "verification_step": {
+      "command": "desloppify scan",
+      "reason": "revalidate after changes"
+    },
+    "risk_flags": [],
+    "strict_target": {
+      "target": 95.0,
+      "current": 30.0,
+      "gap": 65.0,
+      "state": "below",
+      "warning": null
+    },
+    "reminders": [
+      {
+        "type": "zone_classification",
+        "message": "60 of 172 files classified as non-production (2 config, 23 script, 35 test). Override with `desloppify zone set <file> production` if any are misclassified.",
+        "command": "desloppify zone show",
+        "priority": 2,
+        "severity": "medium"
+      }
+    ],
+    "reminder_history": {
+      "zone_classification": 3,
+      "report_scores": 2,
+      "feedback_nudge": 1
+    }
+  },
+  "overall_score": 30.0,
+  "objective_score": 75.1,
+  "strict_score": 30.0,
+  "scorecard_dimensions": [
+    {
+      "name": "File health",
+      "score": 67.1,
+      "strict": 67.1,
+      "checks": 135,
+      "issues": 65,
+      "tier": 3,
+      "subjective": false
+    },
+    {
+      "name": "Code quality",
+      "score": 84.9,
+      "strict": 84.9,
+      "checks": 975,
+      "issues": 282,
+      "tier": 3,
+      "subjective": false
+    },
+    {
+      "name": "Duplication",
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 723,
+      "issues": 1,
+      "tier": 3,
+      "subjective": false
+    },
+    {
+      "name": "Security",
+      "score": 100.0,
+      "strict": 100.0,
+      "checks": 270,
+      "issues": 0,
+      "tier": 4,
+      "subjective": false
+    },
+    {
+      "name": "Test health",
+      "score": 26.2,
+      "strict": 26.2,
+      "checks": 1771,
+      "issues": 177,
+      "tier": 4,
+      "subjective": false
+    }
+  ],
+  "subjective_measures": [],
+  "config": {
+    "target_strict_score": 95,
+    "review_max_age_days": 30,
+    "review_batch_max_files": 80,
+    "holistic_max_age_days": 30,
+    "generate_scorecard": true,
+    "badge_path": "scorecard.png",
+    "exclude": [],
+    "ignore": [],
+    "ignore_metadata": {},
+    "zone_overrides": {},
+    "review_dimensions": [],
+    "large_files_threshold": 0,
+    "props_threshold": 0,
+    "finding_noise_budget": 10,
+    "finding_noise_global_budget": 0,
+    "languages": {}
+  }
+}
