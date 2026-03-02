@@ -9,15 +9,15 @@
   "verified_strict_score": 75.0,
   "stats": {
     "total": 604,
-    "open": 599,
-    "fixed": 3,
+    "open": 598,
+    "fixed": 4,
     "auto_resolved": 2,
     "wontfix": 0,
     "false_positive": 0,
     "by_tier": {
       "2": {
-        "open": 145,
-        "fixed": 3,
+        "open": 144,
+        "fixed": 4,
         "auto_resolved": 2,
         "wontfix": 0,
         "false_positive": 0
@@ -13112,17 +13112,23 @@
         "line": 141,
         "info": "Created at line 48 in class PatternBasedForecaster() \u2014 will raise KeyError or return None via .get()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Fixed structure",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-02T19:42:34+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-02T19:44:22+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "production",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually fixed the dict structure to use proper nested dicts and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-02T19:44:22+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::schema_drift::gamma::166": {
       "id": "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::schema_drift::gamma::166",
@@ -15874,11 +15880,11 @@
       "strict": 67.1
     },
     "Code quality": {
-      "score": 84.8,
-      "strict_score": 84.8,
+      "score": 84.9,
+      "strict_score": 84.9,
       "verified_strict_score": 84.7,
       "checks": 975,
-      "issues": 283,
+      "issues": 282,
       "tier": 3,
       "detectors": {
         "unused": {
@@ -15895,9 +15901,9 @@
         },
         "dict_keys": {
           "potential": 135,
-          "pass_rate": 0.8725925925925926,
-          "issues": 47,
-          "weighted_failures": 17.2
+          "pass_rate": 0.88,
+          "issues": 46,
+          "weighted_failures": 16.2
         },
         "global_mutable_config": {
           "potential": 135,
@@ -15930,7 +15936,7 @@
           "weighted_failures": 0.0
         }
       },
-      "strict": 84.8
+      "strict": 84.9
     },
     "Duplication": {
       "score": 100.0,

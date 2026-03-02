@@ -9,15 +9,15 @@
   "verified_strict_score": 75.0,
   "stats": {
     "total": 604,
-    "open": 598,
-    "fixed": 4,
+    "open": 597,
+    "fixed": 5,
     "auto_resolved": 2,
     "wontfix": 0,
     "false_positive": 0,
     "by_tier": {
       "2": {
-        "open": 144,
-        "fixed": 4,
+        "open": 143,
+        "fixed": 5,
         "auto_resolved": 2,
         "wontfix": 0,
         "false_positive": 0
@@ -12000,17 +12000,23 @@
         "line": 154,
         "info": "Created at line 125 in demo_physics_simulator() \u2014 will raise KeyError or return None via .get()"
       },
-      "status": "open",
-      "note": "Reopened (\u00d71) \u2014 reappeared in scan (was fixed)",
+      "status": "fixed",
+      "note": "Fixed with None check",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-02T19:42:34+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-02T19:45:30+00:00",
       "reopen_count": 1,
       "lang": "python",
       "zone": "production",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added a None check for lfp_model and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-02T19:45:30+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Model trained successfully": {
       "id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Model trained successfully",
@@ -15880,11 +15886,11 @@
       "strict": 67.1
     },
     "Code quality": {
-      "score": 84.9,
-      "strict_score": 84.9,
+      "score": 85.0,
+      "strict_score": 85.0,
       "verified_strict_score": 84.7,
       "checks": 975,
-      "issues": 282,
+      "issues": 281,
       "tier": 3,
       "detectors": {
         "unused": {
@@ -15901,9 +15907,9 @@
         },
         "dict_keys": {
           "potential": 135,
-          "pass_rate": 0.88,
-          "issues": 46,
-          "weighted_failures": 16.2
+          "pass_rate": 0.8874074074074074,
+          "issues": 45,
+          "weighted_failures": 15.2
         },
         "global_mutable_config": {
           "potential": 135,
@@ -15936,7 +15942,7 @@
           "weighted_failures": 0.0
         }
       },
-      "strict": 84.9
+      "strict": 85.0
     },
     "Duplication": {
       "score": 100.0,
