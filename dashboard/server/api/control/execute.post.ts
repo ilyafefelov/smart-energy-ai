@@ -3,6 +3,8 @@
 
 import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
 import { recordBillingUsageEvent } from '../../utils/billing'
+import { updateBatteryState } from '../../utils/battery'
+import { updateBatteryControlState } from '../../utils/battery-control-state'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 type ExecutableCommand = 'charge' | 'discharge' | 'hold'
@@ -124,6 +126,14 @@ export default defineEventHandler(async (event) => {
           reason: executableCommand.reason,
           updated_at: new Date().toISOString(),
         }
+
+        await updateBatteryControlState({
+          powerCommand: Number(executableCommand.power_kw || 0),
+          manualMode: executionPlan.modeTo !== 'automatic',
+          autoOptimization: executionPlan.modeTo === 'automatic',
+        }, tenant.id)
+
+        await persistBatterySignalForCommand(executableCommand, tenant.id)
         
         console.log('Python controller result:', pythonResult)
         
@@ -241,6 +251,14 @@ export default defineEventHandler(async (event) => {
       reason: executableCommand.reason,
       updated_at: new Date().toISOString(),
     }
+
+    await updateBatteryControlState({
+      powerCommand: Number(executableCommand.power_kw || 0),
+      manualMode: executionPlan.modeTo !== 'automatic',
+      autoOptimization: executionPlan.modeTo === 'automatic',
+    }, tenant.id)
+
+    await persistBatterySignalForCommand(executableCommand, tenant.id)
     
     return {
       success: true,
@@ -740,5 +758,24 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
         modeTo: 'automatic',
       }
     }
+  }
+}
+
+async function persistBatterySignalForCommand(command: CommandPayload, tenantId: string): Promise<void> {
+  try {
+    const voltage = 400
+    const powerKw = command.command === 'hold' ? 0 : Number(command.power_kw || 0)
+    const current = voltage > 0 ? (powerKw * 1000) / voltage : 0
+
+    await updateBatteryState({
+      current: Number(current.toFixed(3)),
+      temperature: Number((24 + Math.min(12, Math.abs(current) / 12)).toFixed(1)),
+    }, tenantId)
+  } catch (error) {
+    console.warn('[control/execute] failed to persist battery command signal', {
+      tenant_id: tenantId,
+      command_id: command.command_id,
+      error: (error as any)?.message || 'unknown',
+    })
   }
 }

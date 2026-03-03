@@ -282,6 +282,35 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
     }
   }
 
+  const setStateOfCharge = async (socPercent: number) => {
+    error.value = null
+
+    try {
+      const { tenantId, request } = await resolveTenantRequest()
+      const normalized = Number(socPercent)
+      const response = await $fetch('/api/battery/simulate', {
+        method: 'POST',
+        ...request,
+        body: {
+          action: 'setSoc',
+          socPercent: normalized,
+          tenantId,
+        },
+      })
+
+      if (response.success) {
+        await fetchBatteryData()
+        console.log(`[BatteryPhysics] SoC synchronized to ${normalized}%`)
+      } else {
+        throw new Error(response.error || 'Failed to synchronize battery SoC')
+      }
+    } catch (e) {
+      console.error('[BatteryPhysics] SoC sync error:', e)
+      error.value = (e as Error).message
+      throw e
+    }
+  }
+
   const updateBatteryConfig = async (config: any) => {
     error.value = null
 
@@ -434,6 +463,7 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
     fetchBatteryData,
     setPowerCommand,
     setAutoMode,
+    setStateOfCharge,
     updateBatteryConfig,
     resetBattery,
     startRealTimeUpdates,

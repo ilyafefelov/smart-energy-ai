@@ -1,4 +1,4 @@
-import { getBatteryState, simulateBatteryBehavior } from '~/server/utils/battery'
+import { getBatteryState, simulateBatteryBehavior } from '../../utils/battery'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {

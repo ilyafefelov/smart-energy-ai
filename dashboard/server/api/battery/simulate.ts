@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { eventHandler, getMethod, readBody } from 'h3'
-import { getBatteryState, updateBatteryState } from '~/server/utils/battery'
+import { getBatteryState, updateBatteryState } from '../../utils/battery'
+import { getBatteryControlState, updateBatteryControlState } from '../../utils/battery-control-state'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 interface BatterySimSpec {
@@ -26,35 +27,88 @@ type TenantControlMirror = {
 }
 
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
+const SIMULATION_TIME_SCALE = 120
 
-function getControlMirrorStore(): Record<string, TenantControlMirror> {
-  ;(globalThis as any).__batteryControlMirrorByTenant = (globalThis as any).__batteryControlMirrorByTenant || {}
-  return (globalThis as any).__batteryControlMirrorByTenant
+function commandFromPower(powerKw: number): 'charge' | 'discharge' | 'hold' {
+  if (powerKw > 0.05) return 'charge'
+  if (powerKw < -0.05) return 'discharge'
+  return 'hold'
 }
 
-function readControlMirror(tenantId: string): TenantControlMirror {
-  const store = getControlMirrorStore()
-  const existing = store[tenantId]
-  if (existing) {
-    return existing
+function resolveModeState(
+  controlStatus: any,
+  mirror: TenantControlMirror,
+): { manualMode: boolean; autoOptimization: boolean; activeCommand: string } {
+  const hasControlMode = typeof controlStatus?.mode === 'string' && controlStatus.mode.trim().length > 0
+  if (hasControlMode) {
+    const manualMode = String(controlStatus.mode).toLowerCase() !== 'automatic'
+    const activeCommand = String(controlStatus?.active_command || commandFromPower(mirror.powerCommand)).toLowerCase()
+    return {
+      manualMode,
+      autoOptimization: !manualMode,
+      activeCommand,
+    }
   }
 
   return {
-    powerCommand: 0,
-    manualMode: true,
-    autoOptimization: false,
-    updatedAt: new Date().toISOString(),
+    manualMode: Boolean(mirror.manualMode),
+    autoOptimization: !Boolean(mirror.manualMode),
+    activeCommand: commandFromPower(Number(mirror.powerCommand || 0)),
   }
 }
 
-function writeControlMirror(tenantId: string, updates: Partial<TenantControlMirror>): TenantControlMirror {
-  const next = {
-    ...readControlMirror(tenantId),
-    ...updates,
-    updatedAt: new Date().toISOString(),
+async function applyCommandProgression(params: {
+  tenantId: string
+  state: any
+  spec: BatterySimSpec
+  effectivePowerCommand: number
+}): Promise<any> {
+  const { tenantId, state, spec } = params
+  const effectivePowerCommand = Number(params.effectivePowerCommand || 0)
+  const now = Date.now()
+  const lastUpdateMs = new Date(state?.lastUpdate || 0).getTime()
+  if (!Number.isFinite(lastUpdateMs)) {
+    return state
   }
-  getControlMirrorStore()[tenantId] = next
-  return next
+
+  const elapsedHoursRaw = Math.max(0, (now - lastUpdateMs) / 3600000) * SIMULATION_TIME_SCALE
+  const elapsedHours = Math.min(elapsedHoursRaw, 0.25)
+  if (elapsedHours <= 0.0005) {
+    return state
+  }
+
+  const socCurrent = Number(state?.soc ?? 50)
+  const voltage = Number(state?.voltage ?? spec.nominalVoltage ?? 400)
+  const baselineTemp = 24
+  let socNext = socCurrent
+
+  if (Math.abs(effectivePowerCommand) > 0.05 && spec.capacityKwh > 0) {
+    const transferKwh = Math.abs(effectivePowerCommand) * elapsedHours
+    if (effectivePowerCommand > 0) {
+      socNext += (transferKwh * spec.efficiency / spec.capacityKwh) * 100
+    } else {
+      socNext -= (transferKwh / Math.max(0.6, spec.efficiency) / spec.capacityKwh) * 100
+    }
+  } else {
+    const selfDischargePerHour = (spec.selfDischargePercentMonthly / 30 / 24)
+    socNext -= selfDischargePerHour * elapsedHours
+  }
+
+  socNext = Math.max(spec.socMinPercent, Math.min(spec.socMaxPercent, socNext))
+
+  const nextCurrent = Math.abs(effectivePowerCommand) > 0.05
+    ? (effectivePowerCommand * 1000) / Math.max(1, voltage)
+    : 0
+  const priorTemp = Number(state?.temperature ?? baselineTemp)
+  const tempTarget = baselineTemp + Math.min(12, Math.abs(nextCurrent) / 12)
+  const tempBlend = Math.min(1, elapsedHours / 0.2)
+  const nextTemperature = priorTemp + (tempTarget - priorTemp) * tempBlend
+
+  return updateBatteryState({
+    soc: round(socNext, 2),
+    current: round(nextCurrent, 3),
+    temperature: round(nextTemperature, 1),
+  }, tenantId)
 }
 
 function loadBatterySimulationSpec(defaultVoltage: number, tenantId: string): BatterySimSpec {
@@ -177,11 +231,11 @@ export default eventHandler(async (event) => {
     const livePowerKw = round((voltage * current) / 1000, 3)
 
     const spec = loadBatterySimulationSpec(voltage, tenant.id)
-    const mirror = readControlMirror(tenant.id)
-    const statusMode = String(controlStatus?.mode || '').toLowerCase() === 'automatic' ? 'automatic' : 'manual'
-    const manualMode = statusMode === 'manual'
-    const autoOptimization = !manualMode
-    const activeCommand = String(controlStatus?.active_command || controlHistory?.history?.[0]?.command || 'hold').toLowerCase()
+    const mirror = await getBatteryControlState(tenant.id)
+    const resolvedMode = resolveModeState(controlStatus, mirror)
+    const manualMode = resolvedMode.manualMode
+    const autoOptimization = resolvedMode.autoOptimization
+    const activeCommand = String(controlStatus?.active_command || controlHistory?.history?.[0]?.command || resolvedMode.activeCommand || 'hold').toLowerCase()
     const historyPowerKwRaw = Number(controlHistory?.history?.[0]?.power_kw)
     const historyPowerKw = Number.isFinite(historyPowerKwRaw) ? historyPowerKwRaw : null
 
@@ -193,25 +247,37 @@ export default eventHandler(async (event) => {
       spec,
     })
 
-    writeControlMirror(tenant.id, {
+    await updateBatteryControlState({
       powerCommand: effectivePowerCommand,
       manualMode,
       autoOptimization,
     })
 
+    const progressedState = await applyCommandProgression({
+      tenantId: tenant.id,
+      state,
+      spec,
+      effectivePowerCommand,
+    })
+
+    const progressedSocPercent = Number(progressedState?.soc ?? socPercent)
+    const progressedVoltage = Number(progressedState?.voltage ?? voltage)
+    const progressedCurrent = Number(progressedState?.current ?? current)
+    const progressedLivePowerKw = round((progressedVoltage * progressedCurrent) / 1000, 3)
+
     return {
       success: true,
       tenant: getTenantResponseMetadata(tenant),
       battery: {
-        soc: round(socPercent / 100, 4),
-        socPercentage: round(socPercent, 1),
-        power: livePowerKw,
+        soc: round(progressedSocPercent / 100, 4),
+        socPercentage: round(progressedSocPercent, 1),
+        power: progressedLivePowerKw,
         commandedPower: effectivePowerCommand,
-        voltage: round(voltage, 2),
-        current: round(current, 2),
-        temperature: round(Number(state?.temperature ?? 25), 1),
-        health: round(Number(state?.health ?? 98.5), 1),
-        cycleCount: Number(state?.cycles ?? 0),
+        voltage: round(progressedVoltage, 2),
+        current: round(progressedCurrent, 2),
+        temperature: round(Number(progressedState?.temperature ?? 25), 1),
+        health: round(Number(progressedState?.health ?? 98.5), 1),
+        cycleCount: Number(progressedState?.cycles ?? 0),
         type: spec.batteryType,
         capacity: round(spec.capacityKwh, 2),
         usableCapacity: round(spec.usableCapacityKwh, 2),
@@ -233,7 +299,7 @@ export default eventHandler(async (event) => {
         decision_source: controlStatus?.decision_source || null,
         isSimulationRunning: true,
         source: 'control_status_backed_simulator',
-        lastUpdated: state?.lastUpdate || new Date().toISOString(),
+        lastUpdated: progressedState?.lastUpdate || new Date().toISOString(),
       },
       specs: {
         typeName: spec.typeName,
@@ -284,7 +350,7 @@ export default eventHandler(async (event) => {
         })
       }
 
-      writeControlMirror(tenant.id, {
+      await updateBatteryControlState({
         powerCommand: clampedPowerKw,
         manualMode: true,
         autoOptimization: false,
@@ -332,8 +398,9 @@ export default eventHandler(async (event) => {
         })
       }
 
-      writeControlMirror(tenant.id, {
-        powerCommand: enabled ? 0 : Number(readControlMirror(tenant.id).powerCommand || 0),
+      const currentMirror = await getBatteryControlState(tenant.id)
+      await updateBatteryControlState({
+        powerCommand: enabled ? 0 : Number(currentMirror.powerCommand || 0),
         manualMode: !enabled,
         autoOptimization: enabled,
       })
@@ -368,7 +435,7 @@ export default eventHandler(async (event) => {
         },
       }).catch(() => null)
 
-      writeControlMirror(tenant.id, {
+      await updateBatteryControlState({
         powerCommand: 0,
         manualMode: true,
         autoOptimization: false,
@@ -384,6 +451,33 @@ export default eventHandler(async (event) => {
         tenant: getTenantResponseMetadata(tenant),
         message: 'Battery reset',
         execution_mode: 'manual_command',
+      }
+    }
+
+    if (body.action === 'setSoc') {
+      const rawSoc = Number(body.socPercent ?? body.soc ?? NaN)
+      if (!Number.isFinite(rawSoc)) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid socPercent. Must be a finite number between 0 and 100',
+        })
+      }
+
+      const normalizedSoc = rawSoc <= 1 ? rawSoc * 100 : rawSoc
+      const clampedSoc = round(Math.max(0, Math.min(100, normalizedSoc)), 2)
+      const updated = await updateBatteryState({
+        soc: clampedSoc,
+        current: 0,
+      }, tenant.id)
+
+      return {
+        success: true,
+        tenant: getTenantResponseMetadata(tenant),
+        message: `Battery SoC synchronized to ${clampedSoc}%`,
+        socPercent: clampedSoc,
+        soc: round(clampedSoc / 100, 4),
+        lastUpdated: updated.lastUpdate,
+        execution_mode: 'manual_sync',
       }
     }
 

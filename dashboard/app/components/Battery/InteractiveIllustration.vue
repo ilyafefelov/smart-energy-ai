@@ -139,6 +139,29 @@
           </button>
         </div>
 
+        <div class="mt-4 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+          <p class="text-[11px] uppercase tracking-wide text-slate-400">Current SoC Sync</p>
+          <p class="mt-1 text-xs text-slate-400">Align simulator charge level with manual field telemetry.</p>
+          <div class="mt-2 flex items-center gap-2">
+            <input
+              v-model.number="manualSocPercent"
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              class="w-full rounded-md border border-slate-600 bg-slate-950 px-2 py-1 text-sm text-slate-100 outline-none focus:border-cyan-500"
+              :disabled="isBusy"
+            />
+            <button
+              class="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+              :disabled="isBusy"
+              @click="syncCurrentSoc"
+            >
+              Sync SoC
+            </button>
+          </div>
+        </div>
+
         <p class="mt-3 text-xs" :class="feedback.type === 'error' ? 'text-red-400' : 'text-cyan-300'" v-if="feedback.message">
           {{ feedback.message }}
         </p>
@@ -173,6 +196,7 @@ const batteryPhysicsStore = useBatteryPhysicsStore()
 const tenantContext = useTenantContext()
 const transitionNotifications = useControlTransitionNotifications()
 const targetPower = ref(0)
+const manualSocPercent = ref(0)
 const feedback = ref<FeedbackState>({ message: '', type: 'success' })
 
 const isBusy = computed(() => batteryPhysicsStore.isLoading)
@@ -276,6 +300,14 @@ watch(
   { immediate: true }
 )
 
+watch(
+  () => batteryPhysicsStore.state.socPercentage,
+  (value) => {
+    manualSocPercent.value = Number(value || 0)
+  },
+  { immediate: true }
+)
+
 const setFeedback = (
   message: string,
   type: 'success' | 'error' = 'success',
@@ -340,6 +372,17 @@ const setIdle = async () => {
     setFeedback('Battery set to hold', 'success', 'hold')
   } catch {
     setFeedback('Failed to hold battery command', 'error', 'hold:error')
+  }
+}
+
+const syncCurrentSoc = async () => {
+  try {
+    const normalized = Math.max(0, Math.min(100, Number(manualSocPercent.value || 0)))
+    await batteryPhysicsStore.setStateOfCharge(normalized)
+    manualSocPercent.value = normalized
+    setFeedback(`SoC synchronized to ${normalized.toFixed(1)}%`, 'success', 'soc:sync')
+  } catch {
+    setFeedback('Failed to synchronize current SoC', 'error', 'soc:sync:error')
   }
 }
 
