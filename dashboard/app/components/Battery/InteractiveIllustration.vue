@@ -23,6 +23,15 @@
 
     <div class="relative mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
       <div class="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+        <div class="mb-3 flex items-center justify-center">
+          <span
+            class="rounded-full border px-3 py-1 text-xs font-semibold tracking-wide"
+            :class="operationBadgeClass"
+          >
+            {{ operationStatus.icon }} {{ operationStatus.label }}
+          </span>
+        </div>
+
         <div class="mx-auto flex w-full max-w-xs items-end justify-center gap-4">
           <div class="relative h-56 w-28 rounded-2xl border-4 border-slate-600 bg-slate-950 p-1">
             <div class="absolute -top-3 left-1/2 h-2 w-10 -translate-x-1/2 rounded-t-lg bg-slate-500"></div>
@@ -32,9 +41,35 @@
                 v-if="batteryPhysicsStore.state.isCharging"
                 class="absolute inset-x-0 bottom-0 h-10 animate-pulse bg-gradient-to-t from-cyan-300/80 to-transparent"
               ></div>
+              <div
+                v-if="batteryPhysicsStore.state.isDischarging"
+                class="absolute inset-x-0 top-0 h-10 animate-pulse bg-gradient-to-b from-amber-300/80 to-transparent"
+              ></div>
             </div>
             <div class="absolute inset-0 flex items-center justify-center text-2xl font-black text-white drop-shadow-lg">
               {{ Math.round(batteryPhysicsStore.state.socPercentage) }}%
+            </div>
+
+            <div
+              v-if="batteryPhysicsStore.state.isCharging"
+              class="absolute -right-8 top-1/2 -translate-y-1/2 animate-bounce text-xl text-emerald-300"
+              title="Charging"
+            >
+              ↑
+            </div>
+            <div
+              v-else-if="batteryPhysicsStore.state.isDischarging"
+              class="absolute -right-8 top-1/2 -translate-y-1/2 animate-bounce text-xl text-amber-300"
+              title="Discharging"
+            >
+              ↓
+            </div>
+            <div
+              v-else
+              class="absolute -right-8 top-1/2 -translate-y-1/2 text-xl text-slate-400"
+              title="Idle"
+            >
+              •
             </div>
           </div>
 
@@ -157,6 +192,41 @@ const powerFlowColor = computed(() => {
   if (power > 0) return 'text-emerald-400'
   if (power < 0) return 'text-amber-400'
   return 'text-slate-300'
+})
+
+const operationStatus = computed(() => {
+  const modeLabel = batteryPhysicsStore.state.manualMode ? 'Manual' : 'Auto'
+  if (batteryPhysicsStore.state.isCharging) {
+    return {
+      icon: '🟢',
+      label: `${modeLabel} Charging`,
+      tone: 'charging' as const,
+    }
+  }
+
+  if (batteryPhysicsStore.state.isDischarging) {
+    return {
+      icon: '🟠',
+      label: `${modeLabel} Discharging`,
+      tone: 'discharging' as const,
+    }
+  }
+
+  return {
+    icon: '⚪',
+    label: `${modeLabel} Idle`,
+    tone: 'idle' as const,
+  }
+})
+
+const operationBadgeClass = computed(() => {
+  if (operationStatus.value.tone === 'charging') {
+    return 'border-emerald-500/60 bg-emerald-500/15 text-emerald-200'
+  }
+  if (operationStatus.value.tone === 'discharging') {
+    return 'border-amber-500/60 bg-amber-500/15 text-amber-200'
+  }
+  return 'border-slate-600 bg-slate-700/30 text-slate-300'
 })
 
 const temperatureColor = computed(() => {
