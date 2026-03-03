@@ -31,6 +31,7 @@ from .assets.multi_tenant.asset_factory import create_all_assets, multi_client_a
 # Import engines for feature processing
 from .engines import select_feature_engine
 from .engines.polars_engine import create_polars_engine
+from .io_managers import build_asset_io_manager_from_env
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,8 @@ resources = {
     "polars_engine": create_polars_engine({}) or selected_engine,
     # Explicit generic selector output for new assets.
     "feature_engine": selected_engine,
+    # Asset persistence plane; uses S3 when configured, filesystem otherwise.
+    "io_manager": build_asset_io_manager_from_env(),
 }
 
 # Collect all assets

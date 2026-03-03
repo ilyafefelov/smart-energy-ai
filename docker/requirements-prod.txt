@@ -4,6 +4,7 @@ dagster-webserver
 dagster-daemon
 mlflow
 psycopg2-binary
+boto3
 redis
 gunicorn
 uvicorn[standard]
