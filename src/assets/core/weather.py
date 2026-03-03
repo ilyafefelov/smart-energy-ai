@@ -15,8 +15,24 @@ import logging
 from typing import Dict, List, Optional, Tuple
 import requests
 import numpy as np
+import os
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_weather_location() -> Tuple[float, float, str]:
+    """Resolve location/timezone for weather fetch from env with Kyiv fallback."""
+    try:
+        latitude = float(os.getenv('WEATHER_LATITUDE', '50.45'))
+        longitude = float(os.getenv('WEATHER_LONGITUDE', '30.52'))
+    except ValueError:
+        latitude = 50.45
+        longitude = 30.52
+
+    latitude = max(-90.0, min(90.0, latitude))
+    longitude = max(-180.0, min(180.0, longitude))
+    timezone = os.getenv('WEATHER_TIMEZONE', 'Europe/Kiev')
+    return latitude, longitude, timezone
 
 
 @asset(
@@ -46,13 +62,11 @@ def weather_asset() -> pl.DataFrame:
     """
     logger.info("Starting weather data fetch from Open-Meteo")
     
-    # Default location: Kyiv, Ukraine (50.45°N, 30.52°E)
-    latitude = 50.45
-    longitude = 30.52
+    latitude, longitude, timezone = _resolve_weather_location()
     
     try:
         # Fetch current conditions + 7-day forecast
-        weather_data = _fetch_openmeteo_data(latitude, longitude)
+        weather_data = _fetch_openmeteo_data(latitude, longitude, timezone)
         
         if not weather_data:
             logger.warning("Open-Meteo API unavailable, generating synthetic data")
@@ -75,7 +89,7 @@ def weather_asset() -> pl.DataFrame:
         return pl.DataFrame(_generate_synthetic_weather())
 
 
-def _fetch_openmeteo_data(lat: float, lon: float) -> Optional[List[Dict]]:
+def _fetch_openmeteo_data(lat: float, lon: float, timezone: str) -> Optional[List[Dict]]:
     """Fetch weather data from Open-Meteo API."""
     
     # Open-Meteo API endpoint
@@ -94,7 +108,7 @@ def _fetch_openmeteo_data(lat: float, lon: float) -> Optional[List[Dict]]:
             "relativehumidity_2m"
         ],
         "forecast_days": 7,
-        "timezone": "Europe/Kiev"
+        "timezone": timezone
     }
     
     try:

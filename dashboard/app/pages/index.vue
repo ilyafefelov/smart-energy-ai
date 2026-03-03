@@ -393,7 +393,7 @@
       <!-- Battery Trajectory Simulation -->
       <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
         <h2 class="text-xl font-bold text-white mb-4">🔋 Battery Trajectory (Next 24h)</h2>
-        <p class="text-sm text-slate-400 mb-4">Simulated battery SOC based on optimal trading strategy</p>
+        <p class="text-sm text-slate-400 mb-4">Projected SOC trajectory derived from live prices and current battery limits</p>
 
         <svg viewBox="0 0 1200 300" class="w-full h-48 mb-4">
           <!-- Grid -->
@@ -401,9 +401,9 @@
           <line x1="0" y1="150" x2="1200" y2="150" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
           <line x1="0" y1="250" x2="1200" y2="250" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
 
-          <!-- Simulated trajectory -->
+          <!-- Data-driven trajectory -->
           <polyline
-            points="0,150 100,120 200,140 300,100 400,130 500,110 600,140 700,120 800,150 900,130 1000,110 1100,140 1200,100"
+            :points="batteryTrajectoryPoints"
             fill="none"
             stroke="#fbbf24"
             stroke-width="3"
@@ -412,12 +412,12 @@
           />
 
           <!-- Min/Max bounds -->
-          <line x1="0" y1="30" x2="1200" y2="30" stroke="#ef4444" stroke-width="2" stroke-dasharray="8" opacity="0.5" />
-          <line x1="0" y1="270" x2="1200" y2="270" stroke="#22c55e" stroke-width="2" stroke-dasharray="8" opacity="0.5" />
+          <line :x1="0" :y1="batteryUpperBoundY" :x2="1200" :y2="batteryUpperBoundY" stroke="#ef4444" stroke-width="2" stroke-dasharray="8" opacity="0.5" />
+          <line :x1="0" :y1="batteryLowerBoundY" :x2="1200" :y2="batteryLowerBoundY" stroke="#22c55e" stroke-width="2" stroke-dasharray="8" opacity="0.5" />
 
           <!-- Labels -->
-          <text x="10" y="25" font-size="12" fill="#ef4444">Max (100%)</text>
-          <text x="10" y="290" font-size="12" fill="#22c55e">Min (15%)</text>
+          <text x="10" :y="Math.max(16, batteryUpperBoundY - 6)" font-size="12" fill="#ef4444">Max (100%)</text>
+          <text x="10" :y="Math.min(296, batteryLowerBoundY + 18)" font-size="12" fill="#22c55e">Min ({{ batteryStore.minSOC }}%)</text>
         </svg>
 
         <p class="text-xs text-slate-400">Hover to see predicted SOC at specific hour • Drag to adjust forecast</p>
@@ -484,40 +484,20 @@
           </div>
           
           <div class="space-y-3">
-            <div>
+            <div v-for="entry in savingsBreakdownRows" :key="entry.key">
               <div class="flex justify-between items-center mb-2">
-                <span class="text-sm text-slate-300">Arbitrage Profit</span>
-                <span class="font-bold text-green-400">₴ 1,250</span>
+                <span class="text-sm text-slate-300">{{ entry.label }}</span>
+                <span class="font-bold" :class="entry.textColor">₴ {{ Math.round(entry.value).toLocaleString() }}</span>
               </div>
               <div class="w-full bg-slate-700 rounded-full h-2">
-                <div class="h-full bg-green-500 rounded-full" style="width: 65%"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-sm text-slate-300">Avoided Peak Charges</span>
-                <span class="font-bold text-blue-400">₴ 450</span>
-              </div>
-              <div class="w-full bg-slate-700 rounded-full h-2">
-                <div class="h-full bg-blue-500 rounded-full" style="width: 23%"></div>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-sm text-slate-300">Efficiency Gains</span>
-                <span class="font-bold text-purple-400">₴ 220</span>
-              </div>
-              <div class="w-full bg-slate-700 rounded-full h-2">
-                <div class="h-full bg-purple-500 rounded-full" style="width: 11%"></div>
+                <div class="h-full rounded-full" :class="entry.barColor" :style="{ width: `${entry.percent}%` }"></div>
               </div>
             </div>
 
             <div class="pt-4 mt-4 border-t border-slate-700">
               <div class="flex justify-between items-center">
                 <span class="font-bold text-white">Total Daily Savings</span>
-                <span class="text-2xl font-bold text-energy-400">₴ 1,920</span>
+                <span class="text-2xl font-bold text-energy-400">₴ {{ Math.round(totalDailySavings).toLocaleString() }}</span>
               </div>
             </div>
           </div>
@@ -705,6 +685,8 @@ const currentDate = computed(() => {
 })
 
 const liveStatus = computed(() => {
+  const trainingStatus = metricsStore.rawMetrics?.trainingStatus
+  if (trainingStatus === 'running') return 'RETRAINING IN PROGRESS'
   return new Date().getHours() >= 8 && new Date().getHours() < 20 ? 'TRADING HOURS' : 'OFF-PEAK'
 })
 
@@ -764,6 +746,97 @@ const weeklyPeakDay = computed(() => {
     return current.value > peak.value ? current : peak
   }, weeklySavingsSeries.value[0])
 })
+
+const savingsBreakdownRows = computed(() => {
+  const breakdown = metricsStore.rawMetrics?.savingsBreakdown || {}
+  const arbitrage = Number(breakdown.arbitrage || 0)
+  const peakAvoidance = Number(breakdown.peak_avoidance || 0)
+  const efficiency = Number(breakdown.efficiency || 0)
+
+  const fallbackTotal = parseCurrencyValue(metricsStore.savingsToday.value)
+  const fallbackArbitrage = fallbackTotal * 0.6
+  const fallbackPeakAvoidance = fallbackTotal * 0.25
+  const fallbackEfficiency = fallbackTotal * 0.15
+
+  const rows = [
+    {
+      key: 'arbitrage',
+      label: 'Arbitrage Profit',
+      value: arbitrage > 0 ? arbitrage : fallbackArbitrage,
+      barColor: 'bg-green-500',
+      textColor: 'text-green-400',
+    },
+    {
+      key: 'peak_avoidance',
+      label: 'Avoided Peak Charges',
+      value: peakAvoidance > 0 ? peakAvoidance : fallbackPeakAvoidance,
+      barColor: 'bg-blue-500',
+      textColor: 'text-blue-400',
+    },
+    {
+      key: 'efficiency',
+      label: 'Efficiency Gains',
+      value: efficiency > 0 ? efficiency : fallbackEfficiency,
+      barColor: 'bg-purple-500',
+      textColor: 'text-purple-400',
+    },
+  ]
+
+  const total = rows.reduce((sum, row) => sum + row.value, 0)
+  return rows.map((row) => ({
+    ...row,
+    percent: total > 0 ? Number(((row.value / total) * 100).toFixed(1)) : 0,
+  }))
+})
+
+const totalDailySavings = computed(() => {
+  return savingsBreakdownRows.value.reduce((sum, row) => sum + row.value, 0)
+})
+
+const projectTrajectory = computed(() => {
+  const prices = pricesStore.forecast.slice(0, 24)
+  if (prices.length === 0) {
+    return [batteryStore.soc]
+  }
+
+  const avgPrice = prices.reduce((sum, row) => sum + row.price, 0) / prices.length
+  const minSoc = batteryStore.minSOC
+  const maxSoc = 100
+  let soc = Number(batteryStore.soc)
+
+  const trajectory = [soc]
+  for (const row of prices) {
+    if (row.price <= avgPrice * 0.9) {
+      soc = Math.min(maxSoc, soc + 4)
+    } else if (row.price >= avgPrice * 1.1) {
+      soc = Math.max(minSoc, soc - 5)
+    } else {
+      soc = Math.max(minSoc, Math.min(maxSoc, soc - 0.5))
+    }
+    trajectory.push(Number(soc.toFixed(2)))
+  }
+
+  return trajectory
+})
+
+const mapSocToY = (socPercent: number) => {
+  const clamped = Math.max(0, Math.min(100, socPercent))
+  return 270 - ((clamped / 100) * 240)
+}
+
+const batteryTrajectoryPoints = computed(() => {
+  const series = projectTrajectory.value
+  const maxIndex = Math.max(1, series.length - 1)
+  return series
+    .map((soc, index) => {
+      const x = (index / maxIndex) * 1200
+      return `${x},${mapSocToY(soc)}`
+    })
+    .join(' ')
+})
+
+const batteryUpperBoundY = computed(() => mapSocToY(100))
+const batteryLowerBoundY = computed(() => mapSocToY(batteryStore.minSOC))
 
 // Chart points for price forecast
 const chartPoints = computed(() => {
@@ -857,19 +930,20 @@ const exportSavingsData = () => {
   const dateStr = now.toISOString().split('T')[0]
   const filename = `savings-breakdown-${dateStr}.csv`
   
-  // Savings data (from the displayed values)
-  const arbitrage = 1250
-  const peakAvoidance = 450
-  const efficiency = 220
-  const total = arbitrage + peakAvoidance + efficiency
+  const rows = savingsBreakdownRows.value
+  const arbitrage = rows.find((row) => row.key === 'arbitrage')?.value || 0
+  const peakAvoidance = rows.find((row) => row.key === 'peak_avoidance')?.value || 0
+  const efficiency = rows.find((row) => row.key === 'efficiency')?.value || 0
+  const total = rows.reduce((sum, row) => sum + row.value, 0)
   
   // Build CSV header
   let csv = 'Category,Amount(₴),Percentage\n'
   
   // Build CSV rows
-  csv += `Arbitrage Profit,${arbitrage},${((arbitrage / total) * 100).toFixed(1)}%\n`
-  csv += `Avoided Peak Charges,${peakAvoidance},${((peakAvoidance / total) * 100).toFixed(1)}%\n`
-  csv += `Efficiency Gains,${efficiency},${((efficiency / total) * 100).toFixed(1)}%\n`
+  const safeTotal = total > 0 ? total : 1
+  csv += `Arbitrage Profit,${arbitrage},${((arbitrage / safeTotal) * 100).toFixed(1)}%\n`
+  csv += `Avoided Peak Charges,${peakAvoidance},${((peakAvoidance / safeTotal) * 100).toFixed(1)}%\n`
+  csv += `Efficiency Gains,${efficiency},${((efficiency / safeTotal) * 100).toFixed(1)}%\n`
   csv += `Total Daily Savings,${total},100%\n`
   
   downloadCSV(csv, filename)

@@ -6,6 +6,7 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
+import { resolveTenantContext } from '../../utils/tenant-context'
 
 const execAsync = promisify(exec)
 
@@ -43,9 +44,11 @@ interface MLRecommendationResponse {
 
 export default defineEventHandler(async (event): Promise<MLRecommendationResponse> => {
   try {
+    const tenant = await resolveTenantContext(event)
     // Get the project root path (dashboard/../ = project root)
     const projectRoot = path.resolve(process.cwd(), '..')
     const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
+    const tenantConfigDir = path.join(projectRoot, 'energy_ml', 'configs', 'tenants', tenant.id)
     
     console.log(`[ML API] Project root: ${projectRoot}`)
     console.log(`[ML API] Python script: ${pythonScript}`)
@@ -56,7 +59,12 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
       `python "${pythonScript}" --action=get_recommendation --format=json --enhanced=true`,
       { 
         cwd: projectRoot,
-        timeout: 30000 // 30 second timeout
+        timeout: 30000, // 30 second timeout
+        env: {
+          ...process.env,
+          ENERGY_ML_CONFIG_DIR: tenantConfigDir,
+          ENERGY_ML_TENANT_ID: tenant.id,
+        },
       }
     )
     
@@ -110,6 +118,14 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
     
   } catch (error) {
     console.error('[ML API] Error:', error)
+
+    const errorData = (error as any)?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return {
+        success: false,
+        error: errorData.error.message,
+      }
+    }
     
     // Return error response
     return {

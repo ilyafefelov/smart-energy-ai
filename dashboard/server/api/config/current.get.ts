@@ -6,6 +6,14 @@ import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
+function normalizeLoadProfileType(value: unknown): 'standard' | 'multi-shift' | '24/7' | 'custom' {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (normalized === 'multi_shift' || normalized === 'multi-shift') return 'multi-shift'
+  if (normalized === '24_7' || normalized === '24/7') return '24/7'
+  if (normalized === 'custom') return 'custom'
+  return 'standard'
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const tenant = await resolveTenantContext(event)
@@ -55,7 +63,16 @@ export default defineEventHandler(async (event) => {
       dashboard_show_degradation_cost: true,
       dashboard_show_arbitrage_opportunities: true,
       dashboard_currency_symbol: '₴',
-      dashboard_language: 'en'
+      dashboard_language: 'en',
+
+      // Optimization and generation settings
+      optimization_strategy: 'balanced',
+      custom_optimization_weights: null,
+      solar_capacity_kw: 0,
+      wind_capacity_kw: 0,
+      latitude: 50.45,
+      longitude: 30.52,
+      timezone: 'Europe/Kiev'
     }
     
     let currentConfig = defaultConfig
@@ -68,6 +85,7 @@ export default defineEventHandler(async (event) => {
         
         // Merge saved config with defaults (in case new fields were added)
         currentConfig = { ...defaultConfig, ...savedConfig }
+        currentConfig.load_profile_type = normalizeLoadProfileType(currentConfig.load_profile_type)
       } catch (e) {
         console.warn('Could not parse saved config, using defaults:', e)
       }

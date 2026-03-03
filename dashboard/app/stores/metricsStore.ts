@@ -135,6 +135,7 @@ const TOOLTIPS: TooltipInfo = {
 export const useMetricsStore = defineStore('metrics', () => {
   const tenantContext = useTenantContext()
   const metrics = ref<DashboardMetrics>({ ...DEFAULT_METRICS })
+  const rawMetrics = ref<any>(null)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   const lastFetchTime = ref<Date | null>(null)
@@ -161,6 +162,7 @@ export const useMetricsStore = defineStore('metrics', () => {
 
       if (response.success && response.metrics) {
         const m = response.metrics
+        rawMetrics.value = m
 
         metrics.value = {
           savingsToday: {
@@ -258,12 +260,14 @@ export const useMetricsStore = defineStore('metrics', () => {
 
   const resetMetrics = () => {
     metrics.value = { ...DEFAULT_METRICS }
+    rawMetrics.value = null
     error.value = null
   }
 
   return {
     // State
     metrics,
+    rawMetrics,
     isLoading,
     error,
     lastFetchTime,

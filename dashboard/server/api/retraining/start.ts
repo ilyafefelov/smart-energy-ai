@@ -75,6 +75,7 @@ export default defineEventHandler(async (event) => {
     // Start Python training process in background
     // Only spawn if script exists, otherwise simulate
     if (executionMode === 'python') {
+      const tenantConfigDir = path.join(process.cwd(), '..', 'energy_ml', 'configs', 'tenants', tenant.id)
       const trainProcess = spawn('python', [
         pythonScript,
         '--job-id',
@@ -83,7 +84,13 @@ export default defineEventHandler(async (event) => {
         tenant.id,
         '--config',
         JSON.stringify(body),
-      ])
+      ], {
+        env: {
+          ...process.env,
+          ENERGY_ML_CONFIG_DIR: tenantConfigDir,
+          ENERGY_ML_TENANT_ID: tenant.id,
+        },
+      })
 
       trainProcess.stdout?.on('data', (data) => {
         console.log(`[${jobId}] ${data.toString()}`)

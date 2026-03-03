@@ -1,5 +1,9 @@
 // API endpoint to trigger Dagster asset materialization from dashboard
 
+import { existsSync, readFileSync } from 'fs'
+import { join, resolve } from 'path'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
+
 const AVAILABLE_ASSETS = [
   'market_data_asset',
   'weather_asset',
@@ -26,6 +30,7 @@ function normalizeAssetName(value: unknown): string {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
+    const tenant = await resolveTenantContext(event, { body })
     const requestedAsset = body?.asset || body?.asset_name
     const normalizedAsset = normalizeAssetName(requestedAsset)
     
@@ -48,8 +53,19 @@ export default defineEventHandler(async (event) => {
     const startTime = Date.now()
     
     // Get project root (parent of dashboard)
-    const path = await import('path')
-    const projectRoot = path.resolve(process.cwd(), '..')
+    const projectRoot = resolve(process.cwd(), '..')
+
+    const tenantConfigPath = join(projectRoot, 'energy_ml', 'configs', 'tenants', tenant.id, 'user_config.json')
+    const legacyConfigPath = join(projectRoot, 'energy_ml', 'configs', 'user_config.json')
+    const configPath = existsSync(tenantConfigPath) ? tenantConfigPath : legacyConfigPath
+    let config: any = {}
+    if (existsSync(configPath)) {
+      try {
+        config = JSON.parse(readFileSync(configPath, 'utf-8'))
+      } catch {
+        config = {}
+      }
+    }
     
     try {
       const output = execFileSync(
@@ -58,7 +74,15 @@ export default defineEventHandler(async (event) => {
         {
           encoding: 'utf-8',
           timeout: 180000,
-          cwd: projectRoot
+          cwd: projectRoot,
+          env: {
+            ...process.env,
+            ENERGY_ML_CONFIG_DIR: join(projectRoot, 'energy_ml', 'configs', 'tenants', tenant.id),
+            ENERGY_ML_TENANT_ID: tenant.id,
+            WEATHER_LATITUDE: String(config?.latitude ?? 50.45),
+            WEATHER_LONGITUDE: String(config?.longitude ?? 30.52),
+            WEATHER_TIMEZONE: String(config?.timezone ?? 'Europe/Kiev'),
+          },
         }
       )
       
@@ -66,6 +90,7 @@ export default defineEventHandler(async (event) => {
       
       return {
         success: true,
+        tenant: getTenantResponseMetadata(tenant),
         asset: normalizedAsset,
         requested_asset: requestedAsset,
         execution_time_ms: executionTime,
@@ -79,6 +104,7 @@ export default defineEventHandler(async (event) => {
 
       return {
         success: false,
+        tenant: getTenantResponseMetadata(tenant),
         asset: normalizedAsset,
         requested_asset: requestedAsset,
         error: errorText,
@@ -87,10 +113,15 @@ export default defineEventHandler(async (event) => {
       }
     }
   } catch (error) {
+    const errorData = (error as any)?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('[dagster/trigger] Error:', error)
     return {
       success: false,
-      error: error.message
+      error: (error as any).message
     }
   }
 })

@@ -5,6 +5,7 @@ Handles battery, load profile, and tariff settings persistence with complete ML 
 from pathlib import Path
 from typing import Dict, Optional, Literal, List
 import json
+import os
 from pydantic import BaseModel, ValidationError, Field
 
 
@@ -83,7 +84,8 @@ class ConfigurationManager:
             config_dir: Directory to store configs (defaults to energy_ml/configs/)
         """
         if config_dir is None:
-            config_dir = Path(__file__).resolve().parent / "configs"
+            env_config_dir = os.getenv('ENERGY_ML_CONFIG_DIR')
+            config_dir = Path(env_config_dir) if env_config_dir else Path(__file__).resolve().parent / "configs"
         
         self.config_dir = Path(config_dir)
         self.config_dir.mkdir(parents=True, exist_ok=True)
