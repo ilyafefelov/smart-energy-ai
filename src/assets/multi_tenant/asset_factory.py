@@ -8,13 +8,51 @@ Thesis Relevance: Demonstrates how Software-Defined Assets can be programmatical
 generated for multi-tenant SaaS architecture without code duplication.
 """
 
-from dagster import asset, AssetIn, DependencyDefinition
-from typing import Dict, List, Any, Optional
+from dagster import asset, AssetIn
+from typing import Dict, List, Any, Optional, Set, Tuple
 import yaml
 from pathlib import Path
 import logging
+import re
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_tenant_id(raw_tenant_id: str) -> str:
+    """Normalize tenant IDs into deterministic, storage-safe slugs."""
+    normalized = re.sub(r'[^a-zA-Z0-9]+', '_', str(raw_tenant_id).strip().lower())
+    normalized = re.sub(r'_+', '_', normalized).strip('_')
+    return normalized or 'unknown_tenant'
+
+
+def _build_tenant_descriptor(client_config: Dict[str, Any]) -> Dict[str, str]:
+    raw_id = str(client_config.get('id', 'unknown_tenant'))
+    normalized_id = _normalize_tenant_id(raw_id)
+    return {
+        'raw_id': raw_id,
+        'normalized_id': normalized_id,
+        'tenant_namespace': f"tenant/{normalized_id}",
+        'storage_namespace': f"tenants/{normalized_id}",
+        'asset_name': f"client_data_{normalized_id}",
+    }
+
+
+def _sanitize_shared_input(df):
+    """Drop tenant-identifying columns from shared inputs before tenant projection."""
+    import polars as pl
+
+    drop_candidates = [
+        'client_id',
+        'client_name',
+        'tenant_id',
+        'tenant_namespace',
+        'storage_namespace',
+    ]
+    present = [column for column in drop_candidates if column in df.columns]
+    if not present:
+        return df
+
+    return df.drop(present)
 
 
 def load_customer_configurations() -> List[Dict[str, Any]]:
@@ -41,12 +79,15 @@ def create_client_specific_asset(client_config: Dict[str, Any]):
     This function returns a Dagster asset that processes data specifically
     for one client based on their configuration.
     """
-    client_id = client_config['id']
+    tenant = _build_tenant_descriptor(client_config)
+    client_id = tenant['raw_id']
+    normalized_id = tenant['normalized_id']
     client_name = client_config['name']
     
     @asset(
-        name=f"client_data_{client_id}",
-        group_name="client_specific",
+        name=tenant['asset_name'],
+        key_prefix=["tenant", normalized_id],
+        group_name=f"client_specific_{normalized_id}",
         description=f"Client-specific data processing for {client_name}",
         ins={
             "market_data": AssetIn("market_data_asset"),
@@ -54,6 +95,9 @@ def create_client_specific_asset(client_config: Dict[str, Any]):
         },
         metadata={
             "client_id": client_id,
+            "normalized_tenant_id": normalized_id,
+            "tenant_namespace": tenant['tenant_namespace'],
+            "storage_namespace": tenant['storage_namespace'],
             "client_name": client_name,
             "battery_capacity": client_config['energy_system']['battery_capacity_kwh'],
             "solar_capacity": client_config['energy_system']['solar_capacity_kw']
@@ -68,8 +112,8 @@ def create_client_specific_asset(client_config: Dict[str, Any]):
         logger.info(f"Processing data for client: {client_id}")
         
         # Merge market and weather data
-        combined_df = market_data.join(
-            weather_data, 
+        combined_df = _sanitize_shared_input(market_data).join(
+            _sanitize_shared_input(weather_data),
             on="timestamp", 
             how="inner"
         )
@@ -77,6 +121,9 @@ def create_client_specific_asset(client_config: Dict[str, Any]):
         # Add client-specific features
         client_df = combined_df.with_columns([
             pl.lit(client_id).alias("client_id"),
+            pl.lit(normalized_id).alias("tenant_id"),
+            pl.lit(tenant['tenant_namespace']).alias("tenant_namespace"),
+            pl.lit(tenant['storage_namespace']).alias("storage_namespace"),
             pl.lit(client_name).alias("client_name"),
             
             # Battery system specifications
@@ -91,6 +138,14 @@ def create_client_specific_asset(client_config: Dict[str, Any]):
             # Processing timestamp
             pl.lit(datetime.now()).alias("processed_at")
         ])
+
+        # Tenant-isolation guard: any accidental non-matching tenant assignment is rejected.
+        if "client_id" in client_df.columns:
+            leakage_count = client_df.filter(pl.col("client_id") != client_id).height
+            if leakage_count > 0:
+                raise ValueError(
+                    f"Tenant isolation breach: found {leakage_count} rows outside tenant '{client_id}'"
+                )
         
         # Client-specific solar generation calculation
         solar_capacity = client_config['energy_system']['solar_capacity_kw']
@@ -171,12 +226,29 @@ def generate_client_assets() -> List:
     
     # Generate assets for each client
     client_assets = []
+    seen_normalized_ids: Set[str] = set()
     
     for config in client_configs:
         try:
+            tenant = _build_tenant_descriptor(config)
+            normalized_id = tenant['normalized_id']
+            if normalized_id in seen_normalized_ids:
+                logger.error(
+                    "Skipping duplicate tenant after normalization: raw_id=%s normalized_id=%s",
+                    config.get('id'),
+                    normalized_id,
+                )
+                continue
+
+            seen_normalized_ids.add(normalized_id)
             client_asset = create_client_specific_asset(config)
             client_assets.append(client_asset)
-            logger.info(f"Created asset for client: {config['id']}")
+            logger.info(
+                "Created isolated asset for client: raw_id=%s normalized_id=%s namespace=%s",
+                config.get('id'),
+                normalized_id,
+                tenant['tenant_namespace'],
+            )
         except Exception as e:
             logger.error(f"Failed to create asset for {config['id']}: {e}")
             continue

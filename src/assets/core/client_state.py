@@ -16,8 +16,15 @@ from typing import Dict, List, Optional, Any
 import numpy as np
 import yaml
 from pathlib import Path
+import re
 
 logger = logging.getLogger(__name__)
+
+
+def _normalize_tenant_id(raw_tenant_id: str) -> str:
+    normalized = re.sub(r'[^a-zA-Z0-9]+', '_', str(raw_tenant_id).strip().lower())
+    normalized = re.sub(r'_+', '_', normalized).strip('_')
+    return normalized or 'unknown_tenant'
 
 
 @asset(
@@ -121,6 +128,8 @@ def _normalize_client_config(raw_config: Dict[str, Any]) -> Optional[Dict[str, A
         logger.warning("Skipping customer config without 'id'")
         return None
 
+    normalized_tenant_id = _normalize_tenant_id(str(client_id))
+
     normalized: Dict[str, Any] = dict(raw_config)
     normalized["battery_type"] = energy_system.get("battery_type", raw_config.get("battery_type", "LFP_280Ah"))
     normalized["battery_capacity_kwh"] = float(
@@ -139,6 +148,9 @@ def _normalize_client_config(raw_config: Dict[str, Any]) -> Optional[Dict[str, A
         "load_profile",
         raw_config.get("load_profile", raw_config.get("type", "commercial")),
     )
+    normalized["tenant_id"] = normalized_tenant_id
+    normalized["tenant_namespace"] = f"tenant/{normalized_tenant_id}"
+    normalized["storage_namespace"] = f"tenants/{normalized_tenant_id}"
     return normalized
 
 
@@ -154,7 +166,10 @@ def _get_default_client_configs() -> List[Dict]:
             'solar_capacity_kw': 150.0,
             'peak_load_kw': 200.0,
             'base_load_kw': 50.0,
-            'load_profile': 'commercial'
+            'load_profile': 'commercial',
+            'tenant_id': 'client_001_kyiv_mall',
+            'tenant_namespace': 'tenant/client_001_kyiv_mall',
+            'storage_namespace': 'tenants/client_001_kyiv_mall',
         },
         {
             'id': 'client_002_lviv_office',
@@ -165,7 +180,10 @@ def _get_default_client_configs() -> List[Dict]:
             'solar_capacity_kw': 80.0,
             'peak_load_kw': 120.0,
             'base_load_kw': 30.0,
-            'load_profile': 'office'
+            'load_profile': 'office',
+            'tenant_id': 'client_002_lviv_office',
+            'tenant_namespace': 'tenant/client_002_lviv_office',
+            'storage_namespace': 'tenants/client_002_lviv_office',
         },
         {
             'id': 'client_003_dnipro_factory',
@@ -176,7 +194,10 @@ def _get_default_client_configs() -> List[Dict]:
             'solar_capacity_kw': 300.0,
             'peak_load_kw': 400.0,
             'base_load_kw': 150.0,
-            'load_profile': 'industrial'
+            'load_profile': 'industrial',
+            'tenant_id': 'client_003_dnipro_factory',
+            'tenant_namespace': 'tenant/client_003_dnipro_factory',
+            'storage_namespace': 'tenants/client_003_dnipro_factory',
         }
     ]
 
@@ -184,6 +205,9 @@ def _get_default_client_configs() -> List[Dict]:
 def _generate_client_state(config: Dict, weather_df: pl.DataFrame, market_df: pl.DataFrame) -> List[Dict]:
     """Generate synthetic state data for a specific client."""
     client_id = config.get('id', 'unknown_client')
+    tenant_id = config.get('tenant_id', _normalize_tenant_id(client_id))
+    tenant_namespace = config.get('tenant_namespace', f"tenant/{tenant_id}")
+    storage_namespace = config.get('storage_namespace', f"tenants/{tenant_id}")
     logger.info(f"Generating state data for client: {client_id}")
     
     # Get weather data for client location (simplified - use first available)
@@ -230,6 +254,9 @@ def _generate_client_state(config: Dict, weather_df: pl.DataFrame, market_df: pl
         record = {
             'timestamp': timestamp,
             'client_id': client_id,
+            'tenant_id': tenant_id,
+            'tenant_namespace': tenant_namespace,
+            'storage_namespace': storage_namespace,
             'battery_soc': current_soc,
             'battery_temp': battery_temp,
             'battery_voltage': _calculate_battery_voltage(current_soc, config.get('battery_type', 'LFP_280Ah')),
