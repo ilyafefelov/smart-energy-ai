@@ -1,29 +1,27 @@
 {
-  "general": {
-    "siteName": "Factory #1",
-    "timezone": "Europe/Kiev (GMT+2)",
-    "currency": "UAH",
-    "notificationsEnabled": true
-  },
   "battery": {
-    "capacity": 130,
     "minSOC": 15,
+    "maxDischargeRate": 50,
     "maxChargeRate": 50,
-    "maxDischargeRate": 50
-  },
-  "notifications": {
-    "highPrice": true,
-    "highPriceThreshold": 13,
-    "lowPrice": true,
-    "lowPriceThreshold": 7,
-    "modelComplete": true,
-    "systemAlerts": true
+    "capacity": 155
   },
   "model": {
-    "learningRate": 0.0003,
     "batchSize": 64,
-    "epochs": 21
+    "learningRate": 0.0003,
+    "epochs": 20
   },
-  "lastUpdated": "2026-02-07T06:48:48.303Z",
-  "version": "1.0"
+  "general": {
+    "currency": "UAH",
+    "timezone": "Europe/Kiev (GMT+2)",
+    "notificationsEnabled": true,
+    "siteName": "Smoke Import"
+  },
+  "notifications": {
+    "systemAlerts": true,
+    "highPriceThreshold": 13,
+    "lowPriceThreshold": 7,
+    "highPrice": true,
+    "modelComplete": true,
+    "lowPrice": true
+  }
 }

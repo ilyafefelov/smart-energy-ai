@@ -1,20 +1,20 @@
 {
   "battery_metrics": {
-    "cycles_remaining": 7690,
-    "health_percentage": 91.1,
-    "degradation_cost_today": 406.25
+    "cycles_remaining": 7553,
+    "health_percentage": 88.7,
+    "degradation_cost_today": 243.75
   },
   "cost_analytics": {
-    "daily_arbitrage_profit": 698.23,
-    "peak_avoidance_savings": 25.0,
-    "degradation_cost": 406.25,
-    "net_savings": 316.98
+    "daily_arbitrage_profit": 565.12,
+    "peak_avoidance_savings": 125.0,
+    "degradation_cost": 243.75,
+    "net_savings": 446.37
   },
   "ml_metrics": {
-    "model_accuracy": 0.854,
-    "confidence_score": 0.939,
-    "last_training": "2026-02-28T21:36:16.686762",
+    "model_accuracy": 0.864,
+    "confidence_score": 0.95,
+    "last_training": "2026-03-03T04:00:00.583177+00:00",
     "features_used": 0
   },
-  "cache_timestamp": "2026-02-28T21:36:16.686762"
+  "cache_timestamp": "2026-03-03T04:00:00.583177+00:00"
 }
