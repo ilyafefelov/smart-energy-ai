@@ -65,6 +65,6 @@
   "enable_physics_simulation": true,
   "battery_temperature_c": 25,
   "battery_aging_model": "combined",
-  "last_updated": "2026-03-03T03:58:45.487Z",
+  "last_updated": "2026-03-03T13:06:25.220Z",
   "version": "1.0"
 }

@@ -1,5 +1,5 @@
 {
-  "recalculation_timestamp": "2026-03-03T04:00:00.582063+00:00",
+  "recalculation_timestamp": "2026-03-03T13:07:16.328840+00:00",
   "config_used": {
     "battery_type": "LFP",
     "battery_capacity_kwh": 150,
@@ -67,14 +67,14 @@
     "enable_physics_simulation": true,
     "battery_temperature_c": 25,
     "battery_aging_model": "combined",
-    "last_updated": "2026-03-03T03:58:45.487Z",
+    "last_updated": "2026-03-03T13:06:25.220Z",
     "version": "1.0"
   },
   "model_performance": {
-    "xgboost_accuracy": 0.835,
-    "lightgbm_accuracy": 0.828,
-    "catboost_accuracy": 0.835,
-    "ensemble_accuracy": 0.864,
+    "xgboost_accuracy": 0.837,
+    "lightgbm_accuracy": 0.869,
+    "catboost_accuracy": 0.827,
+    "ensemble_accuracy": 0.858,
     "feature_importance_top": [
       "price_spread_24h",
       "battery_soc_trend",
@@ -84,14 +84,14 @@
     ]
   },
   "validation_metrics": {
-    "cross_validation_score": 0.864,
-    "backtest_sharpe_ratio": 1.66,
-    "historical_daily_profit_uah": 565.12,
-    "profit_volatility_uah": 169.54,
-    "success_rate_percent": 86.4,
-    "max_drawdown_days": 12,
+    "cross_validation_score": 0.858,
+    "backtest_sharpe_ratio": 1.63,
+    "historical_daily_profit_uah": 561.2,
+    "profit_volatility_uah": 168.36,
+    "success_rate_percent": 85.8,
+    "max_drawdown_days": 6,
     "backtest_period_days": 365
   },
-  "next_retrain_due": "2026-03-10T04:00:00.582063+00:00",
+  "next_retrain_due": "2026-03-10T13:07:16.328840+00:00",
   "recalculation_duration_seconds": 0
 }

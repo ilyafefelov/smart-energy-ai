@@ -1,27 +1,27 @@
 {
-  "battery": {
-    "minSOC": 15,
-    "maxDischargeRate": 50,
-    "maxChargeRate": 50,
-    "capacity": 155
+  "general": {
+    "notificationsEnabled": true,
+    "siteName": "Smoke Import",
+    "timezone": "Europe/Kiev (GMT+2)",
+    "currency": "UAH"
   },
   "model": {
+    "epochs": 20,
     "batchSize": 64,
-    "learningRate": 0.0003,
-    "epochs": 20
-  },
-  "general": {
-    "currency": "UAH",
-    "timezone": "Europe/Kiev (GMT+2)",
-    "notificationsEnabled": true,
-    "siteName": "Smoke Import"
+    "learningRate": 0.0003
   },
   "notifications": {
-    "systemAlerts": true,
-    "highPriceThreshold": 13,
-    "lowPriceThreshold": 7,
     "highPrice": true,
+    "highPriceThreshold": 13,
+    "systemAlerts": true,
+    "lowPrice": true,
     "modelComplete": true,
-    "lowPrice": true
+    "lowPriceThreshold": 7
+  },
+  "battery": {
+    "maxDischargeRate": 50,
+    "minSOC": 15,
+    "capacity": 155,
+    "maxChargeRate": 50
   }
 }

@@ -21,13 +21,13 @@ Write-Host "🔄 Starting Nuxt dev server..." -ForegroundColor Green
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Green
 Write-Host ""
 Write-Host "📊 Dashboard will be available at:" -ForegroundColor Cyan
-Write-Host "   → http://localhost:3000" -ForegroundColor White
+Write-Host "   → http://localhost:3600" -ForegroundColor White
 Write-Host ""
 Write-Host "📚 Pages:" -ForegroundColor Cyan
-Write-Host "   → http://localhost:3000/ (Dashboard)" -ForegroundColor White
-Write-Host "   → http://localhost:3000/analytics (Analytics)" -ForegroundColor White
-Write-Host "   → http://localhost:3000/control (Control)" -ForegroundColor White
-Write-Host "   → http://localhost:3000/settings (Settings)" -ForegroundColor White
+Write-Host "   → http://localhost:3600/ (Dashboard)" -ForegroundColor White
+Write-Host "   → http://localhost:3600/analytics (Analytics)" -ForegroundColor White
+Write-Host "   → http://localhost:3600/control (Control)" -ForegroundColor White
+Write-Host "   → http://localhost:3600/settings (Settings)" -ForegroundColor White
 Write-Host ""
 Write-Host "📈 Real Data Sources:" -ForegroundColor Cyan
 Write-Host "   → OREE Feb 2026 prices (5₴ - 15₴/kWh)" -ForegroundColor White

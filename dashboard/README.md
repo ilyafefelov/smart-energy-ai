@@ -41,7 +41,7 @@ npm install
 
 # 3. Start development server
 npm run dev
-# http://localhost:3000
+# http://localhost:3600
 
 # 4. Build for production
 npm run build
@@ -70,7 +70,7 @@ dashboard/
 
 ## API Endpoints
 
-All endpoints available at `http://localhost:3000/api/`
+All endpoints available at `http://localhost:3600/api/`
 
 ### GET /api/prices
 Real-time OREE electricity prices
@@ -141,7 +141,7 @@ Create `.env.local`:
 
 ```env
 NUXT_PUBLIC_SITE_NAME=Smart Energy Dashboard
-NUXT_PUBLIC_API_BASE=http://localhost:3000
+NUXT_PUBLIC_API_BASE=http://localhost:3600
 ```
 
 ## Technologies
