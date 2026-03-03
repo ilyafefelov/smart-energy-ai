@@ -2,11 +2,10 @@
   <div class="bg-slate-800 border border-slate-700 rounded-lg p-6">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold text-white">📊 24-Hour Forecast</h3>
-      <span class="text-xs text-slate-400">Next 24 hours</span>
+      <span class="text-xs text-slate-400">Live next 24 hours</span>
     </div>
 
-    <!-- Simple forecast display -->
-    <div class="space-y-2">
+    <div v-if="forecastRows.length > 0" class="space-y-2">
       <div class="grid grid-cols-4 gap-2 text-xs text-slate-400 border-b border-slate-700 pb-2">
         <span>Time</span>
         <span>Action</span>
@@ -15,7 +14,7 @@
       </div>
       
       <div class="space-y-1 max-h-40 overflow-y-auto">
-        <div v-for="hour in sampleForecast" :key="hour.time" class="grid grid-cols-4 gap-2 text-sm py-1">
+        <div v-for="hour in forecastRows" :key="hour.key" class="grid grid-cols-4 gap-2 text-sm py-1">
           <span class="text-slate-300">{{ hour.time }}:00</span>
           <span 
             class="text-xs px-2 py-1 rounded"
@@ -31,6 +30,10 @@
           <span class="text-slate-400">{{ hour.status }}</span>
         </div>
       </div>
+    </div>
+
+    <div v-else class="py-8 text-center text-sm text-slate-400">
+      Waiting for live price forecast...
     </div>
 
     <!-- Summary -->
@@ -53,21 +56,52 @@
   </div>
 </template>
 
-<script setup>
-// Sample forecast data - in real app this would come from API
-const sampleForecast = ref([
-  { time: 0, action: 'HOLD', price: 0.82, status: 'Off-peak' },
-  { time: 1, action: 'HOLD', price: 0.82, status: 'Off-peak' },
-  { time: 2, action: 'HOLD', price: 0.82, status: 'Off-peak' },
-  { time: 6, action: 'HOLD', price: 0.85, status: 'Peak' },
-  { time: 7, action: 'HOLD', price: 0.85, status: 'Peak' },
-  { time: 8, action: 'HOLD', price: 0.85, status: 'Peak' },
-  { time: 12, action: 'HOLD', price: 0.85, status: 'Peak' },
-  { time: 18, action: 'HOLD', price: 0.85, status: 'Peak' },
-  { time: 23, action: 'HOLD', price: 0.82, status: 'Off-peak' },
-])
+<script setup lang="ts">
+import { usePricesStore } from '~/stores/pricesStore'
 
-const buyHours = computed(() => sampleForecast.value.filter(h => h.action === 'BUY').length)
-const sellHours = computed(() => sampleForecast.value.filter(h => h.action === 'SELL').length)
-const holdHours = computed(() => sampleForecast.value.filter(h => h.action === 'HOLD').length)
+interface ForecastRow {
+  key: string
+  time: number
+  action: 'BUY' | 'SELL' | 'HOLD'
+  price: number
+  status: 'Peak' | 'Off-Peak' | 'Normal'
+}
+
+const pricesStore = usePricesStore()
+
+const forecastRows = computed<ForecastRow[]>(() => {
+  const source = pricesStore.forecast.slice(0, 24)
+  const avg = pricesStore.todayAvg
+  const nowHour = new Date().getHours()
+
+  if (source.length === 0) {
+    return []
+  }
+
+  return source.map((point, idx) => {
+    const price = Number(point.price || 0)
+    let action: ForecastRow['action'] = 'HOLD'
+    let status: ForecastRow['status'] = 'Normal'
+
+    if (avg > 0 && price < avg * 0.85) {
+      action = 'BUY'
+      status = 'Off-Peak'
+    } else if (avg > 0 && price > avg * 1.15) {
+      action = 'SELL'
+      status = 'Peak'
+    }
+
+    return {
+      key: `${idx}-${point.timestamp instanceof Date ? point.timestamp.getTime() : nowHour + idx}`,
+      time: (nowHour + idx) % 24,
+      action,
+      price,
+      status,
+    }
+  })
+})
+
+const buyHours = computed(() => forecastRows.value.filter((h) => h.action === 'BUY').length)
+const sellHours = computed(() => forecastRows.value.filter((h) => h.action === 'SELL').length)
+const holdHours = computed(() => forecastRows.value.filter((h) => h.action === 'HOLD').length)
 </script>
