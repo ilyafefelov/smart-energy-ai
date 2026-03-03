@@ -5,51 +5,69 @@ export default defineEventHandler(async (event) => {
   // STANDARDIZED RESPONSE: { success, metrics: { ... } }
 
   try {
-    // Simulate dashboard metrics
-    // In production, these would come from the database/analytics engine
+    const [baseMetrics, pricePayload, batteryPayload, mlPayload] = await Promise.all([
+      $fetch<any>('/api/metrics').catch(() => null),
+      $fetch<any>('/api/prices/current').catch(() => null),
+      $fetch<any>('/api/battery/status').catch(() => null),
+      $fetch<any>('/api/ml/recommendation').catch(() => null),
+    ])
 
     const now = new Date()
-    const hour = now.getHours()
 
-    // Simulate savings
-    const baseSavings = 125.50 + Math.random() * 50
-    const monthlySavings = baseSavings * 28 + (Math.random() - 0.5) * 200
+    const dailySavingsFromML = Number(mlPayload?.data?.savings_estimate?.daily_uah || 0)
+    const monthlySavingsFromML = Number(mlPayload?.data?.savings_estimate?.monthly_uah || 0)
 
-    // Simulate forecast accuracy (typically 85-95%)
-    const forecastAccuracy = 88 + Math.random() * 5
+    const dailySavingsFallback = Number(baseMetrics?.savings?.daily_avg || 0)
+    const monthlySavingsFallback = Number(baseMetrics?.forecast?.monthly || 0)
 
-    // Battery health (gradually decreasing)
-    const batteryHealth = 95 - (Math.random() * 2)
+    const savingsToday = dailySavingsFromML > 0 ? dailySavingsFromML : dailySavingsFallback
+    const savingsMonth = monthlySavingsFromML > 0 ? monthlySavingsFromML : monthlySavingsFallback
 
-    // Peak and off-peak times (8-20 is peak in Ukraine)
-    const avgPrice = 9.85
-    const peakPrice = avgPrice * 1.4
-    const offPeakPrice = avgPrice * 0.8
+    const confidence = Number(mlPayload?.data?.confidence || 0)
+    const forecastAccuracy = confidence > 0 ? confidence * 100 : 85
+
+    const batteryHealth = Number(batteryPayload?.battery?.health || 95)
+
+    const avgPrice = Number(pricePayload?.prices?.today?.avg || 0)
+    const peakPrice = Number(pricePayload?.prices?.forecast?.peak || 0)
+    const offPeakPrice = Number(pricePayload?.prices?.forecast?.offPeak || 0)
+
+    const lastTrainedAt = new Date(Date.now() - 24 * 3600000).toISOString()
+
+    const trendValue = dailySavingsFallback > 0
+      ? ((savingsToday - dailySavingsFallback) / dailySavingsFallback) * 100
+      : 0
+    const savingsTrend = trendValue > 2 ? 'up' : trendValue < -2 ? 'down' : 'stable'
+
+    const nextCycleHours = Math.max(1, Math.round(Number(batteryPayload?.battery?.availableToCharge || 20) / 10))
+    const nextCycleIn = `${nextCycleHours}h 0m`
+
+    const modelVersion = mlPayload?.data?.model_info?.version || 'Phase4F-v1.0'
 
     return {
       success: true,
       metrics: {
-        savingsToday: Math.round(baseSavings * 100) / 100,
-        savingsTrend: Math.random() > 0.5 ? 'up' : 'stable',
-        savingsTrendValue: Math.random() * 15,
-        savingsMonth: Math.round(monthlySavings * 100) / 100,
-        forecastAccuracy: Math.round(forecastAccuracy * 100) / 100,
-        batteryHealth: Math.round(batteryHealth * 10) / 10,
-        nextCycleIn: `${Math.floor(Math.random() * 4) + 1}h ${Math.floor(Math.random() * 60)}m`,
-        averagePrice: Math.round(avgPrice * 100) / 100,
-        peakPrice: Math.round(peakPrice * 100) / 100,
-        offPeakPrice: Math.round(offPeakPrice * 100) / 100,
-        modelVersion: 'PPO v2.1',
+        savingsToday: Number(savingsToday.toFixed(2)),
+        savingsTrend,
+        savingsTrendValue: Number(trendValue.toFixed(2)),
+        savingsMonth: Number(savingsMonth.toFixed(2)),
+        forecastAccuracy: Number(forecastAccuracy.toFixed(2)),
+        batteryHealth: Number(batteryHealth.toFixed(1)),
+        nextCycleIn,
+        averagePrice: Number(avgPrice.toFixed(2)),
+        peakPrice: Number(peakPrice.toFixed(2)),
+        offPeakPrice: Number(offPeakPrice.toFixed(2)),
+        modelVersion,
         trainingStatus: 'active',
-        lastTrainedAt: new Date(Date.now() - 24 * 3600000).toISOString()
-      }
+        lastTrainedAt,
+      },
     }
   } catch (error: any) {
     console.error('Failed to fetch metrics:', error)
     return {
       success: false,
       error: error.message || 'Failed to fetch metrics',
-      metrics: null
+      metrics: null,
     }
   }
 })

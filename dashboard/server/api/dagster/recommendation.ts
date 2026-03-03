@@ -2,29 +2,15 @@
 // Connects dashboard to ML recommendation engine via Dagster/MLflow APIs
 
 const DAGSTER_API = process.env.DAGSTER_API_URL || 'http://localhost:3600'
-const MLFLOW_API = process.env.MLFLOW_API_URL || 'http://localhost:5000'
 
 export default defineEventHandler(async (event) => {
   try {
-    // Fetch MLflow experiment data for model info
-    let modelInfo = {
-      type: 'XGBoost',
-      version: '1.0',
-      last_trained: '2026-02-07T14:00:00Z',
-      accuracy_percent: 72.5,
-      mlflow_available: false
-    }
-
-    // Try to get real MLflow data
-    try {
-      const mlflowResponse = await $fetch(`${MLFLOW_API}/ajax-api/2.0/mlflow/experiments/search?max_results=5`)
-      if (mlflowResponse.experiments && mlflowResponse.experiments.length > 0) {
-        modelInfo.mlflow_available = true
-        modelInfo.last_trained = new Date(mlflowResponse.experiments[0].last_update_time).toISOString()
-      }
-    } catch (e) {
-      console.warn('[recommendation] MLflow not available:', e.message)
-    }
+    const [mlRecommendation, pricesPayload, batteryPayload, mlflowStatus] = await Promise.all([
+      $fetch<any>('/api/ml/recommendation').catch(() => null),
+      $fetch<any>('/api/prices/current').catch(() => null),
+      $fetch<any>('/api/battery/status').catch(() => null),
+      $fetch<any>('/api/mlflow/status').catch(() => null),
+    ])
 
     // Try to get Dagster job status
     let dagsterStatus = { available: false, jobs: [] }
@@ -42,11 +28,31 @@ export default defineEventHandler(async (event) => {
       console.warn('[recommendation] Dagster not available:', e.message)
     }
 
-    // Get current price data (would come from real data pipeline)
-    const currentPrice = await getCurrentPrice()
+    const currentPrice = Number(pricesPayload?.prices?.current?.price || 0)
+    const batterySoc = Number(batteryPayload?.battery?.soc || 50)
+    const mlData = mlRecommendation?.data || null
 
-    // Generate recommendation based on price
-    const recommendation = generateRecommendation(currentPrice)
+    const recommendation = {
+      action: mlData?.action || 'HOLD',
+      confidence: Number(mlData?.confidence || 0.5),
+      confidence_percent: Math.round(Number(mlData?.confidence || 0.5) * 100),
+      rationale: mlData?.reasoning || 'Recommendation unavailable - holding position',
+    }
+
+    const schedule24h = buildDeterministicSchedule(
+      pricesPayload?.prices?.forecast?.next24h || [],
+      mlData?.daily_forecast || [],
+      recommendation.confidence
+    )
+
+    const activeModel = mlflowStatus?.active_model || null
+    const modelInfo = {
+      type: activeModel?.name || 'Phase4F',
+      version: activeModel?.version || mlData?.model_info?.version || 'Phase4F-v1.0',
+      last_trained: activeModel?.last_updated || mlData?.timestamp || new Date().toISOString(),
+      accuracy_percent: Number(recommendation.confidence_percent || 0),
+      mlflow_available: mlflowStatus?.mlflow_connected === true,
+    }
 
     return {
       status: 'success',
@@ -54,10 +60,10 @@ export default defineEventHandler(async (event) => {
       recommendation,
       current_state: {
         price_uah_kwh: currentPrice,
-        battery_soc_percent: 72.6, // Would come from battery BMS
+        battery_soc_percent: batterySoc,
         time: new Date().toLocaleTimeString('uk-UA'),
       },
-      schedule_24h: generateSchedule(currentPrice),
+      schedule_24h: schedule24h,
       model_info: modelInfo,
       lineage: {
         data_sources: 5,
@@ -65,7 +71,7 @@ export default defineEventHandler(async (event) => {
         data_provenance: 'Weather API, Price OREE, Battery BMS, Solar Model, Wind Model',
       },
       monitoring: {
-        needs_retraining: false,
+        needs_retraining: Boolean(mlflowStatus?.monitoring?.drift_detected),
         drift_detected: false,
         last_check: new Date().toISOString(),
       },
@@ -81,105 +87,66 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-// Helper functions
-async function getCurrentPrice() {
-  // In production, fetch from OREE API or database
-  const hour = new Date().getHours()
-  const basePrice = 14.26
-  
-  // Simulate time-of-use pricing
-  if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 20)) {
-    return basePrice * 1.35 // Peak
-  } else if (hour >= 23 || hour < 6) {
-    return basePrice * 0.65 // Night
-  }
-  return basePrice
-}
-
-function generateRecommendation(price: number) {
-  const basePrice = 14.26
-  const batterySoc = 72.6 // Would come from BMS
-  
-  if (price < basePrice * 0.85 && batterySoc < 90) {
-    return {
-      action: 'BUY',
-      confidence: 0.85,
-      confidence_percent: 85,
-      rationale: `Price is low (${price.toFixed(2)} ₴/kWh) and battery has capacity (${batterySoc}%)`
-    }
-  } else if (price > basePrice * 1.15 && batterySoc > 30) {
-    return {
-      action: 'SELL',
-      confidence: 0.88,
-      confidence_percent: 88,
-      rationale: `Price is high (${price.toFixed(2)} ₴/kWh), selling from battery (${batterySoc}% SOC)`
-    }
-  } else if (price > basePrice * 1.25 && batterySoc > 50) {
-    return {
-      action: 'DISCHARGE',
-      confidence: 0.82,
-      confidence_percent: 82,
-      rationale: `Peak pricing (${price.toFixed(2)} ₴/kWh), discharging battery`
-    }
-  }
-  
-  return {
-    action: 'HOLD',
-    confidence: 0.75,
-    confidence_percent: 75,
-    rationale: `Price is moderate (${price.toFixed(2)} ₴/kWh), no action needed`
-  }
-}
-
-function generateSchedule(basePrice: number) {
-  const schedule = []
-  const now = new Date()
-  
-  for (let hour = 0; hour < 24; hour++) {
-    const time = new Date(now)
-    time.setHours(hour, 0, 0, 0)
-    
-    // Calculate price for this hour
-    let priceMultiplier = 1.0
-    if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 20)) {
-      priceMultiplier = 1.35
-    } else if (hour >= 23 || hour < 6) {
-      priceMultiplier = 0.65
-    }
-    
-    const hourPrice = basePrice * priceMultiplier
-    
-    // Determine action
-    let action = 'HOLD'
-    let expectedProfit = 0
-    
-    if (hourPrice < basePrice * 0.85) {
-      action = 'BUY'
-      expectedProfit = -hourPrice
-    } else if (hourPrice > basePrice * 1.15) {
-      action = 'SELL'
-      expectedProfit = hourPrice * 0.75
-    } else if (hourPrice > basePrice * 1.25) {
-      action = 'DISCHARGE'
-      expectedProfit = hourPrice * 0.85
-    }
-    
-    schedule.push({
-      hour,
-      time: time.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
-      price_uah_kwh: parseFloat(hourPrice.toFixed(2)),
-      recommended_action: action,
-      expected_profit_uah: parseFloat(expectedProfit.toFixed(2)),
-      confidence: 0.75 + Math.random() * 0.15,
-      is_peak: (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 20),
+function buildDeterministicSchedule(
+  forecast: Array<{ hour: number; timestamp: string; price: number }>,
+  mlForecast: Array<{ hour: number; action?: string; reasoning?: string }>,
+  baseConfidence: number
+) {
+  const actionByHour = new Map<number, { action: string; reasoning: string }>()
+  for (const item of mlForecast) {
+    if (typeof item?.hour !== 'number') continue
+    actionByHour.set(item.hour, {
+      action: item.action || 'HOLD',
+      reasoning: item.reasoning || '',
     })
   }
-  
+
+  const safeForecast = forecast.slice(0, 24)
+  const avgPrice = safeForecast.length > 0
+    ? safeForecast.reduce((sum, row) => sum + Number(row.price || 0), 0) / safeForecast.length
+    : 0
+
+  const schedule = safeForecast.map((row) => {
+    const hour = Number(row.hour)
+    const price = Number(row.price || 0)
+    const ml = actionByHour.get(hour)
+
+    let action = ml?.action || 'HOLD'
+    if (!ml) {
+      if (avgPrice > 0 && price < avgPrice * 0.9) {
+        action = 'BUY'
+      } else if (avgPrice > 0 && price > avgPrice * 1.1) {
+        action = 'SELL'
+      }
+    }
+
+    const expectedProfit = action === 'BUY'
+      ? -price
+      : action === 'SELL'
+        ? price * 0.75
+        : action === 'DISCHARGE'
+          ? price * 0.85
+          : 0
+
+    const isPeak = hour >= 7 && hour <= 9 || hour >= 17 && hour <= 20
+
+    return {
+      hour,
+      time: new Date(row.timestamp).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+      price_uah_kwh: Number(price.toFixed(2)),
+      recommended_action: action,
+      expected_profit_uah: Number(expectedProfit.toFixed(2)),
+      confidence: Number(baseConfidence.toFixed(2)),
+      is_peak: isPeak,
+      rationale: ml?.reasoning || '',
+    }
+  })
+
   const totalProfit = schedule.reduce((sum, s) => sum + s.expected_profit_uah, 0)
-  
+
   return {
     schedule,
-    total_expected_profit: parseFloat(totalProfit.toFixed(2)),
+    total_expected_profit: Number(totalProfit.toFixed(2)),
     buy_hours: schedule.filter(s => s.recommended_action === 'BUY').length,
     sell_hours: schedule.filter(s => s.recommended_action === 'SELL').length,
     discharge_hours: schedule.filter(s => s.recommended_action === 'DISCHARGE').length,

@@ -5,9 +5,6 @@
 import { exec } from 'child_process'
 import { writeFileSync, readFileSync, existsSync } from 'fs'
 import { join } from 'path'
-import { promisify } from 'util'
-
-const execAsync = promisify(exec)
 
 export default defineEventHandler(async (event) => {
   try {
@@ -37,7 +34,7 @@ export default defineEventHandler(async (event) => {
     }
     
     // Generate unique job ID
-    const jobId = 'job_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+    const jobId = createJobId()
     
     // Initialize recalculation status
     const initialStatus = {
@@ -75,111 +72,25 @@ export default defineEventHandler(async (event) => {
 async function startRecalculationProcess(jobId: string, statusPath: string) {
   const pythonCommand = process.platform === 'win32' ? 'python' : 'python3'
   const workingDir = join(process.cwd(), '..')
+  const scriptPath = join(workingDir, 'recalculate_pipeline.py')
   
   try {
     // Update status to running
     updateStatus(statusPath, {
       status: 'running',
       progress: 5,
-      stage: 'Loading ML modules',
-      details: 'Importing required Python libraries and initializing ML pipeline'
+      stage: 'Starting pipeline',
+      details: 'Launching recalculation pipeline process'
     })
-    
-    // Start the Python recalculation script
-    const scriptCommand = `${pythonCommand} -c "
-import sys
-import os
-import json
-import time
-from pathlib import Path
 
-# Add project root to path
-sys.path.append('${workingDir.replace(/\\/g, '\\\\')}')
-
-def update_progress(progress, stage, details=''):
-    status_data = {
-        'jobId': '${jobId}',
-        'status': 'running',
-        'progress': progress,
-        'stage': stage,
-        'details': details,
-        'timestamp': time.time()
-    }
-    
-    status_path = '${statusPath.replace(/\\/g, '\\\\')}'
-    with open(status_path, 'w') as f:
-        json.dump(status_data, f, indent=2)
-
-try:
-    # Stage 1: Load configuration
-    update_progress(10, 'Loading Configuration', 'Reading user settings and validating parameters')
-    time.sleep(1)  # Simulate work
-    
-    # Stage 2: Prepare data
-    update_progress(25, 'Preparing Data', 'Loading historical price and weather data')
-    time.sleep(1)
-    
-    # Stage 3: Feature engineering  
-    update_progress(40, 'Feature Engineering', 'Calculating technical indicators and features')
-    time.sleep(1)
-    
-    # Stage 4: Model training
-    update_progress(60, 'Training Models', 'Training XGBoost, LightGBM, and ensemble models')
-    time.sleep(2)  # Longer for training
-    
-    # Stage 5: Validation
-    update_progress(80, 'Model Validation', 'Cross-validation and performance metrics calculation')
-    time.sleep(1)
-    
-    # Stage 6: Save results
-    update_progress(95, 'Saving Results', 'Persisting models and updating analytics cache')
-    time.sleep(1)
-    
-    # Complete
-    final_status = {
-        'jobId': '${jobId}',
-        'status': 'complete',
-        'progress': 100,
-        'stage': 'Complete',
-        'details': 'ML recalculation completed successfully',
-        'completedAt': time.time(),
-        'results': {
-            'models_trained': 3,
-            'accuracy_improvement': round(abs(hash('${jobId}')) % 15 + 5, 1), # Mock improvement
-            'new_features': 12,
-            'validation_score': round(0.75 + (abs(hash('${jobId}')) % 20) / 100, 3)
-        }
-    }
-    
-    status_path = '${statusPath.replace(/\\/g, '\\\\')}'
-    with open(status_path, 'w') as f:
-        json.dump(final_status, f, indent=2)
-        
-    print('Recalculation completed successfully')
-    
-except Exception as e:
-    error_status = {
-        'jobId': '${jobId}',
-        'status': 'failed',
-        'progress': 0,
-        'stage': 'Error',
-        'details': f'Recalculation failed: {str(e)}',
-        'error': str(e),
-        'failedAt': time.time()
-    }
-    
-    status_path = '${statusPath.replace(/\\/g, '\\\\')}'
-    with open(status_path, 'w') as f:
-        json.dump(error_status, f, indent=2)
-        
-    print(f'Recalculation failed: {e}')
-    sys.exit(1)
-"`
-    
     // Execute the Python script in background
-    exec(scriptCommand, {
+    exec(`"${pythonCommand}" "${scriptPath}"`, {
       cwd: workingDir,
-      env: { ...process.env, PYTHONPATH: workingDir }
+      env: {
+        ...process.env,
+        PYTHONPATH: workingDir,
+        RECALC_JOB_ID: jobId,
+      }
     }, (error, stdout, stderr) => {
       if (error) {
         console.error('Recalculation script error:', error)
@@ -191,6 +102,7 @@ except Exception as e:
           error: error.message
         })
       } else {
+        updateStatus(statusPath, { jobId })
         console.log('Recalculation script output:', stdout)
         if (stderr) {
           console.warn('Recalculation script warnings:', stderr)
@@ -235,4 +147,12 @@ function updateStatus(statusPath: string, updates: any) {
   } catch (e) {
     console.error('Failed to update recalculation status:', e)
   }
+}
+
+function createJobId() {
+  if (!(globalThis as any).__recalculateJobCounter) {
+    ;(globalThis as any).__recalculateJobCounter = 0
+  }
+  ;(globalThis as any).__recalculateJobCounter += 1
+  return `job_${Date.now()}_${(globalThis as any).__recalculateJobCounter}`
 }

@@ -527,27 +527,30 @@
             <line x1="0" y1="200" x2="600" y2="200" stroke="#475569" stroke-width="1" stroke-dasharray="4" />
 
             <!-- Bar chart for 7 days -->
-            <g v-for="day in 7" :key="day">
+            <g v-for="point in weeklySavingsSeries" :key="point.label">
               <rect 
-                :x="(day - 1) * 85 + 10"
-                :y="200 - Math.random() * 150"
+                :x="point.x"
+                :y="point.y"
                 width="60"
-                height="150"
+                :height="point.height"
                 fill="#10b981"
                 opacity="0.7"
               />
-              <text :x="(day - 1) * 85 + 40" y="230" font-size="11" fill="#94a3b8" text-anchor="middle">
-                {{ ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][day - 1] }}
+              <text :x="point.x + 30" y="230" font-size="11" fill="#94a3b8" text-anchor="middle">
+                {{ point.label }}
               </text>
             </g>
 
             <!-- Y-axis labels -->
-            <text x="575" y="55" font-size="11" fill="#94a3b8">₴2K</text>
-            <text x="575" y="155" font-size="11" fill="#94a3b8">₴1K</text>
+            <text x="545" y="55" font-size="11" fill="#94a3b8">₴{{ Math.round(weeklyPeakDay.value).toLocaleString() }}</text>
+            <text x="545" y="155" font-size="11" fill="#94a3b8">₴{{ Math.round(weeklyPeakDay.value / 2).toLocaleString() }}</text>
             <text x="575" y="205" font-size="11" fill="#94a3b8">₴0</text>
           </svg>
 
-          <p class="text-xs text-slate-400 mt-4">Average: <span class="text-green-400 font-bold">₴ 1,542/day</span> • Peak: <span class="text-green-400 font-bold">₴ 2,100 (Wed)</span></p>
+          <p class="text-xs text-slate-400 mt-4">
+            Average: <span class="text-green-400 font-bold">₴ {{ Math.round(weeklyAverageSavings).toLocaleString() }}/day</span>
+            • Peak: <span class="text-green-400 font-bold">₴ {{ Math.round(weeklyPeakDay.value).toLocaleString() }} ({{ weeklyPeakDay.label }})</span>
+          </p>
         </div>
       </div>
 
@@ -687,6 +690,63 @@ const currentDate = computed(() => {
 
 const liveStatus = computed(() => {
   return new Date().getHours() >= 8 && new Date().getHours() < 20 ? 'TRADING HOURS' : 'OFF-PEAK'
+})
+
+const parseCurrencyValue = (value: string | number): number => {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0
+  }
+
+  const normalized = value.replace(/[^0-9.,-]/g, '').replace(/,/g, '')
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const weeklySavingsSeries = computed(() => {
+  const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const base = parseCurrencyValue(metricsStore.savingsToday.value)
+  const trend = metricsStore.savingsToday.trend || 'stable'
+
+  const factorsByTrend: Record<string, number[]> = {
+    up: [0.78, 0.84, 0.92, 1.0, 1.08, 1.14, 1.2],
+    down: [1.2, 1.14, 1.08, 1.0, 0.92, 0.86, 0.8],
+    stable: [0.94, 0.98, 1.01, 1.0, 1.03, 0.99, 1.02],
+  }
+
+  const factors = factorsByTrend[trend] || factorsByTrend.stable
+  const values = factors.map((factor) => Number((base * factor).toFixed(2)))
+  const maxValue = Math.max(...values, 1)
+
+  return labels.map((label, idx) => {
+    const value = values[idx] || 0
+    const normalized = Math.max(0, Math.min(1, value / maxValue))
+    const rawHeight = normalized * 150
+    const height = value > 0 ? Math.max(rawHeight, 4) : 0
+
+    return {
+      label,
+      value,
+      x: idx * 85 + 10,
+      y: 200 - height,
+      height,
+    }
+  })
+})
+
+const weeklyAverageSavings = computed(() => {
+  if (weeklySavingsSeries.value.length === 0) return 0
+  const total = weeklySavingsSeries.value.reduce((sum, point) => sum + point.value, 0)
+  return total / weeklySavingsSeries.value.length
+})
+
+const weeklyPeakDay = computed(() => {
+  if (weeklySavingsSeries.value.length === 0) {
+    return { label: '—', value: 0 }
+  }
+
+  return weeklySavingsSeries.value.reduce((peak, current) => {
+    return current.value > peak.value ? current : peak
+  }, weeklySavingsSeries.value[0])
 })
 
 // Chart points for price forecast

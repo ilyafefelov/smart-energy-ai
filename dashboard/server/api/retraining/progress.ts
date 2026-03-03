@@ -34,6 +34,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       status: progressData.status,
       progress: progressData.progress,
+      execution_mode: progressData.execution_mode || 'python',
       message: progressData.message
     }
 
@@ -48,12 +49,9 @@ export default defineEventHandler(async (event) => {
         const metrics = JSON.parse(fs.readFileSync(metricsFile, 'utf-8'))
         response.metrics = metrics
       } else {
-        // Simulate metrics improvement if file doesn't exist
-        response.metrics = {
-          previousAccuracy: 85.2,
-          newAccuracy: 92.8,
-          improvementPercent: 8.9
-        }
+        response.metrics = null
+        response.metrics_available = false
+        response.metrics_message = 'Training metrics artifact not found for this job'
       }
     }
 

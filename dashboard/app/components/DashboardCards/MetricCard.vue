@@ -52,6 +52,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import InfoTooltip from '~/components/Tooltips/InfoTooltip.vue'
 
 interface Props {
   label: string

@@ -165,6 +165,7 @@ The project uses **bd** (beads) for issue tracking. All issues are stored in `.b
 - **API Documentation**: `docs/API_DOCUMENTATION_IMPORT_EXPORT.md`
 - **ML Pipeline**: `ML_PIPELINE_PLAN.md`
 - **Testing Guide**: `TEST_PIPELINE_GUIDE.md`
+- **Nuxt MCP Guide**: `https://nuxt.com/docs/4.x/guide/ai/mcp`
 - **Archived Legacy Reports**: `docs/archive/root-cleanup-20260302/`
 
 <!-- BEGIN BEADS INTEGRATION -->

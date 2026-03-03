@@ -21,35 +21,40 @@ export default defineEventHandler(async (event) => {
         console.warn('Python controller not available:', pythonError.message)
       }
     }
-    
-    // Fallback to mock data for development/demo
-    const mockStatus = {
-      soc: Math.round(30 + Math.random() * 60), // 30-90%
-      power_kw: Math.round((Math.random() - 0.5) * 10 * 100) / 100, // -5 to +5kW
-      mode: Math.random() > 0.7 ? 'manual' : 'automatic',
-      active_command: Math.random() > 0.6 ? ['charge', 'discharge', 'hold'][Math.floor(Math.random() * 3)] : null,
-      command_reason: null,
-      battery_capacity_kwh: 10.0,
-      max_power_kw: 5.0,
-      last_update: new Date().toISOString(),
-      estimated_completion: null,
-      scheduled_commands_count: Math.floor(Math.random() * 3)
-    }
-    
-    // Add command reason if there's an active command
-    if (mockStatus.active_command) {
-      const reasons = {
-        'charge': 'Low electricity prices detected',
-        'discharge': 'Peak price arbitrage opportunity', 
-        'hold': 'Marginal price conditions'
-      }
-      mockStatus.command_reason = reasons[mockStatus.active_command]
-    }
-    
+
+    // Deterministic fallback from persisted battery state and command memory.
+    const [batteryStatus] = await Promise.all([
+      $fetch<any>('/api/battery/status').catch(() => null),
+    ])
+
+    const battery = batteryStatus?.battery || {}
+    const schedules = (globalThis.scheduledCommands || [])
+    const now = Date.now()
+    const pendingSchedules = schedules.filter((cmd: any) => {
+      return cmd?.status === 'pending' && new Date(cmd?.scheduled_time).getTime() > now
+    })
+
+    const history = globalThis.commandHistory || []
+    const lastCommand = history[0] || null
+    const lastCommandTs = lastCommand ? new Date(lastCommand.executed_at || lastCommand.timestamp).getTime() : 0
+    const isRecentCommand = lastCommandTs > 0 && now - lastCommandTs <= 6 * 60 * 60 * 1000
+
+    const activeCommand = isRecentCommand ? (lastCommand.command || null) : null
+    const mode = activeCommand ? 'manual' : 'automatic'
+
     return {
       success: true,
-      ...mockStatus,
-      source: 'mock_data'
+      soc: Number(battery.soc ?? 50),
+      power_kw: Number(battery.power ?? 0),
+      mode,
+      active_command: activeCommand,
+      command_reason: isRecentCommand ? (lastCommand.reason || null) : null,
+      battery_capacity_kwh: Number(battery.capacity ?? 150),
+      max_power_kw: 5.0,
+      last_update: battery.lastUpdated || new Date().toISOString(),
+      estimated_completion: isRecentCommand ? (lastCommand.result?.estimated_completion || null) : null,
+      scheduled_commands_count: pendingSchedules.length,
+      source: 'battery_status_fallback'
     }
     
   } catch (error) {

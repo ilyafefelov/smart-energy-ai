@@ -114,5 +114,9 @@ export default defineEventHandler(async (event) => {
 })
 
 function generateScheduleId() {
-  return 'sched_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6)
+  if (!(globalThis as any).__scheduleIdCounter) {
+    ;(globalThis as any).__scheduleIdCounter = 0
+  }
+  ;(globalThis as any).__scheduleIdCounter += 1
+  return `sched_${Date.now()}_${(globalThis as any).__scheduleIdCounter}`
 }

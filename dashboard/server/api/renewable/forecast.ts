@@ -38,6 +38,11 @@ export default defineEventHandler(async (event) => {
       // Get current time and weather conditions
       const now = new Date()
       const currentHour = now.getHours()
+
+      const deterministicNoise = (seed: number) => {
+        const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453
+        return value - Math.floor(value)
+      }
       
       // Generate realistic weather and generation data for Ukraine
       const generateWeatherForecast = (hours: number) => {
@@ -47,20 +52,24 @@ export default defineEventHandler(async (event) => {
           const timestamp = new Date(now.getTime() + h * 3600000)
           const hour = timestamp.getHours()
           const dayOfYear = Math.floor((timestamp.getTime() - new Date(timestamp.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24))
+          const seedBase = dayOfYear * 100 + hour + h * 0.37
           
           // Seasonal temperature variation (Kiev climate)
           const seasonalTemp = 10 + 15 * Math.sin(2 * Math.PI * (dayOfYear - 90) / 365)
           const dailyTempVariation = 8 * Math.sin(2 * Math.PI * hour / 24)
-          const temperature = seasonalTemp + dailyTempVariation + (Math.random() - 0.5) * 6
+          const tempNoise = (deterministicNoise(seedBase) - 0.5) * 6
+          const temperature = seasonalTemp + dailyTempVariation + tempNoise
           
           // Solar irradiance calculation
           let ghi = 0
           let solarGeneration = 0
+          let cloudFactor = 0.65
           
           if (hour >= 6 && hour <= 18) { // Daylight hours
             const sunAngle = Math.sin(Math.PI * (hour - 6) / 12)
             const seasonalFactor = 0.7 + 0.3 * Math.sin(2 * Math.PI * (dayOfYear - 80) / 365)
-            const cloudFactor = 0.4 + 0.6 * (1 - Math.pow(Math.random(), 2)) // More clear than cloudy
+            const cloudNoise = deterministicNoise(seedBase + 11)
+            cloudFactor = 0.4 + 0.6 * (1 - Math.pow(cloudNoise, 2))
             
             ghi = 1000 * sunAngle * seasonalFactor * cloudFactor
             
@@ -73,8 +82,10 @@ export default defineEventHandler(async (event) => {
           }
           
           // Wind generation calculation
-          const baseWindSpeed = 4 + 8 * Math.pow(Math.random(), 0.7) // 4-12 m/s typical
-          const windSpeed = Math.max(0, baseWindSpeed + (Math.random() - 0.5) * 2)
+          const windNoiseBase = deterministicNoise(seedBase + 23)
+          const windNoiseOffset = deterministicNoise(seedBase + 29)
+          const baseWindSpeed = 4 + 8 * Math.pow(windNoiseBase, 0.7) // 4-12 m/s typical
+          const windSpeed = Math.max(0, baseWindSpeed + (windNoiseOffset - 0.5) * 2)
           
           let windGeneration = 0
           if (windCapacityKw > 0 && windSpeed >= 3) { // Cut-in speed

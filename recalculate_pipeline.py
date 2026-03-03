@@ -5,22 +5,28 @@ Triggered by dashboard configuration changes to recalculate ML models and analyt
 """
 
 import sys
+import os
 import json
 import time
 import traceback
 import random
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
 # Project root
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_DIR = PROJECT_ROOT / "energy_ml" / "configs"
 STATUS_FILE = CONFIG_DIR / "recalculation_status.json"
+RECALC_JOB_ID = os.getenv("RECALC_JOB_ID", "").strip()
 
 def update_status(status, progress=0, stage="", details="", **kwargs):
     """Update recalculation status file."""
@@ -28,13 +34,16 @@ def update_status(status, progress=0, stage="", details="", **kwargs):
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         
         status_data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": utc_now_iso(),
             "status": status,
             "progress": progress,
             "stage": stage,
             "details": details,
             **kwargs
         }
+
+        if RECALC_JOB_ID:
+            status_data["jobId"] = RECALC_JOB_ID
         
         with open(STATUS_FILE, 'w') as f:
             json.dump(status_data, f, indent=2)
@@ -194,11 +203,11 @@ def save_results_and_cache(config, model_results, validation_results):
     
     # Save comprehensive results
     results = {
-        "recalculation_timestamp": datetime.utcnow().isoformat(),
+        "recalculation_timestamp": utc_now_iso(),
         "config_used": config,
         "model_performance": model_results,
         "validation_metrics": validation_results,
-        "next_retrain_due": (datetime.utcnow() + timedelta(days=config.get('ml_retrain_frequency_days', 7))).isoformat(),
+        "next_retrain_due": (datetime.now(timezone.utc) + timedelta(days=config.get('ml_retrain_frequency_days', 7))).isoformat(),
         "recalculation_duration_seconds": 0  # Will be updated
     }
     
@@ -230,10 +239,10 @@ def save_results_and_cache(config, model_results, validation_results):
         "ml_metrics": {
             "model_accuracy": model_results['ensemble_accuracy'],
             "confidence_score": round(model_results['ensemble_accuracy'] * 1.1, 3),
-            "last_training": datetime.utcnow().isoformat(),
+            "last_training": utc_now_iso(),
             "features_used": sum([v for k, v in model_results.items() if 'features' in k and isinstance(v, int)], 0)
         },
-        "cache_timestamp": datetime.utcnow().isoformat()
+        "cache_timestamp": utc_now_iso()
     }
     
     cache_file = results_dir / "analytics_cache.json"
@@ -288,7 +297,7 @@ def main():
                 "results_file_size_kb": round(results_size / 1024, 1),
                 "cache_file_size_kb": round(cache_size / 1024, 1)
             },
-            "completion_timestamp": datetime.utcnow().isoformat()
+            "completion_timestamp": utc_now_iso()
         }
         
         update_status(**completion_data)
@@ -307,7 +316,7 @@ def main():
             "Error",
             error_msg,
             error_details=traceback.format_exc(),
-            failed_timestamp=datetime.utcnow().isoformat()
+            failed_timestamp=utc_now_iso()
         )
         
         return 1

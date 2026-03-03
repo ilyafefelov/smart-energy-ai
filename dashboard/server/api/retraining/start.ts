@@ -9,6 +9,7 @@ interface RetrainingJob {
   status: 'running' | 'completed' | 'failed'
   progress: number
   startTime: number
+  executionMode: 'python' | 'simulation_fallback'
   endTime?: number
   error?: string
 }
@@ -23,7 +24,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
 
     // Generate unique job ID
-    const jobId = `job-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const jobId = createJobId()
 
     // Create progress file path
     const progressDir = path.join(process.cwd(), 'data', 'retraining')
@@ -33,12 +34,18 @@ export default defineEventHandler(async (event) => {
 
     const progressFile = path.join(progressDir, `${jobId}.json`)
 
+    const pythonScript = path.join(process.cwd(), '..', 'scripts', 'train_model.py')
+    const executionMode: 'python' | 'simulation_fallback' = fs.existsSync(pythonScript)
+      ? 'python'
+      : 'simulation_fallback'
+
     // Initialize progress file
     const initialProgress = {
       jobId,
       status: 'running',
       progress: 0,
       startTime: Date.now(),
+      execution_mode: executionMode,
       message: 'Starting model retraining...'
     }
 
@@ -49,14 +56,13 @@ export default defineEventHandler(async (event) => {
       id: jobId,
       status: 'running',
       progress: 0,
-      startTime: Date.now()
+      startTime: Date.now(),
+      executionMode,
     })
 
     // Start Python training process in background
-    const pythonScript = path.join(process.cwd(), '..', 'scripts', 'train_model.py')
-
     // Only spawn if script exists, otherwise simulate
-    if (fs.existsSync(pythonScript)) {
+    if (executionMode === 'python') {
       const trainProcess = spawn('python', [pythonScript, '--job-id', jobId, '--config', JSON.stringify(body)])
 
       trainProcess.stdout?.on('data', (data) => {
@@ -84,6 +90,7 @@ export default defineEventHandler(async (event) => {
           progress: code === 0 ? 100 : activeJobs.get(jobId)?.progress || 0,
           startTime: activeJobs.get(jobId)?.startTime,
           endTime: Date.now(),
+          execution_mode: 'python',
           error: code === 0 ? null : `Process exited with code ${code}`,
           message: code === 0 ? 'Training completed successfully!' : `Training failed: ${code}`
         }
@@ -92,12 +99,13 @@ export default defineEventHandler(async (event) => {
     } else {
       // Simulate training with gradual progress
       console.log(`[${jobId}] Python script not found, simulating training...`)
-      simulateTraining(jobId, progressFile)
+      simulateTraining(jobId, progressFile, executionMode)
     }
 
     return {
       success: true,
       jobId,
+      execution_mode: executionMode,
       estimatedTime: 600, // 10 minutes
       message: 'Retraining started successfully'
     }
@@ -111,7 +119,11 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-function simulateTraining(jobId: string, progressFile: string) {
+function simulateTraining(
+  jobId: string,
+  progressFile: string,
+  executionMode: 'python' | 'simulation_fallback'
+) {
   let progress = 0
   const steps = [5, 15, 25, 40, 55, 70, 85, 95, 100]
   let stepIndex = 0
@@ -126,6 +138,7 @@ function simulateTraining(jobId: string, progressFile: string) {
         status: progress === 100 ? 'completed' : 'running',
         progress,
         startTime: activeJobs.get(jobId)?.startTime,
+        execution_mode: executionMode,
         message: getProgressMessage(progress)
       }
 
@@ -151,4 +164,12 @@ function getProgressMessage(progress: number): string {
   if (progress < 85) return 'Optimizing parameters...'
   if (progress < 100) return 'Finalizing...'
   return 'Training completed!'
+}
+
+function createJobId() {
+  if (!(globalThis as any).__retrainingJobCounter) {
+    ;(globalThis as any).__retrainingJobCounter = 0
+  }
+  ;(globalThis as any).__retrainingJobCounter += 1
+  return `job-${Date.now()}-${(globalThis as any).__retrainingJobCounter}`
 }

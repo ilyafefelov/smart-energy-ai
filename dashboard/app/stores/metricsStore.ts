@@ -24,52 +24,52 @@ export interface DashboardMetrics {
 const DEFAULT_METRICS: DashboardMetrics = {
   savingsToday: {
     label: 'Daily Savings',
-    value: '₴ 125.50',
+    value: '—',
     unit: 'UAH',
-    trend: 'up',
-    trendValue: 12.5,
+    trend: 'stable',
+    trendValue: 0,
     color: 'green'
   },
   savingsThisMonth: {
     label: 'Monthly Savings',
-    value: '₴ 3,450',
+    value: '—',
     unit: 'UAH',
     color: 'green'
   },
   forecastAccuracy: {
     label: 'Forecast Accuracy',
-    value: '92.3%',
+    value: '—',
     unit: '%',
     trend: 'stable',
     color: 'blue'
   },
   batteryHealth: {
     label: 'Battery SOC',
-    value: '75%',
+    value: '—',
     unit: '%',
     trend: 'stable',
     color: 'yellow'
   },
   nextCycleIn: {
     label: 'Next Cycle In',
-    value: '3h 45m',
+    value: '—',
     color: 'purple'
   },
   averagePrice: {
     label: 'Today\'s Avg Price',
-    value: '9.85',
+    value: '—',
     unit: '₴/kWh',
     color: 'slate'
   },
   peakPrice: {
     label: 'Peak Price',
-    value: '14.50',
+    value: '—',
     unit: '₴/kWh',
     color: 'red'
   },
   offPeakPrice: {
     label: 'Off-Peak Price',
-    value: '6.20',
+    value: '—',
     unit: '₴/kWh',
     color: 'green'
   }

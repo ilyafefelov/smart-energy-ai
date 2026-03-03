@@ -10,8 +10,11 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
+import { existsSync } from 'fs'
+import { eventHandler, readBody } from 'h3'
 
 const execAsync = promisify(exec)
+const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === 'win32' ? 'python' : 'python3')
 
 interface OptimizationStrategyRequest {
   strategy: "max_earn" | "max_battery_health" | "max_charge" | "balanced"
@@ -41,7 +44,37 @@ interface OptimizationStrategyResponse {
   error?: string
 }
 
-export default defineEventHandler(async (event): Promise<OptimizationStrategyResponse> => {
+function resolveProjectRoot(): string {
+  const cwd = process.cwd()
+  if (existsSync(path.join(cwd, 'ml_integration_api.py'))) {
+    return cwd
+  }
+  return path.resolve(cwd, '..')
+}
+
+function parseJsonFromPythonStdout(stdout: string): any {
+  const trimmed = stdout.trim()
+  if (!trimmed) {
+    throw new Error('Empty response from Python process')
+  }
+
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    const lines = trimmed.split(/\r?\n/).reverse()
+    for (const line of lines) {
+      try {
+        return JSON.parse(line)
+      } catch {
+        continue
+      }
+    }
+  }
+
+  throw new Error('Unable to parse Python JSON response')
+}
+
+export default eventHandler(async (event): Promise<OptimizationStrategyResponse> => {
   try {
     const body = await readBody(event) as OptimizationStrategyRequest
     
@@ -49,14 +82,16 @@ export default defineEventHandler(async (event): Promise<OptimizationStrategyRes
       throw new Error('Strategy is required')
     }
     
-    // Get the project root path
-    const projectRoot = path.resolve(process.cwd(), '..')
+    const projectRoot = resolveProjectRoot()
     const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
+    if (!existsSync(pythonScript)) {
+      throw new Error(`Python script not found at ${pythonScript}`)
+    }
     
     console.log(`[Optimization API] Setting strategy: ${body.strategy}`)
     
     // Prepare command arguments
-    let command = `python "${pythonScript}" --action=set_optimization_strategy --strategy=${body.strategy}`
+    let command = `${pythonCommand} "${pythonScript}" --action=set_optimization_strategy --strategy=${body.strategy} --format=json`
     
     // Add custom weights if provided
     if (body.custom_weights) {
@@ -67,7 +102,8 @@ export default defineEventHandler(async (event): Promise<OptimizationStrategyRes
     // Call the Python ML pipeline
     const { stdout, stderr } = await execAsync(command, {
       cwd: projectRoot,
-      timeout: 15000 // 15 second timeout
+      timeout: 15000, // 15 second timeout
+      maxBuffer: 1024 * 1024,
     })
     
     if (stderr) {
@@ -77,7 +113,7 @@ export default defineEventHandler(async (event): Promise<OptimizationStrategyRes
     console.log(`[Optimization API] Python stdout: ${stdout}`)
     
     // Parse the JSON response from Python
-    const mlResponse = JSON.parse(stdout.trim())
+    const mlResponse = parseJsonFromPythonStdout(stdout)
     
     if (!mlResponse.success) {
       throw new Error(mlResponse.error || 'Failed to set optimization strategy')

@@ -26,14 +26,8 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    // Fallback to in-memory schedules
-    let schedules = globalThis.scheduledCommands || []
-    
-    if (schedules.length === 0) {
-      // Generate some mock scheduled commands for demo
-      schedules = generateMockSchedules()
-      globalThis.scheduledCommands = schedules
-    }
+    // Deterministic fallback to in-memory schedules.
+    const schedules = Array.isArray(globalThis.scheduledCommands) ? globalThis.scheduledCommands : []
     
     // Filter to only pending and future schedules
     const now = new Date()
@@ -68,48 +62,3 @@ export default defineEventHandler(async (event) => {
     }
   }
 })
-
-function generateMockSchedules() {
-  const commands = ['charge', 'discharge', 'hold']
-  const reasons = [
-    'Scheduled during off-peak hours',
-    'Peak demand response',
-    'Battery maintenance cycle',
-    'Cost optimization schedule',
-    'Grid balancing service'
-  ]
-  
-  const schedules = []
-  const now = new Date()
-  
-  // Create 3-5 mock scheduled commands
-  const count = Math.floor(Math.random() * 3) + 3
-  
-  for (let i = 0; i < count; i++) {
-    // Schedule between 1 hour and 2 days from now
-    const hoursAhead = Math.floor(Math.random() * 47) + 1
-    const scheduledTime = new Date(now.getTime() + hoursAhead * 60 * 60 * 1000)
-    
-    const command = commands[Math.floor(Math.random() * commands.length)]
-    
-    let power_kw = 0
-    if (command === 'charge') {
-      power_kw = Math.round((Math.random() * 3 + 1) * 10) / 10 // 1-4kW
-    } else if (command === 'discharge') {
-      power_kw = Math.round((Math.random() * 3 + 1) * 10) / 10 // 1-4kW (stored as positive)
-    }
-    
-    schedules.push({
-      id: `sched_mock_${i}_${Date.now()}`,
-      command: command,
-      power_kw: power_kw,
-      scheduled_time: scheduledTime.toISOString(),
-      reason: reasons[Math.floor(Math.random() * reasons.length)],
-      user_id: Math.random() > 0.5 ? 'dashboard' : 'system',
-      created_at: new Date(now.getTime() - Math.random() * 60 * 60 * 1000).toISOString(), // Created up to 1 hour ago
-      status: 'pending'
-    })
-  }
-  
-  return schedules
-}
