@@ -10,6 +10,47 @@ import { resolveTenantContext } from '../../utils/tenant-context'
 
 const execAsync = promisify(exec)
 
+interface PriceForecastPoint {
+  hour: number
+  price: number
+}
+
+interface PricesCurrentResponse {
+  success?: boolean
+  prices?: {
+    forecast?: {
+      next24h?: PriceForecastPoint[]
+    }
+  }
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function buildHourlyPriceMap(pricesPayload: PricesCurrentResponse | null | undefined): Map<number, number> {
+  const map = new Map<number, number>()
+  const rows = pricesPayload?.prices?.forecast?.next24h
+  if (!Array.isArray(rows)) {
+    return map
+  }
+
+  for (const row of rows) {
+    const hour = toFiniteNumber((row as any)?.hour)
+    const price = toFiniteNumber((row as any)?.price)
+    if (hour == null || price == null) {
+      continue
+    }
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+      continue
+    }
+    map.set(hour, price)
+  }
+
+  return map
+}
+
 // Types for API response
 interface MLRecommendationResponse {
   success: boolean
@@ -81,6 +122,18 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
       throw new Error(mlResponse.error || 'ML pipeline failed')
     }
     
+    let pricesPayload: PricesCurrentResponse | null = null
+    try {
+      pricesPayload = await $fetch<PricesCurrentResponse>('/api/prices/current')
+    } catch (pricesError) {
+      console.warn('[ML API] Failed to load /api/prices/current for hourly forecast price mapping:', pricesError)
+    }
+
+    const hourlyPriceMap = buildHourlyPriceMap(pricesPayload)
+    const dailySavings = toFiniteNumber(mlResponse.daily_savings_estimate) ?? 0
+    const monthlySavings = toFiniteNumber(mlResponse.monthly_savings_estimate) ?? (dailySavings * 30)
+    const annualSavings = toFiniteNumber(mlResponse.annual_savings_estimate) ?? (dailySavings * 365)
+
     // Transform the response to match our interface
     const response: MLRecommendationResponse = {
       success: true,
@@ -88,16 +141,29 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
         action: mlResponse.action,
         confidence: mlResponse.confidence,
         reasoning: mlResponse.reasoning,
-        daily_forecast: mlResponse.hourly_forecast?.map((item: any) => ({
-          hour: item.hour,
-          action: item.action,
-          price_uah_mwh: item.savings_estimate * 1000, // Convert kWh to MWh
-          reasoning: item.reasoning
-        })) || [],
+        daily_forecast: mlResponse.hourly_forecast?.map((item: any) => {
+          const itemHour = toFiniteNumber(item?.hour)
+          const hour = itemHour != null ? Math.max(0, Math.min(23, Math.floor(itemHour))) : 0
+
+          const explicitPriceMwh = toFiniteNumber(item?.price_uah_mwh)
+          const explicitPriceKwh = toFiniteNumber(item?.price_uah_kwh)
+          const mappedPriceKwh = hourlyPriceMap.get(hour)
+
+          const priceUahMwh = explicitPriceMwh
+            ?? (explicitPriceKwh != null ? explicitPriceKwh * 1000 : null)
+            ?? (mappedPriceKwh != null ? mappedPriceKwh * 1000 : 0)
+
+          return {
+            hour,
+            action: item.action,
+            price_uah_mwh: Number(priceUahMwh.toFixed(2)),
+            reasoning: item.reasoning
+          }
+        }) || [],
         savings_estimate: {
-          daily_uah: mlResponse.estimated_savings * 24, // Estimate daily from hourly
-          monthly_uah: mlResponse.estimated_savings * 24 * 30,
-          annual_uah: mlResponse.estimated_savings * 24 * 365
+          daily_uah: Number(dailySavings.toFixed(2)),
+          monthly_uah: Number(monthlySavings.toFixed(2)),
+          annual_uah: Number(annualSavings.toFixed(2))
         },
         battery_impact: {
           current_soc: mlResponse.battery_impact?.current_soc || 50,

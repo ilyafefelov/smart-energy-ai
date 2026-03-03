@@ -204,7 +204,7 @@ $null = Invoke-Api -Method 'GET' -Path '/api/optimization/strategy'
 $null = Invoke-Api -Method 'GET' -Path '/api/physics/battery'
 $null = Invoke-Api -Method 'GET' -Path '/api/prices/current'
 $null = Invoke-Api -Method 'GET' -Path '/api/renewable/forecast?type=forecast&forecast_hours=24&solar_capacity=5&wind_capacity=2'
-$null = Invoke-Api -Method 'GET' -Path '/api/retraining/progress?jobId=missing-job'
+$null = Invoke-Api -Method 'GET' -Path '/api/retraining/progress?jobId=missing-job' -Note 'expected-negative'
 $null = Invoke-Api -Method 'GET' -Path '/api/settings/export'
 $null = Invoke-Api -Method 'GET' -Path '/api/settings/load'
 
@@ -352,12 +352,16 @@ if (-not (Test-Path $reportDir)) {
 $reportPath = Join-Path $reportDir 'api_smoke_test_report.json'
 $results | ConvertTo-Json -Depth 6 | Set-Content -Path $reportPath -Encoding UTF8
 
+$appSuccessFalse = @($results | Where-Object { $_.app_success -eq $false -and $_.note -ne 'expected-negative' }).Count
+$appSuccessExpectedFalse = @($results | Where-Object { $_.app_success -eq $false -and $_.note -eq 'expected-negative' }).Count
+
 $summary = [pscustomobject]@{
   total = $results.Count
   http_ok = @($results | Where-Object { $_.http_ok }).Count
   http_fail = @($results | Where-Object { -not $_.http_ok }).Count
   app_success_true = @($results | Where-Object { $_.app_success -eq $true }).Count
-  app_success_false = @($results | Where-Object { $_.app_success -eq $false }).Count
+  app_success_false = $appSuccessFalse
+  app_success_expected_false = $appSuccessExpectedFalse
   report = $reportPath
 }
 

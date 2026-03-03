@@ -70,6 +70,7 @@ export default eventHandler(async (event) => {
 
     let strategySyncError: string | null = null
     let pythonError: string | null = null
+    let pythonStderr: string | null = null
     let fallbackReason: FallbackReason | null = null
 
     try {
@@ -96,7 +97,7 @@ export default eventHandler(async (event) => {
             cwd: projectRoot,
           })
 
-          pythonError = stderr || null
+          pythonStderr = stderr ? String(stderr).trim() : null
 
           let recommendation: any = null
           try {
@@ -121,7 +122,8 @@ export default eventHandler(async (event) => {
                 fallback_used: false,
                 fallback_reason: null,
                 strategy_sync_error: strategySyncError,
-                python_error: pythonError,
+                python_error: null,
+                python_stderr: pythonStderr,
                 input_context: {
                   battery_soc: batterySoc,
                   price,

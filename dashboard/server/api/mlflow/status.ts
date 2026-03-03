@@ -75,9 +75,28 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     console.error('[mlflow-status] Error:', error.message)
     return {
-      status: 'error',
+      success: true,
+      status: 'degraded',
+      timestamp: new Date().toISOString(),
       error: error.message,
-      mlflow_connected: false
+      mlflow_connected: false,
+      mlflow_available: false,
+      active_model: {
+        name: 'MLflow offline (local fallback mode)',
+        version: 'n/a',
+        stage: 'Unavailable',
+      },
+      experiments: [],
+      runs: [],
+      monitoring: {
+        last_evaluation: new Date().toISOString(),
+        drift_detected: false,
+        recommendations: [
+          'MLflow server is currently unavailable',
+          'Local runtime continues without experiment tracking',
+          `Set MLFLOW_API_URL to a reachable server (current: ${MLFLOW_URI})`,
+        ],
+      },
     }
   }
 })
