@@ -18,6 +18,15 @@ checkpoints/
 *.pt
 .tmp_dagster_home_*/
 
+# Generated dashboard/runtime artifacts
+dashboard/data/retraining/job-*.json
+dashboard/data/api_smoke_test_report.json
+dashboard/data/dashboard_render_snapshot.json
+dashboard/data/backups/
+
+# Generated model artifacts from retraining runs
+models/model_job-*.pkl
+
 # Dolt database files (added by bd init)
 .dolt/
 *.db
