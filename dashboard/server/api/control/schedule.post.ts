@@ -2,6 +2,7 @@
 // POST /api/control/schedule
 
 import { createError, defineEventHandler, readBody } from 'h3'
+import { recordBillingUsageEvent } from '../../utils/billing'
 import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
@@ -76,6 +77,7 @@ export default defineEventHandler(async (event: any) => {
         const pythonResult = JSON.parse(result)
         
         await persistScheduledIntent(schedule, 'python_controller')
+        recordBillingForScheduledIntent(schedule, 'python_controller')
 
         return {
           success: true,
@@ -105,6 +107,7 @@ export default defineEventHandler(async (event: any) => {
     )
     
     await persistScheduledIntent(schedule, 'memory_storage')
+    recordBillingForScheduledIntent(schedule, 'memory_storage')
 
     return {
       success: true,
@@ -220,6 +223,35 @@ async function persistScheduledIntent(schedule: any, source: 'python_controller'
       command_id: schedule.command_id,
       execution_key: executionKey,
       error: result.error || 'unknown',
+    })
+  }
+}
+
+function recordBillingForScheduledIntent(
+  schedule: any,
+  source: 'python_controller' | 'memory_storage',
+): void {
+  try {
+    recordBillingUsageEvent({
+      tenantId: String(schedule.tenant_id || ''),
+      feature: 'scheduled_control',
+      quantity: 1,
+      unit: 'command',
+      occurredAt: String(schedule.created_at || new Date().toISOString()),
+      metadata: {
+        schedule_id: schedule.id,
+        command_id: schedule.command_id,
+        command: schedule.command,
+        source,
+        power_kw: Number(schedule.power_kw || 0),
+        scheduled_time: schedule.scheduled_time,
+      },
+    })
+  } catch (error) {
+    console.warn('[control/schedule] failed to record billing usage event', {
+      schedule_id: schedule?.id,
+      tenant_id: schedule?.tenant_id,
+      error: (error as any)?.message || 'unknown',
     })
   }
 }

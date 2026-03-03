@@ -2,6 +2,7 @@
 // POST /api/control/execute
 
 import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
+import { recordBillingUsageEvent } from '../../utils/billing'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
@@ -79,6 +80,8 @@ export default defineEventHandler(async (event) => {
           executionSource: 'python_controller',
           batterySocBeforeRaw: batteryStatusBefore?.battery?.soc,
         })
+
+        recordBillingForExecutedCommand(command, pythonResult, 'python_controller')
         
         console.log('Python controller result:', pythonResult)
         
@@ -164,6 +167,8 @@ export default defineEventHandler(async (event) => {
       executionSource: 'simulation',
       batterySocBeforeRaw: batterySoc * 100,
     })
+
+    recordBillingForExecutedCommand(command, simulationResult, 'simulation')
     
     return {
       success: true,
@@ -515,4 +520,38 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
     inserted: persistResult.inserted,
     updated: persistResult.updated,
   })
+}
+
+function recordBillingForExecutedCommand(
+  command: CommandPayload,
+  executionResult: any,
+  source: 'python_controller' | 'simulation',
+): void {
+  try {
+    const durationHours = deriveDurationHours(command, executionResult)
+    const energyKwh = Math.max(0, Math.abs(Number(command.power_kw || 0)) * durationHours)
+
+    recordBillingUsageEvent({
+      tenantId: command.tenant_id,
+      feature: 'optimization_control',
+      quantity: 1,
+      unit: 'command',
+      occurredAt: command.timestamp,
+      metadata: {
+        command_id: command.command_id,
+        schedule_id: command.schedule_id,
+        command: command.command,
+        source,
+        power_kw: command.power_kw,
+        duration_minutes: command.duration_minutes,
+        estimated_energy_kwh: Number(energyKwh.toFixed(6)),
+      },
+    })
+  } catch (error) {
+    console.warn('[control/execute] failed to record billing usage event', {
+      command_id: command.command_id,
+      tenant_id: command.tenant_id,
+      error: (error as any)?.message || 'unknown',
+    })
+  }
 }
