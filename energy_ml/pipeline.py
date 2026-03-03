@@ -68,6 +68,94 @@ class PipelineOrchestrator:
         # State tracking
         self._last_recommendation = None
         self._last_recommendation_time = None
+        self._live_context: Dict[str, Any] = {}
+        self._live_price_map_kwh: Dict[int, float] = {}
+        self._live_current_price_kwh: Optional[float] = None
+        self._live_battery_state: Dict[str, float] = {}
+
+    @staticmethod
+    def _safe_float(value: Any, default: float = 0.0) -> float:
+        try:
+            numeric = float(value)
+            if numeric != numeric:
+                return default
+            return numeric
+        except Exception:
+            return default
+
+    def set_live_context(self, live_context: Optional[Dict[str, Any]]) -> None:
+        """Attach live signals (price/battery/weather metadata) for inference-time decisions."""
+        context = live_context if isinstance(live_context, dict) else {}
+        self._live_context = context
+
+        price_signal = context.get('price_signal') if isinstance(context.get('price_signal'), dict) else {}
+        self._live_current_price_kwh = None
+        self._live_price_map_kwh = {}
+
+        current_price = self._safe_float(price_signal.get('current_uah_kwh'), default=-1)
+        if current_price > 0:
+            self._live_current_price_kwh = current_price
+
+        forecast_rows = price_signal.get('forecast_next24h') if isinstance(price_signal.get('forecast_next24h'), list) else []
+        for row in forecast_rows:
+            if not isinstance(row, dict):
+                continue
+            try:
+                hour = int(row.get('hour'))
+            except Exception:
+                continue
+            if hour < 0 or hour > 23:
+                continue
+            price = self._safe_float(row.get('price'), default=-1)
+            if price <= 0:
+                continue
+            self._live_price_map_kwh[hour] = price
+
+        battery_signal = context.get('battery_signal') if isinstance(context.get('battery_signal'), dict) else {}
+        soc_percent = self._safe_float(
+            battery_signal.get('soc_percent', battery_signal.get('soc')),
+            default=-1,
+        )
+        health_percent = self._safe_float(
+            battery_signal.get('health_percent', battery_signal.get('health')),
+            default=-1,
+        )
+        cycles_remaining = self._safe_float(battery_signal.get('cycles_remaining'), default=-1)
+
+        self._live_battery_state = {
+            'soc_percent': soc_percent,
+            'health_percent': health_percent,
+            'cycles_remaining': cycles_remaining,
+        }
+
+    def _resolve_tariff_rate_uah_mwh(self, hour: int) -> float:
+        if hour in self._live_price_map_kwh:
+            return self._live_price_map_kwh[hour] * 1000
+
+        current_hour = datetime.now().hour
+        if self._live_current_price_kwh is not None and current_hour == hour:
+            return self._live_current_price_kwh * 1000
+
+        return self.tariff.get_hourly_rate(hour)
+
+    def _resolve_battery_state(self) -> Tuple[float, float, float]:
+        default_soc = max(0.0, min(100.0, (self.config.battery_soc_min + self.config.battery_soc_max) * 50.0))
+        default_health = 95.0
+        default_cycles_remaining = float(max(self.config.battery_cycles_max * 0.8, 1))
+
+        soc = self._live_battery_state.get('soc_percent', -1)
+        health = self._live_battery_state.get('health_percent', -1)
+        cycles = self._live_battery_state.get('cycles_remaining', -1)
+
+        soc_percent = soc if soc >= 0 else default_soc
+        health_percent = health if health >= 0 else default_health
+        cycles_remaining = cycles if cycles >= 0 else default_cycles_remaining
+
+        return (
+            max(0.0, min(100.0, soc_percent)),
+            max(0.0, min(100.0, health_percent)),
+            max(1.0, cycles_remaining),
+        )
     
     def _create_battery_config(self, user_config: UserConfigModel) -> BatteryConfig:
         """Convert UserConfigModel to BatteryConfig."""
@@ -138,9 +226,8 @@ class PipelineOrchestrator:
         
         # Get current state
         load_kw = self.load_profile.get_hourly_coefficient(current_hour, 0) * self.config.load_peak_kw
-        tariff_rate = self.tariff.get_hourly_rate(current_hour)
-        battery_soc = 60.0  # Mock SOC (60%)
-        battery_health = 95.0  # Mock health (95%)
+        tariff_rate = self._resolve_tariff_rate_uah_mwh(current_hour)
+        battery_soc, battery_health, cycles_remaining = self._resolve_battery_state()
         
         # Validation
         is_valid, errors = self.validate_all_inputs()
@@ -194,6 +281,8 @@ class PipelineOrchestrator:
                 'tariff_rate_uah_mwh': tariff_rate,
                 'battery_soc_percent': battery_soc,
                 'battery_health_percent': battery_health,
+                'battery_cycles_remaining': cycles_remaining,
+                'price_source': 'live_market' if current_hour in self._live_price_map_kwh else 'tariff_model',
                 'is_peak_hour': is_peak_hour,
                 'charge_cost_uah_kwh': charge_cost,
                 'discharge_revenue_uah_kwh': discharge_revenue,
@@ -380,13 +469,14 @@ class PipelineOrchestrator:
         """
         current_hour = datetime.now().hour
         load_kw = self.load_profile.get_hourly_coefficient(current_hour, 0) * self.config.load_peak_kw
+        soc_percent, health_percent, cycles_remaining = self._resolve_battery_state()
         
         return {
             'config': self.config.model_dump() if hasattr(self.config, 'model_dump') else self.config.dict(),
             'battery_state': {
-                'soc_percent': self.battery.simulate_cycles(cycles=1).soh * 100,  # Mock SOC
-                'health_percent': self.battery.simulate_cycles(cycles=1).soh * 100,
-                'cycles_remaining': self.battery_config.cycles_to_eol,
+                'soc_percent': soc_percent,
+                'health_percent': health_percent,
+                'cycles_remaining': cycles_remaining,
             },
             'load_profile': {
                 'type': self.config.load_profile_type,
@@ -396,7 +486,7 @@ class PipelineOrchestrator:
             },
             'tariff': {
                 'region': self.config.tariff_region,
-                'current_rate_uah_mwh': self.tariff.get_hourly_rate(current_hour),
+                'current_rate_uah_mwh': self._resolve_tariff_rate_uah_mwh(current_hour),
                 'is_peak_hour': 6 <= current_hour < 23,
             },
             'last_recommendation': self._last_recommendation,

@@ -59,10 +59,18 @@ class UserConfigModel(BaseModel):
     custom_optimization_weights: Optional[Dict[str, float]] = None
     
     # New Renewable Energy Configuration
+    has_solar: bool = False
+    has_wind: bool = False
     solar_capacity_kw: float = Field(default=0.0, ge=0.0, le=1000.0)
     wind_capacity_kw: float = Field(default=0.0, ge=0.0, le=1000.0)
+    solar_efficiency: float = Field(default=0.2, ge=0.1, le=0.35)
+    wind_efficiency: float = Field(default=0.35, ge=0.2, le=0.6)
+    solar_tilt_deg: float = Field(default=30.0, ge=0.0, le=90.0)
+    wind_cut_in_speed_mps: float = Field(default=3.0, ge=1.0, le=10.0)
+    wind_rated_speed_mps: float = Field(default=12.0, ge=4.0, le=30.0)
     latitude: float = Field(default=50.45, ge=-90.0, le=90.0)  # Default: Kyiv
     longitude: float = Field(default=30.52, ge=-180.0, le=180.0)  # Default: Kyiv
+    timezone: str = "Europe/Kiev"
     
     # New Battery Physics Configuration
     enable_physics_simulation: bool = True

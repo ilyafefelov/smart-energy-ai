@@ -11,9 +11,10 @@ Provides solar and wind generation forecasting based on:
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime, timedelta
+import os
 import json
 import math
-import random
+import requests
 
 from energy_ml.user_config import UserConfigModel
 
@@ -113,83 +114,199 @@ class RenewableForecaster:
     
     def _get_weather_data(self, latitude: float, longitude: float) -> Dict[str, Any]:
         """Get weather data for the location.
-        
-        In real implementation, this would call a weather API.
-        For now, we'll use realistic mock data for Ukraine.
+
+        Priority:
+        1) Live context injected by API layer (ENERGY_ML_LIVE_CONTEXT_JSON)
+        2) Open-Meteo API
+        3) Deterministic synthetic fallback (no randomness)
         """
+        from_context = self._get_weather_from_live_context()
+        if from_context:
+            return from_context
+
+        from_api = self._fetch_open_meteo_weather(latitude, longitude)
+        if from_api:
+            return from_api
+
+        return self._build_deterministic_fallback(latitude, longitude)
+
+    def _safe_float(self, value: Any, default: float = 0.0) -> float:
+        try:
+            numeric = float(value)
+            if math.isnan(numeric):
+                return default
+            return numeric
+        except Exception:
+            return default
+
+    def _get_weather_from_live_context(self) -> Optional[Dict[str, Any]]:
+        raw = os.getenv('ENERGY_ML_LIVE_CONTEXT_JSON')
+        if not raw:
+            return None
+
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            return None
+
+        weather_signal = payload.get('weather_signal') if isinstance(payload, dict) else None
+        if not isinstance(weather_signal, dict):
+            return None
+
+        current = weather_signal.get('current') if isinstance(weather_signal.get('current'), dict) else {}
+        next24 = weather_signal.get('next24h') if isinstance(weather_signal.get('next24h'), list) else []
+        if not next24:
+            return None
+
+        hourly_forecast: Dict[str, Dict[str, float]] = {}
+        for row in next24:
+            if not isinstance(row, dict):
+                continue
+            try:
+                hour = datetime.fromisoformat(str(row.get('timestamp')).replace('Z', '+00:00')).hour
+            except Exception:
+                continue
+            hourly_forecast[f'hour_{hour}'] = {
+                'solar_irradiance_w_m2': max(0.0, self._safe_float(row.get('shortwave_radiation_w_m2'))),
+                'wind_speed_m_s': max(0.0, self._safe_float(row.get('wind_speed_m_s'))),
+                'temperature_c': self._safe_float(row.get('temperature_c'), default=15.0),
+            }
+
+        if not hourly_forecast:
+            return None
+
+        cloud_cover_fraction = max(0.0, min(1.0, self._safe_float(current.get('cloud_cover_percent')) / 100.0))
+        return {
+            'solar_irradiance_w_m2': max(0.0, self._safe_float(current.get('shortwave_radiation_w_m2'))),
+            'wind_speed_m_s': max(0.0, self._safe_float(current.get('wind_speed_m_s'))),
+            'temperature_c': self._safe_float(current.get('temperature_c'), default=15.0),
+            'cloud_cover_fraction': cloud_cover_fraction,
+            'humidity_percent': 60.0,
+            'pressure_hpa': 1013.0,
+            'visibility_km': 10.0,
+            'current_hour': datetime.now().hour,
+            'season_factor': math.sin(2 * math.pi * datetime.now().timetuple().tm_yday / 365.25),
+            'location': f"{self._safe_float(weather_signal.get('latitude'), 50.45):.2f}°N, {self._safe_float(weather_signal.get('longitude'), 30.52):.2f}°E",
+            'source': weather_signal.get('source', 'live_context'),
+            'hourly_forecast': hourly_forecast,
+        }
+
+    def _fetch_open_meteo_weather(self, latitude: float, longitude: float) -> Optional[Dict[str, Any]]:
+        try:
+            response = requests.get(
+                'https://api.open-meteo.com/v1/forecast',
+                params={
+                    'latitude': latitude,
+                    'longitude': longitude,
+                    'hourly': 'temperature_2m,shortwave_radiation,wind_speed_10m,cloud_cover',
+                    'forecast_days': 2,
+                    'timezone': 'auto',
+                },
+                timeout=8,
+            )
+            response.raise_for_status()
+            payload = response.json()
+
+            hourly = payload.get('hourly') if isinstance(payload, dict) else None
+            if not isinstance(hourly, dict):
+                return None
+
+            times = hourly.get('time') if isinstance(hourly.get('time'), list) else []
+            if not times:
+                return None
+
+            now = datetime.utcnow()
+            current_index = 0
+            for idx, item in enumerate(times):
+                try:
+                    ts = datetime.fromisoformat(str(item).replace('Z', '+00:00'))
+                except Exception:
+                    continue
+                if ts >= now:
+                    current_index = idx
+                    break
+
+            def row_value(key: str, idx: int, default: float = 0.0) -> float:
+                values = hourly.get(key) if isinstance(hourly.get(key), list) else []
+                if idx < 0 or idx >= len(values):
+                    return default
+                return self._safe_float(values[idx], default)
+
+            current_hour = datetime.now().hour
+            hourly_forecast: Dict[str, Dict[str, float]] = {}
+            for offset in range(24):
+                idx = current_index + offset
+                if idx >= len(times):
+                    break
+                ts = datetime.fromisoformat(str(times[idx]).replace('Z', '+00:00'))
+                hourly_forecast[f'hour_{ts.hour}'] = {
+                    'solar_irradiance_w_m2': max(0.0, row_value('shortwave_radiation', idx)),
+                    'wind_speed_m_s': max(0.0, row_value('wind_speed_10m', idx)),
+                    'temperature_c': row_value('temperature_2m', idx, 15.0),
+                }
+
+            return {
+                'solar_irradiance_w_m2': max(0.0, row_value('shortwave_radiation', current_index)),
+                'wind_speed_m_s': max(0.0, row_value('wind_speed_10m', current_index)),
+                'temperature_c': row_value('temperature_2m', current_index, 15.0),
+                'cloud_cover_fraction': max(0.0, min(1.0, row_value('cloud_cover', current_index) / 100.0)),
+                'humidity_percent': 60.0,
+                'pressure_hpa': 1013.0,
+                'visibility_km': 10.0,
+                'current_hour': current_hour,
+                'season_factor': math.sin(2 * math.pi * datetime.now().timetuple().tm_yday / 365.25),
+                'location': f"{latitude:.2f}°N, {longitude:.2f}°E",
+                'source': 'open-meteo',
+                'hourly_forecast': hourly_forecast,
+            }
+        except Exception as exc:
+            logger.warning('Open-Meteo weather fetch failed, using deterministic fallback: %s', exc)
+            return None
+
+    def _build_deterministic_fallback(self, latitude: float, longitude: float) -> Dict[str, Any]:
         current_hour = datetime.now().hour
         current_date = datetime.now()
-        
-        # Mock weather data with seasonal and daily patterns
         season_factor = math.sin(2 * math.pi * current_date.timetuple().tm_yday / 365.25)
-        
-        # Solar irradiance (W/m²) - realistic for Ukraine
-        base_irradiance = 600 + 300 * season_factor  # Higher in summer
-        
-        # Daily pattern for solar (sunrise to sunset)
-        if 6 <= current_hour <= 18:
-            # Solar day pattern (bell curve)
-            hour_angle = (current_hour - 12) * math.pi / 6  # -π to π
-            daily_factor = max(0, math.cos(hour_angle))
-        else:
-            daily_factor = 0
-        
+
+        base_irradiance = 600 + 300 * season_factor
+        hour_angle = (current_hour - 12) * math.pi / 6
+        daily_factor = max(0.0, math.cos(hour_angle)) if 6 <= current_hour <= 18 else 0.0
         solar_irradiance = base_irradiance * daily_factor
-        
-        # Add realistic variations
-        cloud_cover = random.uniform(0.2, 0.8)  # 20-80% cloud cover
-        solar_irradiance *= (1 - cloud_cover * 0.7)  # Clouds reduce irradiance
-        
-        # Wind data
-        base_wind_speed = 5 + 3 * random.uniform(-1, 1)  # 2-8 m/s typical
-        wind_gust_factor = 1 + random.uniform(-0.3, 0.5)  # Gusts
-        wind_speed = max(0, base_wind_speed * wind_gust_factor)
-        
-        # Temperature
-        base_temp = 15 + 15 * season_factor  # 0°C winter, 30°C summer
-        daily_temp_variation = 10 * math.sin((current_hour - 6) * math.pi / 12)
-        temperature = base_temp + daily_temp_variation + random.uniform(-3, 3)
-        
-        weather_data = {
-            'solar_irradiance_w_m2': max(0, solar_irradiance),
-            'wind_speed_m_s': wind_speed,
-            'temperature_c': temperature,
-            'cloud_cover_fraction': cloud_cover,
-            'humidity_percent': random.uniform(40, 90),
-            'pressure_hpa': 1013 + random.uniform(-20, 20),
-            'visibility_km': random.uniform(5, 20),
-            'current_hour': current_hour,
-            'season_factor': season_factor,
-            'location': f"{latitude:.2f}°N, {longitude:.2f}°E"
-        }
-        
-        # Generate 24-hour forecast
+
+        cloud_cover = 0.45
+        solar_irradiance *= (1 - cloud_cover * 0.7)
+        wind_speed = max(0.0, 5.0 + 1.5 * math.sin((current_hour - 3) * math.pi / 12))
+        base_temp = 15 + 15 * season_factor
+        temperature = base_temp + 8 * math.sin((current_hour - 6) * math.pi / 12)
+
         hourly_forecast = {}
         for h in range(24):
             forecast_hour = (current_hour + h) % 24
-            
-            # Solar forecast
-            if 6 <= forecast_hour <= 18:
-                hour_angle = (forecast_hour - 12) * math.pi / 6
-                solar_daily_factor = max(0, math.cos(hour_angle))
-            else:
-                solar_daily_factor = 0
-            
+            hour_angle = (forecast_hour - 12) * math.pi / 6
+            solar_daily_factor = max(0.0, math.cos(hour_angle)) if 6 <= forecast_hour <= 18 else 0.0
             forecast_solar = base_irradiance * solar_daily_factor * (1 - cloud_cover * 0.6)
-            
-            # Wind forecast (varies less predictably)
-            wind_variation = random.uniform(0.7, 1.3)
-            forecast_wind = base_wind_speed * wind_variation
-            
+            forecast_wind = max(0.0, 5.0 + 1.3 * math.sin((forecast_hour - 4) * math.pi / 12))
+
             hourly_forecast[f'hour_{forecast_hour}'] = {
-                'solar_irradiance_w_m2': max(0, forecast_solar),
-                'wind_speed_m_s': max(0, forecast_wind),
-                'temperature_c': base_temp + 8 * math.sin((forecast_hour - 6) * math.pi / 12)
+                'solar_irradiance_w_m2': max(0.0, forecast_solar),
+                'wind_speed_m_s': forecast_wind,
+                'temperature_c': base_temp + 8 * math.sin((forecast_hour - 6) * math.pi / 12),
             }
-        
-        weather_data['hourly_forecast'] = hourly_forecast
-        
-        return weather_data
+
+        return {
+            'solar_irradiance_w_m2': max(0.0, solar_irradiance),
+            'wind_speed_m_s': wind_speed,
+            'temperature_c': temperature,
+            'cloud_cover_fraction': cloud_cover,
+            'humidity_percent': 60.0,
+            'pressure_hpa': 1013.0,
+            'visibility_km': 10.0,
+            'current_hour': current_hour,
+            'season_factor': season_factor,
+            'location': f"{latitude:.2f}°N, {longitude:.2f}°E",
+            'source': 'deterministic_fallback',
+            'hourly_forecast': hourly_forecast,
+        }
     
     def _combine_forecasts(self, solar_forecast: Dict, wind_forecast: Dict) -> Dict[str, Any]:
         """Combine solar and wind forecasts into total renewable generation."""

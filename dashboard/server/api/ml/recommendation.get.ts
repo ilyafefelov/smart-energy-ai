@@ -49,6 +49,22 @@ interface OpenMeteoSnapshot {
   }>
 }
 
+interface DriftDiagnostics {
+  status: 'stable' | 'warning' | 'drifted'
+  score: number
+  thresholds: {
+    warning: number
+    drifted: number
+  }
+  signals: Array<{
+    name: string
+    value: number
+    weight: number
+    contribution: number
+  }>
+  recommendation: string
+}
+
 function toFiniteNumber(value: unknown): number | null {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : null
@@ -106,8 +122,76 @@ interface MLRecommendationResponse {
     }
     feature_provenance?: Record<string, any>
     model_inputs?: Record<string, any>
+    inference_lineage?: Record<string, any>
+    drift_diagnostics?: DriftDiagnostics
   }
   error?: string
+}
+
+function average(values: number[]): number {
+  if (!values.length) return 0
+  return values.reduce((sum, value) => sum + value, 0) / values.length
+}
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  if (value < 0) return 0
+  if (value > 1) return 1
+  return value
+}
+
+function computeDriftDiagnostics(input: {
+  currentPriceUahKwh: number | null
+  priceForecastRows: Array<{ price?: number | null }>
+  weatherCurrent: OpenMeteoSnapshot['current'] | null
+  batterySocPercent: number | null
+}): DriftDiagnostics {
+  const priceRows = input.priceForecastRows
+    .map((row) => toFiniteNumber(row?.price))
+    .filter((value): value is number => value != null)
+
+  const avgPrice = average(priceRows)
+  const currentPrice = input.currentPriceUahKwh ?? avgPrice
+  const priceDrift = avgPrice > 0 ? Math.abs(currentPrice - avgPrice) / avgPrice : 0
+
+  const temp = toFiniteNumber(input.weatherCurrent?.temperature_c)
+  const weatherDrift = temp != null ? Math.abs(temp - 15) / 35 : 0
+
+  const soc = input.batterySocPercent ?? 50
+  const socDrift = Math.abs(soc - 50) / 50
+
+  const signals = [
+    { name: 'price_distribution_shift', value: clamp01(priceDrift), weight: 0.5 },
+    { name: 'weather_temperature_shift', value: clamp01(weatherDrift), weight: 0.25 },
+    { name: 'battery_soc_shift', value: clamp01(socDrift), weight: 0.25 },
+  ]
+
+  const score = signals.reduce((sum, signal) => sum + signal.value * signal.weight, 0)
+  const withContrib = signals.map((signal) => ({
+    ...signal,
+    contribution: Number((signal.value * signal.weight).toFixed(4)),
+    value: Number(signal.value.toFixed(4)),
+  }))
+
+  const warning = 0.2
+  const drifted = 0.35
+  const status: DriftDiagnostics['status'] = score >= drifted ? 'drifted' : score >= warning ? 'warning' : 'stable'
+  const recommendation = status === 'drifted'
+    ? 'Trigger accelerated retraining and validate feature normalization windows.'
+    : status === 'warning'
+      ? 'Increase monitoring cadence and compare against recent training cohort.'
+      : 'Distribution is stable; continue normal monitoring interval.'
+
+  return {
+    status,
+    score: Number(score.toFixed(4)),
+    thresholds: {
+      warning,
+      drifted,
+    },
+    signals: withContrib,
+    recommendation,
+  }
 }
 
 function sanitizeTimezone(timezone: string | null | undefined): string {
@@ -201,9 +285,11 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
       },
     }
 
-    const [configPayload, pricesPayload] = await Promise.all([
+    const [configPayload, pricesPayload, batteryPayload, mlflowStatus] = await Promise.all([
       $fetch<any>('/api/config/current', tenantRequest).catch(() => null),
       $fetch<PricesCurrentResponse>('/api/prices/current', tenantRequest).catch(() => null),
+      $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
+      $fetch<any>('/api/mlflow/status', tenantRequest).catch(() => null),
     ])
 
     const latitude = toFiniteNumber(configPayload?.data?.latitude) ?? 50.45
@@ -238,8 +324,22 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
         current_uah_kwh: toFiniteNumber(pricesPayload?.prices?.current?.price),
         forecast_next24h: pricesPayload?.prices?.forecast?.next24h || [],
       },
+      battery_signal: {
+        source: 'api/battery/status',
+        soc_percent: toFiniteNumber(batteryPayload?.battery?.soc),
+        health_percent: toFiniteNumber(batteryPayload?.battery?.health),
+        cycles_remaining: toFiniteNumber(configPayload?.data?.battery_cycles_max)
+          ? Number((Number(configPayload?.data?.battery_cycles_max) * Math.max(0.1, Number(batteryPayload?.battery?.health || 100) / 100)).toFixed(0))
+          : null,
+      },
       weather_signal: weatherPayload,
     }
+
+    const inferenceContextId = [
+      tenant.id,
+      Math.round(new Date(liveContext.captured_at).getTime() / 1000),
+      Math.round((liveContext.price_signal.current_uah_kwh || 0) * 100),
+    ].join(':')
 
     // Get the project root path (dashboard/../ = project root)
     const projectRoot = path.resolve(process.cwd(), '..')
@@ -282,6 +382,12 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
     const dailySavings = toFiniteNumber(mlResponse.daily_savings_estimate) ?? 0
     const monthlySavings = toFiniteNumber(mlResponse.monthly_savings_estimate) ?? (dailySavings * 30)
     const annualSavings = toFiniteNumber(mlResponse.annual_savings_estimate) ?? (dailySavings * 365)
+    const driftDiagnostics = computeDriftDiagnostics({
+      currentPriceUahKwh: toFiniteNumber(liveContext.price_signal.current_uah_kwh),
+      priceForecastRows: liveContext.price_signal.forecast_next24h || [],
+      weatherCurrent: weatherPayload?.current || null,
+      batterySocPercent: toFiniteNumber(liveContext.battery_signal.soc_percent),
+    })
 
     // Transform the response to match our interface
     const response: MLRecommendationResponse = {
@@ -335,8 +441,33 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
         model_inputs: mlResponse.model_inputs || {
           profile: liveContext.config,
           live_price: liveContext.price_signal.current_uah_kwh,
+          live_battery: liveContext.battery_signal,
           live_weather: weatherPayload?.current || null,
         },
+        inference_lineage: {
+          inference_context_id: inferenceContextId,
+          tenant_id: tenant.id,
+          captured_at: liveContext.captured_at,
+          training_reference: {
+            mlflow_connected: mlflowStatus?.mlflow_connected === true,
+            model_name: mlflowStatus?.active_model?.name || null,
+            model_version: mlflowStatus?.active_model?.version || null,
+            model_stage: mlflowStatus?.active_model?.stage || null,
+            trained_at: mlflowStatus?.active_model?.last_updated || null,
+          },
+          inference_sources: {
+            profile: 'tenant_config',
+            prices: liveContext.price_signal.source,
+            weather: weatherPayload?.source || 'weather_unavailable',
+            battery: liveContext.battery_signal.source,
+          },
+          feature_vector_signature: {
+            strategy: String(liveContext.config.optimization_strategy || 'balanced'),
+            load_profile: String(liveContext.config.load_profile_type || 'standard'),
+            horizon_hours: 24,
+          },
+        },
+        drift_diagnostics: driftDiagnostics,
       }
     }
     

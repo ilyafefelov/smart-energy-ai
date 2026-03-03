@@ -38,7 +38,11 @@ export default eventHandler(async (event: any) => {
       const batterySocPercent = Number(batteryStatus?.battery?.soc || 50)
       const batteryHealthPercent = Number(batteryStatus?.battery?.health || 95)
 
-      const driftScore = Number(Math.min(0.35, Math.abs(mape - 10) / 80).toFixed(4))
+      const recommendationDriftScore = Number(mlRecommendation?.data?.drift_diagnostics?.score)
+      const recommendationDriftStatus = String(mlRecommendation?.data?.drift_diagnostics?.status || 'stable')
+      const driftScore = Number.isFinite(recommendationDriftScore)
+        ? recommendationDriftScore
+        : Number(Math.min(0.35, Math.abs(mape - 10) / 80).toFixed(4))
       const featureDrifts = {
         battery_soc: Number(Math.min(0.2, Math.abs(batterySocPercent - 50) / 500).toFixed(4)),
         grid_price_uah_kwh: Number(Math.min(0.2, Math.abs(currentPrice - avgPrice) / 50).toFixed(4)),
@@ -74,7 +78,7 @@ export default eventHandler(async (event: any) => {
         Math.max(0, (Date.now() - new Date(modelCreatedAt).getTime()) / (1000 * 60 * 60)).toFixed(1)
       )
 
-      const shouldRetrain = driftScore > 0.2 || mape > 12 || batteryHealthPercent < 90
+      const shouldRetrain = driftScore > 0.2 || mape > 12 || batteryHealthPercent < 90 || recommendationDriftStatus === 'drifted'
       const retrainReasons = []
       if (driftScore > 0.2) retrainReasons.push('Data drift threshold exceeded')
       if (mape > 12) retrainReasons.push('MAPE above allowed threshold')
@@ -121,11 +125,29 @@ export default eventHandler(async (event: any) => {
         },
 
         drift_status: {
-          drift_detected: driftScore > 0.2,
+          drift_detected: driftScore > 0.2 || recommendationDriftStatus === 'drifted',
           drift_score: driftScore,
           last_check: timestamp,
-          status: driftScore > 0.2 ? 'drifted' : 'stable',
+          status: recommendationDriftStatus === 'warning' || recommendationDriftStatus === 'drifted'
+            ? recommendationDriftStatus
+            : (driftScore > 0.2 ? 'drifted' : 'stable'),
           feature_drifts: featureDrifts,
+          source: mlRecommendation?.data?.drift_diagnostics ? 'inference_payload' : 'monitoring_heuristic',
+        },
+
+        lineage: {
+          training: mlRecommendation?.data?.inference_lineage?.training_reference || {
+            mlflow_connected: Boolean(mlflowStatus?.mlflow_connected),
+            model_name: mlflowStatus?.active_model?.name || null,
+            model_version: mlflowStatus?.active_model?.version || null,
+            trained_at: mlflowStatus?.active_model?.last_updated || null,
+          },
+          inference: {
+            context_id: mlRecommendation?.data?.inference_lineage?.inference_context_id || null,
+            captured_at: mlRecommendation?.data?.inference_lineage?.captured_at || timestamp,
+            sources: mlRecommendation?.data?.inference_lineage?.inference_sources || null,
+          },
+          feature_provenance: mlRecommendation?.data?.feature_provenance || null,
         },
 
         alerts: {

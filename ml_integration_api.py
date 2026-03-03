@@ -141,6 +141,7 @@ def _apply_live_price_signal(
 def _build_model_inputs(user_config: Any, live_context: Dict[str, Any]) -> Dict[str, Any]:
     price_signal = live_context.get('price_signal') or {}
     weather_signal = live_context.get('weather_signal') or {}
+    battery_signal = live_context.get('battery_signal') or {}
     return {
         'optimization_strategy': getattr(user_config, 'optimization_strategy', 'balanced'),
         'load_profile_type': getattr(user_config, 'load_profile_type', 'standard'),
@@ -164,6 +165,11 @@ def _build_model_inputs(user_config: Any, live_context: Dict[str, Any]) -> Dict[
         },
         'live_price_uah_kwh': price_signal.get('current_uah_kwh'),
         'live_weather': weather_signal.get('current'),
+        'live_battery_state': {
+            'soc_percent': battery_signal.get('soc_percent', battery_signal.get('soc')),
+            'health_percent': battery_signal.get('health_percent', battery_signal.get('health')),
+            'cycles_remaining': battery_signal.get('cycles_remaining'),
+        },
     }
 
 
@@ -178,6 +184,8 @@ def get_recommendation(enhanced: bool = False) -> Dict[str, Any]:
         
         # Initialize Pipeline Orchestrator
         orchestrator = PipelineOrchestrator(user_config)
+        if hasattr(orchestrator, 'set_live_context'):
+            orchestrator.set_live_context(live_context)
         
         # Get current recommendation
         current_recommendation = orchestrator.calculate_recommendation()
