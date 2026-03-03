@@ -44,6 +44,33 @@
         </div>
       </div>
 
+      <!-- Quick Overview Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="rounded-xl border border-cyan-700/50 bg-gradient-to-br from-cyan-900/35 to-slate-900 p-4">
+          <p class="text-xs uppercase tracking-wider text-cyan-300">Battery Profile</p>
+          <p class="mt-2 text-2xl font-bold text-white">{{ settingsStore.settings.battery.capacity }} kWh</p>
+          <p class="text-xs text-cyan-200 mt-1">Charge {{ settingsStore.settings.battery.maxChargeRate }} kW • Discharge {{ settingsStore.settings.battery.maxDischargeRate }} kW</p>
+        </div>
+
+        <div class="rounded-xl border border-emerald-700/50 bg-gradient-to-br from-emerald-900/35 to-slate-900 p-4">
+          <p class="text-xs uppercase tracking-wider text-emerald-300">Safety Window</p>
+          <p class="mt-2 text-2xl font-bold text-white">{{ settingsStore.settings.battery.minSOC }}%</p>
+          <p class="text-xs text-emerald-200 mt-1">Minimum SOC reserve • {{ usableCapacityEstimate }} kWh usable estimate</p>
+        </div>
+
+        <div class="rounded-xl border border-violet-700/50 bg-gradient-to-br from-violet-900/35 to-slate-900 p-4">
+          <p class="text-xs uppercase tracking-wider text-violet-300">Model Preset</p>
+          <p class="mt-2 text-2xl font-bold text-white">{{ settingsStore.settings.model.epochs }} epochs</p>
+          <p class="text-xs text-violet-200 mt-1">Batch {{ settingsStore.settings.model.batchSize }} • LR {{ settingsStore.settings.model.learningRate }}</p>
+        </div>
+
+        <div class="rounded-xl border border-amber-700/50 bg-gradient-to-br from-amber-900/35 to-slate-900 p-4">
+          <p class="text-xs uppercase tracking-wider text-amber-300">Arbitrage Snapshot</p>
+          <p class="mt-2 text-2xl font-bold text-white">₴{{ estimatedDailySpreadRevenue }}</p>
+          <p class="text-xs text-amber-200 mt-1">Daily spread estimate • Notifications: {{ enabledNotificationCount }}/4 enabled</p>
+        </div>
+      </div>
+
       <!-- Settings Tabs -->
       <div class="border-b border-slate-800 flex gap-4">
         <button 
@@ -325,6 +352,7 @@ import PreferencesOptimizationProfile from '~/components/Preferences/Optimizatio
 const settingsStore = useSettingsStore()
 const retrainingStore = useRetrainingStore()
 const tenantContext = useTenantContext()
+const route = useRoute()
 
 const tenantOptions = computed(() => tenantContext.tenants.value)
 const selectedTenantId = computed({
@@ -332,8 +360,26 @@ const selectedTenantId = computed({
   set: (tenantId: string) => tenantContext.setTenant(tenantId),
 })
 
-const activeTab = ref('general')
-const saveSuccess = ref(false)
+const usableCapacityEstimate = computed(() => {
+  const capacity = Number(settingsStore.settings.battery.capacity || 0)
+  const minReserve = Number(settingsStore.settings.battery.minSOC || 0) / 100
+  return Math.max(0, capacity * (1 - minReserve)).toFixed(1)
+})
+
+const estimatedDailySpreadRevenue = computed(() => {
+  const capacity = Number(settingsStore.settings.battery.capacity || 0)
+  const maxDischarge = Number(settingsStore.settings.battery.maxDischargeRate || 0)
+  const high = Number(settingsStore.settings.notifications.highPriceThreshold || 0)
+  const low = Number(settingsStore.settings.notifications.lowPriceThreshold || 0)
+  const spread = Math.max(0, high - low)
+  const cycleEnergy = Math.min(capacity, maxDischarge * 4)
+  return Math.round(cycleEnergy * spread * 0.85).toLocaleString()
+})
+
+const enabledNotificationCount = computed(() => {
+  const alerts = settingsStore.settings.notifications
+  return [alerts.highPrice, alerts.lowPrice, alerts.modelComplete, alerts.systemAlerts].filter(Boolean).length
+})
 
 const tabs = [
   { id: 'general', label: 'General', icon: '🌍' },
@@ -345,6 +391,11 @@ const tabs = [
   { id: 'notifications', label: 'Notifications', icon: '🔔' },
   { id: 'model', label: 'Model', icon: '🤖' }
 ]
+
+const tabIds = new Set(tabs.map((tab) => tab.id))
+const initialTab = String(route.query.tab || 'general')
+const activeTab = ref(tabIds.has(initialTab) ? initialTab : 'general')
+const saveSuccess = ref(false)
 
 const showSaveSuccess = () => {
   saveSuccess.value = true
@@ -411,6 +462,16 @@ watch(
   () => tenantContext.currentTenantId.value,
   async () => {
     await settingsStore.loadSettings()
+  },
+)
+
+watch(
+  () => route.query.tab,
+  (value) => {
+    const tab = String(value || '')
+    if (tabIds.has(tab)) {
+      activeTab.value = tab
+    }
   },
 )
 </script>
