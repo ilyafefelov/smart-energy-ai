@@ -42,5 +42,7 @@
 {"created_at":"2026-03-02T22:18:01Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-snj","issue_id":"smart-energy-ai-ser","type":"parent-child"}
 {"created_at":"2026-03-02T22:17:44Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-q0l","issue_id":"smart-energy-ai-ssu","type":"parent-child"}
 {"created_at":"2026-03-02T22:17:58Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-4qs","issue_id":"smart-energy-ai-x6g","type":"parent-child"}
+{"created_at":"2026-03-03T04:36:12Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-17a","issue_id":"smart-energy-ai-xvy","type":"discovered-from"}
+{"created_at":"2026-03-03T04:35:19Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-17a","issue_id":"smart-energy-ai-y36","type":"discovered-from"}
 {"created_at":"2026-03-02T22:17:37Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-t9s","issue_id":"smart-energy-ai-ygq","type":"parent-child"}
 {"created_at":"2026-03-03T00:51:27Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-1ws","issue_id":"smart-energy-ai-yqi","type":"discovered-from"}
