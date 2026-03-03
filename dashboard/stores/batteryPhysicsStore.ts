@@ -35,6 +35,13 @@ export interface BatteryPhysicsState {
   
   // Control
   powerCommand: number // kW
+  commandedPower?: number // kW
+  appliedPowerCommand?: number // kW
+  renewableGenerationKw?: number // kW
+  loadDemandKw?: number // kW
+  renewableSurplusKw?: number // kW
+  renewableChargePowerKw?: number // kW
+  renewableChargeAvailableKw?: number // kW
   manualMode: boolean
   autoOptimization: boolean
   
@@ -195,12 +202,17 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
         }
 
         // Add to power flow history
+        const appliedPower = Number(state.value.appliedPowerCommand ?? state.value.power)
+        const renewableGeneration = Number(state.value.renewableGenerationKw ?? 0)
+        const loadDemand = Number(state.value.loadDemandKw ?? 0)
         addPowerFlowData({
           grid: 0, // TODO: Get from generation/load data
-          battery: state.value.power,
-          solar: 0, // TODO: Get from solar API
-          wind: 0, // TODO: Get from wind API  
-          load: 5, // TODO: Get from load profile
+          battery: Number.isFinite(appliedPower) ? appliedPower : 0,
+          // Keep compatibility with existing chart shape; until solar/wind split is added,
+          // map renewable aggregate into solar bucket.
+          solar: Number.isFinite(renewableGeneration) ? renewableGeneration : 0,
+          wind: 0,
+          load: Number.isFinite(loadDemand) ? loadDemand : 0,
           timestamp: new Date()
         })
 

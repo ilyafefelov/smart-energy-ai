@@ -203,14 +203,19 @@ const isBusy = computed(() => batteryPhysicsStore.isLoading)
 
 const effectiveDisplayPower = computed(() => {
   const measuredPower = Number(batteryPhysicsStore.state.power || 0)
-  const commandPower = Number(batteryPhysicsStore.state.powerCommand || 0)
+  const appliedPower = Number(
+    batteryPhysicsStore.state.appliedPowerCommand
+      ?? batteryPhysicsStore.state.commandedPower
+      ?? batteryPhysicsStore.state.powerCommand
+      ?? 0,
+  )
 
   // Prefer measured telemetry when present, but fall back to command flow
   // so simulation/manual control still communicates active charge/discharge.
   if (Math.abs(measuredPower) > 0.05) {
     return measuredPower
   }
-  return commandPower
+  return appliedPower
 })
 
 const signedPower = computed(() => {

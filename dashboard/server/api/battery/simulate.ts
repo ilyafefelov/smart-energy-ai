@@ -29,6 +29,163 @@ type TenantControlMirror = {
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
 const SIMULATION_TIME_SCALE = 120
 
+const DEFAULT_ENERGY_CONFIG = {
+  battery_type: 'LFP',
+  battery_capacity_kwh: 150,
+  battery_efficiency: 0.95,
+  battery_c_rate_charge: 0.5,
+  battery_c_rate_discharge: 1,
+  battery_soc_min: 0.1,
+  battery_soc_max: 0.95,
+  load_profile_type: 'standard',
+  load_peak_kw: 10,
+  load_base_kw: 2,
+  load_custom_hourly: null,
+  load_seasonal_variation: 0.2,
+  load_weekend_factor: 0.6,
+  load_night_factor: 0.3,
+  has_solar: false,
+  has_wind: false,
+  solar_capacity_kw: 0,
+  wind_capacity_kw: 0,
+  solar_efficiency: 0.2,
+  wind_efficiency: 0.35,
+  wind_cut_in_speed_mps: 3,
+  wind_rated_speed_mps: 12,
+}
+
+const LOAD_PROFILE_COEFFICIENTS: Record<'standard' | 'multi-shift' | '24/7', number[]> = {
+  standard: [0.2, 0.2, 0.2, 0.2, 0.2, 0.3, 0.4, 0.6, 0.8, 1, 1, 0.9, 0.8, 0.9, 1, 1, 0.9, 0.8, 0.6, 0.5, 0.4, 0.3, 0.3, 0.2],
+  'multi-shift': [0.8, 0.8, 0.7, 0.6, 0.5, 0.4, 1, 1, 1, 1, 1, 1, 1, 1, 0.3, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.3, 0.9, 0.9],
+  '24/7': [0.9, 0.9, 0.9, 0.9, 0.9, 0.95, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.95, 0.95, 0.9, 0.9],
+}
+
+function deterministicNoise(seed: number): number {
+  const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453
+  return value - Math.floor(value)
+}
+
+function normalizeLoadProfileType(value: unknown): 'standard' | 'multi-shift' | '24/7' | 'custom' {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (normalized === 'multi_shift' || normalized === 'multi-shift') return 'multi-shift'
+  if (normalized === '24_7' || normalized === '24/7') return '24/7'
+  if (normalized === 'custom') return 'custom'
+  return 'standard'
+}
+
+function loadTenantEnergyConfig(tenantId: string): any {
+  const tenantConfigPath = join(process.cwd(), '../energy_ml/configs/tenants', tenantId, 'user_config.json')
+  const legacyConfigPath = join(process.cwd(), '../energy_ml/configs/user_config.json')
+  const configPath = existsSync(tenantConfigPath) ? tenantConfigPath : legacyConfigPath
+
+  let config: any = {}
+  if (existsSync(configPath)) {
+    try {
+      config = JSON.parse(readFileSync(configPath, 'utf-8'))
+    } catch {
+      config = {}
+    }
+  }
+
+  return {
+    ...DEFAULT_ENERGY_CONFIG,
+    ...config,
+    load_profile_type: normalizeLoadProfileType(config?.load_profile_type),
+  }
+}
+
+function getDayOfYear(date: Date): number {
+  const start = new Date(Date.UTC(date.getUTCFullYear(), 0, 0))
+  const diff = date.getTime() - start.getTime()
+  return Math.floor(diff / 86400000)
+}
+
+function estimateLoadDemandKw(config: any, at: Date): number {
+  const hour = at.getHours()
+  const day = at.getDay()
+  const profileType = normalizeLoadProfileType(config?.load_profile_type)
+  const baseKw = Math.max(0.1, Number(config?.load_base_kw ?? DEFAULT_ENERGY_CONFIG.load_base_kw))
+  const peakKw = Math.max(baseKw, Number(config?.load_peak_kw ?? DEFAULT_ENERGY_CONFIG.load_peak_kw))
+
+  let profileCoeff = 0.6
+  const customProfile = Array.isArray(config?.load_custom_hourly) ? config.load_custom_hourly : null
+  if (profileType === 'custom' && customProfile && customProfile.length === 24) {
+    profileCoeff = Math.max(0, Math.min(1.5, Number(customProfile[hour] ?? 0.5)))
+  } else {
+    const profile = LOAD_PROFILE_COEFFICIENTS[profileType as 'standard' | 'multi-shift' | '24/7'] || LOAD_PROFILE_COEFFICIENTS.standard
+    profileCoeff = Number(profile[hour] ?? 0.6)
+  }
+
+  const weekendFactor = (day === 0 || day === 6)
+    ? Math.max(0.2, Number(config?.load_weekend_factor ?? DEFAULT_ENERGY_CONFIG.load_weekend_factor))
+    : 1
+  const nightFactor = (hour < 6 || hour >= 22)
+    ? Math.max(0.2, Number(config?.load_night_factor ?? DEFAULT_ENERGY_CONFIG.load_night_factor)) + 0.7
+    : 1
+  const seasonalVariation = Math.max(0, Number(config?.load_seasonal_variation ?? DEFAULT_ENERGY_CONFIG.load_seasonal_variation))
+  const seasonalFactor = 1 + Math.sin((2 * Math.PI * (getDayOfYear(at) - 80)) / 365) * seasonalVariation * 0.25
+
+  const demand = (baseKw + (peakKw - baseKw) * profileCoeff) * weekendFactor * nightFactor * seasonalFactor
+  return round(Math.max(0.1, demand), 3)
+}
+
+function estimateRenewableGenerationKw(config: any, at: Date): number {
+  const hour = at.getHours()
+  const dayOfYear = getDayOfYear(at)
+
+  const hasSolar = Boolean(config?.has_solar ?? Number(config?.solar_capacity_kw || 0) > 0)
+  const hasWind = Boolean(config?.has_wind ?? Number(config?.wind_capacity_kw || 0) > 0)
+  const solarCapacityKw = hasSolar ? Math.max(0, Number(config?.solar_capacity_kw || 0)) : 0
+  const windCapacityKw = hasWind ? Math.max(0, Number(config?.wind_capacity_kw || 0)) : 0
+
+  let solarGenerationKw = 0
+  if (solarCapacityKw > 0 && hour >= 6 && hour <= 18) {
+    const sunFactor = Math.sin(Math.PI * (hour - 6) / 12)
+    const seasonalFactor = 0.7 + 0.3 * Math.sin((2 * Math.PI * (dayOfYear - 80)) / 365)
+    const cloudNoise = deterministicNoise(dayOfYear * 37 + hour * 11 + 7)
+    const cloudFactor = 0.55 + 0.45 * (1 - cloudNoise)
+    const solarEfficiency = Math.max(0.1, Number(config?.solar_efficiency || DEFAULT_ENERGY_CONFIG.solar_efficiency))
+    const solarEfficiencyFactor = Math.max(0.4, Math.min(1.35, solarEfficiency / 0.2))
+    solarGenerationKw = solarCapacityKw * sunFactor * seasonalFactor * cloudFactor * solarEfficiencyFactor
+  }
+
+  let windGenerationKw = 0
+  if (windCapacityKw > 0) {
+    const windEfficiency = Math.max(0.1, Number(config?.wind_efficiency || DEFAULT_ENERGY_CONFIG.wind_efficiency))
+    const windEfficiencyFactor = Math.max(0.35, Math.min(1.25, windEfficiency / 0.35))
+    const cutIn = Math.max(0.5, Number(config?.wind_cut_in_speed_mps || DEFAULT_ENERGY_CONFIG.wind_cut_in_speed_mps))
+    const rated = Math.max(cutIn + 1, Number(config?.wind_rated_speed_mps || DEFAULT_ENERGY_CONFIG.wind_rated_speed_mps))
+    const windNoise = deterministicNoise(dayOfYear * 19 + hour * 3 + 17)
+    const windSpeed = 2.5 + windNoise * 10.5
+
+    if (windSpeed >= cutIn && windSpeed < 25) {
+      if (windSpeed <= rated) {
+        windGenerationKw = windCapacityKw * Math.pow((windSpeed - cutIn) / (rated - cutIn), 3) * windEfficiencyFactor
+      } else {
+        windGenerationKw = windCapacityKw * 0.95 * windEfficiencyFactor
+      }
+    }
+  }
+
+  return round(Math.max(0, solarGenerationKw + windGenerationKw), 3)
+}
+
+function resolveRenewableChargePowerKw(input: {
+  renewableGenerationKw: number
+  loadDemandKw: number
+  spec: BatterySimSpec
+}): { renewableSurplusKw: number; chargePowerKw: number } {
+  const renewableSurplusKw = round(input.renewableGenerationKw - input.loadDemandKw, 3)
+  const chargePowerKw = renewableSurplusKw > 0
+    ? round(Math.min(input.spec.maxChargePowerKw, renewableSurplusKw), 3)
+    : 0
+
+  return {
+    renewableSurplusKw,
+    chargePowerKw,
+  }
+}
+
 function commandFromPower(powerKw: number): 'charge' | 'discharge' | 'hold' {
   if (powerKw > 0.05) return 'charge'
   if (powerKw < -0.05) return 'discharge'
@@ -61,10 +218,10 @@ async function applyCommandProgression(params: {
   tenantId: string
   state: any
   spec: BatterySimSpec
-  effectivePowerCommand: number
+  appliedPowerCommand: number
 }): Promise<any> {
   const { tenantId, state, spec } = params
-  const effectivePowerCommand = Number(params.effectivePowerCommand || 0)
+  const appliedPowerCommand = Number(params.appliedPowerCommand || 0)
   const now = Date.now()
   const lastUpdateMs = new Date(state?.lastUpdate || 0).getTime()
   if (!Number.isFinite(lastUpdateMs)) {
@@ -82,9 +239,9 @@ async function applyCommandProgression(params: {
   const baselineTemp = 24
   let socNext = socCurrent
 
-  if (Math.abs(effectivePowerCommand) > 0.05 && spec.capacityKwh > 0) {
-    const transferKwh = Math.abs(effectivePowerCommand) * elapsedHours
-    if (effectivePowerCommand > 0) {
+  if (Math.abs(appliedPowerCommand) > 0.05 && spec.capacityKwh > 0) {
+    const transferKwh = Math.abs(appliedPowerCommand) * elapsedHours
+    if (appliedPowerCommand > 0) {
       socNext += (transferKwh * spec.efficiency / spec.capacityKwh) * 100
     } else {
       socNext -= (transferKwh / Math.max(0.6, spec.efficiency) / spec.capacityKwh) * 100
@@ -96,8 +253,8 @@ async function applyCommandProgression(params: {
 
   socNext = Math.max(spec.socMinPercent, Math.min(spec.socMaxPercent, socNext))
 
-  const nextCurrent = Math.abs(effectivePowerCommand) > 0.05
-    ? (effectivePowerCommand * 1000) / Math.max(1, voltage)
+  const nextCurrent = Math.abs(appliedPowerCommand) > 0.05
+    ? (appliedPowerCommand * 1000) / Math.max(1, voltage)
     : 0
   const priorTemp = Number(state?.temperature ?? baselineTemp)
   const tempTarget = baselineTemp + Math.min(12, Math.abs(nextCurrent) / 12)
@@ -111,28 +268,15 @@ async function applyCommandProgression(params: {
   }, tenantId)
 }
 
-function loadBatterySimulationSpec(defaultVoltage: number, tenantId: string): BatterySimSpec {
-  const tenantConfigPath = join(process.cwd(), '../energy_ml/configs/tenants', tenantId, 'user_config.json')
-  const legacyConfigPath = join(process.cwd(), '../energy_ml/configs/user_config.json')
-  const configPath = existsSync(tenantConfigPath) ? tenantConfigPath : legacyConfigPath
+function loadBatterySimulationSpec(defaultVoltage: number, tenantConfig: any): BatterySimSpec {
+  const batteryType = String(tenantConfig?.battery_type || DEFAULT_ENERGY_CONFIG.battery_type)
+  const capacityKwh = Number(tenantConfig?.battery_capacity_kwh || DEFAULT_ENERGY_CONFIG.battery_capacity_kwh)
+  const efficiency = Number(tenantConfig?.battery_efficiency || DEFAULT_ENERGY_CONFIG.battery_efficiency)
+  const socMinPercent = Number(tenantConfig?.battery_soc_min ?? DEFAULT_ENERGY_CONFIG.battery_soc_min) * 100
+  const socMaxPercent = Number(tenantConfig?.battery_soc_max ?? DEFAULT_ENERGY_CONFIG.battery_soc_max) * 100
 
-  let config: any = null
-  if (existsSync(configPath)) {
-    try {
-      config = JSON.parse(readFileSync(configPath, 'utf-8'))
-    } catch {
-      config = null
-    }
-  }
-
-  const batteryType = String(config?.battery_type || 'LFP')
-  const capacityKwh = Number(config?.battery_capacity_kwh || 150)
-  const efficiency = Number(config?.battery_efficiency || 0.95)
-  const socMinPercent = Number(config?.battery_soc_min ?? 0.1) * 100
-  const socMaxPercent = Number(config?.battery_soc_max ?? 0.95) * 100
-
-  const maxChargePowerKw = Math.max(0.1, capacityKwh * Number(config?.battery_c_rate_charge || 0.5))
-  const maxDischargePowerKw = Math.max(0.1, capacityKwh * Number(config?.battery_c_rate_discharge || 1.0))
+  const maxChargePowerKw = Math.max(0.1, capacityKwh * Number(tenantConfig?.battery_c_rate_charge || DEFAULT_ENERGY_CONFIG.battery_c_rate_charge))
+  const maxDischargePowerKw = Math.max(0.1, capacityKwh * Number(tenantConfig?.battery_c_rate_discharge || DEFAULT_ENERGY_CONFIG.battery_c_rate_discharge))
 
   const typeNames: Record<string, string> = {
     LFP: 'Lithium Iron Phosphate',
@@ -178,13 +322,27 @@ function resolveCommandedPower(params: {
   mirrorPowerKw: number
   spec: BatterySimSpec
 }): number {
+  const desiredSign = params.activeCommand === 'charge' ? 1 : params.activeCommand === 'discharge' ? -1 : 0
   const historyPowerKw = params.historyPowerKw
   if (Number.isFinite(historyPowerKw)) {
-    return round(clampPower(Number(historyPowerKw), params.spec), 3)
+    const normalizedHistory = round(clampPower(Number(historyPowerKw), params.spec), 3)
+    if (
+      desiredSign === 0
+      || (Math.abs(normalizedHistory) > 0.05 && Math.sign(normalizedHistory) === desiredSign)
+    ) {
+      return normalizedHistory
+    }
   }
 
   if (Number.isFinite(params.mirrorPowerKw) && Math.abs(params.mirrorPowerKw) > 0.001) {
-    return round(clampPower(params.mirrorPowerKw, params.spec), 3)
+    const normalizedMirror = round(clampPower(params.mirrorPowerKw, params.spec), 3)
+    if (desiredSign === 0) {
+      return 0
+    }
+    if (Math.sign(normalizedMirror) !== desiredSign && Math.abs(normalizedMirror) > 0.05) {
+      return round(clampPower(Math.abs(normalizedMirror) * desiredSign, params.spec), 3)
+    }
+    return normalizedMirror
   }
 
   if (params.activeCommand === 'charge') {
@@ -230,7 +388,10 @@ export default eventHandler(async (event) => {
     const current = Number(state?.current ?? 0)
     const livePowerKw = round((voltage * current) / 1000, 3)
 
-    const spec = loadBatterySimulationSpec(voltage, tenant.id)
+    const tenantConfig = loadTenantEnergyConfig(tenant.id)
+    const spec = loadBatterySimulationSpec(voltage, tenantConfig)
+    const loadDemandKw = estimateLoadDemandKw(tenantConfig, new Date())
+    const renewableGenerationKw = estimateRenewableGenerationKw(tenantConfig, new Date())
     const mirror = await getBatteryControlState(tenant.id)
     const resolvedMode = resolveModeState(controlStatus, mirror)
     const manualMode = resolvedMode.manualMode
@@ -247,6 +408,18 @@ export default eventHandler(async (event) => {
       spec,
     })
 
+    const renewablePower = resolveRenewableChargePowerKw({
+      renewableGenerationKw,
+      loadDemandKw,
+      spec,
+    })
+
+    const renewableChargeAppliedKw = effectivePowerCommand < -0.05
+      ? 0
+      : renewablePower.chargePowerKw
+
+    const appliedPowerCommand = round(clampPower(effectivePowerCommand + renewableChargeAppliedKw, spec), 3)
+
     await updateBatteryControlState({
       powerCommand: effectivePowerCommand,
       manualMode,
@@ -257,7 +430,7 @@ export default eventHandler(async (event) => {
       tenantId: tenant.id,
       state,
       spec,
-      effectivePowerCommand,
+      appliedPowerCommand,
     })
 
     const progressedSocPercent = Number(progressedState?.soc ?? socPercent)
@@ -273,6 +446,7 @@ export default eventHandler(async (event) => {
         socPercentage: round(progressedSocPercent, 1),
         power: progressedLivePowerKw,
         commandedPower: effectivePowerCommand,
+        appliedPowerCommand,
         voltage: round(progressedVoltage, 2),
         current: round(progressedCurrent, 2),
         temperature: round(Number(progressedState?.temperature ?? 25), 1),
@@ -285,12 +459,17 @@ export default eventHandler(async (event) => {
         socMax: round(spec.socMaxPercent, 1),
         maxChargePower: round(spec.maxChargePowerKw, 2),
         maxDischargePower: round(spec.maxDischargePowerKw, 2),
-        isCharging: effectivePowerCommand > 0.1,
-        isDischarging: effectivePowerCommand < -0.1,
-        isIdle: Math.abs(effectivePowerCommand) <= 0.1,
+        isCharging: appliedPowerCommand > 0.1,
+        isDischarging: appliedPowerCommand < -0.1,
+        isIdle: Math.abs(appliedPowerCommand) <= 0.1,
         estimatedRuntime: null,
         estimatedChargeTime: null,
         powerCommand: effectivePowerCommand,
+        renewableGenerationKw,
+        loadDemandKw,
+        renewableSurplusKw: renewablePower.renewableSurplusKw,
+        renewableChargePowerKw: renewableChargeAppliedKw,
+        renewableChargeAvailableKw: renewablePower.chargePowerKw,
         manualMode,
         autoOptimization,
         execution_mode: manualMode ? 'manual_command' : 'auto_recommendation',
@@ -312,6 +491,7 @@ export default eventHandler(async (event) => {
         tenant_filter_applied: true,
         control_status_source: controlStatus?.source || 'unavailable',
         control_history_source: controlHistory?.source || 'unavailable',
+        renewable_model_source: 'local_deterministic_estimate',
       },
     }
   }
@@ -319,7 +499,8 @@ export default eventHandler(async (event) => {
   if (method === 'POST') {
     const body = await readBody(event)
     const state = await getBatteryState(tenant.id)
-    const spec = loadBatterySimulationSpec(Number(state?.voltage ?? 400), tenant.id)
+    const tenantConfig = loadTenantEnergyConfig(tenant.id)
+    const spec = loadBatterySimulationSpec(Number(state?.voltage ?? 400), tenantConfig)
 
     if (body.action === 'setPower') {
       const requestedPowerKw = Number(body.power ?? 0)
