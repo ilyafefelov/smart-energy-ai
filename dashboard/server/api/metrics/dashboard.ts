@@ -78,9 +78,14 @@ export default defineEventHandler(async (event) => {
     const monthlySavingsFromML = Number(mlPayload?.data?.savings_estimate?.monthly_uah || 0)
 
     const dailySavingsFallback = Number(baseMetrics?.savings?.daily_avg || 0)
+    const dailyRealizedNetFallback = Number(baseMetrics?.realized?.net_daily_avg || 0)
     const monthlySavingsFallback = Number(baseMetrics?.forecast?.monthly || 0)
 
-    const savingsToday = dailySavingsFromML > 0 ? dailySavingsFromML : dailySavingsFallback
+    const savingsToday = dailySavingsFromML > 0
+      ? dailySavingsFromML
+      : dailySavingsFallback > 0
+        ? dailySavingsFallback
+        : dailyRealizedNetFallback
     const savingsMonth = monthlySavingsFromML > 0 ? monthlySavingsFromML : monthlySavingsFallback
 
     const confidence = Number(mlPayload?.data?.confidence || 0)
@@ -116,6 +121,13 @@ export default defineEventHandler(async (event) => {
       efficiency: Number(baseMetrics?.breakdown?.demand_response || 0),
     }
 
+    const realized = {
+      revenueTotal: Number(baseMetrics?.realized?.revenue_total || 0),
+      costTotal: Number(baseMetrics?.realized?.cost_total || 0),
+      netTotal: Number(baseMetrics?.realized?.net_total || 0),
+      autoTransitions: Number(baseMetrics?.realized?.auto_transitions || 0),
+    }
+
     return {
       success: true,
       tenant: getTenantResponseMetadata(tenant),
@@ -134,6 +146,7 @@ export default defineEventHandler(async (event) => {
         trainingStatus: retrainingArtifacts.trainingStatus,
         lastTrainedAt,
         savingsBreakdown: breakdown,
+        realized,
       },
       source: {
         tenant_filter_applied: true,

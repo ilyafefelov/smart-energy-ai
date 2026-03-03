@@ -502,10 +502,14 @@ definePageMeta({
 // Imports
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useTenantContext } from '~/composables/useTenantContext'
+import { useControlTransitionNotifications } from '~/composables/useControlTransitionNotifications'
+import { useSettingsStore } from '~/stores/settingsStore'
 
 // Toast for notifications
 const toast = useToast()
 const tenantContext = useTenantContext()
+const settingsStore = useSettingsStore()
+const transitionNotifications = useControlTransitionNotifications()
 
 const tenantOptions = computed(() => tenantContext.tenants.value)
 const selectedTenantId = computed({
@@ -653,14 +657,23 @@ const getCommandColor = (command) => {
 const refreshStatus = async () => {
   statusLoading.value = true
   try {
-    await tenantContext.loadTenants()
+    await Promise.all([
+      tenantContext.loadTenants(),
+      settingsStore.loadSettings(),
+    ])
     const [statusData, physicsData] = await Promise.all([
       $fetch('/api/control/status', buildTenantRequest()),
       $fetch('/api/control/physics', buildTenantRequest()).catch(() => null)
     ])
     
     if (statusData) {
+      const previousStatus = { ...systemStatus.value }
       systemStatus.value = { ...systemStatus.value, ...statusData }
+      transitionNotifications.emitTransitionToastIfNeeded(
+        previousStatus,
+        systemStatus.value,
+        tenantContext.currentTenantId.value,
+      )
     }
     
     if (physicsData) {
@@ -869,7 +882,10 @@ const formatScheduleTime = (timestamp) => {
 let refreshInterval = null
 
 onMounted(async () => {
-  await tenantContext.loadTenants()
+  await Promise.all([
+    tenantContext.loadTenants(),
+    settingsStore.loadSettings(),
+  ])
 
   // Initial data load
   await Promise.all([
@@ -908,6 +924,8 @@ watch(manualMode, async (isManual) => {
 watch(
   () => tenantContext.currentTenantId.value,
   async () => {
+    await settingsStore.loadSettings()
+    transitionNotifications.resetTransitionDeduper()
     await Promise.all([refreshStatus(), refreshHistory()])
   },
 )

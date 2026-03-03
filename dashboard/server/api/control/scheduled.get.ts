@@ -8,13 +8,18 @@ export default defineEventHandler(async (event) => {
     const tenant = await resolveTenantContext(event)
     const query = getQuery(event)
     const limit = Math.min(parseInt(query.limit as string) || 20, 50)
+    const pythonScript = 'get_scheduled_commands.py'
+    let fallbackReasonCode: string | null = null
     
     // Try to get schedules from Python controller
-    const { execPython } = await import('../../../utils/python-runner.js').catch(() => ({ execPython: null }))
+    const pythonRunner: any = await import('../../utils/python-runner.js').catch(() => ({ execPython: null, hasPythonScript: null }))
+    const execPython = pythonRunner?.execPython
+    const hasPythonScript = pythonRunner?.hasPythonScript
+    const pythonScriptAvailable = Boolean(execPython && hasPythonScript && hasPythonScript(pythonScript))
     
-    if (execPython) {
+    if (pythonScriptAvailable && execPython) {
       try {
-        const result = await execPython('get_scheduled_commands.py', {
+        const result = await execPython(pythonScript, {
           limit: limit.toString(),
           tenant_id: tenant.id,
         })
@@ -29,13 +34,19 @@ export default defineEventHandler(async (event) => {
           count: scopedSchedules.length,
           source_metadata: {
             tenant_filter_applied: true,
+            python_script: pythonScript,
+            python_script_available: true,
+            fallback_reason_code: 'none',
           },
           source: 'python_controller'
         }
         
       } catch (pythonError) {
         console.warn('Python controller schedules not available:', pythonError.message)
+        fallbackReasonCode = 'python_execution_failed'
       }
+    } else {
+      fallbackReasonCode = 'python_script_missing'
     }
     
     // Deterministic fallback to in-memory schedules.
@@ -65,6 +76,9 @@ export default defineEventHandler(async (event) => {
       count: limitedSchedules.length,
       source_metadata: {
         tenant_filter_applied: true,
+        python_script: pythonScript,
+        python_script_available: pythonScriptAvailable,
+        fallback_reason_code: fallbackReasonCode || 'python_unavailable',
       },
       source: 'memory_storage'
     }

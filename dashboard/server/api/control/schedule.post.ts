@@ -10,6 +10,8 @@ export default defineEventHandler(async (event: any) => {
   try {
     const body = await readBody(event)
     const tenant = await resolveTenantContext(event, { body })
+    const pythonScript = 'create_schedule.py'
+    let fallbackReasonCode: string | null = null
     
     // Validate input
     if (!body.command || !body.power_kw || !body.scheduled_time) {
@@ -61,11 +63,14 @@ export default defineEventHandler(async (event: any) => {
     console.log('Creating schedule:', schedule)
     
     // Try to schedule via Python controller
-    const { execPython } = await import('../../../utils/python-runner.js').catch(() => ({ execPython: null }))
+    const pythonRunner: any = await import('../../utils/python-runner.js').catch(() => ({ execPython: null, hasPythonScript: null }))
+    const execPython = pythonRunner?.execPython
+    const hasPythonScript = pythonRunner?.hasPythonScript
+    const pythonScriptAvailable = Boolean(execPython && hasPythonScript && hasPythonScript(pythonScript))
     
-    if (execPython) {
+    if (pythonScriptAvailable && execPython) {
       try {
-        const result = await (execPython as any)('create_schedule.py', {
+        const result = await (execPython as any)(pythonScript, {
           command: schedule.command,
           power_kw: schedule.power_kw.toString(),
           scheduled_time: schedule.scheduled_time,
@@ -86,12 +91,21 @@ export default defineEventHandler(async (event: any) => {
           command_id: schedule.command_id,
           scheduled_time: schedule.scheduled_time,
           result: pythonResult,
+          source_metadata: {
+            tenant_filter_applied: true,
+            python_script: pythonScript,
+            python_script_available: true,
+            fallback_reason_code: 'none',
+          },
           source: 'python_controller'
         }
         
       } catch (pythonError: any) {
         console.warn('Python controller scheduling failed:', pythonError.message)
+        fallbackReasonCode = 'python_execution_failed'
       }
+    } else {
+      fallbackReasonCode = 'python_script_missing'
     }
     
     // Fallback to in-memory storage
@@ -116,6 +130,12 @@ export default defineEventHandler(async (event: any) => {
       command_id: schedule.command_id,
       scheduled_time: schedule.scheduled_time,
       message: 'Command scheduled successfully',
+      source_metadata: {
+        tenant_filter_applied: true,
+        python_script: pythonScript,
+        python_script_available: pythonScriptAvailable,
+        fallback_reason_code: fallbackReasonCode || 'python_unavailable',
+      },
       source: 'memory_storage'
     }
     
@@ -215,6 +235,14 @@ async function persistScheduledIntent(schedule: any, source: 'python_controller'
     battery_soc_end: null,
     solar_actual: null,
     load_actual: null,
+    decision_source: 'manual',
+    execution_status: 'scheduled',
+    event_type: 'scheduled_intent',
+    mode_from: null,
+    mode_to: null,
+    realized_revenue_uah: null,
+    realized_cost_uah: null,
+    realized_net_uah: null,
   })
 
   if (!result.ok) {

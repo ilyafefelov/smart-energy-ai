@@ -6,27 +6,47 @@ import { getTenantResponseMetadata, isRecordVisibleForTenant, resolveTenantConte
 export default defineEventHandler(async (event) => {
   try {
     const tenant = await resolveTenantContext(event)
+    const pythonScript = 'get_control_status.py'
+    let fallbackReasonCode: string | null = null
     // Import the Python control system
-    const { execPython } = await import('../../../utils/python-runner.js').catch(() => ({ execPython: null }))
+    const pythonRunner: any = await import('../../utils/python-runner.js').catch(() => ({ execPython: null, hasPythonScript: null }))
+    const execPython = pythonRunner?.execPython
+    const hasPythonScript = pythonRunner?.hasPythonScript
+    const pythonScriptAvailable = Boolean(execPython && hasPythonScript && hasPythonScript(pythonScript))
+    const controlModeByTenant = (globalThis as any).__controlModeByTenant || {}
+    const controlModeState = controlModeByTenant[tenant.id] || null
     
-    if (execPython) {
+    if (pythonScriptAvailable && execPython) {
       // Try to get status from Python controller
       try {
-        const result = await execPython('get_control_status.py', { tenant_id: tenant.id })
+        const result = await execPython(pythonScript)
         const pythonStatus = JSON.parse(result)
         
         return {
           success: true,
           tenant: getTenantResponseMetadata(tenant),
           ...pythonStatus,
+          mode: controlModeState?.mode || pythonStatus?.mode || 'automatic',
+          active_command: controlModeState?.active_command || pythonStatus?.active_command || null,
+          requested_command: controlModeState?.requested_command || pythonStatus?.requested_command || pythonStatus?.active_command || null,
+          decision_source: controlModeState?.decision_source || pythonStatus?.decision_source || null,
+          command_reason: controlModeState?.reason || pythonStatus?.command_reason || null,
+          last_update: controlModeState?.updated_at || pythonStatus?.last_update || new Date().toISOString(),
           source_metadata: {
             tenant_filter_applied: true,
+            python_script: pythonScript,
+            python_script_available: true,
+            fallback_reason_code: 'none',
+            mode_state_overlay_applied: Boolean(controlModeState),
           },
           source: 'python_controller'
         }
       } catch (pythonError) {
         console.warn('Python controller not available:', pythonError.message)
+        fallbackReasonCode = 'python_execution_failed'
       }
+    } else {
+      fallbackReasonCode = 'python_script_missing'
     }
 
     // Deterministic fallback from persisted battery state and command memory.
@@ -55,8 +75,10 @@ export default defineEventHandler(async (event) => {
     const lastCommandTs = lastCommand ? new Date(lastCommand.executed_at || lastCommand.timestamp).getTime() : 0
     const isRecentCommand = lastCommandTs > 0 && now - lastCommandTs <= 6 * 60 * 60 * 1000
 
-    const activeCommand = isRecentCommand ? (lastCommand.command || null) : null
-    const mode = activeCommand ? 'manual' : 'automatic'
+    const activeCommand = controlModeState?.active_command || (isRecentCommand ? (lastCommand.command || null) : null)
+    const requestedCommand = controlModeState?.requested_command || (isRecentCommand ? (lastCommand.requested_command || lastCommand.command || null) : null)
+    const mode = controlModeState?.mode || (activeCommand ? 'manual' : 'automatic')
+    const decisionSource = controlModeState?.decision_source || (isRecentCommand ? (lastCommand.decision_source || null) : null)
 
     return {
       success: true,
@@ -65,14 +87,19 @@ export default defineEventHandler(async (event) => {
       power_kw: Number(battery.power ?? 0),
       mode,
       active_command: activeCommand,
-      command_reason: isRecentCommand ? (lastCommand.reason || null) : null,
+      requested_command: requestedCommand,
+      decision_source: decisionSource,
+      command_reason: controlModeState?.reason || (isRecentCommand ? (lastCommand.reason || null) : null),
       battery_capacity_kwh: Number(battery.capacity ?? 150),
       max_power_kw: 5.0,
-      last_update: battery.lastUpdated || new Date().toISOString(),
+      last_update: controlModeState?.updated_at || battery.lastUpdated || new Date().toISOString(),
       estimated_completion: isRecentCommand ? (lastCommand.result?.estimated_completion || null) : null,
       scheduled_commands_count: pendingSchedules.length,
       source_metadata: {
         tenant_filter_applied: true,
+        python_script: pythonScript,
+        python_script_available: pythonScriptAvailable,
+        fallback_reason_code: fallbackReasonCode || 'python_unavailable',
       },
       source: 'battery_status_fallback'
     }

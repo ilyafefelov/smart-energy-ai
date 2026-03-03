@@ -114,6 +114,8 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useControlTransitionNotifications } from '../../composables/useControlTransitionNotifications'
+import { useTenantContext } from '../../composables/useTenantContext'
 import { useBatteryPhysicsStore } from '~/stores/batteryPhysicsStore'
 
 interface FeedbackState {
@@ -133,6 +135,8 @@ const props = withDefaults(
 )
 
 const batteryPhysicsStore = useBatteryPhysicsStore()
+const tenantContext = useTenantContext()
+const transitionNotifications = useControlTransitionNotifications()
 const targetPower = ref(0)
 const feedback = ref<FeedbackState>({ message: '', type: 'success' })
 
@@ -190,8 +194,21 @@ watch(
   { immediate: true }
 )
 
-const setFeedback = (message: string, type: 'success' | 'error' = 'success') => {
+const setFeedback = (
+  message: string,
+  type: 'success' | 'error' = 'success',
+  dedupeKey?: string,
+) => {
   feedback.value = { message, type }
+
+  transitionNotifications.emitActionToast({
+    tenantId: tenantContext.currentTenantId.value,
+    title: type === 'error' ? 'Battery Control Error' : 'Battery Control Update',
+    message,
+    color: type === 'error' ? 'red' : 'green',
+    dedupeKey: dedupeKey || `${type}:${message}`,
+  })
+
   setTimeout(() => {
     feedback.value = { message: '', type: 'success' }
   }, 2800)
@@ -201,36 +218,36 @@ const toggleMode = async () => {
   try {
     const nextManual = !batteryPhysicsStore.state.manualMode
     await batteryPhysicsStore.setAutoMode(!nextManual)
-    setFeedback(nextManual ? 'Manual mode enabled' : 'Auto mode enabled')
+    setFeedback(nextManual ? 'Manual mode enabled' : 'Auto mode enabled', 'success', `mode:${nextManual ? 'manual' : 'auto'}`)
   } catch {
-    setFeedback('Failed to switch control mode', 'error')
+    setFeedback('Failed to switch control mode', 'error', 'mode:error')
   }
 }
 
 const applyCommand = async () => {
   try {
     await batteryPhysicsStore.setPowerCommand(targetPower.value)
-    setFeedback('Power command applied')
+    setFeedback('Power command applied', 'success', 'power:apply')
   } catch {
-    setFeedback('Failed to apply power command', 'error')
+    setFeedback('Failed to apply power command', 'error', 'power:apply:error')
   }
 }
 
 const quickCharge = async () => {
   try {
     await batteryPhysicsStore.charge(batteryPhysicsStore.state.maxChargePower * 0.8)
-    setFeedback('Quick charge started')
+    setFeedback('Quick charge started', 'success', 'quick:charge')
   } catch {
-    setFeedback('Quick charge failed', 'error')
+    setFeedback('Quick charge failed', 'error', 'quick:charge:error')
   }
 }
 
 const quickDischarge = async () => {
   try {
     await batteryPhysicsStore.discharge(batteryPhysicsStore.state.maxDischargePower * 0.8)
-    setFeedback('Quick discharge started')
+    setFeedback('Quick discharge started', 'success', 'quick:discharge')
   } catch {
-    setFeedback('Quick discharge failed', 'error')
+    setFeedback('Quick discharge failed', 'error', 'quick:discharge:error')
   }
 }
 
@@ -238,9 +255,9 @@ const setIdle = async () => {
   try {
     await batteryPhysicsStore.idle()
     targetPower.value = 0
-    setFeedback('Battery set to hold')
+    setFeedback('Battery set to hold', 'success', 'hold')
   } catch {
-    setFeedback('Failed to hold battery command', 'error')
+    setFeedback('Failed to hold battery command', 'error', 'hold:error')
   }
 }
 

@@ -57,6 +57,14 @@ export default defineEventHandler(async (event) => {
     let baselineTotal = rows.reduce((sum: number, row: any) => sum + asNumber(row?.cost_baseline), 0)
     let optimizedTotal = rows.reduce((sum: number, row: any) => sum + asNumber(row?.cost_optimized), 0)
     let savingsTotal = rows.reduce((sum: number, row: any) => sum + asNumber(row?.savings), 0)
+    const realizedRevenueTotal = rows.reduce((sum: number, row: any) => sum + asNumber(row?.realized_revenue_uah), 0)
+    const realizedCostTotal = rows.reduce((sum: number, row: any) => sum + asNumber(row?.realized_cost_uah), 0)
+    const realizedNetTotal = rows.reduce(
+      (sum: number, row: any) => sum + asNumber(row?.realized_net_uah, asNumber(row?.realized_revenue_uah) - asNumber(row?.realized_cost_uah)),
+      0,
+    )
+    const autoTransitionsTotal = rows.reduce((sum: number, row: any) => sum + asNumber(row?.auto_transitions), 0)
+    const hasRealizedSignal = Math.abs(realizedRevenueTotal) > 0 || Math.abs(realizedCostTotal) > 0 || Math.abs(realizedNetTotal) > 0
 
     const ppoBaselineTotal = asNumber(ppoValidation?.baseline_total, 0)
     const ppoOptimizedTotal = asNumber(ppoValidation?.optimized_total, 0)
@@ -75,6 +83,11 @@ export default defineEventHandler(async (event) => {
       const fallbackDaily = asNumber(analytics?.cost_analytics?.net_savings, 0)
       savingsTotal = fallbackDaily * days
     }
+
+    if (savingsTotal <= 0 && hasRealizedSignal) {
+      savingsTotal = realizedNetTotal
+    }
+
     if (optimizedTotal <= 0) {
       optimizedTotal = savingsTotal * 1.35
     }
@@ -86,6 +99,9 @@ export default defineEventHandler(async (event) => {
     const optimizedDaily = optimizedTotal / days
     const savingsDaily = savingsTotal / days
     const savingsPct = baselineTotal > 0 ? (savingsTotal / baselineTotal) * 100 : 0
+    const realizedDailyRevenue = realizedRevenueTotal / days
+    const realizedDailyCost = realizedCostTotal / days
+    const realizedDailyNet = realizedNetTotal / days
 
     const monthlyFromMl = asNumber(mlRecommendation?.data?.savings_estimate?.monthly_uah, 0)
     const annualFromMl = asNumber(mlRecommendation?.data?.savings_estimate?.annual_uah, 0)
@@ -130,6 +146,16 @@ export default defineEventHandler(async (event) => {
         load_shifting: round(loadShifting),
         demand_response: round(demandResponse),
       },
+      realized: {
+        revenue_total: round(realizedRevenueTotal),
+        cost_total: round(realizedCostTotal),
+        net_total: round(realizedNetTotal),
+        revenue_daily_avg: round(realizedDailyRevenue),
+        cost_daily_avg: round(realizedDailyCost),
+        net_daily_avg: round(realizedDailyNet),
+        auto_transitions: Math.round(autoTransitionsTotal),
+        unit: 'UAH',
+      },
       forecast: {
         monthly: round(monthlyForecast),
         quarterly: round(quarterlyForecast),
@@ -156,7 +182,12 @@ export default defineEventHandler(async (event) => {
         reconciliation: historyPayload?.source?.reconciliation || {
           reconciled_rows: 0,
           heuristic_rows_remaining: 0,
+          realized_revenue_uah: 0,
+          realized_cost_uah: 0,
+          realized_net_uah: 0,
+          auto_transitions: 0,
         },
+        realized_metrics_available: hasRealizedSignal,
         prices_source: pricesPayload?.source || 'unavailable',
         tenant_filter_applied: true,
       },

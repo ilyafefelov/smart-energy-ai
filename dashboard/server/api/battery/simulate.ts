@@ -18,11 +18,44 @@ interface BatterySimSpec {
   selfDischargePercentMonthly: number
 }
 
-let powerCommand = 0
-let manualMode = true
-let autoOptimization = false
+type TenantControlMirror = {
+  powerCommand: number
+  manualMode: boolean
+  autoOptimization: boolean
+  updatedAt: string
+}
 
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
+
+function getControlMirrorStore(): Record<string, TenantControlMirror> {
+  ;(globalThis as any).__batteryControlMirrorByTenant = (globalThis as any).__batteryControlMirrorByTenant || {}
+  return (globalThis as any).__batteryControlMirrorByTenant
+}
+
+function readControlMirror(tenantId: string): TenantControlMirror {
+  const store = getControlMirrorStore()
+  const existing = store[tenantId]
+  if (existing) {
+    return existing
+  }
+
+  return {
+    powerCommand: 0,
+    manualMode: true,
+    autoOptimization: false,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+function writeControlMirror(tenantId: string, updates: Partial<TenantControlMirror>): TenantControlMirror {
+  const next = {
+    ...readControlMirror(tenantId),
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  }
+  getControlMirrorStore()[tenantId] = next
+  return next
+}
 
 function loadBatterySimulationSpec(defaultVoltage: number, tenantId: string): BatterySimSpec {
   const tenantConfigPath = join(process.cwd(), '../energy_ml/configs/tenants', tenantId, 'user_config.json')
@@ -68,33 +101,75 @@ function loadBatterySimulationSpec(defaultVoltage: number, tenantId: string): Ba
   }
 }
 
-function computeAutoPowerKw(socPercent: number, spec: BatterySimSpec): number {
-  const hour = new Date().getHours()
-  const isOffPeak = hour >= 23 || hour < 7
-  const isPeak = hour >= 8 && hour <= 22
-
-  if (isOffPeak && socPercent < spec.socMaxPercent - 5) {
-    return round(spec.maxChargePowerKw * 0.2, 3)
-  }
-
-  if (isPeak && socPercent > spec.socMinPercent + 10) {
-    return round(-spec.maxDischargePowerKw * 0.15, 3)
-  }
-
-  return 0
-}
-
 function clampPower(targetKw: number, spec: BatterySimSpec): number {
   if (!Number.isFinite(targetKw)) return 0
   return Math.max(-spec.maxDischargePowerKw, Math.min(spec.maxChargePowerKw, targetKw))
 }
 
+function resolveManualCommand(powerKw: number): { command: 'charge' | 'discharge' | 'hold', powerKw: number } {
+  const normalized = Number(powerKw)
+  if (!Number.isFinite(normalized) || Math.abs(normalized) < 0.05) {
+    return { command: 'hold', powerKw: 0 }
+  }
+  if (normalized > 0) {
+    return { command: 'charge', powerKw: Math.abs(normalized) }
+  }
+  return { command: 'discharge', powerKw: -Math.abs(normalized) }
+}
+
+function resolveCommandedPower(params: {
+  activeCommand: string
+  livePowerKw: number
+  historyPowerKw: number | null
+  mirrorPowerKw: number
+  spec: BatterySimSpec
+}): number {
+  const historyPowerKw = params.historyPowerKw
+  if (Number.isFinite(historyPowerKw)) {
+    return round(clampPower(Number(historyPowerKw), params.spec), 3)
+  }
+
+  if (Number.isFinite(params.mirrorPowerKw) && Math.abs(params.mirrorPowerKw) > 0.001) {
+    return round(clampPower(params.mirrorPowerKw, params.spec), 3)
+  }
+
+  if (params.activeCommand === 'charge') {
+    const fallback = Math.abs(params.livePowerKw) > 0.05 ? Math.abs(params.livePowerKw) : params.spec.maxChargePowerKw * 0.2
+    return round(clampPower(Math.abs(fallback), params.spec), 3)
+  }
+
+  if (params.activeCommand === 'discharge') {
+    const fallback = Math.abs(params.livePowerKw) > 0.05 ? Math.abs(params.livePowerKw) : params.spec.maxDischargePowerKw * 0.2
+    return round(clampPower(-Math.abs(fallback), params.spec), 3)
+  }
+
+  return 0
+}
+
 export default eventHandler(async (event) => {
   const tenant = await resolveTenantContext(event)
   const method = getMethod(event)
+  const tenantRequest = {
+    query: {
+      tenantId: tenant.id,
+    },
+    headers: {
+      'x-tenant-id': tenant.id,
+    },
+  }
 
   if (method === 'GET') {
-    const state = await getBatteryState(tenant.id)
+    const [state, controlStatus, controlHistory] = await Promise.all([
+      getBatteryState(tenant.id),
+      $fetch<any>('/api/control/status', tenantRequest).catch(() => null),
+      $fetch<any>('/api/control/history', {
+        ...tenantRequest,
+        query: {
+          ...tenantRequest.query,
+          limit: 1,
+        },
+      }).catch(() => null),
+    ])
 
     const socPercent = Number(state?.soc ?? 50)
     const voltage = Number(state?.voltage ?? 400)
@@ -102,9 +177,27 @@ export default eventHandler(async (event) => {
     const livePowerKw = round((voltage * current) / 1000, 3)
 
     const spec = loadBatterySimulationSpec(voltage, tenant.id)
-    const effectivePowerCommand = manualMode
-      ? powerCommand
-      : computeAutoPowerKw(socPercent, spec)
+    const mirror = readControlMirror(tenant.id)
+    const statusMode = String(controlStatus?.mode || '').toLowerCase() === 'automatic' ? 'automatic' : 'manual'
+    const manualMode = statusMode === 'manual'
+    const autoOptimization = !manualMode
+    const activeCommand = String(controlStatus?.active_command || controlHistory?.history?.[0]?.command || 'hold').toLowerCase()
+    const historyPowerKwRaw = Number(controlHistory?.history?.[0]?.power_kw)
+    const historyPowerKw = Number.isFinite(historyPowerKwRaw) ? historyPowerKwRaw : null
+
+    const effectivePowerCommand = resolveCommandedPower({
+      activeCommand,
+      livePowerKw,
+      historyPowerKw,
+      mirrorPowerKw: mirror.powerCommand,
+      spec,
+    })
+
+    writeControlMirror(tenant.id, {
+      powerCommand: effectivePowerCommand,
+      manualMode,
+      autoOptimization,
+    })
 
     return {
       success: true,
@@ -134,9 +227,12 @@ export default eventHandler(async (event) => {
         powerCommand: effectivePowerCommand,
         manualMode,
         autoOptimization,
-        execution_mode: manualMode ? 'manual_command' : 'auto_optimization',
+        execution_mode: manualMode ? 'manual_command' : 'auto_recommendation',
+        active_command: activeCommand,
+        requested_command: controlStatus?.requested_command || null,
+        decision_source: controlStatus?.decision_source || null,
         isSimulationRunning: true,
-        source: 'battery_state_backed_simulator',
+        source: 'control_status_backed_simulator',
         lastUpdated: state?.lastUpdate || new Date().toISOString(),
       },
       specs: {
@@ -145,6 +241,11 @@ export default eventHandler(async (event) => {
         roundTripEfficiency: round(spec.efficiency * spec.efficiency, 4),
         nominalVoltage: round(spec.nominalVoltage, 2),
         selfDischarge: spec.selfDischargePercentMonthly,
+      },
+      source_metadata: {
+        tenant_filter_applied: true,
+        control_status_source: controlStatus?.source || 'unavailable',
+        control_history_source: controlHistory?.source || 'unavailable',
       },
     }
   }
@@ -156,46 +257,122 @@ export default eventHandler(async (event) => {
 
     if (body.action === 'setPower') {
       const requestedPowerKw = Number(body.power ?? 0)
-      powerCommand = round(clampPower(requestedPowerKw, spec), 3)
-      manualMode = true
-      autoOptimization = false
+      const clampedPowerKw = round(clampPower(requestedPowerKw, spec), 3)
+      const resolved = resolveManualCommand(clampedPowerKw)
 
-      const voltage = Number(state?.voltage ?? spec.nominalVoltage)
-      const derivedCurrent = voltage > 0 ? round((powerCommand * 1000) / voltage, 2) : 0
-      await updateBatteryState({ current: derivedCurrent }, tenant.id)
+      const executeResponse = await $fetch<any>('/api/control/execute', {
+        ...tenantRequest,
+        method: 'POST',
+        body: {
+          tenantId: tenant.id,
+          command: resolved.command,
+          power_kw: resolved.powerKw,
+          reason: body.reason || 'Battery simulator manual power command',
+          user_id: body.user_id || 'battery_simulator',
+        },
+      }).catch((error) => {
+        throw createError({
+          statusCode: 500,
+          statusMessage: error?.data?.error || error?.message || 'Control execute request failed',
+        })
+      })
+
+      if (!executeResponse?.success) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: executeResponse?.error || 'Control execute request failed',
+        })
+      }
+
+      writeControlMirror(tenant.id, {
+        powerCommand: clampedPowerKw,
+        manualMode: true,
+        autoOptimization: false,
+      })
 
       return {
         success: true,
         tenant: getTenantResponseMetadata(tenant),
-        message: `Power set to ${powerCommand}kW`,
-        powerCommand,
+        message: `Power set to ${clampedPowerKw}kW`,
+        powerCommand: clampedPowerKw,
+        requested_command: executeResponse?.requested_command || resolved.command,
+        resolved_command: executeResponse?.resolved_command || resolved.command,
+        decision_source: executeResponse?.decision_source || 'manual',
         execution_mode: 'manual_command',
+        source: executeResponse?.source || 'control_execute',
+        source_metadata: executeResponse?.source_metadata || {
+          tenant_filter_applied: true,
+        },
       }
     }
 
     if (body.action === 'setAutoMode') {
-      autoOptimization = body.enabled ?? true
-      manualMode = !autoOptimization
+      const enabled = body.enabled ?? true
+      const executeResponse = await $fetch<any>('/api/control/execute', {
+        ...tenantRequest,
+        method: 'POST',
+        body: {
+          tenantId: tenant.id,
+          command: enabled ? 'auto' : 'hold',
+          power_kw: enabled ? Math.abs(Number(body.power ?? 2.5)) : 0,
+          reason: enabled ? 'Battery simulator: enable auto mode' : 'Battery simulator: disable auto mode',
+          user_id: body.user_id || 'battery_simulator',
+        },
+      }).catch((error) => {
+        throw createError({
+          statusCode: 500,
+          statusMessage: error?.data?.error || error?.message || 'Failed to set control mode',
+        })
+      })
 
-      if (autoOptimization) {
-        powerCommand = 0
-        await updateBatteryState({ current: 0 }, tenant.id)
+      if (!executeResponse?.success) {
+        throw createError({
+          statusCode: 500,
+          statusMessage: executeResponse?.error || 'Failed to set control mode',
+        })
       }
+
+      writeControlMirror(tenant.id, {
+        powerCommand: enabled ? 0 : Number(readControlMirror(tenant.id).powerCommand || 0),
+        manualMode: !enabled,
+        autoOptimization: enabled,
+      })
 
       return {
         success: true,
         tenant: getTenantResponseMetadata(tenant),
-        message: `Auto mode ${autoOptimization ? 'enabled' : 'disabled'}`,
-        autoOptimization,
-        manualMode,
-        execution_mode: autoOptimization ? 'auto_optimization' : 'manual_command',
+        message: `Auto mode ${enabled ? 'enabled' : 'disabled'}`,
+        autoOptimization: enabled,
+        manualMode: !enabled,
+        requested_command: executeResponse?.requested_command || (enabled ? 'auto' : 'hold'),
+        resolved_command: executeResponse?.resolved_command || (enabled ? 'auto' : 'hold'),
+        decision_source: executeResponse?.decision_source || (enabled ? 'dagster' : 'manual'),
+        execution_mode: enabled ? 'auto_recommendation' : 'manual_command',
+        source: executeResponse?.source || 'control_execute',
+        source_metadata: executeResponse?.source_metadata || {
+          tenant_filter_applied: true,
+        },
       }
     }
 
     if (body.action === 'reset') {
-      powerCommand = 0
-      manualMode = true
-      autoOptimization = false
+      await $fetch<any>('/api/control/execute', {
+        ...tenantRequest,
+        method: 'POST',
+        body: {
+          tenantId: tenant.id,
+          command: 'hold',
+          power_kw: 0,
+          reason: 'Battery simulator reset command',
+          user_id: body.user_id || 'battery_simulator',
+        },
+      }).catch(() => null)
+
+      writeControlMirror(tenant.id, {
+        powerCommand: 0,
+        manualMode: true,
+        autoOptimization: false,
+      })
 
       await updateBatteryState({
         current: 0,

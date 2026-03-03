@@ -1,9 +1,14 @@
 // Control API - Remove Scheduled Command Endpoint
 // DELETE /api/control/schedule/[id]
 
+import { getTenantResponseMetadata, isRecordVisibleForTenant, resolveTenantContext } from '../../../utils/tenant-context'
+
 export default defineEventHandler(async (event) => {
   try {
+    const tenant = await resolveTenantContext(event)
     const scheduleId = getRouterParam(event, 'id')
+    const pythonScript = 'cancel_scheduled_command.py'
+    let fallbackReasonCode: string | null = null
     
     if (!scheduleId) {
       throw createError({
@@ -15,12 +20,16 @@ export default defineEventHandler(async (event) => {
     console.log('Removing scheduled command:', scheduleId)
     
     // Try to remove via Python controller
-    const { execPython } = await import('../../../../utils/python-runner.js').catch(() => ({ execPython: null }))
+    const pythonRunner: any = await import('../../../utils/python-runner.js').catch(() => ({ execPython: null, hasPythonScript: null }))
+    const execPython = pythonRunner?.execPython
+    const hasPythonScript = pythonRunner?.hasPythonScript
+    const pythonScriptAvailable = Boolean(execPython && hasPythonScript && hasPythonScript(pythonScript))
     
-    if (execPython) {
+    if (pythonScriptAvailable && execPython) {
       try {
-        const result = await execPython('cancel_scheduled_command.py', {
-          schedule_id: scheduleId
+        const result = await execPython(pythonScript, {
+          schedule_id: scheduleId,
+          tenant_id: tenant.id,
         })
         
         const pythonResult = JSON.parse(result)
@@ -28,8 +37,15 @@ export default defineEventHandler(async (event) => {
         if (pythonResult.success) {
           return {
             success: true,
+            tenant: getTenantResponseMetadata(tenant),
             message: 'Scheduled command cancelled',
             schedule_id: scheduleId,
+            source_metadata: {
+              tenant_filter_applied: true,
+              python_script: pythonScript,
+              python_script_available: true,
+              fallback_reason_code: 'none',
+            },
             source: 'python_controller'
           }
         } else {
@@ -38,7 +54,10 @@ export default defineEventHandler(async (event) => {
         
       } catch (pythonError) {
         console.warn('Python controller cancellation failed:', pythonError.message)
+        fallbackReasonCode = 'python_execution_failed'
       }
+    } else {
+      fallbackReasonCode = 'python_script_missing'
     }
     
     // Fallback to in-memory removal
@@ -50,7 +69,7 @@ export default defineEventHandler(async (event) => {
     
     // Remove the schedule
     globalThis.scheduledCommands = globalThis.scheduledCommands.filter(
-      cmd => cmd.id !== scheduleId
+      cmd => !(cmd.id === scheduleId && isRecordVisibleForTenant(cmd?.tenant_id ?? cmd?.tenantId, tenant))
     )
     
     const finalCount = globalThis.scheduledCommands.length
@@ -64,12 +83,24 @@ export default defineEventHandler(async (event) => {
     
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       message: 'Scheduled command cancelled',
       schedule_id: scheduleId,
+      source_metadata: {
+        tenant_filter_applied: true,
+        python_script: pythonScript,
+        python_script_available: pythonScriptAvailable,
+        fallback_reason_code: fallbackReasonCode || 'python_unavailable',
+      },
       source: 'memory_storage'
     }
     
   } catch (error) {
+    const errorData = (error as any)?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('Schedule removal error:', error)
     
     if (error.statusCode) {

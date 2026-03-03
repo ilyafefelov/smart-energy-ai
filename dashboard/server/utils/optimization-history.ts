@@ -26,6 +26,14 @@ export type OptimizationHistoryInsert = {
   battery_soc_end: number | null
   solar_actual: number | null
   load_actual: number | null
+  decision_source?: string | null
+  execution_status?: string | null
+  event_type?: string | null
+  mode_from?: string | null
+  mode_to?: string | null
+  realized_revenue_uah?: number | null
+  realized_cost_uah?: number | null
+  realized_net_uah?: number | null
   is_reconciled?: boolean
   reconciled_at?: string | null
   reconciliation_note?: string | null
@@ -179,6 +187,14 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
       battery_soc_end DOUBLE PRECISION,
       solar_actual DOUBLE PRECISION,
       load_actual DOUBLE PRECISION,
+      decision_source VARCHAR(32),
+      execution_status VARCHAR(32),
+      event_type VARCHAR(32),
+      mode_from VARCHAR(32),
+      mode_to VARCHAR(32),
+      realized_revenue_uah DOUBLE PRECISION,
+      realized_cost_uah DOUBLE PRECISION,
+      realized_net_uah DOUBLE PRECISION,
       is_reconciled BOOLEAN NOT NULL DEFAULT FALSE,
       reconciled_at TIMESTAMP,
       reconciliation_note TEXT,
@@ -205,6 +221,14 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS tariff_window VARCHAR(32)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS interval_start TIMESTAMP`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS interval_end TIMESTAMP`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS decision_source VARCHAR(32)`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS execution_status VARCHAR(32)`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS event_type VARCHAR(32)`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS mode_from VARCHAR(32)`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS mode_to VARCHAR(32)`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS realized_revenue_uah DOUBLE PRECISION`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS realized_cost_uah DOUBLE PRECISION`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS realized_net_uah DOUBLE PRECISION`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS is_reconciled BOOLEAN NOT NULL DEFAULT FALSE`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS reconciled_at TIMESTAMP`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS reconciliation_note TEXT`)
@@ -320,12 +344,20 @@ export async function persistOptimizationHistory(
         battery_soc_end,
         solar_actual,
         load_actual,
+        decision_source,
+        execution_status,
+        event_type,
+        mode_from,
+        mode_to,
+        realized_revenue_uah,
+        realized_cost_uah,
+        realized_net_uah,
         is_reconciled,
         reconciled_at,
         reconciliation_note,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, NOW())
       ON CONFLICT (execution_key)
       DO UPDATE SET
         command_id = EXCLUDED.command_id,
@@ -351,6 +383,14 @@ export async function persistOptimizationHistory(
         battery_soc_end = EXCLUDED.battery_soc_end,
         solar_actual = EXCLUDED.solar_actual,
         load_actual = EXCLUDED.load_actual,
+        decision_source = EXCLUDED.decision_source,
+        execution_status = EXCLUDED.execution_status,
+        event_type = EXCLUDED.event_type,
+        mode_from = EXCLUDED.mode_from,
+        mode_to = EXCLUDED.mode_to,
+        realized_revenue_uah = EXCLUDED.realized_revenue_uah,
+        realized_cost_uah = EXCLUDED.realized_cost_uah,
+        realized_net_uah = EXCLUDED.realized_net_uah,
         is_reconciled = EXCLUDED.is_reconciled,
         reconciled_at = EXCLUDED.reconciled_at,
         reconciliation_note = EXCLUDED.reconciliation_note,
@@ -382,6 +422,14 @@ export async function persistOptimizationHistory(
         entry.battery_soc_end,
         entry.solar_actual,
         entry.load_actual,
+        entry.decision_source ?? null,
+        entry.execution_status ?? null,
+        entry.event_type ?? null,
+        entry.mode_from ?? null,
+        entry.mode_to ?? null,
+        entry.realized_revenue_uah ?? null,
+        entry.realized_cost_uah ?? null,
+        entry.realized_net_uah ?? null,
         entry.is_reconciled ?? false,
         entry.reconciled_at ?? null,
         entry.reconciliation_note ?? null,

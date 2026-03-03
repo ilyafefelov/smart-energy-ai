@@ -159,22 +159,30 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
     return types[state.value.type] || types['LFP']
   })
 
-  // Actions
-  const fetchBatteryData = async () => {
-    isLoading.value = true
-    error.value = null
-
-    try {
-      await tenantContext.loadTenants()
-      const tenantId = tenantContext.currentTenantId.value
-      const response = await $fetch('/api/battery/simulate', {
+  const resolveTenantRequest = async () => {
+    await tenantContext.loadTenants()
+    const tenantId = tenantContext.currentTenantId.value
+    return {
+      tenantId,
+      request: {
         query: {
           tenantId,
         },
         headers: {
           'x-tenant-id': tenantId,
         },
-      })
+      },
+    }
+  }
+
+  // Actions
+  const fetchBatteryData = async () => {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const { request } = await resolveTenantRequest()
+      const response = await $fetch('/api/battery/simulate', request)
       
       if (response.success && response.battery) {
         state.value = {
@@ -212,28 +220,30 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
     error.value = null
 
     try {
-      await tenantContext.loadTenants()
-      const tenantId = tenantContext.currentTenantId.value
-      const response = await $fetch('/api/battery/simulate', {
+      const { tenantId, request } = await resolveTenantRequest()
+      const limitedPower = Math.max(-state.value.maxDischargePower, Math.min(state.value.maxChargePower, Number(power || 0)))
+      const command = Math.abs(limitedPower) < 0.05
+        ? 'hold'
+        : limitedPower > 0
+          ? 'charge'
+          : 'discharge'
+
+      const response = await $fetch('/api/control/execute', {
         method: 'POST',
-        query: {
-          tenantId,
-        },
-        headers: {
-          'x-tenant-id': tenantId,
-        },
+        ...request,
         body: {
-          action: 'setPower',
-          power,
           tenantId,
+          command,
+          power_kw: command === 'hold' ? 0 : limitedPower,
+          reason: 'Interactive battery widget manual command',
+          user_id: 'battery_widget',
         }
       })
 
       if (response.success) {
-        state.value.powerCommand = response.powerCommand
-        state.value.manualMode = true
-        state.value.autoOptimization = false
-        console.log(`[BatteryPhysics] Power command set to ${power}kW`)
+        state.value.powerCommand = limitedPower
+        await fetchBatteryData()
+        console.log(`[BatteryPhysics] Power command set to ${limitedPower}kW via ${response.source || 'control_execute'}`)
       } else {
         throw new Error(response.error || 'Failed to set power')
       }
@@ -247,28 +257,22 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
     error.value = null
 
     try {
-      await tenantContext.loadTenants()
-      const tenantId = tenantContext.currentTenantId.value
-      const response = await $fetch('/api/battery/simulate', {
+      const { tenantId, request } = await resolveTenantRequest()
+      const response = await $fetch('/api/control/execute', {
         method: 'POST',
-        query: {
-          tenantId,
-        },
-        headers: {
-          'x-tenant-id': tenantId,
-        },
+        ...request,
         body: {
-          action: 'setAutoMode',
-          enabled,
           tenantId,
+          command: enabled ? 'auto' : 'hold',
+          power_kw: enabled ? Math.max(0.5, Math.min(5, Math.abs(state.value.powerCommand || 2.5))) : 0,
+          reason: enabled ? 'Interactive battery widget auto mode' : 'Interactive battery widget manual mode',
+          user_id: 'battery_widget',
         }
       })
 
       if (response.success) {
-        state.value.manualMode = !enabled
-        state.value.autoOptimization = enabled
-        if (enabled) state.value.powerCommand = 0
-        console.log(`[BatteryPhysics] Auto mode ${enabled ? 'enabled' : 'disabled'}`)
+        await fetchBatteryData()
+        console.log(`[BatteryPhysics] Auto mode ${enabled ? 'enabled' : 'disabled'} via ${response.source || 'control_execute'}`)
       } else {
         throw new Error(response.error || 'Failed to set auto mode')
       }

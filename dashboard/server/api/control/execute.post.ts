@@ -5,6 +5,19 @@ import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../..
 import { recordBillingUsageEvent } from '../../utils/billing'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
+type ExecutableCommand = 'charge' | 'discharge' | 'hold'
+
+type ExecutionPlan = {
+  command: ExecutableCommand
+  power_kw: number
+  decisionSource: 'manual' | 'dagster' | 'ml' | 'heuristic'
+  reasoning: string
+  requestedCommand: string
+  eventType: 'manual_command' | 'auto_transition'
+  modeFrom: 'manual' | 'automatic'
+  modeTo: 'manual' | 'automatic'
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -52,7 +65,12 @@ export default defineEventHandler(async (event) => {
     console.log('Executing control command:', command)
     
     // Try to execute via Python controller
-    const { execPython } = await import('../../../utils/python-runner.js').catch(() => ({ execPython: null }))
+    const pythonScript = 'execute_control_command.py'
+    let fallbackReasonCode: string | null = null
+    const pythonRunner: any = await import('../../utils/python-runner.js').catch(() => ({ execPython: null, hasPythonScript: null }))
+    const execPython = pythonRunner?.execPython
+    const hasPythonScript = pythonRunner?.hasPythonScript
+    const pythonScriptAvailable = Boolean(execPython && hasPythonScript && hasPythonScript(pythonScript))
 
     const batteryStatusBefore = await $fetch<any>('/api/battery/status', {
       headers: {
@@ -63,25 +81,49 @@ export default defineEventHandler(async (event) => {
       },
     }).catch(() => null)
     
-    if (execPython) {
+    const executionPlan = await resolveExecutionPlan(command, tenant.id)
+    const executableCommand = {
+      ...command,
+      command: executionPlan.command,
+      power_kw: executionPlan.power_kw,
+      reason: executionPlan.reasoning || command.reason,
+    }
+
+    if (pythonScriptAvailable && execPython) {
       try {
-        const result = await execPython('execute_control_command.py', {
-          ...command,
-          power: command.power_kw.toString(),
-          command_type: command.command,
-          tenant_id: tenant.id,
+        const result = await execPython(pythonScript, {
+          command: executableCommand.command,
+          power: executableCommand.power_kw,
+          duration: executableCommand.duration_minutes,
+          reason: executableCommand.reason,
+          user_id: executableCommand.user_id,
         })
         
         const pythonResult = JSON.parse(result)
 
         await persistCommandToOptimizationHistory({
-          command,
+          command: executableCommand,
           executionResult: pythonResult,
           executionSource: 'python_controller',
           batterySocBeforeRaw: batteryStatusBefore?.battery?.soc,
+          decisionSource: executionPlan.decisionSource,
+          eventType: executionPlan.eventType,
+          modeFrom: executionPlan.modeFrom,
+          modeTo: executionPlan.modeTo,
+          requestedCommand: executionPlan.requestedCommand,
         })
 
-        recordBillingForExecutedCommand(command, pythonResult, 'python_controller')
+        recordBillingForExecutedCommand(executableCommand, pythonResult, 'python_controller', executionPlan.requestedCommand)
+
+        ;(globalThis as any).__controlModeByTenant = (globalThis as any).__controlModeByTenant || {}
+        ;(globalThis as any).__controlModeByTenant[tenant.id] = {
+          mode: executionPlan.modeTo,
+          requested_command: executionPlan.requestedCommand,
+          active_command: executionPlan.command,
+          decision_source: executionPlan.decisionSource,
+          reason: executableCommand.reason,
+          updated_at: new Date().toISOString(),
+        }
         
         console.log('Python controller result:', pythonResult)
         
@@ -89,14 +131,26 @@ export default defineEventHandler(async (event) => {
           success: true,
           tenant: getTenantResponseMetadata(tenant),
           result: pythonResult,
-          command_id: command.command_id,
-          executed_at: command.timestamp,
+          command_id: executableCommand.command_id,
+          requested_command: executionPlan.requestedCommand,
+          resolved_command: executionPlan.command,
+          decision_source: executionPlan.decisionSource,
+          executed_at: executableCommand.timestamp,
+          source_metadata: {
+            tenant_filter_applied: true,
+            python_script: pythonScript,
+            python_script_available: true,
+            fallback_reason_code: 'none',
+          },
           source: 'python_controller'
         }
         
       } catch (pythonError) {
         console.warn('Python controller execution failed:', pythonError.message)
+        fallbackReasonCode = 'python_execution_failed'
       }
+    } else {
+      fallbackReasonCode = 'python_script_missing'
     }
     
     // Fallback simulation for development
@@ -115,27 +169,27 @@ export default defineEventHandler(async (event) => {
     const maxPower = 5.0
 
     let deltaSoc = 0
-    if (command.command === 'charge' && command.power_kw > 0) {
-      deltaSoc = Math.min(0.2, Math.abs(command.power_kw) / batteryCapacity)
-    } else if (command.command === 'discharge' && command.power_kw < 0) {
-      deltaSoc = -Math.min(0.2, Math.abs(command.power_kw) / batteryCapacity)
+    if (executableCommand.command === 'charge' && executableCommand.power_kw > 0) {
+      deltaSoc = Math.min(0.2, Math.abs(executableCommand.power_kw) / batteryCapacity)
+    } else if (executableCommand.command === 'discharge' && executableCommand.power_kw < 0) {
+      deltaSoc = -Math.min(0.2, Math.abs(executableCommand.power_kw) / batteryCapacity)
     }
 
     const newSoc = Math.max(0.05, Math.min(0.95, batterySoc + deltaSoc))
     const socDeltaKwh = Math.abs(newSoc - batterySoc) * batteryCapacity
-    const powerAbs = Math.max(Math.abs(command.power_kw), 0.1)
+    const powerAbs = Math.max(Math.abs(executableCommand.power_kw), 0.1)
     const derivedMinutes = Math.max(1, Math.round((socDeltaKwh / powerAbs) * 60))
 
     const simulationResult = {
       success: true,
       soc_before: Number(batterySoc.toFixed(4)),
       new_soc: Number(newSoc.toFixed(4)),
-      power_kw: command.power_kw,
-      estimated_completion: command.command === 'hold'
+      power_kw: executableCommand.power_kw,
+      estimated_completion: executableCommand.command === 'hold'
         ? null
-        : new Date(Date.now() + (command.duration_minutes || derivedMinutes) * 60000).toISOString(),
+        : new Date(Date.now() + (executableCommand.duration_minutes || derivedMinutes) * 60000).toISOString(),
       validation: {
-        power_within_limits: Math.abs(command.power_kw) <= maxPower,
+        power_within_limits: Math.abs(executableCommand.power_kw) <= maxPower,
         soc_safe_for_operation: newSoc >= 0.05 && newSoc <= 0.95,
         command_accepted: true
       }
@@ -147,7 +201,10 @@ export default defineEventHandler(async (event) => {
     }
     
     const historyEntry = {
-      ...command,
+      ...executableCommand,
+      requested_command: executionPlan.requestedCommand,
+      resolved_command: executionPlan.command,
+      decision_source: executionPlan.decisionSource,
       tenant_id: tenant.id,
       result: simulationResult,
       executed_at: new Date().toISOString(),
@@ -162,20 +219,44 @@ export default defineEventHandler(async (event) => {
     }
 
     await persistCommandToOptimizationHistory({
-      command,
+      command: executableCommand,
       executionResult: simulationResult,
       executionSource: 'simulation',
       batterySocBeforeRaw: batterySoc * 100,
+      decisionSource: executionPlan.decisionSource,
+      eventType: executionPlan.eventType,
+      modeFrom: executionPlan.modeFrom,
+      modeTo: executionPlan.modeTo,
+      requestedCommand: executionPlan.requestedCommand,
     })
 
-    recordBillingForExecutedCommand(command, simulationResult, 'simulation')
+    recordBillingForExecutedCommand(executableCommand, simulationResult, 'simulation', executionPlan.requestedCommand)
+
+    ;(globalThis as any).__controlModeByTenant = (globalThis as any).__controlModeByTenant || {}
+    ;(globalThis as any).__controlModeByTenant[tenant.id] = {
+      mode: executionPlan.modeTo,
+      requested_command: executionPlan.requestedCommand,
+      active_command: executionPlan.command,
+      decision_source: executionPlan.decisionSource,
+      reason: executableCommand.reason,
+      updated_at: new Date().toISOString(),
+    }
     
     return {
       success: true,
       tenant: getTenantResponseMetadata(tenant),
       result: simulationResult,
-      command_id: command.command_id,
-      executed_at: command.timestamp,
+      command_id: executableCommand.command_id,
+      requested_command: executionPlan.requestedCommand,
+      resolved_command: executionPlan.command,
+      decision_source: executionPlan.decisionSource,
+      executed_at: executableCommand.timestamp,
+      source_metadata: {
+        tenant_filter_applied: true,
+        python_script: pythonScript,
+        python_script_available: pythonScriptAvailable,
+        fallback_reason_code: fallbackReasonCode || 'python_unavailable',
+      },
       source: 'simulation'
     }
     
@@ -247,6 +328,11 @@ type PersistInput = {
   executionResult: any
   executionSource: 'python_controller' | 'simulation'
   batterySocBeforeRaw: unknown
+  decisionSource: 'manual' | 'dagster' | 'ml' | 'heuristic'
+  eventType: 'manual_command' | 'auto_transition'
+  modeFrom: 'manual' | 'automatic'
+  modeTo: 'manual' | 'automatic'
+  requestedCommand: string
 }
 
 type PricingContext = {
@@ -454,6 +540,9 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
   const durationHours = deriveDurationHours(command, executionResult)
   const energyKwh = Math.max(0, Math.abs(Number(command.power_kw || 0)) * durationHours)
   const economics = computeCanonicalEconomics(command, energyKwh, pricing)
+  const realizedCostUah = command.command === 'charge' ? energyKwh * pricing.unitPriceUahKwh : 0
+  const realizedRevenueUah = command.command === 'discharge' ? energyKwh * pricing.unitPriceUahKwh : 0
+  const realizedNetUah = realizedRevenueUah - realizedCostUah
 
   const socBefore = normalizeSocPercent(
     executionResult?.soc_before ?? executionResult?.result?.soc_before ?? input.batterySocBeforeRaw,
@@ -503,6 +592,14 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
     battery_soc_end: Number.isFinite(socAfter) ? socAfter : null,
     solar_actual: null,
     load_actual: null,
+    decision_source: input.decisionSource,
+    execution_status: executionResult?.success === false ? 'failed' : 'executed',
+    event_type: input.eventType,
+    mode_from: input.modeFrom,
+    mode_to: input.modeTo,
+    realized_revenue_uah: Number.isFinite(realizedRevenueUah) ? realizedRevenueUah : null,
+    realized_cost_uah: Number.isFinite(realizedCostUah) ? realizedCostUah : null,
+    realized_net_uah: Number.isFinite(realizedNetUah) ? realizedNetUah : null,
   })
 
   if (!persistResult.ok) {
@@ -526,6 +623,7 @@ function recordBillingForExecutedCommand(
   command: CommandPayload,
   executionResult: any,
   source: 'python_controller' | 'simulation',
+  requestedCommand: string,
 ): void {
   try {
     const durationHours = deriveDurationHours(command, executionResult)
@@ -540,6 +638,7 @@ function recordBillingForExecutedCommand(
       metadata: {
         command_id: command.command_id,
         schedule_id: command.schedule_id,
+        requested_command: requestedCommand,
         command: command.command,
         source,
         power_kw: command.power_kw,
@@ -553,5 +652,93 @@ function recordBillingForExecutedCommand(
       tenant_id: command.tenant_id,
       error: (error as any)?.message || 'unknown',
     })
+  }
+}
+
+function mapRecommendationToExecution(action: string, fallbackPowerKw: number): { command: ExecutableCommand, power_kw: number } {
+  const normalized = String(action || 'HOLD').toUpperCase()
+  if (normalized === 'BUY' || normalized === 'CHARGE') {
+    return { command: 'charge', power_kw: Math.max(0.5, Math.abs(fallbackPowerKw)) }
+  }
+  if (normalized === 'SELL' || normalized === 'DISCHARGE') {
+    return { command: 'discharge', power_kw: -Math.max(0.5, Math.abs(fallbackPowerKw)) }
+  }
+  return { command: 'hold', power_kw: 0 }
+}
+
+async function resolveExecutionPlan(command: CommandPayload, tenantId: string): Promise<ExecutionPlan> {
+  const modeStateByTenant = (globalThis as any).__controlModeByTenant || {}
+  const previousMode = modeStateByTenant[tenantId]?.mode === 'automatic' ? 'automatic' : 'manual'
+
+  if (command.command !== 'auto') {
+    const normalizedPower = command.command === 'hold'
+      ? 0
+      : command.command === 'charge'
+        ? Math.abs(command.power_kw)
+        : -Math.abs(command.power_kw)
+    return {
+      command: command.command as ExecutableCommand,
+      power_kw: normalizedPower,
+      decisionSource: 'manual',
+      reasoning: command.reason,
+      requestedCommand: command.command,
+      eventType: 'manual_command',
+      modeFrom: previousMode,
+      modeTo: 'manual',
+    }
+  }
+
+  const fallbackPowerKw = Math.max(0.5, Math.min(5, Math.abs(Number(command.power_kw || 2.5))))
+  const tenantRequest = {
+    headers: {
+      'x-tenant-id': tenantId,
+    },
+    query: {
+      tenantId,
+    },
+  }
+
+  try {
+    const dagsterRecommendation = await $fetch<any>('/api/dagster/recommendation', tenantRequest)
+    const mapped = mapRecommendationToExecution(dagsterRecommendation?.recommendation?.action || 'HOLD', fallbackPowerKw)
+    const source = String(dagsterRecommendation?.source_metadata?.recommendation_source || '')
+    return {
+      ...mapped,
+      decisionSource: source.startsWith('dagster') ? 'dagster' : 'ml',
+      reasoning: dagsterRecommendation?.recommendation?.rationale || 'Auto execution from Dagster recommendation',
+      requestedCommand: 'auto',
+      eventType: 'auto_transition',
+      modeFrom: previousMode,
+      modeTo: 'automatic',
+    }
+  } catch {
+    try {
+      const mlRecommendation = await $fetch<any>('/api/ml/recommendation', tenantRequest)
+      const mapped = mapRecommendationToExecution(mlRecommendation?.data?.action || 'HOLD', fallbackPowerKw)
+      return {
+        ...mapped,
+        decisionSource: 'ml',
+        reasoning: mlRecommendation?.data?.reasoning || 'Auto execution from ML recommendation',
+        requestedCommand: 'auto',
+        eventType: 'auto_transition',
+        modeFrom: previousMode,
+        modeTo: 'automatic',
+      }
+    } catch {
+      const pricesPayload = await $fetch<any>('/api/prices/current', tenantRequest).catch(() => null)
+      const current = Number(pricesPayload?.prices?.current?.price || 0)
+      const avg = Number(pricesPayload?.prices?.today?.avg || 0)
+      const heuristicAction = avg > 0 && current < avg * 0.9 ? 'BUY' : avg > 0 && current > avg * 1.1 ? 'SELL' : 'HOLD'
+      const mapped = mapRecommendationToExecution(heuristicAction, fallbackPowerKw)
+      return {
+        ...mapped,
+        decisionSource: 'heuristic',
+        reasoning: 'Auto execution from heuristic fallback (price spread threshold).',
+        requestedCommand: 'auto',
+        eventType: 'auto_transition',
+        modeFrom: previousMode,
+        modeTo: 'automatic',
+      }
+    }
   }
 }

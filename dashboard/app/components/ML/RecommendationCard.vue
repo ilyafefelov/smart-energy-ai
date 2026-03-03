@@ -86,15 +86,25 @@
 
 <script setup>
 import { useMLStore } from '~/stores/mlStore'
+import { useTenantContext } from '~/composables/useTenantContext'
 
 const mlStore = useMLStore()
+const tenantContext = useTenantContext()
 
 const refreshRecommendation = async () => {
-  await mlStore.fetchRecommendation()
+  await mlStore.fetchRecommendation(tenantContext.currentTenantId.value)
 }
 
 // Load recommendation on mount
-onMounted(() => {
-  refreshRecommendation()
+onMounted(async () => {
+  await tenantContext.loadTenants()
+  await refreshRecommendation()
 })
+
+watch(
+  () => tenantContext.currentTenantId.value,
+  async () => {
+    await refreshRecommendation()
+  },
+)
 </script>

@@ -27,6 +27,101 @@ function normalizeAssetName(value: unknown): string {
   return ASSET_ALIASES[raw] || raw
 }
 
+function resolveAssetSelection(assetName: string, includeUpstream: boolean): string {
+  return includeUpstream ? `*${assetName}` : assetName
+}
+
+function resolveDagsterDbConfig() {
+  return {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432'),
+    user: process.env.DB_USER || 'dagster',
+    password: process.env.DB_PASSWORD || 'dagster',
+    database: process.env.DB_NAME || 'dagster',
+  }
+}
+
+type DagsterScheduleSnapshot = {
+  success: boolean
+  source?: string
+  asset?: string
+  asset_file?: string
+  dagster_home?: string
+  tenant_id?: string
+  selected_client_id?: string
+  schedule?: Array<{
+    hour: number
+    action: string
+    action_kw: number
+    expected_profit_uah: number
+    price_uah_kwh: number
+  }>
+  recommendation?: {
+    action: string
+    confidence: number
+    confidence_percent: number
+    rationale: string
+  }
+  generated_at?: string
+  error?: string
+}
+
+async function persistDagsterSnapshot(snapshot: DagsterScheduleSnapshot, executionTimeMs: number) {
+  let pool: any = null
+
+  try {
+    const { Pool } = await import('pg')
+    pool = new Pool(resolveDagsterDbConfig())
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS asset_results (
+        id SERIAL PRIMARY KEY,
+        asset_name VARCHAR(255) NOT NULL,
+        run_id VARCHAR(255),
+        materialization_time TIMESTAMP DEFAULT NOW(),
+        data JSONB,
+        status VARCHAR(50) DEFAULT 'success',
+        error_message TEXT,
+        execution_time_ms INTEGER,
+        UNIQUE(asset_name, run_id)
+      )
+    `)
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_asset_results_name ON asset_results(asset_name)')
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_asset_results_time ON asset_results(materialization_time DESC)')
+
+    const assetName = String(snapshot.asset || 'optimization_schedule_milp_asset')
+    const runId = `snapshot_${assetName}_${Date.now()}`
+
+    await pool.query(
+      `
+        INSERT INTO asset_results (asset_name, run_id, materialization_time, data, status, execution_time_ms)
+        VALUES ($1, $2, NOW(), $3::jsonb, 'success', $4)
+        ON CONFLICT (asset_name, run_id)
+        DO UPDATE SET
+          data = EXCLUDED.data,
+          status = EXCLUDED.status,
+          execution_time_ms = EXCLUDED.execution_time_ms
+      `,
+      [assetName, runId, JSON.stringify(snapshot), executionTimeMs],
+    )
+
+    return {
+      stored: true,
+      assetName,
+      runId,
+    }
+  } catch (error: any) {
+    return {
+      stored: false,
+      error: error?.message || 'Failed to persist dagster snapshot',
+    }
+  } finally {
+    if (pool) {
+      await pool.end().catch(() => {})
+    }
+  }
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -46,6 +141,9 @@ export default defineEventHandler(async (event) => {
         available_assets: AVAILABLE_ASSETS,
       }
     }
+
+    const includeUpstream = body?.include_upstream !== false
+    const assetSelection = resolveAssetSelection(normalizedAsset, includeUpstream)
     
     // Use subprocess to run dagster CLI
     const { execFileSync } = await import('child_process')
@@ -70,7 +168,7 @@ export default defineEventHandler(async (event) => {
     try {
       const output = execFileSync(
         'python',
-        ['-m', 'dagster', 'asset', 'materialize', '--select', normalizedAsset, '-m', 'src.definitions'],
+        ['-m', 'dagster', 'asset', 'materialize', '--select', assetSelection, '-m', 'src.definitions'],
         {
           encoding: 'utf-8',
           timeout: 180000,
@@ -87,14 +185,56 @@ export default defineEventHandler(async (event) => {
       )
       
       const executionTime = Date.now() - startTime
+
+      let snapshotPersist: any = { stored: false }
+      try {
+        const scheduleReaderOutput = execFileSync(
+          'python',
+          [
+            join(projectRoot, 'scripts', 'read_dagster_schedule.py'),
+            '--tenant-id',
+            tenant.id,
+            '--project-root',
+            projectRoot,
+          ],
+          {
+            encoding: 'utf-8',
+            timeout: 30000,
+            cwd: projectRoot,
+            env: {
+              ...process.env,
+              ENERGY_ML_TENANT_ID: tenant.id,
+            },
+          },
+        )
+
+        const snapshot = JSON.parse((scheduleReaderOutput || '').trim()) as DagsterScheduleSnapshot
+        if (snapshot?.success && Array.isArray(snapshot?.schedule) && snapshot.schedule.length > 0) {
+          snapshot.tenant_id = tenant.id
+          snapshotPersist = await persistDagsterSnapshot(snapshot, executionTime)
+        } else {
+          snapshotPersist = {
+            stored: false,
+            error: snapshot?.error || 'Schedule snapshot unavailable after materialization',
+          }
+        }
+      } catch (snapshotError: any) {
+        snapshotPersist = {
+          stored: false,
+          error: snapshotError?.message || 'Failed to create Dagster snapshot',
+        }
+      }
       
       return {
         success: true,
         tenant: getTenantResponseMetadata(tenant),
         asset: normalizedAsset,
+        selection: assetSelection,
+        include_upstream: includeUpstream,
         requested_asset: requestedAsset,
         execution_time_ms: executionTime,
         output: output.slice(-1000), // Last 1000 chars
+        snapshot: snapshotPersist,
         timestamp: new Date().toISOString()
       }
     } catch (execError) {
@@ -106,6 +246,8 @@ export default defineEventHandler(async (event) => {
         success: false,
         tenant: getTenantResponseMetadata(tenant),
         asset: normalizedAsset,
+        selection: assetSelection,
+        include_upstream: includeUpstream,
         requested_asset: requestedAsset,
         error: errorText,
         output: (stdout || stderr).slice(-4000),

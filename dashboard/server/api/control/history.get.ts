@@ -9,13 +9,18 @@ export default defineEventHandler(async (event) => {
     const tenant = await resolveTenantContext(event)
     const query = getQuery(event)
     const limit = Math.min(parseInt(query.limit as string) || 50, 100)
+    const pythonScript = 'get_control_history.py'
+    let fallbackReasonCode: string | null = null
     
     // Try to get history from Python controller
-    const { execPython } = await import('../../../utils/python-runner.js').catch(() => ({ execPython: null }))
+    const pythonRunner: any = await import('../../utils/python-runner.js').catch(() => ({ execPython: null, hasPythonScript: null }))
+    const execPython = pythonRunner?.execPython
+    const hasPythonScript = pythonRunner?.hasPythonScript
+    const pythonScriptAvailable = Boolean(execPython && hasPythonScript && hasPythonScript(pythonScript))
     
-    if (execPython) {
+    if (pythonScriptAvailable && execPython) {
       try {
-        const result = await execPython('get_control_history.py', {
+        const result = await execPython(pythonScript, {
           limit: limit.toString(),
           tenant_id: tenant.id,
         })
@@ -35,13 +40,19 @@ export default defineEventHandler(async (event) => {
           count: normalized.length,
           source_metadata: {
             tenant_filter_applied: true,
+            python_script: pythonScript,
+            python_script_available: true,
+            fallback_reason_code: 'none',
           },
           source: 'python_controller'
         }
         
       } catch (pythonError) {
         console.warn('Python controller history not available:', pythonError.message)
+        fallbackReasonCode = 'python_execution_failed'
       }
+    } else {
+      fallbackReasonCode = 'python_script_missing'
     }
 
     // Deterministic fallback to in-memory history.
@@ -60,6 +71,9 @@ export default defineEventHandler(async (event) => {
       count: apiHistory.length,
       source_metadata: {
         tenant_filter_applied: true,
+        python_script: pythonScript,
+        python_script_available: pythonScriptAvailable,
+        fallback_reason_code: fallbackReasonCode || 'python_unavailable',
       },
       source: 'memory_storage'
     }
@@ -219,6 +233,14 @@ async function persistHistoryRows(rows: any[], source: 'python_controller_histor
       battery_soc_end: Number.isFinite(row.soc_after) ? row.soc_after * 100 : null,
       solar_actual: null,
       load_actual: null,
+      decision_source: 'manual',
+      execution_status: row.success ? 'executed' : 'failed',
+      event_type: 'history_sync',
+      mode_from: null,
+      mode_to: null,
+      realized_revenue_uah: null,
+      realized_cost_uah: null,
+      realized_net_uah: null,
     })
   }
 }

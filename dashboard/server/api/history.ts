@@ -33,6 +33,10 @@ type HistoryRow = {
   cost_baseline: number
   cost_optimized: number
   savings: number
+  realized_revenue_uah?: number
+  realized_cost_uah?: number
+  realized_net_uah?: number
+  auto_transitions?: number
   battery_actions: number
   price_min: number
   price_max: number
@@ -72,6 +76,10 @@ async function fetchAppDbHistory(limitDays: number, tenantId: string): Promise<A
           DATE(timestamp) AS day,
           SUM(COALESCE(cost_baseline, 0)) AS baseline_cost,
           SUM(COALESCE(cost_rl, 0)) AS optimized_cost,
+          SUM(COALESCE(realized_revenue_uah, 0)) AS realized_revenue_uah,
+          SUM(COALESCE(realized_cost_uah, 0)) AS realized_cost_uah,
+          SUM(COALESCE(realized_net_uah, 0)) AS realized_net_uah,
+          SUM(CASE WHEN COALESCE(event_type, '') = 'auto_transition' THEN 1 ELSE 0 END) AS auto_transitions,
           SUM(CASE WHEN predicted_action IN (0, 1) THEN 1 ELSE 0 END) AS battery_actions,
           SUM(CASE WHEN COALESCE(is_reconciled, FALSE) THEN 1 ELSE 0 END) AS reconciled_rows,
           SUM(CASE WHEN COALESCE(economics_method, '') = 'heuristic_multiplier' THEN 1 ELSE 0 END) AS heuristic_rows
@@ -92,6 +100,10 @@ async function fetchAppDbHistory(limitDays: number, tenantId: string): Promise<A
         cost_baseline: asNumber(row.baseline_cost, 0),
         cost_optimized: asNumber(row.optimized_cost, 0),
         savings: asNumber(row.baseline_cost, 0) - asNumber(row.optimized_cost, 0),
+        realized_revenue_uah: asNumber(row.realized_revenue_uah, 0),
+        realized_cost_uah: asNumber(row.realized_cost_uah, 0),
+        realized_net_uah: asNumber(row.realized_net_uah, 0),
+        auto_transitions: asNumber(row.auto_transitions, 0),
         battery_actions: asNumber(row.battery_actions, 0),
         reconciled_rows: asNumber(row.reconciled_rows, 0),
         heuristic_rows: asNumber(row.heuristic_rows, 0),
@@ -317,6 +329,22 @@ export default eventHandler(async (event) => {
       (sum, row) => sum + asNumber((row as any)?.heuristic_rows, 0),
       0,
     )
+    const totalRealizedRevenueUah = (selectedRows || []).reduce(
+      (sum, row) => sum + asNumber((row as any)?.realized_revenue_uah, 0),
+      0,
+    )
+    const totalRealizedCostUah = (selectedRows || []).reduce(
+      (sum, row) => sum + asNumber((row as any)?.realized_cost_uah, 0),
+      0,
+    )
+    const totalRealizedNetUah = (selectedRows || []).reduce(
+      (sum, row) => sum + asNumber((row as any)?.realized_net_uah, 0),
+      0,
+    )
+    const totalAutoTransitions = (selectedRows || []).reduce(
+      (sum, row) => sum + asNumber((row as any)?.auto_transitions, 0),
+      0,
+    )
 
     const fallbackReasonCode = appDbRows
       ? 'none'
@@ -353,12 +381,20 @@ export default eventHandler(async (event) => {
         : Math.max(0, fallbackDailySavings)
 
       const actionCount = asNumber(sourceRow?.battery_actions, actionBuckets.get(dateKey) || 0)
+      const realizedRevenueUah = asNumber(sourceRow?.realized_revenue_uah, 0)
+      const realizedCostUah = asNumber(sourceRow?.realized_cost_uah, 0)
+      const realizedNetUah = asNumber(sourceRow?.realized_net_uah, realizedRevenueUah - realizedCostUah)
+      const autoTransitions = asNumber(sourceRow?.auto_transitions, 0)
 
       rows.push({
         date: dateKey,
         cost_baseline: round(baselineCost),
         cost_optimized: round(optimizedCost),
         savings: round(savings),
+        realized_revenue_uah: round(realizedRevenueUah),
+        realized_cost_uah: round(realizedCostUah),
+        realized_net_uah: round(realizedNetUah),
+        auto_transitions: Math.round(autoTransitions),
         battery_actions: Math.round(actionCount),
         price_min: round(todayMinPriceKwh * 1000),
         price_max: round(todayMaxPriceKwh * 1000),
@@ -384,6 +420,10 @@ export default eventHandler(async (event) => {
         reconciliation: {
           reconciled_rows: totalReconciledRows,
           heuristic_rows_remaining: totalHeuristicRows,
+          realized_revenue_uah: round(totalRealizedRevenueUah),
+          realized_cost_uah: round(totalRealizedCostUah),
+          realized_net_uah: round(totalRealizedNetUah),
+          auto_transitions: Math.round(totalAutoTransitions),
         },
         tenant_filter_applied: true,
       },

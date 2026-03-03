@@ -11,6 +11,21 @@ export interface Metric {
   color?: string
 }
 
+export interface MetricsSourceMetadata {
+  economicsSource: string
+  historySource: string
+  fallbackReasonCode: string
+  realizedMetricsAvailable: boolean
+  reconciliation: {
+    reconciled_rows: number
+    heuristic_rows_remaining: number
+    realized_revenue_uah: number
+    realized_cost_uah: number
+    realized_net_uah: number
+    auto_transitions: number
+  }
+}
+
 export interface DashboardMetrics {
   savingsToday: Metric
   savingsThisMonth: Metric
@@ -136,6 +151,20 @@ export const useMetricsStore = defineStore('metrics', () => {
   const tenantContext = useTenantContext()
   const metrics = ref<DashboardMetrics>({ ...DEFAULT_METRICS })
   const rawMetrics = ref<any>(null)
+  const sourceMetadata = ref<MetricsSourceMetadata>({
+    economicsSource: 'unknown',
+    historySource: 'unknown',
+    fallbackReasonCode: 'unknown',
+    realizedMetricsAvailable: false,
+    reconciliation: {
+      reconciled_rows: 0,
+      heuristic_rows_remaining: 0,
+      realized_revenue_uah: 0,
+      realized_cost_uah: 0,
+      realized_net_uah: 0,
+      auto_transitions: 0,
+    },
+  })
   const isLoading = ref(false)
   const error = ref<string | null>(null)
   const lastFetchTime = ref<Date | null>(null)
@@ -149,7 +178,47 @@ export const useMetricsStore = defineStore('metrics', () => {
 
   const allMetrics = computed(() => Object.values(metrics.value))
 
-  const getTooltip = (key: string) => TOOLTIPS[key] || null
+  const economicsSourceLabel = computed(() => {
+    const source = sourceMetadata.value.economicsSource
+    if (source === 'optimization_history_db') return 'realized optimization ledger'
+    if (source === 'dagster_asset_results') return 'Dagster asset materializations'
+    if (source === 'ppo_validation_artifact') return 'PPO validation artifact'
+    if (source === 'analytics_cache_fallback') return 'analytics cache fallback'
+    return source || 'unknown source'
+  })
+
+  const savingsSourceDescription = computed(() => {
+    const sourceLabel = economicsSourceLabel.value
+    if (sourceMetadata.value.realizedMetricsAvailable) {
+      return `Source: ${sourceLabel}`
+    }
+
+    const fallbackReason = sourceMetadata.value.fallbackReasonCode
+    if (fallbackReason && fallbackReason !== 'none' && fallbackReason !== 'unknown') {
+      return `Source: ${sourceLabel} (fallback: ${fallbackReason})`
+    }
+
+    return `Source: ${sourceLabel} (fallback)`
+  })
+
+  const getTooltip = (key: string) => {
+    const base = TOOLTIPS[key]
+    if (!base) return null
+
+    if (key === 'savingsToday' || key === 'savingsThisMonth') {
+      const sourceLine = sourceMetadata.value.realizedMetricsAvailable
+        ? `Source: ${economicsSourceLabel.value}.`
+        : `Fallback source: ${economicsSourceLabel.value}.`
+      const reconciliation = sourceMetadata.value.reconciliation
+      return {
+        ...base,
+        description: `${base.description}. ${sourceLine} Reconciled rows: ${reconciliation.reconciled_rows}.`,
+        formula: `${base.formula || 'N/A'} | economics_source=${sourceMetadata.value.economicsSource}`,
+      }
+    }
+
+    return base
+  }
 
   // Actions
   const fetchMetrics = async () => {
@@ -158,11 +227,42 @@ export const useMetricsStore = defineStore('metrics', () => {
 
     try {
       await tenantContext.loadTenants()
-      const response = await $fetch('/api/metrics/dashboard', tenantContext.tenantRequest.value) as any
+      const tenantRequest = tenantContext.tenantRequest.value
+      const [dashboardResponse, metricsResponse] = await Promise.all([
+        $fetch('/api/metrics/dashboard', tenantRequest).catch(() => null),
+        $fetch('/api/metrics', tenantRequest).catch(() => null),
+      ]) as any[]
 
-      if (response.success && response.metrics) {
-        const m = response.metrics
-        rawMetrics.value = m
+      if (dashboardResponse?.success && dashboardResponse?.metrics) {
+        const m = dashboardResponse.metrics
+        const source = metricsResponse?.source || {}
+        const reconciliation = source?.reconciliation || {}
+        const realized = metricsResponse?.realized || {}
+
+        sourceMetadata.value = {
+          economicsSource: String(source?.economics_source || 'unknown'),
+          historySource: String(source?.history_source || 'unknown'),
+          fallbackReasonCode: String(source?.fallback_reason_code || 'unknown'),
+          realizedMetricsAvailable: Boolean(
+            source?.realized_metrics_available
+              || Math.abs(Number(realized?.net_total || 0)) > 0
+              || Math.abs(Number(reconciliation?.realized_net_uah || 0)) > 0,
+          ),
+          reconciliation: {
+            reconciled_rows: Number(reconciliation?.reconciled_rows || 0),
+            heuristic_rows_remaining: Number(reconciliation?.heuristic_rows_remaining || 0),
+            realized_revenue_uah: Number(reconciliation?.realized_revenue_uah || 0),
+            realized_cost_uah: Number(reconciliation?.realized_cost_uah || 0),
+            realized_net_uah: Number(reconciliation?.realized_net_uah || 0),
+            auto_transitions: Number(reconciliation?.auto_transitions || 0),
+          },
+        }
+
+        rawMetrics.value = {
+          ...m,
+          sourceMetadata: sourceMetadata.value,
+          realized,
+        }
 
         metrics.value = {
           savingsToday: {
@@ -219,7 +319,7 @@ export const useMetricsStore = defineStore('metrics', () => {
         }
         lastFetchTime.value = new Date()
       } else {
-        throw new Error(response.error || 'Failed to fetch metrics')
+        throw new Error(dashboardResponse?.error || 'Failed to fetch metrics')
       }
     } catch (e) {
       console.error('Failed to fetch metrics:', e)
@@ -261,6 +361,20 @@ export const useMetricsStore = defineStore('metrics', () => {
   const resetMetrics = () => {
     metrics.value = { ...DEFAULT_METRICS }
     rawMetrics.value = null
+    sourceMetadata.value = {
+      economicsSource: 'unknown',
+      historySource: 'unknown',
+      fallbackReasonCode: 'unknown',
+      realizedMetricsAvailable: false,
+      reconciliation: {
+        reconciled_rows: 0,
+        heuristic_rows_remaining: 0,
+        realized_revenue_uah: 0,
+        realized_cost_uah: 0,
+        realized_net_uah: 0,
+        auto_transitions: 0,
+      },
+    }
     error.value = null
   }
 
@@ -268,6 +382,7 @@ export const useMetricsStore = defineStore('metrics', () => {
     // State
     metrics,
     rawMetrics,
+    sourceMetadata,
     isLoading,
     error,
     lastFetchTime,
@@ -278,6 +393,8 @@ export const useMetricsStore = defineStore('metrics', () => {
     accuracy,
     batteryHealth,
     allMetrics,
+    economicsSourceLabel,
+    savingsSourceDescription,
     getTooltip,
 
     // Actions
