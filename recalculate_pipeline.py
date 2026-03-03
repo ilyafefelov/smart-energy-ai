@@ -26,6 +26,7 @@ def utc_now_iso() -> str:
 PROJECT_ROOT = Path(__file__).resolve().parent
 CONFIG_DIR = PROJECT_ROOT / "energy_ml" / "configs"
 STATUS_FILE = CONFIG_DIR / "recalculation_status.json"
+SEED_CONFIG_FILE = CONFIG_DIR / "templates" / "user_config.seed.json"
 RECALC_JOB_ID = os.getenv("RECALC_JOB_ID", "").strip()
 
 def update_status(status, progress=0, stage="", details="", **kwargs):
@@ -56,16 +57,38 @@ def update_status(status, progress=0, stage="", details="", **kwargs):
 def load_user_config():
     """Load current user configuration."""
     config_file = CONFIG_DIR / "user_config.json"
-    
-    if not config_file.exists():
-        raise FileNotFoundError("User configuration not found")
-    
+
+    fallback_config = {
+        "battery_type": "LFP",
+        "battery_capacity_kwh": 150,
+        "battery_efficiency": 0.95,
+        "load_profile_type": "standard",
+        "load_peak_kw": 50,
+        "tariff_peak_rate_uah_kwh": 12,
+        "tariff_off_peak_rate_uah_kwh": 6,
+        "optimization_strategy": "balanced",
+        "solar_capacity_kw": 0,
+        "wind_capacity_kw": 0,
+    }
+
     try:
+        if not config_file.exists() and SEED_CONFIG_FILE.exists():
+            with open(SEED_CONFIG_FILE, 'r') as f:
+                seed_config = json.load(f)
+            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            with open(config_file, 'w') as f:
+                json.dump(seed_config, f, indent=2)
+            return seed_config
+
+        if not config_file.exists():
+            return fallback_config
+
         with open(config_file, 'r') as f:
             config = json.load(f)
         return config
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON in config file: {e}")
+        logger.warning(f"Invalid JSON in config file, using fallback defaults: {e}")
+        return fallback_config
 
 def simulate_data_loading(config):
     """Simulate loading and preparing data based on configuration."""

@@ -1,0 +1,20 @@
+{
+  "battery_metrics": {
+    "cycles_remaining": 8000,
+    "health_percentage": 100,
+    "degradation_cost_today": 0
+  },
+  "cost_analytics": {
+    "daily_arbitrage_profit": 0,
+    "peak_avoidance_savings": 0,
+    "degradation_cost": 0,
+    "net_savings": 0
+  },
+  "ml_metrics": {
+    "model_accuracy": 0,
+    "confidence_score": 0,
+    "last_training": "1970-01-01T00:00:00.000Z",
+    "features_used": 0
+  },
+  "cache_timestamp": "1970-01-01T00:00:00.000Z"
+}

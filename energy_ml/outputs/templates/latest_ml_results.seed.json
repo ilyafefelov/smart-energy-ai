@@ -1,0 +1,22 @@
+{
+  "recalculation_timestamp": "1970-01-01T00:00:00.000Z",
+  "config_used": {},
+  "model_performance": {
+    "xgboost_accuracy": 0,
+    "lightgbm_accuracy": 0,
+    "catboost_accuracy": 0,
+    "ensemble_accuracy": 0,
+    "feature_importance_top": []
+  },
+  "validation_metrics": {
+    "cross_validation_score": 0,
+    "backtest_sharpe_ratio": 0,
+    "historical_daily_profit_uah": 0,
+    "profit_volatility_uah": 0,
+    "success_rate_percent": 0,
+    "max_drawdown_days": 0,
+    "backtest_period_days": 0
+  },
+  "next_retrain_due": null,
+  "recalculation_duration_seconds": 0
+}

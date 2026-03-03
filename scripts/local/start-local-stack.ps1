@@ -79,8 +79,38 @@ function Resolve-DagsterPython {
   throw 'Unable to find a Python executable with both dagster and dagster_webserver installed.'
 }
 
+function Ensure-SeededJson {
+  param(
+    [string]$TargetPath,
+    [string]$SeedPath
+  )
+
+  if (Test-Path $TargetPath) {
+    return
+  }
+  if (-not (Test-Path $SeedPath)) {
+    return
+  }
+
+  $targetDir = Split-Path -Parent $TargetPath
+  if (-not (Test-Path $targetDir)) {
+    New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
+  }
+
+  Copy-Item -Path $SeedPath -Destination $TargetPath -Force
+  Write-Host "Seeded runtime file: $TargetPath" -ForegroundColor DarkGray
+}
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $dashboardDir = Join-Path $repoRoot 'dashboard'
+
+Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'dashboard\data\battery_state.json') -SeedPath (Join-Path $repoRoot 'dashboard\data\seeds\battery_state.seed.json')
+Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\configs\user_config.json') -SeedPath (Join-Path $repoRoot 'energy_ml\configs\templates\user_config.seed.json')
+Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\configs\recalculation_status.json') -SeedPath (Join-Path $repoRoot 'energy_ml\configs\templates\recalculation_status.seed.json')
+Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\configs\recalculation_trigger.json') -SeedPath (Join-Path $repoRoot 'energy_ml\configs\templates\recalculation_trigger.seed.json')
+Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\outputs\analytics_cache.json') -SeedPath (Join-Path $repoRoot 'energy_ml\outputs\templates\analytics_cache.seed.json')
+Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\outputs\latest_ml_results.json') -SeedPath (Join-Path $repoRoot 'energy_ml\outputs\templates\latest_ml_results.seed.json')
+Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\energy_ml\outputs\control_status.json') -SeedPath (Join-Path $repoRoot 'energy_ml\energy_ml\outputs\templates\control_status.seed.json')
 
 Write-Host 'Smart Energy AI Local Stack Launcher' -ForegroundColor Cyan
 Write-Host "Repo root: $repoRoot"

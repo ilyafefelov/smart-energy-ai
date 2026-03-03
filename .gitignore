@@ -19,6 +19,7 @@ checkpoints/
 .tmp_dagster_home_*/
 
 # Generated dashboard/runtime artifacts
+dashboard/data/battery_state.json
 dashboard/data/retraining/job-*.json
 dashboard/data/api_smoke_test_report.json
 dashboard/data/dashboard_render_snapshot.json
@@ -37,6 +38,10 @@ energy_ml/configs/recalculation_trigger.json
 energy_ml/configs/user_config.json
 energy_ml/outputs/
 energy_ml/energy_ml/outputs/
+!energy_ml/outputs/templates/
+!energy_ml/outputs/templates/*.json
+!energy_ml/energy_ml/outputs/templates/
+!energy_ml/energy_ml/outputs/templates/*.json
 
 # Dolt database files (added by bd init)
 .dolt/

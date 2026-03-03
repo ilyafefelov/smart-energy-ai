@@ -82,6 +82,12 @@ Set-Location D:\OpenClaw-Backup\clawd\projects\smart-energy-ai
 .\scripts\local\start-local-stack.ps1 -Start both
 ```
 
+The launcher auto-seeds missing runtime JSON state from tracked templates under:
+- `dashboard/data/seeds/`
+- `energy_ml/configs/templates/`
+- `energy_ml/outputs/templates/`
+- `energy_ml/energy_ml/outputs/templates/`
+
 Canonical local ports:
 - Dagster: `http://127.0.0.1:3000`
 - Dashboard: `http://127.0.0.1:3600`

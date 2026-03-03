@@ -1,0 +1,17 @@
+{
+  "system_status": {
+    "soc": 50,
+    "power_kw": 0,
+    "mode": "automatic",
+    "active_command": "hold",
+    "command_reason": "seed",
+    "battery_capacity_kwh": 10,
+    "max_power_kw": 5,
+    "last_update": "1970-01-01T00:00:00.000Z",
+    "estimated_completion": null,
+    "scheduled_commands_count": 0
+  },
+  "command_history": [],
+  "scheduled_commands": [],
+  "last_saved": "1970-01-01T00:00:00.000Z"
+}
