@@ -2,9 +2,11 @@
 // GET /api/control/history
 
 import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
+import { getTenantResponseMetadata, isRecordVisibleForTenant, resolveTenantContext, type TenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
   try {
+    const tenant = await resolveTenantContext(event)
     const query = getQuery(event)
     const limit = Math.min(parseInt(query.limit as string) || 50, 100)
     
@@ -13,16 +15,27 @@ export default defineEventHandler(async (event) => {
     
     if (execPython) {
       try {
-        const result = await execPython('get_control_history.py', { limit: limit.toString() })
+        const result = await execPython('get_control_history.py', {
+          limit: limit.toString(),
+          tenant_id: tenant.id,
+        })
         const pythonHistory = JSON.parse(result)
-        const normalized = normalizeHistoryEntries(Array.isArray(pythonHistory) ? pythonHistory : [], 'python_controller')
+        const normalized = normalizeHistoryEntries(
+          Array.isArray(pythonHistory) ? pythonHistory : [],
+          'python_controller',
+          tenant,
+        )
 
         await persistHistoryRows(normalized, 'python_controller_history')
         
         return {
           success: true,
+          tenant: getTenantResponseMetadata(tenant),
           history: normalized,
           count: normalized.length,
+          source_metadata: {
+            tenant_filter_applied: true,
+          },
           source: 'python_controller'
         }
         
@@ -32,27 +45,31 @@ export default defineEventHandler(async (event) => {
     }
 
     // Deterministic fallback to in-memory history.
-    const [batteryStatus] = await Promise.all([
-      $fetch<any>('/api/battery/status').catch(() => null),
-    ])
-
-    const fallbackSoc = Number(batteryStatus?.battery?.soc ?? 50) / 100
     const history = Array.isArray(globalThis.commandHistory) ? globalThis.commandHistory : []
     
     // Apply limit
     const limitedHistory = history.slice(0, limit)
-    const apiHistory = normalizeHistoryEntries(limitedHistory, 'memory_storage')
+    const apiHistory = normalizeHistoryEntries(limitedHistory, 'memory_storage', tenant)
 
     await persistHistoryRows(apiHistory, 'memory_history')
     
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       history: apiHistory,
       count: apiHistory.length,
+      source_metadata: {
+        tenant_filter_applied: true,
+      },
       source: 'memory_storage'
     }
     
   } catch (error) {
+    const errorData = (error as any)?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('History endpoint error:', error)
     
     return {
@@ -112,8 +129,14 @@ function mapCommandToAction(command: string): number {
   }
 }
 
-function normalizeHistoryEntries(entries: any[], source: 'python_controller' | 'memory_storage'): any[] {
-  return entries.map((entry: any) => {
+function normalizeHistoryEntries(
+  entries: any[],
+  source: 'python_controller' | 'memory_storage',
+  tenant: TenantContext,
+): any[] {
+  return entries
+  .filter((entry: any) => isRecordVisibleForTenant(entry?.tenant_id ?? entry?.tenantId, tenant))
+  .map((entry: any) => {
     const timestamp = normalizeTimestamp(entry?.timestamp || entry?.executed_at)
     const command = String(entry?.command || 'hold').toLowerCase()
     const powerKw = Number(entry?.power_kw ?? 0)
@@ -130,6 +153,7 @@ function normalizeHistoryEntries(entries: any[], source: 'python_controller' | '
     return {
       command_id: commandId,
       schedule_id: scheduleId,
+      tenant_id: tenant.id,
       timestamp,
       command,
       power_kw: Number.isFinite(powerKw) ? powerKw : 0,
@@ -160,6 +184,7 @@ async function persistHistoryRows(rows: any[], source: 'python_controller_histor
     const executionKey = buildOptimizationExecutionKey({
       commandId: row.command_id,
       scheduleId: row.schedule_id,
+      tenantId: row.tenant_id,
       timestamp: row.timestamp,
       command: row.command,
       powerKw: Number(row.power_kw || 0),
@@ -173,6 +198,7 @@ async function persistHistoryRows(rows: any[], source: 'python_controller_histor
       execution_key: executionKey,
       command_id: row.command_id,
       schedule_id: row.schedule_id,
+      tenant_id: row.tenant_id,
       execution_source: source,
       timestamp: row.timestamp,
       predicted_action: mapCommandToAction(row.command),

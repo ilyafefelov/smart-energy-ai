@@ -2,6 +2,7 @@
 
 import fs from 'fs'
 import path from 'path'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
   // POST /api/retraining/cancel?jobId=...
@@ -9,6 +10,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const query = getQuery(event)
+    const tenant = await resolveTenantContext(event)
     const jobId = query.jobId as string
 
     if (!jobId) {
@@ -18,7 +20,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const progressFile = path.join(process.cwd(), 'data', 'retraining', `${jobId}.json`)
+    const progressFile = path.join(process.cwd(), 'data', 'tenants', tenant.id, 'retraining', `${jobId}.json`)
 
     if (!fs.existsSync(progressFile)) {
       return {
@@ -46,9 +48,15 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       message: 'Retraining cancelled successfully'
     }
   } catch (error: any) {
+    const errorData = error?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('Failed to cancel retraining:', error)
     return {
       success: false,

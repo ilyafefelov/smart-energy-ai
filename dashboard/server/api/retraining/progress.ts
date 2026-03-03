@@ -2,6 +2,7 @@
 
 import fs from 'fs'
 import path from 'path'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
   // GET /api/retraining/progress?jobId=...
@@ -9,6 +10,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const query = getQuery(event)
+    const tenant = await resolveTenantContext(event)
     const jobId = query.jobId as string
 
     if (!jobId) {
@@ -18,7 +20,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    const progressFile = path.join(process.cwd(), 'data', 'retraining', `${jobId}.json`)
+    const progressFile = path.join(process.cwd(), 'data', 'tenants', tenant.id, 'retraining', `${jobId}.json`)
 
     if (!fs.existsSync(progressFile)) {
       return {
@@ -32,6 +34,7 @@ export default defineEventHandler(async (event) => {
 
     const response: any = {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       status: progressData.status,
       progress: progressData.progress,
       execution_mode: progressData.execution_mode || 'python',
@@ -44,7 +47,7 @@ export default defineEventHandler(async (event) => {
 
     // If completed, try to load metrics
     if (progressData.status === 'completed') {
-      const metricsFile = path.join(process.cwd(), 'data', 'retraining', `${jobId}-metrics.json`)
+      const metricsFile = path.join(process.cwd(), 'data', 'tenants', tenant.id, 'retraining', `${jobId}-metrics.json`)
       if (fs.existsSync(metricsFile)) {
         const metrics = JSON.parse(fs.readFileSync(metricsFile, 'utf-8'))
         response.metrics = metrics
@@ -57,6 +60,11 @@ export default defineEventHandler(async (event) => {
 
     return response
   } catch (error: any) {
+    const errorData = error?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('Failed to check retraining progress:', error)
     return {
       success: false,

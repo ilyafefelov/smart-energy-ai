@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
+import { getTenantResponseMetadata, resolveTenantContext } from '../utils/tenant-context'
 
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
 const asNumber = (value: unknown, fallback = 0) => {
@@ -22,18 +23,28 @@ function readJsonIfExists(filePath: string): any | null {
   }
 }
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
   // GET /api/metrics - Legacy metrics contract mapped to backend data sources.
   try {
+    const tenant = await resolveTenantContext(event)
+    const tenantRequest = {
+      headers: {
+        'x-tenant-id': tenant.id,
+      },
+      query: {
+        tenantId: tenant.id,
+      },
+    }
+
     const projectRoot = resolveProjectRoot()
     const analyticsPath = join(projectRoot, 'energy_ml', 'outputs', 'analytics_cache.json')
     const ppoValidationPath = join(projectRoot, 'data', 'results', 'ppo_validation_feb2026.json')
 
     const [historyPayload, pricesPayload, mlRecommendation, batteryStatus] = await Promise.all([
-      $fetch<any>('/api/history').catch(() => null),
-      $fetch<any>('/api/prices').catch(() => null),
-      $fetch<any>('/api/ml/recommendation').catch(() => null),
-      $fetch<any>('/api/battery/status').catch(() => null),
+      $fetch<any>('/api/history', tenantRequest).catch(() => null),
+      $fetch<any>('/api/prices', tenantRequest).catch(() => null),
+      $fetch<any>('/api/ml/recommendation', tenantRequest).catch(() => null),
+      $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
     ])
 
     const analytics = readJsonIfExists(analyticsPath)
@@ -95,6 +106,7 @@ export default defineEventHandler(async () => {
 
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       timestamp: new Date().toISOString(),
       period: `${days}-days`,
       baseline: {
@@ -146,9 +158,15 @@ export default defineEventHandler(async () => {
           heuristic_rows_remaining: 0,
         },
         prices_source: pricesPayload?.source || 'unavailable',
+        tenant_filter_applied: true,
       },
     }
   } catch (error: any) {
+    const errorData = error?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('[metrics] Failed to build backend-derived metrics:', error)
     return {
       success: false,

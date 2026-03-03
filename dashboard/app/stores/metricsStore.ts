@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useTenantContext } from '~/composables/useTenantContext'
 
 export interface Metric {
   label: string
@@ -132,6 +133,7 @@ const TOOLTIPS: TooltipInfo = {
 }
 
 export const useMetricsStore = defineStore('metrics', () => {
+  const tenantContext = useTenantContext()
   const metrics = ref<DashboardMetrics>({ ...DEFAULT_METRICS })
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -154,7 +156,8 @@ export const useMetricsStore = defineStore('metrics', () => {
     error.value = null
 
     try {
-      const response = await $fetch('/api/metrics/dashboard') as any
+      await tenantContext.loadTenants()
+      const response = await $fetch('/api/metrics/dashboard', tenantContext.tenantRequest.value) as any
 
       if (response.success && response.metrics) {
         const m = response.metrics

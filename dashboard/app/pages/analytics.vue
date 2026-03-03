@@ -2,12 +2,23 @@
   <div class="min-h-screen bg-slate-950 text-white p-8">
     <div class="max-w-7xl mx-auto space-y-8">
       <!-- Header -->
-      <div>
-        <NuxtLink to="/" class="text-blue-400 hover:text-blue-300 text-sm mb-2 inline-block">
-          ← Back to Dashboard
-        </NuxtLink>
-        <h1 class="text-4xl font-bold text-energy-400 mt-2">📈 Analytics</h1>
-        <p class="text-slate-400 mt-2">Detailed energy market analysis and performance metrics</p>
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <NuxtLink to="/" class="text-blue-400 hover:text-blue-300 text-sm mb-2 inline-block">
+            ← Back to Dashboard
+          </NuxtLink>
+          <h1 class="text-4xl font-bold text-energy-400 mt-2">📈 Analytics</h1>
+          <p class="text-slate-400 mt-2">Detailed energy market analysis and performance metrics</p>
+        </div>
+
+        <select
+          v-model="selectedTenantId"
+          class="px-3 py-2 rounded-md border border-slate-700 bg-slate-900 text-sm"
+        >
+          <option v-for="tenant in tenantOptions" :key="tenant.id" :value="tenant.id">
+            {{ tenant.name || tenant.id }}
+          </option>
+        </select>
       </div>
 
       <!-- Error Handling -->
@@ -263,12 +274,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { usePricesStore } from '~/stores/pricesStore'
 import { useMetricsStore } from '~/stores/metricsStore'
+import { useTenantContext } from '~/composables/useTenantContext'
 
 const pricesStore = usePricesStore()
 const metricsStore = useMetricsStore()
+const tenantContext = useTenantContext()
+
+const tenantOptions = computed(() => tenantContext.tenants.value)
+const selectedTenantId = computed({
+  get: () => tenantContext.currentTenantId.value,
+  set: (tenantId: string) => tenantContext.setTenant(tenantId),
+})
 
 const lastUpdateTime = computed(() => {
   if (!pricesStore.lastFetchTime) return 'Never'
@@ -294,6 +313,8 @@ const chartPoints = computed(() => {
 })
 
 onMounted(async () => {
+  await tenantContext.loadTenants()
+
   await Promise.all([
     pricesStore.fetchPrices(),
     metricsStore.fetchMetrics()
@@ -308,4 +329,14 @@ onUnmounted(() => {
   pricesStore.stopRealTimeUpdates()
   metricsStore.stopRealTimeUpdates()
 })
+
+watch(
+  () => tenantContext.currentTenantId.value,
+  async () => {
+    await Promise.all([
+      pricesStore.fetchPrices(),
+      metricsStore.fetchMetrics(),
+    ])
+  },
+)
 </script>

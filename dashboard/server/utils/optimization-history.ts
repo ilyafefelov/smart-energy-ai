@@ -5,6 +5,7 @@ export type OptimizationHistoryInsert = {
   execution_key: string
   command_id: string | null
   schedule_id: string | null
+  tenant_id: string | null
   execution_source: string
   timestamp: string
   predicted_action: number
@@ -41,6 +42,7 @@ export type PersistOptimizationHistoryResult = {
 type ExecutionKeyInput = {
   commandId: string | null
   scheduleId: string | null
+  tenantId: string | null
   timestamp: string
   command: string
   powerKw: number
@@ -73,6 +75,7 @@ export function buildOptimizationExecutionKey(input: ExecutionKeyInput): string 
   const canonicalPayload = [
     normalizeNullableText(input.commandId) || '',
     normalizeNullableText(input.scheduleId) || '',
+    normalizeNullableText(input.tenantId) || '',
     input.timestamp,
     input.command,
     Number(input.powerKw).toFixed(6),
@@ -155,6 +158,7 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
       execution_key VARCHAR(64) NOT NULL,
       command_id VARCHAR(128),
       schedule_id VARCHAR(128),
+      tenant_id VARCHAR(128),
       execution_source VARCHAR(64) NOT NULL DEFAULT 'unknown',
       timestamp TIMESTAMP NOT NULL,
       predicted_action INTEGER NOT NULL,
@@ -186,6 +190,7 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS execution_key VARCHAR(64)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS command_id VARCHAR(128)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS schedule_id VARCHAR(128)`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(128)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS execution_source VARCHAR(64)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ALTER COLUMN execution_source SET DEFAULT 'unknown'`)
   await optimizationPool.query(`UPDATE optimization_history SET execution_source = 'unknown' WHERE execution_source IS NULL`)
@@ -227,6 +232,12 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
   )
   await optimizationPool.query(
     'CREATE INDEX IF NOT EXISTS idx_optimization_history_schedule_id ON optimization_history(schedule_id)',
+  )
+  await optimizationPool.query(
+    'CREATE INDEX IF NOT EXISTS idx_optimization_history_tenant_id ON optimization_history(tenant_id)',
+  )
+  await optimizationPool.query(
+    'CREATE INDEX IF NOT EXISTS idx_optimization_history_tenant_timestamp ON optimization_history(tenant_id, timestamp DESC)',
   )
 }
 
@@ -288,6 +299,7 @@ export async function persistOptimizationHistory(
         execution_key,
         command_id,
         schedule_id,
+        tenant_id,
         execution_source,
         timestamp,
         predicted_action,
@@ -313,11 +325,12 @@ export async function persistOptimizationHistory(
         reconciliation_note,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, NOW())
       ON CONFLICT (execution_key)
       DO UPDATE SET
         command_id = EXCLUDED.command_id,
         schedule_id = EXCLUDED.schedule_id,
+        tenant_id = EXCLUDED.tenant_id,
         execution_source = EXCLUDED.execution_source,
         timestamp = EXCLUDED.timestamp,
         predicted_action = EXCLUDED.predicted_action,
@@ -348,6 +361,7 @@ export async function persistOptimizationHistory(
         entry.execution_key,
         entry.command_id,
         entry.schedule_id,
+        entry.tenant_id,
         entry.execution_source,
         entry.timestamp,
         entry.predicted_action,
@@ -378,6 +392,7 @@ export async function persistOptimizationHistory(
       execution_key: entry.execution_key,
       command_id: entry.command_id,
       schedule_id: entry.schedule_id,
+      tenant_id: entry.tenant_id,
       execution_source: entry.execution_source,
       inserted,
       updated: !inserted,

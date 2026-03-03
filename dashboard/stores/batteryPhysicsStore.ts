@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useTenantContext } from '~/composables/useTenantContext'
 
 export interface BatteryPhysicsState {
   // Battery state
@@ -88,6 +89,7 @@ const DEFAULT_STATE: BatteryPhysicsState = {
 }
 
 export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
+  const tenantContext = useTenantContext()
   // State
   const state = ref<BatteryPhysicsState>({ ...DEFAULT_STATE })
   const specs = ref<BatterySpecs | null>(null)
@@ -163,7 +165,16 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
     error.value = null
 
     try {
-      const response = await $fetch('/api/battery/simulate')
+      await tenantContext.loadTenants()
+      const tenantId = tenantContext.currentTenantId.value
+      const response = await $fetch('/api/battery/simulate', {
+        query: {
+          tenantId,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        },
+      })
       
       if (response.success && response.battery) {
         state.value = {
@@ -201,11 +212,20 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
     error.value = null
 
     try {
+      await tenantContext.loadTenants()
+      const tenantId = tenantContext.currentTenantId.value
       const response = await $fetch('/api/battery/simulate', {
         method: 'POST',
+        query: {
+          tenantId,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        },
         body: {
           action: 'setPower',
-          power
+          power,
+          tenantId,
         }
       })
 
@@ -227,11 +247,20 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
     error.value = null
 
     try {
+      await tenantContext.loadTenants()
+      const tenantId = tenantContext.currentTenantId.value
       const response = await $fetch('/api/battery/simulate', {
         method: 'POST',
+        query: {
+          tenantId,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        },
         body: {
           action: 'setAutoMode',
-          enabled
+          enabled,
+          tenantId,
         }
       })
 
@@ -253,11 +282,20 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
     error.value = null
 
     try {
+      await tenantContext.loadTenants()
+      const tenantId = tenantContext.currentTenantId.value
       const response = await $fetch('/api/battery/simulate', {
         method: 'POST',
+        query: {
+          tenantId,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        },
         body: {
           action: 'updateConfig',
-          config
+          config,
+          tenantId,
         }
       })
 
@@ -278,10 +316,19 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
     error.value = null
 
     try {
+      await tenantContext.loadTenants()
+      const tenantId = tenantContext.currentTenantId.value
       const response = await $fetch('/api/battery/simulate', {
         method: 'POST',
+        query: {
+          tenantId,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        },
         body: {
           action: 'reset',
+          tenantId,
           ...resetState
         }
       })

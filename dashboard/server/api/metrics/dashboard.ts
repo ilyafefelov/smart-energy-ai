@@ -1,15 +1,27 @@
 // server/api/metrics/dashboard.ts - Dashboard metrics with standardized response
 
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
+
 export default defineEventHandler(async (event) => {
   // GET /api/metrics/dashboard
   // STANDARDIZED RESPONSE: { success, metrics: { ... } }
 
   try {
+    const tenant = await resolveTenantContext(event)
+    const tenantRequest = {
+      headers: {
+        'x-tenant-id': tenant.id,
+      },
+      query: {
+        tenantId: tenant.id,
+      },
+    }
+
     const [baseMetrics, pricePayload, batteryPayload, mlPayload] = await Promise.all([
-      $fetch<any>('/api/metrics').catch(() => null),
-      $fetch<any>('/api/prices/current').catch(() => null),
-      $fetch<any>('/api/battery/status').catch(() => null),
-      $fetch<any>('/api/ml/recommendation').catch(() => null),
+      $fetch<any>('/api/metrics', tenantRequest).catch(() => null),
+      $fetch<any>('/api/prices/current', tenantRequest).catch(() => null),
+      $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
+      $fetch<any>('/api/ml/recommendation', tenantRequest).catch(() => null),
     ])
 
     const now = new Date()
@@ -46,6 +58,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       metrics: {
         savingsToday: Number(savingsToday.toFixed(2)),
         savingsTrend,
@@ -61,8 +74,16 @@ export default defineEventHandler(async (event) => {
         trainingStatus: 'active',
         lastTrainedAt,
       },
+      source: {
+        tenant_filter_applied: true,
+      },
     }
   } catch (error: any) {
+    const errorData = error?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('Failed to fetch metrics:', error)
     return {
       success: false,

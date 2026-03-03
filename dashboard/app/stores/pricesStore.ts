@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useTenantContext } from '~/composables/useTenantContext'
 
 export interface PricePoint {
   hour: number
@@ -55,6 +56,7 @@ const DEFAULT_DATA: PriceData = {
 }
 
 export const usePricesStore = defineStore('prices', () => {
+  const tenantContext = useTenantContext()
   const data = ref<PriceData>({ ...DEFAULT_DATA })
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -102,7 +104,8 @@ export const usePricesStore = defineStore('prices', () => {
     error.value = null
 
     try {
-      const response = await $fetch('/api/prices/current') as any
+      await tenantContext.loadTenants()
+      const response = await $fetch('/api/prices/current', tenantContext.tenantRequest.value) as any
 
       if (response.success && response.prices) {
         // Standardize response format

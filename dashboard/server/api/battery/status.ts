@@ -1,17 +1,19 @@
 import { getBatteryState, simulateBatteryBehavior } from '~/server/utils/battery'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
   // GET /api/battery/status
   // STANDARDIZED RESPONSE: { success, battery: { soc, voltage, current, power, temperature, health, capacity, lastUpdated } }
 
   try {
+    const tenant = await resolveTenantContext(event)
     // Optional: simulate behavior for testing
     const query = getQuery(event)
     if (query.simulate === 'true') {
-      await simulateBatteryBehavior()
+      await simulateBatteryBehavior(tenant.id)
     }
     
-    const state = await getBatteryState()
+    const state = await getBatteryState(tenant.id)
     
     // Compute derived fields
     const availableToDraw = Math.max(0, (state.soc - 15) / 100 * state.capacity)
@@ -20,6 +22,7 @@ export default defineEventHandler(async (event) => {
     
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       battery: {
         soc: state.soc,
         capacity: state.capacity,
@@ -34,6 +37,11 @@ export default defineEventHandler(async (event) => {
       }
     }
   } catch (e: any) {
+    const errorData = e?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('Failed to get battery status:', e)
     return {
       success: false,

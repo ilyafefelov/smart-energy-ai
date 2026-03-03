@@ -1,9 +1,18 @@
 import fs from 'fs'
 import path from 'path'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
   try {
-    const SETTINGS_FILE = path.join(process.cwd(), 'data/settings.json')
+    const tenant = await resolveTenantContext(event)
+    const tenantDataDir = path.join(process.cwd(), 'data', 'tenants', tenant.id)
+    const tenantSettingsFile = path.join(tenantDataDir, 'settings.json')
+    const legacySettingsFile = path.join(process.cwd(), 'data', 'settings.json')
+    const SETTINGS_FILE = fs.existsSync(tenantSettingsFile)
+      ? tenantSettingsFile
+      : tenant.id === tenant.defaultTenantId
+        ? legacySettingsFile
+        : tenantSettingsFile
     
     // Load settings
     let settings: any = null
@@ -50,6 +59,7 @@ export default defineEventHandler(async (event) => {
       metadata: {
         exported: now.toISOString(),
         version: '1.0',
+        tenant: getTenantResponseMetadata(tenant),
         siteName: siteName,
         timestamp: now.getTime()
       },
@@ -63,6 +73,11 @@ export default defineEventHandler(async (event) => {
     
     return exportData
   } catch (error: any) {
+    const errorData = error?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     throw createError({
       statusCode: 500,
       statusMessage: `Failed to export settings: ${error.message}`

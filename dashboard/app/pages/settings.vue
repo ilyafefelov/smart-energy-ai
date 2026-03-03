@@ -10,6 +10,15 @@
           <h1 class="text-4xl font-bold text-energy-400 mt-2">⚙️ Settings</h1>
           <p class="text-slate-400 mt-2">Configure your energy optimization system</p>
         </div>
+
+        <select
+          v-model="selectedTenantId"
+          class="px-3 py-2 rounded-md border border-slate-700 bg-slate-900 text-sm"
+        >
+          <option v-for="tenant in tenantOptions" :key="tenant.id" :value="tenant.id">
+            {{ tenant.name || tenant.id }}
+          </option>
+        </select>
       </div>
 
       <!-- Status Messages -->
@@ -303,9 +312,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useSettingsStore } from '~/stores/settingsStore'
 import { useRetrainingStore } from '~/stores/retrainingStore'
+import { useTenantContext } from '~/composables/useTenantContext'
 import BatteryConfigPanel from '~/components/Battery/ConfigPanel.vue'
 import GenerationSolarWindConfig from '~/components/Generation/SolarWindConfig.vue'
 import BatteryPhysicsSimulator from '~/components/Battery/PhysicsSimulator.vue'
@@ -314,6 +324,13 @@ import PreferencesOptimizationProfile from '~/components/Preferences/Optimizatio
 
 const settingsStore = useSettingsStore()
 const retrainingStore = useRetrainingStore()
+const tenantContext = useTenantContext()
+
+const tenantOptions = computed(() => tenantContext.tenants.value)
+const selectedTenantId = computed({
+  get: () => tenantContext.currentTenantId.value,
+  set: (tenantId: string) => tenantContext.setTenant(tenantId),
+})
 
 const activeTab = ref('general')
 const saveSuccess = ref(false)
@@ -386,6 +403,14 @@ const resetSettings = async () => {
 }
 
 onMounted(async () => {
+  await tenantContext.loadTenants()
   await settingsStore.loadSettings()
 })
+
+watch(
+  () => tenantContext.currentTenantId.value,
+  async () => {
+    await settingsStore.loadSettings()
+  },
+)
 </script>

@@ -1,6 +1,7 @@
 param(
   [string]$BaseUrl = 'http://127.0.0.1:3600',
-  [bool]$RequireCanonicalEconomics = $true
+  [bool]$RequireCanonicalEconomics = $true,
+  [string[]]$TenantIds = @('client_001_kyiv_mall', 'client_002_lviv_office')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -311,6 +312,38 @@ $importPayload = @{
 }
 $importPayload | ConvertTo-Json -Depth 20 | Set-Content -Path $tmpImport -Encoding UTF8
 $null = Invoke-Api -Method 'POST' -Path '/api/settings/import' -Form @{ file = Get-Item $tmpImport }
+
+# Tenant-scoped smoke checks
+foreach ($tenantId in $TenantIds) {
+  $tenantMetrics = Invoke-Api -Method 'GET' -Path "/api/metrics/dashboard?tenantId=$tenantId" -Note "tenant-check:$tenantId"
+  $tenantSettings = Invoke-Api -Method 'GET' -Path "/api/settings/load?tenantId=$tenantId" -Note "tenant-check:$tenantId"
+
+  $metricsTenantEcho = if ($tenantMetrics -and $tenantMetrics.tenant) { [string]$tenantMetrics.tenant.id } else { '' }
+  $settingsTenantEcho = if ($tenantSettings -and $tenantSettings.tenant) { [string]$tenantSettings.tenant.id } else { '' }
+
+  Add-Assertion -Name ("tenant_echo_metrics_{0}" -f $tenantId) -Passed ($metricsTenantEcho -eq $tenantId) -Message "Expected /api/metrics/dashboard tenant.id='$tenantId', got '$metricsTenantEcho'"
+  Add-Assertion -Name ("tenant_echo_settings_{0}" -f $tenantId) -Passed ($settingsTenantEcho -eq $tenantId) -Message "Expected /api/settings/load tenant.id='$tenantId', got '$settingsTenantEcho'"
+}
+
+if ($TenantIds.Count -ge 2) {
+  $tenantA = $TenantIds[0]
+  $tenantB = $TenantIds[1]
+
+  $null = Invoke-Api -Method 'POST' -Path "/api/control/execute?tenantId=$tenantA" -Body @{ tenantId = $tenantA; command = 'hold'; power_kw = 0; reason = 'tenant smoke A' }
+  $null = Invoke-Api -Method 'POST' -Path "/api/control/execute?tenantId=$tenantB" -Body @{ tenantId = $tenantB; command = 'hold'; power_kw = 0; reason = 'tenant smoke B' }
+
+  $historyA = Invoke-Api -Method 'GET' -Path "/api/control/history?tenantId=$tenantA&limit=25" -Note 'tenant-leak-check'
+  $historyB = Invoke-Api -Method 'GET' -Path "/api/control/history?tenantId=$tenantB&limit=25" -Note 'tenant-leak-check'
+
+  $rowsA = if ($historyA -and $historyA.history) { @($historyA.history) } else { @() }
+  $rowsB = if ($historyB -and $historyB.history) { @($historyB.history) } else { @() }
+
+  $crossInA = @($rowsA | Where-Object { $_.tenant_id -eq $tenantB }).Count
+  $crossInB = @($rowsB | Where-Object { $_.tenant_id -eq $tenantA }).Count
+
+  Add-Assertion -Name 'tenant_history_no_cross_A' -Passed ($crossInA -eq 0) -Message "Expected no tenant '$tenantB' rows in tenant '$tenantA' history, found $crossInA"
+  Add-Assertion -Name 'tenant_history_no_cross_B' -Passed ($crossInB -eq 0) -Message "Expected no tenant '$tenantA' rows in tenant '$tenantB' history, found $crossInB"
+}
 
 $reportDir = Join-Path (Join-Path $PSScriptRoot '..') 'data'
 if (-not (Test-Path $reportDir)) {

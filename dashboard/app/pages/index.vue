@@ -8,6 +8,14 @@
           <p class="text-slate-400">Real-time AI-powered battery optimization</p>
         </div>
         <div class="text-right">
+          <select
+            v-model="selectedTenantId"
+            class="mb-2 px-3 py-2 rounded-md border border-slate-700 bg-slate-900 text-sm"
+          >
+            <option v-for="tenant in tenantOptions" :key="tenant.id" :value="tenant.id">
+              {{ tenant.name || tenant.id }}
+            </option>
+          </select>
           <p class="text-sm text-slate-400">{{ currentDate }}</p>
           <p class="text-energy-400 font-semibold">{{ liveStatus }}</p>
         </div>
@@ -616,7 +624,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useMetricsStore } from '~/stores/metricsStore'
 import { useBatteryStore } from '~/stores/batteryStore'
 import { usePricesStore } from '~/stores/pricesStore'
@@ -624,6 +632,7 @@ import { useRetrainingStore } from '~/stores/retrainingStore'
 import { useSettingsStore } from '~/stores/settingsStore'
 import { useMLStore } from '~/stores/mlStore'
 import { useBatteryPhysicsStore } from '~/stores/batteryPhysicsStore'
+import { useTenantContext } from '~/composables/useTenantContext'
 import MetricCard from '~/components/DashboardCards/MetricCard.vue'
 import MethodologyCard from '~/components/Documentation/MethodologyCard.vue'
 import MLRecommendationCard from '~/components/ML/RecommendationCard.vue'
@@ -636,6 +645,13 @@ const pricesStore = usePricesStore()
 const retrainingStore = useRetrainingStore()
 const settingsStore = useSettingsStore()
 const mlStore = useMLStore()
+const tenantContext = useTenantContext()
+
+const tenantOptions = computed(() => tenantContext.tenants.value)
+const selectedTenantId = computed({
+  get: () => tenantContext.currentTenantId.value,
+  set: (tenantId: string) => tenantContext.setTenant(tenantId),
+})
 
 const showRetrainingComplete = ref(false)
 const chartZoom = ref(1)
@@ -918,6 +934,8 @@ const emergencyStop = () => {
 }
 
 onMounted(async () => {
+  await tenantContext.loadTenants()
+
   // Load settings FIRST so battery capacity is available
   await settingsStore.loadSettings()
   
@@ -942,6 +960,19 @@ onUnmounted(() => {
   pricesStore.stopRealTimeUpdates()
   metricsStore.stopRealTimeUpdates()
 })
+
+watch(
+  () => tenantContext.currentTenantId.value,
+  async () => {
+    await settingsStore.loadSettings()
+    await Promise.all([
+      metricsStore.fetchMetrics(),
+      batteryStore.fetchBatteryStatus(),
+      pricesStore.fetchPrices(),
+      batteryPhysicsStore.fetchBatteryData(),
+    ])
+  },
+)
 </script>
 
 <style scoped>

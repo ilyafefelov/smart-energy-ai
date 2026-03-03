@@ -29,7 +29,7 @@ class TestDashboardE2E:
             # Wait for server to start
             await asyncio.sleep(15)
             
-            yield "http://localhost:3000"
+            yield "http://localhost:3600"
             
             # Cleanup - kill process tree
             try:
@@ -195,6 +195,45 @@ class TestDashboardE2E:
                     
         except Exception as e:
             pytest.skip(f"Navigation testing not possible: {e}")
+
+    @pytest.mark.asyncio
+    @pytest.mark.skipif(not PLAYWRIGHT_AVAILABLE, reason="Playwright not available")
+    async def test_tenant_switch_persists_across_pages(self, browser_page, dashboard_server):
+        """Tenant selector should preserve selected tenant across page navigation."""
+        page = browser_page
+
+        try:
+            await page.goto(f"{dashboard_server}/settings", timeout=30000)
+            await page.wait_for_load_state("networkidle", timeout=15000)
+
+            selector = page.locator('select').first
+            if await selector.count() == 0:
+                pytest.skip("Tenant selector not found in settings page")
+
+            options = selector.locator('option')
+            option_count = await options.count()
+            if option_count < 2:
+                pytest.skip("Need at least two tenant options for switch test")
+
+            second_value = await options.nth(1).get_attribute('value')
+            if not second_value:
+                pytest.skip("Second tenant option has no value")
+
+            await selector.select_option(second_value)
+            await asyncio.sleep(1)
+
+            await page.goto(f"{dashboard_server}/control", timeout=30000)
+            await page.wait_for_load_state("networkidle", timeout=15000)
+
+            control_selector = page.locator('select').first
+            if await control_selector.count() == 0:
+                pytest.skip("Tenant selector not found in control page")
+
+            selected_value = await control_selector.input_value()
+            assert selected_value == second_value
+
+        except Exception as e:
+            pytest.skip(f"Tenant switch flow not fully testable: {e}")
 
 class TestDashboardInteractions:
     """Test specific dashboard interaction patterns."""

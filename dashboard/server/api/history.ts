@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { eventHandler } from 'h3'
 import { resolveOptimizationDbConfig } from '../utils/optimization-history'
+import { getTenantResponseMetadata, resolveTenantContext } from '../utils/tenant-context'
 
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
 const asNumber = (value: unknown, fallback = 0) => {
@@ -35,11 +36,12 @@ type HistoryRow = {
   battery_actions: number
   price_min: number
   price_max: number
+  tenant_id?: string | null
   reconciled_rows?: number
   heuristic_rows?: number
 }
 
-async function fetchAppDbHistory(limitDays: number): Promise<Array<Partial<HistoryRow> & { date: string }> | null> {
+async function fetchAppDbHistory(limitDays: number, tenantId: string): Promise<Array<Partial<HistoryRow> & { date: string }> | null> {
   try {
     const { Pool } = await import('pg')
     const config = resolveOptimizationDbConfig()
@@ -48,6 +50,21 @@ async function fetchAppDbHistory(limitDays: number): Promise<Array<Partial<Histo
     try {
       const tableCheck = await pool.query(`SELECT to_regclass('public.optimization_history') AS table_name`)
       if (!tableCheck.rows?.[0]?.table_name) return null
+
+      const tenantColumnCheck = await pool.query(
+        `
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'optimization_history'
+          AND column_name = 'tenant_id'
+        LIMIT 1
+        `,
+      )
+
+      if (tenantColumnCheck.rowCount === 0) {
+        return null
+      }
 
       const result = await pool.query(
         `
@@ -60,11 +77,12 @@ async function fetchAppDbHistory(limitDays: number): Promise<Array<Partial<Histo
           SUM(CASE WHEN COALESCE(economics_method, '') = 'heuristic_multiplier' THEN 1 ELSE 0 END) AS heuristic_rows
         FROM optimization_history
         WHERE timestamp >= NOW() - INTERVAL '45 days'
+          AND tenant_id = $2
         GROUP BY DATE(timestamp)
         ORDER BY day DESC
         LIMIT $1
         `,
-        [limitDays],
+        [limitDays, tenantId],
       )
 
       if (!result.rows?.length) return null
@@ -110,6 +128,11 @@ function toCanonicalRowsFromDagsterData(data: any): Array<Partial<HistoryRow> & 
           cost_optimized: optimized,
           savings: asNumber(entry?.savings, baseline - optimized),
           battery_actions: asNumber(entry?.battery_actions, 0),
+          tenant_id: typeof entry?.tenant_id === 'string'
+            ? entry.tenant_id.trim().toLowerCase()
+            : typeof entry?.tenantId === 'string'
+              ? entry.tenantId.trim().toLowerCase()
+              : null,
         }
       })
       .filter(Boolean) as Array<Partial<HistoryRow> & { date: string }>
@@ -122,7 +145,7 @@ function toCanonicalRowsFromDagsterData(data: any): Array<Partial<HistoryRow> & 
   return []
 }
 
-async function fetchDagsterAssetHistory(limitDays: number): Promise<Array<Partial<HistoryRow> & { date: string }> | null> {
+async function fetchDagsterAssetHistory(limitDays: number, tenantId: string): Promise<Array<Partial<HistoryRow> & { date: string }> | null> {
   try {
     const { Pool } = await import('pg')
     const pool = new Pool({
@@ -154,6 +177,9 @@ async function fetchDagsterAssetHistory(limitDays: number): Promise<Array<Partia
       for (const row of result.rows) {
         const parsedRows = toCanonicalRowsFromDagsterData(row.data)
         for (const parsed of parsedRows) {
+          if (parsed.tenant_id && parsed.tenant_id !== tenantId) {
+            continue
+          }
           if (!merged.has(parsed.date)) {
             merged.set(parsed.date, parsed)
           }
@@ -207,18 +233,34 @@ function resolveProjectRoot(): string {
   return resolve(cwd, '..')
 }
 
-export default eventHandler(async () => {
+export default eventHandler(async (event) => {
   // GET /api/history - Legacy optimization history mapped to backend telemetry.
   try {
+    const tenant = await resolveTenantContext(event)
     const limitDays = 7
     const projectRoot = resolveProjectRoot()
     const analyticsPath = join(projectRoot, 'energy_ml', 'outputs', 'analytics_cache.json')
     const latestResultsPath = join(projectRoot, 'energy_ml', 'outputs', 'latest_ml_results.json')
     const ppoValidationPath = join(projectRoot, 'data', 'results', 'ppo_validation_feb2026.json')
 
+    const tenantRequest = {
+      headers: {
+        'x-tenant-id': tenant.id,
+      },
+      query: {
+        tenantId: tenant.id,
+      },
+    }
+
     const [controlHistoryPayload, pricesPayload] = await Promise.all([
-      $fetch<any>('/api/control/history?limit=400').catch(() => null),
-      $fetch<any>('/api/prices/current').catch(() => null),
+      $fetch<any>('/api/control/history', {
+        ...tenantRequest,
+        query: {
+          ...tenantRequest.query,
+          limit: 400,
+        },
+      }).catch(() => null),
+      $fetch<any>('/api/prices/current', tenantRequest).catch(() => null),
     ])
 
     const analytics = readJsonIfExists(analyticsPath)
@@ -244,8 +286,8 @@ export default eventHandler(async () => {
       actionBuckets.set(key, currentActions + (isAction ? 1 : 0))
     }
 
-    const appDbRows = await fetchAppDbHistory(limitDays)
-    const dagsterRows = appDbRows ? null : await fetchDagsterAssetHistory(limitDays)
+    const appDbRows = await fetchAppDbHistory(limitDays, tenant.id)
+    const dagsterRows = appDbRows ? null : await fetchDagsterAssetHistory(limitDays, tenant.id)
     const ppoRows = appDbRows || dagsterRows ? null : buildRowsFromPpoValidation(ppoValidation, limitDays)
 
     const fallbackDailySavings = asNumber(
@@ -325,6 +367,7 @@ export default eventHandler(async () => {
 
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       timestamp: new Date().toISOString(),
       data: rows,
       source: {
@@ -342,9 +385,15 @@ export default eventHandler(async () => {
           reconciled_rows: totalReconciledRows,
           heuristic_rows_remaining: totalHeuristicRows,
         },
+        tenant_filter_applied: true,
       },
     }
   } catch (error: any) {
+    const errorData = error?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('[history] Failed to build backend-derived history:', error)
     return {
       success: false,

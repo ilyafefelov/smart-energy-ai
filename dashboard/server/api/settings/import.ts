@@ -1,16 +1,9 @@
 import fs from 'fs'
 import path from 'path'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
   try {
-    const SETTINGS_FILE = path.join(process.cwd(), 'data/settings.json')
-    const BACKUP_DIR = path.join(process.cwd(), 'data/backups')
-    
-    // Ensure backup directory exists
-    if (!fs.existsSync(BACKUP_DIR)) {
-      fs.mkdirSync(BACKUP_DIR, { recursive: true })
-    }
-    
     // Parse multipart form data
     const formData = await readMultipartFormData(event)
     
@@ -22,6 +15,21 @@ export default defineEventHandler(async (event) => {
     const fileField = formData.find(f => f.name === 'file')
     if (!fileField || !fileField.data) {
       throw new Error('File field not found')
+    }
+
+    const tenantField = formData.find((field) => field.name === 'tenantId' || field.name === 'tenant_id')
+    const tenantBody = tenantField?.data
+      ? { tenantId: tenantField.data.toString('utf-8').trim() }
+      : null
+    const tenant = await resolveTenantContext(event, { body: tenantBody })
+
+    const tenantDataDir = path.join(process.cwd(), 'data', 'tenants', tenant.id)
+    const SETTINGS_FILE = path.join(tenantDataDir, 'settings.json')
+    const BACKUP_DIR = path.join(tenantDataDir, 'backups')
+
+    // Ensure backup directory exists
+    if (!fs.existsSync(BACKUP_DIR)) {
+      fs.mkdirSync(BACKUP_DIR, { recursive: true })
     }
     
     // Parse the JSON file
@@ -63,6 +71,7 @@ export default defineEventHandler(async (event) => {
     
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       message: 'Settings imported successfully',
       imported: {
         siteName: importedSettings.general?.siteName,
@@ -72,6 +81,11 @@ export default defineEventHandler(async (event) => {
       }
     }
   } catch (error: any) {
+    const errorData = error?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     throw createError({
       statusCode: 400,
       statusMessage: `Import failed: ${error.message}`

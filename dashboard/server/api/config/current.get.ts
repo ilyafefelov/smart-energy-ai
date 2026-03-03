@@ -4,10 +4,14 @@
  */
 import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
   try {
-    const configPath = join(process.cwd(), '../energy_ml/configs/user_config.json')
+    const tenant = await resolveTenantContext(event)
+    const tenantConfigPath = join(process.cwd(), '../energy_ml/configs/tenants', tenant.id, 'user_config.json')
+    const legacyConfigPath = join(process.cwd(), '../energy_ml/configs/user_config.json')
+    const configPath = existsSync(tenantConfigPath) ? tenantConfigPath : legacyConfigPath
     
     // Default configuration
     const defaultConfig = {
@@ -75,8 +79,11 @@ export default defineEventHandler(async (event) => {
     
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       data: currentConfig,
       metadata: {
+        config_scope: existsSync(tenantConfigPath) ? 'tenant' : 'legacy_default',
+        tenant_config_path: tenantConfigPath,
         config_file_exists: existsSync(configPath),
         last_modified: existsSync(configPath) ? getFileModifiedTime(configPath) : null,
         battery_specs: batterySpecs,
@@ -86,6 +93,11 @@ export default defineEventHandler(async (event) => {
     }
     
   } catch (error) {
+    const errorData = (error as any)?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('Current config fetch error:', error)
     
     throw createError({

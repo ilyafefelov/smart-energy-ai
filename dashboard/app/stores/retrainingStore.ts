@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useTenantContext } from '~/composables/useTenantContext'
 
 export interface RetrainingJob {
   id: string
@@ -28,6 +29,7 @@ const DEFAULT_JOB: RetrainingJob = {
 }
 
 export const useRetrainingStore = defineStore('retraining', () => {
+  const tenantContext = useTenantContext()
   const job = ref<RetrainingJob>({ ...DEFAULT_JOB })
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -88,9 +90,20 @@ export const useRetrainingStore = defineStore('retraining', () => {
     error.value = null
 
     try {
+      await tenantContext.loadTenants()
+      const tenantId = tenantContext.currentTenantId.value
       const response = await $fetch('/api/retraining/start', {
         method: 'POST',
-        body: configOverrides || {}
+        query: {
+          tenantId,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        },
+        body: {
+          ...(configOverrides || {}),
+          tenantId,
+        },
       }) as any
 
       if (response.success && response.jobId) {
@@ -133,7 +146,17 @@ export const useRetrainingStore = defineStore('retraining', () => {
     }
 
     try {
-      const response = await $fetch(`/api/retraining/progress?jobId=${job.value.id}`) as any
+      await tenantContext.loadTenants()
+      const tenantId = tenantContext.currentTenantId.value
+      const response = await $fetch('/api/retraining/progress', {
+        query: {
+          tenantId,
+          jobId: job.value.id,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        },
+      }) as any
 
       if (response.success) {
         const progress = response.progress || job.value.progress
@@ -201,8 +224,17 @@ export const useRetrainingStore = defineStore('retraining', () => {
     }
 
     try {
-      const response = await $fetch(`/api/retraining/cancel?jobId=${job.value.id}`, {
-        method: 'POST'
+      await tenantContext.loadTenants()
+      const tenantId = tenantContext.currentTenantId.value
+      const response = await $fetch('/api/retraining/cancel', {
+        method: 'POST',
+        query: {
+          tenantId,
+          jobId: job.value.id,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        },
       }) as any
 
       if (response.success) {

@@ -12,6 +12,14 @@
             </h1>
           </div>
           <div class="flex items-center space-x-3">
+            <select
+              v-model="selectedTenantId"
+              class="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
+            >
+              <option v-for="tenant in tenantOptions" :key="tenant.id" :value="tenant.id">
+                {{ tenant.name || tenant.id }}
+              </option>
+            </select>
             <UBadge 
               :color="getStatusColor(systemStatus.mode)" 
               :label="systemStatus.mode?.toUpperCase() || 'UNKNOWN'"
@@ -493,9 +501,29 @@ definePageMeta({
 
 // Imports
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useTenantContext } from '~/composables/useTenantContext'
 
 // Toast for notifications
 const toast = useToast()
+const tenantContext = useTenantContext()
+
+const tenantOptions = computed(() => tenantContext.tenants.value)
+const selectedTenantId = computed({
+  get: () => tenantContext.currentTenantId.value,
+  set: (tenantId) => tenantContext.setTenant(tenantId),
+})
+
+const buildTenantRequest = () => {
+  const tenantId = tenantContext.currentTenantId.value
+  return {
+    query: {
+      tenantId,
+    },
+    headers: {
+      'x-tenant-id': tenantId,
+    },
+  }
+}
 
 // Reactive state
 const systemStatus = ref({
@@ -625,9 +653,10 @@ const getCommandColor = (command) => {
 const refreshStatus = async () => {
   statusLoading.value = true
   try {
+    await tenantContext.loadTenants()
     const [statusData, physicsData] = await Promise.all([
-      $fetch('/api/control/status'),
-      $fetch('/api/control/physics').catch(() => null)
+      $fetch('/api/control/status', buildTenantRequest()),
+      $fetch('/api/control/physics', buildTenantRequest()).catch(() => null)
     ])
     
     if (statusData) {
@@ -653,13 +682,14 @@ const refreshStatus = async () => {
 
 const refreshHistory = async () => {
   try {
+    await tenantContext.loadTenants()
     const [historyData, scheduledData] = await Promise.all([
-      $fetch('/api/control/history'),
-      $fetch('/api/control/scheduled').catch(() => [])
+      $fetch('/api/control/history', buildTenantRequest()),
+      $fetch('/api/control/scheduled', buildTenantRequest()).catch(() => null)
     ])
     
-    commandHistory.value = historyData || []
-    scheduledCommands.value = scheduledData || []
+    commandHistory.value = historyData?.history || []
+    scheduledCommands.value = scheduledData?.scheduled_commands || []
     
     console.log('History refreshed:', historyData?.length, 'commands')
   } catch (error) {
@@ -677,6 +707,7 @@ const executeCommand = async (command, power) => {
   
   try {
     const payload = {
+      tenantId: tenantContext.currentTenantId.value,
       command,
       power_kw: command === 'discharge' ? -Math.abs(power) : Math.abs(power),
       reason: `Manual control: ${command} ${Math.abs(power)}kW`,
@@ -687,6 +718,7 @@ const executeCommand = async (command, power) => {
     
     const result = await $fetch('/api/control/execute', {
       method: 'POST',
+      ...buildTenantRequest(),
       body: payload
     })
     
@@ -728,6 +760,7 @@ const addSchedule = async () => {
   
   try {
     const payload = {
+      tenantId: tenantContext.currentTenantId.value,
       command: newSchedule.value.command,
       power_kw: newSchedule.value.power_kw,
       scheduled_time: newSchedule.value.scheduled_time,
@@ -736,6 +769,7 @@ const addSchedule = async () => {
     
     const result = await $fetch('/api/control/schedule', {
       method: 'POST',
+      ...buildTenantRequest(),
       body: payload
     })
     
@@ -776,7 +810,8 @@ const addSchedule = async () => {
 const removeSchedule = async (scheduleId) => {
   try {
     const result = await $fetch(`/api/control/schedule/${scheduleId}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      ...buildTenantRequest(),
     })
     
     if (result.success) {
@@ -834,6 +869,8 @@ const formatScheduleTime = (timestamp) => {
 let refreshInterval = null
 
 onMounted(async () => {
+  await tenantContext.loadTenants()
+
   // Initial data load
   await Promise.all([
     refreshStatus(),
@@ -867,6 +904,13 @@ watch(manualMode, async (isManual) => {
     await executeCommand('auto', 0)
   }
 })
+
+watch(
+  () => tenantContext.currentTenantId.value,
+  async () => {
+    await Promise.all([refreshStatus(), refreshHistory()])
+  },
+)
 </script>
 
 <style scoped>

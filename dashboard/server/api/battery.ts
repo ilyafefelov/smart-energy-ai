@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { eventHandler } from 'h3'
 import { getBatteryState } from '~/server/utils/battery'
+import { getTenantResponseMetadata, isRecordVisibleForTenant, resolveTenantContext } from '../utils/tenant-context'
 
 type CommandRecord = {
   command?: string
@@ -11,8 +12,9 @@ type CommandRecord = {
   timestamp?: string
 }
 
-function loadConfig() {
-  const configPath = join(process.cwd(), '../energy_ml/configs/user_config.json')
+function loadConfig(tenantId: string) {
+  const tenantConfigPath = join(process.cwd(), '../energy_ml/configs/tenants', tenantId, 'user_config.json')
+  const legacyConfigPath = join(process.cwd(), '../energy_ml/configs/user_config.json')
   const defaults = {
     battery_capacity_kwh: 150,
     battery_efficiency: 0.95,
@@ -22,6 +24,8 @@ function loadConfig() {
     battery_c_rate_discharge: 1.0,
     battery_cycles_max: 8000,
   }
+
+  const configPath = existsSync(tenantConfigPath) ? tenantConfigPath : legacyConfigPath
 
   if (!existsSync(configPath)) {
     return defaults
@@ -70,9 +74,10 @@ function deriveTodayTotals(history: CommandRecord[], usableCapacity: number) {
   }
 }
 
-export default eventHandler(async () => {
-  const state = await getBatteryState()
-  const config = loadConfig()
+export default eventHandler(async (event) => {
+  const tenant = await resolveTenantContext(event)
+  const state = await getBatteryState(tenant.id)
+  const config = loadConfig(tenant.id)
 
   const soc = Number(state?.soc ?? 50)
   const voltage = Number(state?.voltage ?? 400)
@@ -90,7 +95,9 @@ export default eventHandler(async () => {
 
   const usableCapacity = capacityKwh * Math.max(0, (maxSoc - minSoc) / 100)
   const commandHistory = Array.isArray((globalThis as any).commandHistory)
-    ? (globalThis as any).commandHistory as CommandRecord[]
+    ? ((globalThis as any).commandHistory as CommandRecord[]).filter((entry: any) =>
+      isRecordVisibleForTenant(entry?.tenant_id ?? entry?.tenantId, tenant),
+    )
     : []
   const today = deriveTodayTotals(commandHistory, usableCapacity)
 
@@ -99,6 +106,7 @@ export default eventHandler(async () => {
 
   return {
     success: true,
+    tenant: getTenantResponseMetadata(tenant),
     timestamp: new Date().toISOString(),
     source: 'battery_state_and_config',
     status: {

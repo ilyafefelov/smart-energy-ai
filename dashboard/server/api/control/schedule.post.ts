@@ -3,10 +3,12 @@
 
 import { createError, defineEventHandler, readBody } from 'h3'
 import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event: any) => {
   try {
     const body = await readBody(event)
+    const tenant = await resolveTenantContext(event, { body })
     
     // Validate input
     if (!body.command || !body.power_kw || !body.scheduled_time) {
@@ -45,6 +47,7 @@ export default defineEventHandler(async (event: any) => {
     const schedule = {
       id: scheduleId,
       command_id: normalizeOptionalString(body.command_id) || `cmd_for_${scheduleId}`,
+      tenant_id: tenant.id,
       command: body.command,
       power_kw: parseFloat(body.power_kw),
       scheduled_time: scheduledTime.toISOString(),
@@ -66,7 +69,8 @@ export default defineEventHandler(async (event: any) => {
           power_kw: schedule.power_kw.toString(),
           scheduled_time: schedule.scheduled_time,
           reason: schedule.reason,
-          user_id: schedule.user_id
+          user_id: schedule.user_id,
+          tenant_id: tenant.id,
         })
         
         const pythonResult = JSON.parse(result)
@@ -75,6 +79,7 @@ export default defineEventHandler(async (event: any) => {
 
         return {
           success: true,
+          tenant: getTenantResponseMetadata(tenant),
           schedule_id: schedule.id,
           command_id: schedule.command_id,
           scheduled_time: schedule.scheduled_time,
@@ -103,6 +108,7 @@ export default defineEventHandler(async (event: any) => {
 
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       schedule_id: schedule.id,
       command_id: schedule.command_id,
       scheduled_time: schedule.scheduled_time,
@@ -111,6 +117,11 @@ export default defineEventHandler(async (event: any) => {
     }
     
   } catch (error: any) {
+    const errorData = error?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('Schedule creation error:', error)
     
     if (error.statusCode) {
@@ -166,6 +177,7 @@ async function persistScheduledIntent(schedule: any, source: 'python_controller'
   const executionKey = buildOptimizationExecutionKey({
     commandId: schedule.command_id,
     scheduleId: schedule.id,
+    tenantId: schedule.tenant_id,
     timestamp: schedule.scheduled_time,
     command: schedule.command,
     powerKw: Number(schedule.power_kw || 0),
@@ -179,6 +191,7 @@ async function persistScheduledIntent(schedule: any, source: 'python_controller'
     execution_key: executionKey,
     command_id: schedule.command_id,
     schedule_id: schedule.id,
+    tenant_id: schedule.tenant_id,
     execution_source: executionSource,
     timestamp: schedule.scheduled_time,
     predicted_action: mapCommandToAction(schedule.command),

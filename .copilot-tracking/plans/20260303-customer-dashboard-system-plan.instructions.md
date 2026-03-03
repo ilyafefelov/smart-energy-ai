@@ -43,28 +43,28 @@ Implement tenant-aware dashboard API and UI flows so metrics and control surface
 
 ## Implementation Checklist
 
-### [ ] Phase 1: Tenant Context and API Boundary
+### [x] Phase 1: Tenant Context and API Boundary
 
-- [ ] Task 1.1: Add tenant resolution and validation contract
+- [x] Task 1.1: Add tenant resolution and validation contract
   - Details: .copilot-tracking/details/20260303-customer-dashboard-system-details.md (Lines 11-29)
 
-- [ ] Task 1.2: Enforce tenant scoping for metrics/history/control reads
+- [x] Task 1.2: Enforce tenant scoping for metrics/history/control reads
   - Details: .copilot-tracking/details/20260303-customer-dashboard-system-details.md (Lines 31-52)
 
-### [ ] Phase 2: Tenant-Scoped Persistence and State
+### [x] Phase 2: Tenant-Scoped Persistence and State
 
-- [ ] Task 2.1: Add tenant key to optimization history contract
+- [x] Task 2.1: Add tenant key to optimization history contract
   - Details: .copilot-tracking/details/20260303-customer-dashboard-system-details.md (Lines 56-76)
 
-- [ ] Task 2.2: Partition file-backed runtime state by tenant
+- [x] Task 2.2: Partition file-backed runtime state by tenant
   - Details: .copilot-tracking/details/20260303-customer-dashboard-system-details.md (Lines 78-102)
 
-### [ ] Phase 3: Tenant-Aware Dashboard UX and Guardrails
+### [x] Phase 3: Tenant-Aware Dashboard UX and Guardrails
 
-- [ ] Task 3.1: Add frontend tenant selector and request propagation
+- [x] Task 3.1: Add frontend tenant selector and request propagation
   - Details: .copilot-tracking/details/20260303-customer-dashboard-system-details.md (Lines 106-129)
 
-- [ ] Task 3.2: Add tenant isolation tests and smoke assertions
+- [x] Task 3.2: Add tenant isolation tests and smoke assertions
   - Details: .copilot-tracking/details/20260303-customer-dashboard-system-details.md (Lines 131-149)
 
 ## Dependencies

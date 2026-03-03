@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { eventHandler, getMethod, readBody } from 'h3'
 import { getBatteryState, updateBatteryState } from '~/server/utils/battery'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 interface BatterySimSpec {
   batteryType: string
@@ -23,8 +24,10 @@ let autoOptimization = false
 
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
 
-function loadBatterySimulationSpec(defaultVoltage: number): BatterySimSpec {
-  const configPath = join(process.cwd(), '../energy_ml/configs/user_config.json')
+function loadBatterySimulationSpec(defaultVoltage: number, tenantId: string): BatterySimSpec {
+  const tenantConfigPath = join(process.cwd(), '../energy_ml/configs/tenants', tenantId, 'user_config.json')
+  const legacyConfigPath = join(process.cwd(), '../energy_ml/configs/user_config.json')
+  const configPath = existsSync(tenantConfigPath) ? tenantConfigPath : legacyConfigPath
 
   let config: any = null
   if (existsSync(configPath)) {
@@ -87,23 +90,25 @@ function clampPower(targetKw: number, spec: BatterySimSpec): number {
 }
 
 export default eventHandler(async (event) => {
+  const tenant = await resolveTenantContext(event)
   const method = getMethod(event)
 
   if (method === 'GET') {
-    const state = await getBatteryState()
+    const state = await getBatteryState(tenant.id)
 
     const socPercent = Number(state?.soc ?? 50)
     const voltage = Number(state?.voltage ?? 400)
     const current = Number(state?.current ?? 0)
     const livePowerKw = round((voltage * current) / 1000, 3)
 
-    const spec = loadBatterySimulationSpec(voltage)
+    const spec = loadBatterySimulationSpec(voltage, tenant.id)
     const effectivePowerCommand = manualMode
       ? powerCommand
       : computeAutoPowerKw(socPercent, spec)
 
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       battery: {
         soc: round(socPercent / 100, 4),
         socPercentage: round(socPercent, 1),
@@ -146,8 +151,8 @@ export default eventHandler(async (event) => {
 
   if (method === 'POST') {
     const body = await readBody(event)
-    const state = await getBatteryState()
-    const spec = loadBatterySimulationSpec(Number(state?.voltage ?? 400))
+    const state = await getBatteryState(tenant.id)
+    const spec = loadBatterySimulationSpec(Number(state?.voltage ?? 400), tenant.id)
 
     if (body.action === 'setPower') {
       const requestedPowerKw = Number(body.power ?? 0)
@@ -157,10 +162,11 @@ export default eventHandler(async (event) => {
 
       const voltage = Number(state?.voltage ?? spec.nominalVoltage)
       const derivedCurrent = voltage > 0 ? round((powerCommand * 1000) / voltage, 2) : 0
-      await updateBatteryState({ current: derivedCurrent })
+      await updateBatteryState({ current: derivedCurrent }, tenant.id)
 
       return {
         success: true,
+        tenant: getTenantResponseMetadata(tenant),
         message: `Power set to ${powerCommand}kW`,
         powerCommand,
         execution_mode: 'manual_command',
@@ -173,11 +179,12 @@ export default eventHandler(async (event) => {
 
       if (autoOptimization) {
         powerCommand = 0
-        await updateBatteryState({ current: 0 })
+        await updateBatteryState({ current: 0 }, tenant.id)
       }
 
       return {
         success: true,
+        tenant: getTenantResponseMetadata(tenant),
         message: `Auto mode ${autoOptimization ? 'enabled' : 'disabled'}`,
         autoOptimization,
         manualMode,
@@ -193,10 +200,11 @@ export default eventHandler(async (event) => {
       await updateBatteryState({
         current: 0,
         temperature: 25,
-      })
+      }, tenant.id)
 
       return {
         success: true,
+        tenant: getTenantResponseMetadata(tenant),
         message: 'Battery reset',
         execution_mode: 'manual_command',
       }

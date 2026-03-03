@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useTenantContext } from '~/composables/useTenantContext'
 
 export interface GeneralSettings {
   siteName: string
@@ -65,9 +66,10 @@ const DEFAULT_SETTINGS: Settings = {
   }
 }
 
-const STORAGE_KEY = 'energy_settings_v1'
+const storageKeyForTenant = (tenantId: string) => `energy_settings_v1_${tenantId}`
 
 export const useSettingsStore = defineStore('settings', () => {
+  const tenantContext = useTenantContext()
   const settings = ref<Settings>({ ...DEFAULT_SETTINGS })
   const isLoading = ref(false)
   const isSaving = ref(false)
@@ -90,34 +92,61 @@ export const useSettingsStore = defineStore('settings', () => {
     error.value = null
 
     try {
-      // Only try localStorage (skip API entirely for now)
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const saved = localStorage.getItem(STORAGE_KEY)
-        if (saved) {
-          try {
+      await tenantContext.loadTenants()
+      const tenantId = tenantContext.currentTenantId.value
+
+      const response = await $fetch('/api/settings/load', {
+        query: {
+          tenantId,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        },
+      }) as any
+
+      if (response?.success && response.settings) {
+        const loaded = response.settings
+        settings.value = {
+          general: { ...DEFAULT_SETTINGS.general, ...loaded.general },
+          battery: { ...DEFAULT_SETTINGS.battery, ...loaded.battery },
+          notifications: { ...DEFAULT_SETTINGS.notifications, ...loaded.notifications },
+          model: { ...DEFAULT_SETTINGS.model, ...loaded.model },
+        }
+        isDirty.value = false
+
+        if (typeof window !== 'undefined' && window.localStorage) {
+          localStorage.setItem(storageKeyForTenant(tenantId), JSON.stringify(settings.value))
+        }
+        return
+      }
+
+      throw new Error(response?.error || 'Failed to load settings from API')
+    } catch (e) {
+      console.error('[SettingsStore] Error loading settings:', e)
+
+      // Local fallback is scoped by tenant id.
+      try {
+        const tenantId = tenantContext.currentTenantId.value
+        if (typeof window !== 'undefined' && window.localStorage && tenantId) {
+          const saved = localStorage.getItem(storageKeyForTenant(tenantId))
+          if (saved) {
             const parsed = JSON.parse(saved)
-            console.log('[SettingsStore] Loaded from localStorage:', parsed)
             settings.value = {
               general: { ...DEFAULT_SETTINGS.general, ...parsed.general },
               battery: { ...DEFAULT_SETTINGS.battery, ...parsed.battery },
               notifications: { ...DEFAULT_SETTINGS.notifications, ...parsed.notifications },
-              model: { ...DEFAULT_SETTINGS.model, ...parsed.model }
+              model: { ...DEFAULT_SETTINGS.model, ...parsed.model },
             }
             isDirty.value = false
             return
-          } catch (parseErr) {
-            console.error('[SettingsStore] Failed to parse localStorage:', parseErr)
-            error.value = 'Failed to parse saved settings'
           }
         }
+      } catch {
+        // Fall through to defaults.
       }
 
-      // No saved settings found, use defaults
-      console.log('[SettingsStore] No saved settings found, using defaults')
-      settings.value = { ...DEFAULT_SETTINGS }
-    } catch (e) {
-      console.error('[SettingsStore] Error loading settings:', e)
       error.value = 'Failed to load settings'
+      settings.value = { ...DEFAULT_SETTINGS }
     } finally {
       isLoading.value = false
     }
@@ -130,12 +159,29 @@ export const useSettingsStore = defineStore('settings', () => {
     try {
       const dataToSave = newSettings ? { ...settings.value, ...newSettings } : settings.value
 
-      // Save to localStorage
+      await tenantContext.loadTenants()
+      const tenantId = tenantContext.currentTenantId.value
+
+      const response = await $fetch('/api/settings/save', {
+        method: 'POST',
+        query: {
+          tenantId,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        },
+        body: {
+          ...dataToSave,
+          tenantId,
+        },
+      }) as any
+
+      if (!response?.success) {
+        throw new Error(response?.error || 'Settings save failed')
+      }
+
       if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave))
-        console.log('[SettingsStore] Saved to localStorage:', dataToSave)
-      } else {
-        throw new Error('localStorage not available')
+        localStorage.setItem(storageKeyForTenant(tenantId), JSON.stringify(dataToSave))
       }
 
       // Update state

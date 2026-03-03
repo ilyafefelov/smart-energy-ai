@@ -2,10 +2,12 @@
 // POST /api/control/execute
 
 import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
+    const tenant = await resolveTenantContext(event, { body })
     const requestTimestamp = resolveIncomingTimestamp(body?.timestamp)
     const commandId = resolveCommandId(body, requestTimestamp)
     
@@ -37,6 +39,7 @@ export default defineEventHandler(async (event) => {
     const command = {
       command_id: commandId,
       schedule_id: normalizeOptionalString(body.schedule_id),
+      tenant_id: tenant.id,
       command: body.command,
       power_kw: body.power_kw || 0,
       duration_minutes: body.duration_minutes || null,
@@ -50,14 +53,22 @@ export default defineEventHandler(async (event) => {
     // Try to execute via Python controller
     const { execPython } = await import('../../../utils/python-runner.js').catch(() => ({ execPython: null }))
 
-    const batteryStatusBefore = await $fetch<any>('/api/battery/status').catch(() => null)
+    const batteryStatusBefore = await $fetch<any>('/api/battery/status', {
+      headers: {
+        'x-tenant-id': tenant.id,
+      },
+      query: {
+        tenantId: tenant.id,
+      },
+    }).catch(() => null)
     
     if (execPython) {
       try {
         const result = await execPython('execute_control_command.py', {
           ...command,
           power: command.power_kw.toString(),
-          command_type: command.command
+          command_type: command.command,
+          tenant_id: tenant.id,
         })
         
         const pythonResult = JSON.parse(result)
@@ -73,6 +84,7 @@ export default defineEventHandler(async (event) => {
         
         return {
           success: true,
+          tenant: getTenantResponseMetadata(tenant),
           result: pythonResult,
           command_id: command.command_id,
           executed_at: command.timestamp,
@@ -87,7 +99,14 @@ export default defineEventHandler(async (event) => {
     // Fallback simulation for development
     console.log('Using simulation mode for command execution')
 
-    const batteryStatus = await $fetch<any>('/api/battery/status').catch(() => null)
+    const batteryStatus = await $fetch<any>('/api/battery/status', {
+      headers: {
+        'x-tenant-id': tenant.id,
+      },
+      query: {
+        tenantId: tenant.id,
+      },
+    }).catch(() => null)
     const batterySoc = Number(batteryStatus?.battery?.soc ?? 50) / 100
     const batteryCapacity = Number(batteryStatus?.battery?.capacity ?? 150)
     const maxPower = 5.0
@@ -126,6 +145,7 @@ export default defineEventHandler(async (event) => {
     
     const historyEntry = {
       ...command,
+      tenant_id: tenant.id,
       result: simulationResult,
       executed_at: new Date().toISOString(),
       success: true
@@ -147,6 +167,7 @@ export default defineEventHandler(async (event) => {
     
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       result: simulationResult,
       command_id: command.command_id,
       executed_at: command.timestamp,
@@ -154,6 +175,11 @@ export default defineEventHandler(async (event) => {
     }
     
   } catch (error) {
+    const errorData = (error as any)?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('Command execution error:', error)
     
     if (error.statusCode) {
@@ -202,6 +228,7 @@ function resolveCommandId(body: any, timestampIso: string): string {
 type CommandPayload = {
   command_id: string
   schedule_id: string | null
+  tenant_id: string
   command: string
   power_kw: number
   duration_minutes: number | null
@@ -272,9 +299,16 @@ function deriveDurationHours(command: CommandPayload, executionResult: any): num
   return Math.abs(Number(command.power_kw || 0)) > 0 ? 1 : 0
 }
 
-async function resolveCurrentPriceKwh(): Promise<number> {
+async function resolveCurrentPriceKwh(tenantId: string): Promise<number> {
   try {
-    const payload = await $fetch<any>('/api/prices/current')
+    const payload = await $fetch<any>('/api/prices/current', {
+      headers: {
+        'x-tenant-id': tenantId,
+      },
+      query: {
+        tenantId,
+      },
+    })
     const direct = Number(payload?.prices?.current?.price)
     if (Number.isFinite(direct) && direct > 0) {
       return direct
@@ -304,8 +338,8 @@ function resolveTariffWindowFromHour(hour: number): 'peak' | 'offpeak' | 'should
   return 'offpeak'
 }
 
-async function resolvePricingContext(commandTimestamp: string): Promise<PricingContext> {
-  const defaultPrice = await resolveCurrentPriceKwh()
+async function resolvePricingContext(commandTimestamp: string, tenantId: string): Promise<PricingContext> {
+  const defaultPrice = await resolveCurrentPriceKwh(tenantId)
   const fallback: PricingContext = {
     unitPriceUahKwh: defaultPrice,
     source: 'prices_current_fallback',
@@ -318,7 +352,14 @@ async function resolvePricingContext(commandTimestamp: string): Promise<PricingC
   }
 
   try {
-    const payload = await $fetch<any>('/api/prices/current')
+    const payload = await $fetch<any>('/api/prices/current', {
+      headers: {
+        'x-tenant-id': tenantId,
+      },
+      query: {
+        tenantId,
+      },
+    })
     const basePrice = Number(payload?.prices?.current?.price)
     const todayAvg = Number(payload?.prices?.today?.avg)
     const peakPrice = Number(payload?.prices?.forecast?.peak)
@@ -404,7 +445,7 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
   const command = input.command
   const executionResult = input.executionResult || {}
 
-  const pricing = await resolvePricingContext(command.timestamp)
+  const pricing = await resolvePricingContext(command.timestamp, command.tenant_id)
   const durationHours = deriveDurationHours(command, executionResult)
   const energyKwh = Math.max(0, Math.abs(Number(command.power_kw || 0)) * durationHours)
   const economics = computeCanonicalEconomics(command, energyKwh, pricing)
@@ -422,6 +463,7 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
   const executionKey = buildOptimizationExecutionKey({
     commandId: command.command_id,
     scheduleId: command.schedule_id,
+    tenantId: command.tenant_id,
     timestamp: command.timestamp,
     command: command.command,
     powerKw: Number(command.power_kw || 0),
@@ -435,6 +477,7 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
     execution_key: executionKey,
     command_id: command.command_id,
     schedule_id: command.schedule_id,
+    tenant_id: command.tenant_id,
     execution_source: input.executionSource,
     timestamp: command.timestamp,
     predicted_action: mapCommandToAction(command.command),

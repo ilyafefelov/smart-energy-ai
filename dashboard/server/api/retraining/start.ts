@@ -3,6 +3,7 @@
 import fs from 'fs'
 import path from 'path'
 import { spawn } from 'child_process'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 interface RetrainingJob {
   id: string
@@ -16,18 +17,28 @@ interface RetrainingJob {
 
 const activeJobs = new Map<string, RetrainingJob>()
 
+function buildTenantJobKey(tenantId: string, jobId: string): string {
+  return `${tenantId}:${jobId}`
+}
+
+function resolveRetrainingDir(tenantId: string): string {
+  return path.join(process.cwd(), 'data', 'tenants', tenantId, 'retraining')
+}
+
 export default defineEventHandler(async (event) => {
   // POST /api/retraining/start
   // STANDARDIZED RESPONSE: { success, jobId, estimatedTime }
 
   try {
     const body = await readBody(event)
+    const tenant = await resolveTenantContext(event, { body })
 
     // Generate unique job ID
     const jobId = createJobId()
+    const tenantJobKey = buildTenantJobKey(tenant.id, jobId)
 
     // Create progress file path
-    const progressDir = path.join(process.cwd(), 'data', 'retraining')
+    const progressDir = resolveRetrainingDir(tenant.id)
     if (!fs.existsSync(progressDir)) {
       fs.mkdirSync(progressDir, { recursive: true })
     }
@@ -41,6 +52,7 @@ export default defineEventHandler(async (event) => {
 
     // Initialize progress file
     const initialProgress = {
+      tenant_id: tenant.id,
       jobId,
       status: 'running',
       progress: 0,
@@ -52,7 +64,7 @@ export default defineEventHandler(async (event) => {
     fs.writeFileSync(progressFile, JSON.stringify(initialProgress, null, 2))
 
     // Add to active jobs
-    activeJobs.set(jobId, {
+    activeJobs.set(tenantJobKey, {
       id: jobId,
       status: 'running',
       progress: 0,
@@ -63,7 +75,15 @@ export default defineEventHandler(async (event) => {
     // Start Python training process in background
     // Only spawn if script exists, otherwise simulate
     if (executionMode === 'python') {
-      const trainProcess = spawn('python', [pythonScript, '--job-id', jobId, '--config', JSON.stringify(body)])
+      const trainProcess = spawn('python', [
+        pythonScript,
+        '--job-id',
+        jobId,
+        '--tenant-id',
+        tenant.id,
+        '--config',
+        JSON.stringify(body),
+      ])
 
       trainProcess.stdout?.on('data', (data) => {
         console.log(`[${jobId}] ${data.toString()}`)
@@ -74,7 +94,7 @@ export default defineEventHandler(async (event) => {
       })
 
       trainProcess.on('close', (code) => {
-        const job = activeJobs.get(jobId)
+        const job = activeJobs.get(tenantJobKey)
         if (job) {
           job.status = code === 0 ? 'completed' : 'failed'
           job.endTime = Date.now()
@@ -85,10 +105,11 @@ export default defineEventHandler(async (event) => {
 
         // Update progress file
         const finalProgress = {
+          tenant_id: tenant.id,
           jobId,
           status: code === 0 ? 'completed' : 'failed',
-          progress: code === 0 ? 100 : activeJobs.get(jobId)?.progress || 0,
-          startTime: activeJobs.get(jobId)?.startTime,
+          progress: code === 0 ? 100 : activeJobs.get(tenantJobKey)?.progress || 0,
+          startTime: activeJobs.get(tenantJobKey)?.startTime,
           endTime: Date.now(),
           execution_mode: 'python',
           error: code === 0 ? null : `Process exited with code ${code}`,
@@ -99,17 +120,23 @@ export default defineEventHandler(async (event) => {
     } else {
       // Simulate training with gradual progress
       console.log(`[${jobId}] Python script not found, simulating training...`)
-      simulateTraining(jobId, progressFile, executionMode)
+      simulateTraining(tenant.id, jobId, progressFile, executionMode)
     }
 
     return {
       success: true,
+      tenant: getTenantResponseMetadata(tenant),
       jobId,
       execution_mode: executionMode,
       estimatedTime: 600, // 10 minutes
       message: 'Retraining started successfully'
     }
   } catch (error: any) {
+    const errorData = error?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('Failed to start retraining:', error)
     return {
       success: false,
@@ -120,10 +147,12 @@ export default defineEventHandler(async (event) => {
 })
 
 function simulateTraining(
+  tenantId: string,
   jobId: string,
   progressFile: string,
   executionMode: 'python' | 'simulation_fallback'
 ) {
+  const tenantJobKey = buildTenantJobKey(tenantId, jobId)
   let progress = 0
   const steps = [5, 15, 25, 40, 55, 70, 85, 95, 100]
   let stepIndex = 0
@@ -134,10 +163,11 @@ function simulateTraining(
       stepIndex++
 
       const progressData = {
+        tenant_id: tenantId,
         jobId,
         status: progress === 100 ? 'completed' : 'running',
         progress,
-        startTime: activeJobs.get(jobId)?.startTime,
+        startTime: activeJobs.get(tenantJobKey)?.startTime,
         execution_mode: executionMode,
         message: getProgressMessage(progress)
       }
@@ -145,7 +175,7 @@ function simulateTraining(
       fs.writeFileSync(progressFile, JSON.stringify(progressData, null, 2))
 
       if (progress === 100) {
-        const job = activeJobs.get(jobId)
+        const job = activeJobs.get(tenantJobKey)
         if (job) {
           job.status = 'completed'
           job.progress = 100

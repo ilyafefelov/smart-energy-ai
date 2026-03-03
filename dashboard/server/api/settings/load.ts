@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 interface SettingsData {
   general?: any
@@ -13,8 +14,11 @@ export default defineEventHandler(async (event) => {
   // STANDARDIZED RESPONSE FORMAT: { success: bool, settings: { general, battery, notifications, model } }
 
   try {
+    const tenant = await resolveTenantContext(event)
     const dataDir = path.join(process.cwd(), 'data')
-    const settingsFile = path.join(dataDir, 'settings.json')
+    const tenantDataDir = path.join(dataDir, 'tenants', tenant.id)
+    const tenantSettingsFile = path.join(tenantDataDir, 'settings.json')
+    const legacySettingsFile = path.join(dataDir, 'settings.json')
 
     // Default structure to ensure all keys exist
     const defaultSettings: SettingsData = {
@@ -45,8 +49,14 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    if (fs.existsSync(settingsFile)) {
-      const fileContent = fs.readFileSync(settingsFile, 'utf-8')
+    const effectiveSettingsFile = fs.existsSync(tenantSettingsFile)
+      ? tenantSettingsFile
+      : tenant.id === tenant.defaultTenantId && fs.existsSync(legacySettingsFile)
+        ? legacySettingsFile
+        : null
+
+    if (effectiveSettingsFile) {
+      const fileContent = fs.readFileSync(effectiveSettingsFile, 'utf-8')
       const loaded = JSON.parse(fileContent)
 
       // Merge with defaults to ensure all keys are present
@@ -59,16 +69,23 @@ export default defineEventHandler(async (event) => {
 
       return {
         success: true,
-        settings
+        tenant: getTenantResponseMetadata(tenant),
+        settings,
       }
     } else {
       // File doesn't exist yet, return defaults
       return {
         success: true,
-        settings: defaultSettings
+        tenant: getTenantResponseMetadata(tenant),
+        settings: defaultSettings,
       }
     }
   } catch (error: any) {
+    const errorData = error?.data
+    if (errorData?.error?.code === 'INVALID_TENANT') {
+      return errorData
+    }
+
     console.error('Failed to load settings:', error)
 
     return {

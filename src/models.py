@@ -45,6 +45,7 @@ class OptimizationHistory(Base):
     execution_key = Column(String(64), nullable=False, unique=True, index=True)
     command_id = Column(String(128), nullable=True, index=True)
     schedule_id = Column(String(128), nullable=True, index=True)
+    tenant_id = Column(String(128), nullable=True, index=True)
     execution_source = Column(String(64), nullable=False, default="unknown")
     timestamp = Column(DateTime, nullable=False, index=True)
     predicted_action = Column(Integer, nullable=False)  # 0=charge, 1=discharge, 2=sell, 3=buy, 4=idle
@@ -108,5 +109,6 @@ __table_args__ = (
     Index('idx_weather_timestamp', WeatherForecast.timestamp),
     Index('idx_prices_timestamp', MarketPrice.timestamp),
     Index('idx_history_timestamp', OptimizationHistory.timestamp),
+    Index('idx_history_tenant_timestamp', OptimizationHistory.tenant_id, OptimizationHistory.timestamp),
     Index('idx_training_date', RLTrainingLog.training_date),
 )

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useSettingsStore } from './settingsStore'
+import { useTenantContext } from '~/composables/useTenantContext'
 
 export interface BatteryState {
   soc: number // State of Charge (0-100%)
@@ -33,6 +34,7 @@ const DEFAULT_STATE: BatteryState = {
 
 export const useBatteryStore = defineStore('battery', () => {
   const settingsStore = useSettingsStore()
+  const tenantContext = useTenantContext()
   
   const state = ref<BatteryState>({ ...DEFAULT_STATE })
   const history = ref<BatteryHistory[]>([])
@@ -84,7 +86,8 @@ export const useBatteryStore = defineStore('battery', () => {
     error.value = null
 
     try {
-      const response = await $fetch('/api/battery/status') as any
+      await tenantContext.loadTenants()
+      const response = await $fetch('/api/battery/status', tenantContext.tenantRequest.value) as any
 
       if (response.success && response.battery) {
         state.value = {
