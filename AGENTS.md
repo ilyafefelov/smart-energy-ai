@@ -24,7 +24,9 @@ bd ready              # Find available work
 bd show <id>          # View issue details
 bd update <id> --status in_progress  # Claim work
 bd close <id>         # Complete work
-bd sync               # Sync with git
+bd dolt remote list   # Check Dolt remotes
+bd dolt pull          # Pull Beads data when remote is configured
+bd dolt push          # Push Beads data when remote is configured
 ```
 
 ## Project Overview
@@ -238,7 +240,8 @@ bd close bd-42 --reason "Completed" --json
 bd automatically syncs via Dolt:
 
 - Each write auto-commits to Dolt history
-- Use `bd dolt push`/`bd dolt pull` for remote sync
+- Use `bd dolt push`/`bd dolt pull` for remote sync when a Dolt remote is configured
+- If no Dolt remote is configured, use `pwsh ./scripts/local/bd-dolt-sync-safe.ps1` to safely skip remote sync without failing landing checks
 - No manual export/import needed!
 
 ### Important Rules
@@ -267,7 +270,7 @@ For more details, see README.md and docs/QUICKSTART.md.
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
    git pull --rebase
-   bd sync
+   pwsh ./scripts/local/bd-dolt-sync-safe.ps1
    git push
    git status  # MUST show "up to date with origin"
    ```
