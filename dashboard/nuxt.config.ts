@@ -1,5 +1,6 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
+  ssr: false,
   
   // Source directory configuration (Nuxt 4)
   srcDir: 'app',
