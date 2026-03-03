@@ -177,8 +177,20 @@ const feedback = ref<FeedbackState>({ message: '', type: 'success' })
 
 const isBusy = computed(() => batteryPhysicsStore.isLoading)
 
+const effectiveDisplayPower = computed(() => {
+  const measuredPower = Number(batteryPhysicsStore.state.power || 0)
+  const commandPower = Number(batteryPhysicsStore.state.powerCommand || 0)
+
+  // Prefer measured telemetry when present, but fall back to command flow
+  // so simulation/manual control still communicates active charge/discharge.
+  if (Math.abs(measuredPower) > 0.05) {
+    return measuredPower
+  }
+  return commandPower
+})
+
 const signedPower = computed(() => {
-  const power = Number(batteryPhysicsStore.state.power || 0)
+  const power = effectiveDisplayPower.value
   return `${power > 0 ? '+' : ''}${power.toFixed(1)}`
 })
 
@@ -188,7 +200,7 @@ const commandText = computed(() => {
 })
 
 const powerFlowColor = computed(() => {
-  const power = Number(batteryPhysicsStore.state.power || 0)
+  const power = effectiveDisplayPower.value
   if (power > 0) return 'text-emerald-400'
   if (power < 0) return 'text-amber-400'
   return 'text-slate-300'
