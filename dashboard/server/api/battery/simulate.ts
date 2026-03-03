@@ -3,6 +3,7 @@ import { join } from 'path'
 import { eventHandler, getMethod, readBody } from 'h3'
 import { getBatteryState, updateBatteryState } from '../../utils/battery'
 import { getBatteryControlState, updateBatteryControlState } from '../../utils/battery-control-state'
+import { buildStrategyWeights, normalizeLoadProfileType, normalizeOptimizationStrategy } from '../../utils/auto-strategy'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 interface BatterySimSpec {
@@ -63,14 +64,6 @@ const LOAD_PROFILE_COEFFICIENTS: Record<'standard' | 'multi-shift' | '24/7', num
 function deterministicNoise(seed: number): number {
   const value = Math.sin(seed * 12.9898 + 78.233) * 43758.5453
   return value - Math.floor(value)
-}
-
-function normalizeLoadProfileType(value: unknown): 'standard' | 'multi-shift' | '24/7' | 'custom' {
-  const normalized = String(value || '').trim().toLowerCase()
-  if (normalized === 'multi_shift' || normalized === 'multi-shift') return 'multi-shift'
-  if (normalized === '24_7' || normalized === '24/7') return '24/7'
-  if (normalized === 'custom') return 'custom'
-  return 'standard'
 }
 
 function loadTenantEnergyConfig(tenantId: string): any {
@@ -389,6 +382,9 @@ export default eventHandler(async (event) => {
     const livePowerKw = round((voltage * current) / 1000, 3)
 
     const tenantConfig = loadTenantEnergyConfig(tenant.id)
+    const optimizationStrategy = normalizeOptimizationStrategy(tenantConfig?.optimization_strategy)
+    const loadProfileType = normalizeLoadProfileType(tenantConfig?.load_profile_type)
+    const strategyWeights = buildStrategyWeights(optimizationStrategy)
     const spec = loadBatterySimulationSpec(voltage, tenantConfig)
     const loadDemandKw = estimateLoadDemandKw(tenantConfig, new Date())
     const renewableGenerationKw = estimateRenewableGenerationKw(tenantConfig, new Date())
@@ -470,6 +466,9 @@ export default eventHandler(async (event) => {
         renewableSurplusKw: renewablePower.renewableSurplusKw,
         renewableChargePowerKw: renewableChargeAppliedKw,
         renewableChargeAvailableKw: renewablePower.chargePowerKw,
+        optimization_strategy: optimizationStrategy,
+        load_profile_type: loadProfileType,
+        strategy_weights: strategyWeights,
         manualMode,
         autoOptimization,
         execution_mode: manualMode ? 'manual_command' : 'auto_recommendation',

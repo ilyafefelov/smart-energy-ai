@@ -4,6 +4,14 @@
 import { exec } from 'child_process'
 import path from 'path'
 import { promisify } from 'util'
+import {
+  applyAutoStrategyDecision,
+  buildStrategyWeights,
+  mapExecutionCommandToRecommendationAction,
+  mapRecommendationActionToExecution,
+  normalizeLoadProfileType,
+  normalizeOptimizationStrategy,
+} from '../../utils/auto-strategy'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 const DAGSTER_API = process.env.DAGSTER_API_URL || 'http://localhost:3000'
@@ -152,7 +160,7 @@ export default defineEventHandler(async (event) => {
       },
     }
 
-    const [postgresDagster, fileDagster, mlRecommendation, pricesPayload, batteryPayload, mlflowStatus, dagsterStatus] = await Promise.all([
+    const [postgresDagster, fileDagster, mlRecommendation, pricesPayload, batteryPayload, mlflowStatus, dagsterStatus, configPayload] = await Promise.all([
       readDagsterRecommendationFromPostgres(tenant.id),
       readMaterializedDagsterRecommendation(projectRoot, tenant.id),
       $fetch<any>('/api/ml/recommendation', tenantRequest).catch(() => null),
@@ -160,13 +168,18 @@ export default defineEventHandler(async (event) => {
       $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
       $fetch<any>('/api/mlflow/status', tenantRequest).catch(() => null),
       queryDagsterStatus(),
+      $fetch<any>('/api/config/current', tenantRequest).catch(() => null),
     ])
 
     const materializedDagster = postgresDagster || fileDagster
 
     const currentPrice = Number(pricesPayload?.prices?.current?.price || 0)
+    const avgPrice = Number(pricesPayload?.prices?.today?.avg || currentPrice || 0)
     const batterySoc = Number(batteryPayload?.battery?.soc || 50)
     const mlData = mlRecommendation?.data || null
+    const optimizationStrategy = normalizeOptimizationStrategy(configPayload?.data?.optimization_strategy)
+    const loadProfileType = normalizeLoadProfileType(configPayload?.data?.load_profile_type)
+    const strategyWeights = buildStrategyWeights(optimizationStrategy)
     const recommendationSource = postgresDagster
       ? 'dagster_postgres_snapshot'
       : fileDagster
@@ -186,6 +199,31 @@ export default defineEventHandler(async (event) => {
           confidence_percent: Math.round(Number(mlData?.confidence || 0.5) * 100),
           rationale: mlData?.reasoning || 'Recommendation unavailable - holding position',
         }
+
+    const fallbackPowerKw = Math.max(0.5, Math.min(5, Number(materializedDagster?.schedule?.[0]?.action_kw || 2.5) || 2.5))
+    const mappedRecommendation = mapRecommendationActionToExecution(recommendation.action, fallbackPowerKw)
+    const adjustedDecision = applyAutoStrategyDecision(mappedRecommendation.command, mappedRecommendation.power_kw, {
+      optimizationStrategy,
+      loadProfileType,
+      currentHour: new Date().getHours(),
+      currentPriceUahKwh: Number.isFinite(currentPrice) ? currentPrice : null,
+      avgPriceUahKwh: Number.isFinite(avgPrice) ? avgPrice : null,
+      batterySocPercent: Number.isFinite(batterySoc) ? batterySoc : null,
+      fallbackPowerKw,
+    })
+    const adjustedAction = mapExecutionCommandToRecommendationAction(adjustedDecision.command)
+    const strategyRationaleSuffix = adjustedDecision.notes.length > 0
+      ? ` Strategy adjustments: ${adjustedDecision.notes.join('; ')}.`
+      : ''
+    const strategyAdjustedRecommendation = {
+      ...recommendation,
+      base_action: recommendation.action,
+      action: adjustedAction,
+      action_kw: Number(adjustedDecision.powerKw.toFixed(3)),
+      strategy_adjusted: adjustedAction !== recommendation.action || adjustedDecision.notes.length > 0,
+      strategy_adjustment_notes: adjustedDecision.notes,
+      rationale: `${recommendation.rationale}${strategyRationaleSuffix}`,
+    }
 
     const schedule24h = materializedDagster
       ? buildScheduleFromDagsterAsset(
@@ -212,7 +250,7 @@ export default defineEventHandler(async (event) => {
       status: 'success',
       timestamp: new Date().toISOString(),
       tenant: getTenantResponseMetadata(tenant),
-      recommendation,
+      recommendation: strategyAdjustedRecommendation,
       current_state: {
         price_uah_kwh: currentPrice,
         battery_soc_percent: batterySoc,
@@ -231,6 +269,11 @@ export default defineEventHandler(async (event) => {
         last_check: new Date().toISOString(),
       },
       dagster_status: dagsterStatus,
+      strategy_context: {
+        optimization_strategy: optimizationStrategy,
+        load_profile_type: loadProfileType,
+        strategy_weights: strategyWeights,
+      },
       source_metadata: {
         tenant_filter_applied: true,
         recommendation_source: recommendationSource,

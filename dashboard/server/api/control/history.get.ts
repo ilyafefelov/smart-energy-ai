@@ -9,6 +9,8 @@ export default defineEventHandler(async (event) => {
     const tenant = await resolveTenantContext(event)
     const query = getQuery(event)
     const limit = Math.min(parseInt(query.limit as string) || 50, 100)
+    const sinceHours = Math.max(1, Math.min(parseInt(query.since_hours as string) || 24, 24 * 7))
+    const sinceTs = Date.now() - sinceHours * 60 * 60 * 1000
     const pythonScript = 'get_control_history.py'
     let fallbackReasonCode: string | null = null
     
@@ -30,14 +32,18 @@ export default defineEventHandler(async (event) => {
           'python_controller',
           tenant,
         )
+        const filtered = normalized.filter((entry: any) => {
+          const ts = new Date(entry?.timestamp || 0).getTime()
+          return Number.isFinite(ts) ? ts >= sinceTs : false
+        }).slice(0, limit)
 
-        await persistHistoryRows(normalized, 'python_controller_history')
+        await persistHistoryRows(filtered, 'python_controller_history')
         
         return {
           success: true,
           tenant: getTenantResponseMetadata(tenant),
-          history: normalized,
-          count: normalized.length,
+          history: filtered,
+          count: filtered.length,
           source_metadata: {
             tenant_filter_applied: true,
             python_script: pythonScript,
@@ -59,7 +65,11 @@ export default defineEventHandler(async (event) => {
     const history = Array.isArray(globalThis.commandHistory) ? globalThis.commandHistory : []
     
     // Apply limit
-    const limitedHistory = history.slice(0, limit)
+    const filteredHistory = history.filter((entry: any) => {
+      const ts = new Date(entry?.timestamp || entry?.executed_at || 0).getTime()
+      return Number.isFinite(ts) ? ts >= sinceTs : false
+    })
+    const limitedHistory = filteredHistory.slice(0, limit)
     const apiHistory = normalizeHistoryEntries(limitedHistory, 'memory_storage', tenant)
 
     await persistHistoryRows(apiHistory, 'memory_history')
@@ -163,6 +173,9 @@ function normalizeHistoryEntries(
 
     const socBefore = normalizeSocPercent(entry?.result?.soc_before ?? entry?.soc_before ?? 0.5)
     const socAfter = normalizeSocPercent(entry?.result?.new_soc ?? entry?.soc_after ?? socBefore, socBefore)
+    const strategyWeights = entry?.strategy_weights && typeof entry.strategy_weights === 'object'
+      ? entry.strategy_weights
+      : null
 
     return {
       command_id: commandId,
@@ -170,11 +183,21 @@ function normalizeHistoryEntries(
       tenant_id: tenant.id,
       timestamp,
       command,
+      requested_command: normalizeOptionalString(entry?.requested_command) || command,
+      resolved_command: normalizeOptionalString(entry?.resolved_command) || command,
       power_kw: Number.isFinite(powerKw) ? powerKw : 0,
       reason,
       user_id: userId,
       soc_before: socBefore,
       soc_after: socAfter,
+      decision_source: normalizeOptionalString(entry?.decision_source),
+      recommendation_source: normalizeOptionalString(entry?.recommendation_source),
+      optimization_strategy: normalizeOptionalString(entry?.optimization_strategy),
+      load_profile_type: normalizeOptionalString(entry?.load_profile_type),
+      strategy_weights: strategyWeights,
+      event_type: normalizeOptionalString(entry?.event_type),
+      mode_from: normalizeOptionalString(entry?.mode_from),
+      mode_to: normalizeOptionalString(entry?.mode_to),
       success: entry?.success !== false,
       estimated_completion: entry?.result?.estimated_completion ?? entry?.estimated_completion ?? null,
     }
@@ -233,11 +256,11 @@ async function persistHistoryRows(rows: any[], source: 'python_controller_histor
       battery_soc_end: Number.isFinite(row.soc_after) ? row.soc_after * 100 : null,
       solar_actual: null,
       load_actual: null,
-      decision_source: 'manual',
+      decision_source: row.decision_source || 'manual',
       execution_status: row.success ? 'executed' : 'failed',
-      event_type: 'history_sync',
-      mode_from: null,
-      mode_to: null,
+      event_type: row.event_type || 'history_sync',
+      mode_from: row.mode_from || null,
+      mode_to: row.mode_to || null,
       realized_revenue_uah: null,
       realized_cost_uah: null,
       realized_net_uah: null,

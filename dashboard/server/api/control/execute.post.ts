@@ -5,6 +5,16 @@ import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../..
 import { recordBillingUsageEvent } from '../../utils/billing'
 import { updateBatteryState } from '../../utils/battery'
 import { updateBatteryControlState } from '../../utils/battery-control-state'
+import {
+  applyAutoStrategyDecision,
+  buildStrategyWeights,
+  mapRecommendationActionToExecution,
+  normalizeLoadProfileType,
+  normalizeOptimizationStrategy,
+  type AutoStrategy,
+  type LoadProfileType,
+  type StrategyWeights,
+} from '../../utils/auto-strategy'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 type ExecutableCommand = 'charge' | 'discharge' | 'hold'
@@ -18,6 +28,10 @@ type ExecutionPlan = {
   eventType: 'manual_command' | 'auto_transition'
   modeFrom: 'manual' | 'automatic'
   modeTo: 'manual' | 'automatic'
+  optimizationStrategy: AutoStrategy
+  loadProfileType: LoadProfileType
+  strategyWeights: StrategyWeights
+  recommendationSource: string
 }
 
 export default defineEventHandler(async (event) => {
@@ -134,6 +148,24 @@ export default defineEventHandler(async (event) => {
         }, tenant.id)
 
         await persistBatterySignalForCommand(executableCommand, tenant.id)
+
+        appendCommandHistory({
+          ...executableCommand,
+          requested_command: executionPlan.requestedCommand,
+          resolved_command: executionPlan.command,
+          decision_source: executionPlan.decisionSource,
+          recommendation_source: executionPlan.recommendationSource,
+          optimization_strategy: executionPlan.optimizationStrategy,
+          load_profile_type: executionPlan.loadProfileType,
+          strategy_weights: executionPlan.strategyWeights,
+          tenant_id: tenant.id,
+          result: pythonResult,
+          executed_at: new Date().toISOString(),
+          success: true,
+          event_type: executionPlan.eventType,
+          mode_from: executionPlan.modeFrom,
+          mode_to: executionPlan.modeTo,
+        })
         
         console.log('Python controller result:', pythonResult)
         
@@ -205,28 +237,25 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    // Store command in memory for history (in real implementation, this would go to database)
-    if (!globalThis.commandHistory) {
-      globalThis.commandHistory = []
-    }
-    
     const historyEntry = {
       ...executableCommand,
       requested_command: executionPlan.requestedCommand,
       resolved_command: executionPlan.command,
       decision_source: executionPlan.decisionSource,
+      recommendation_source: executionPlan.recommendationSource,
+      optimization_strategy: executionPlan.optimizationStrategy,
+      load_profile_type: executionPlan.loadProfileType,
+      strategy_weights: executionPlan.strategyWeights,
       tenant_id: tenant.id,
       result: simulationResult,
       executed_at: new Date().toISOString(),
-      success: true
+      success: true,
+      event_type: executionPlan.eventType,
+      mode_from: executionPlan.modeFrom,
+      mode_to: executionPlan.modeTo,
     }
-    
-    globalThis.commandHistory.unshift(historyEntry)
-    
-    // Keep only last 100 commands
-    if (globalThis.commandHistory.length > 100) {
-      globalThis.commandHistory = globalThis.commandHistory.slice(0, 100)
-    }
+
+    appendCommandHistory(historyEntry)
 
     await persistCommandToOptimizationHistory({
       command: executableCommand,
@@ -673,20 +702,31 @@ function recordBillingForExecutedCommand(
   }
 }
 
-function mapRecommendationToExecution(action: string, fallbackPowerKw: number): { command: ExecutableCommand, power_kw: number } {
-  const normalized = String(action || 'HOLD').toUpperCase()
-  if (normalized === 'BUY' || normalized === 'CHARGE') {
-    return { command: 'charge', power_kw: Math.max(0.5, Math.abs(fallbackPowerKw)) }
-  }
-  if (normalized === 'SELL' || normalized === 'DISCHARGE') {
-    return { command: 'discharge', power_kw: -Math.max(0.5, Math.abs(fallbackPowerKw)) }
-  }
-  return { command: 'hold', power_kw: 0 }
-}
-
 async function resolveExecutionPlan(command: CommandPayload, tenantId: string): Promise<ExecutionPlan> {
   const modeStateByTenant = (globalThis as any).__controlModeByTenant || {}
   const previousMode = modeStateByTenant[tenantId]?.mode === 'automatic' ? 'automatic' : 'manual'
+
+  const tenantRequest = {
+    headers: {
+      'x-tenant-id': tenantId,
+    },
+    query: {
+      tenantId,
+    },
+  }
+
+  const [configPayload, pricesPayload, batteryPayload] = await Promise.all([
+    $fetch<any>('/api/config/current', tenantRequest).catch(() => null),
+    $fetch<any>('/api/prices/current', tenantRequest).catch(() => null),
+    $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
+  ])
+
+  const optimizationStrategy = normalizeOptimizationStrategy(configPayload?.data?.optimization_strategy)
+  const loadProfileType = normalizeLoadProfileType(configPayload?.data?.load_profile_type)
+  const strategyWeights = buildStrategyWeights(optimizationStrategy)
+  const currentPrice = Number(pricesPayload?.prices?.current?.price)
+  const avgPrice = Number(pricesPayload?.prices?.today?.avg)
+  const batterySocPercent = Number(batteryPayload?.battery?.soc)
 
   if (command.command !== 'auto') {
     const normalizedPower = command.command === 'hold'
@@ -703,59 +743,93 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
       eventType: 'manual_command',
       modeFrom: previousMode,
       modeTo: 'manual',
+      optimizationStrategy,
+      loadProfileType,
+      strategyWeights,
+      recommendationSource: 'manual_input',
     }
   }
 
   const fallbackPowerKw = Math.max(0.5, Math.min(5, Math.abs(Number(command.power_kw || 2.5))))
-  const tenantRequest = {
-    headers: {
-      'x-tenant-id': tenantId,
-    },
-    query: {
-      tenantId,
-    },
+  const strategyContext = {
+    optimizationStrategy,
+    loadProfileType,
+    currentHour: new Date().getHours(),
+    currentPriceUahKwh: Number.isFinite(currentPrice) ? currentPrice : null,
+    avgPriceUahKwh: Number.isFinite(avgPrice) ? avgPrice : null,
+    batterySocPercent: Number.isFinite(batterySocPercent) ? batterySocPercent : null,
+    fallbackPowerKw,
   }
 
   try {
     const dagsterRecommendation = await $fetch<any>('/api/dagster/recommendation', tenantRequest)
-    const mapped = mapRecommendationToExecution(dagsterRecommendation?.recommendation?.action || 'HOLD', fallbackPowerKw)
+    const mapped = mapRecommendationActionToExecution(dagsterRecommendation?.recommendation?.action || 'HOLD', fallbackPowerKw)
+    const adjusted = applyAutoStrategyDecision(mapped.command, mapped.power_kw, strategyContext)
     const source = String(dagsterRecommendation?.source_metadata?.recommendation_source || '')
+    const baseReason = dagsterRecommendation?.recommendation?.rationale || 'Auto execution from Dagster recommendation'
+    const strategyNote = adjusted.notes.length > 0
+      ? ` Strategy adjustments: ${adjusted.notes.join('; ')}.`
+      : ''
     return {
-      ...mapped,
+      command: adjusted.command,
+      power_kw: adjusted.powerKw,
       decisionSource: source.startsWith('dagster') ? 'dagster' : 'ml',
-      reasoning: dagsterRecommendation?.recommendation?.rationale || 'Auto execution from Dagster recommendation',
+      reasoning: `${baseReason}${strategyNote}`,
       requestedCommand: 'auto',
       eventType: 'auto_transition',
       modeFrom: previousMode,
       modeTo: 'automatic',
+      optimizationStrategy,
+      loadProfileType,
+      strategyWeights,
+      recommendationSource: source || 'dagster_recommendation',
     }
   } catch {
     try {
       const mlRecommendation = await $fetch<any>('/api/ml/recommendation', tenantRequest)
-      const mapped = mapRecommendationToExecution(mlRecommendation?.data?.action || 'HOLD', fallbackPowerKw)
+      const mapped = mapRecommendationActionToExecution(mlRecommendation?.data?.action || 'HOLD', fallbackPowerKw)
+      const adjusted = applyAutoStrategyDecision(mapped.command, mapped.power_kw, strategyContext)
+      const baseReason = mlRecommendation?.data?.reasoning || 'Auto execution from ML recommendation'
+      const strategyNote = adjusted.notes.length > 0
+        ? ` Strategy adjustments: ${adjusted.notes.join('; ')}.`
+        : ''
       return {
-        ...mapped,
+        command: adjusted.command,
+        power_kw: adjusted.powerKw,
         decisionSource: 'ml',
-        reasoning: mlRecommendation?.data?.reasoning || 'Auto execution from ML recommendation',
+        reasoning: `${baseReason}${strategyNote}`,
         requestedCommand: 'auto',
         eventType: 'auto_transition',
         modeFrom: previousMode,
         modeTo: 'automatic',
+        optimizationStrategy,
+        loadProfileType,
+        strategyWeights,
+        recommendationSource: 'ml_recommendation',
       }
     } catch {
       const pricesPayload = await $fetch<any>('/api/prices/current', tenantRequest).catch(() => null)
       const current = Number(pricesPayload?.prices?.current?.price || 0)
       const avg = Number(pricesPayload?.prices?.today?.avg || 0)
       const heuristicAction = avg > 0 && current < avg * 0.9 ? 'BUY' : avg > 0 && current > avg * 1.1 ? 'SELL' : 'HOLD'
-      const mapped = mapRecommendationToExecution(heuristicAction, fallbackPowerKw)
+      const mapped = mapRecommendationActionToExecution(heuristicAction, fallbackPowerKw)
+      const adjusted = applyAutoStrategyDecision(mapped.command, mapped.power_kw, strategyContext)
+      const strategyNote = adjusted.notes.length > 0
+        ? ` Strategy adjustments: ${adjusted.notes.join('; ')}.`
+        : ''
       return {
-        ...mapped,
+        command: adjusted.command,
+        power_kw: adjusted.powerKw,
         decisionSource: 'heuristic',
-        reasoning: 'Auto execution from heuristic fallback (price spread threshold).',
+        reasoning: `Auto execution from heuristic fallback (price spread threshold).${strategyNote}`,
         requestedCommand: 'auto',
         eventType: 'auto_transition',
         modeFrom: previousMode,
         modeTo: 'automatic',
+        optimizationStrategy,
+        loadProfileType,
+        strategyWeights,
+        recommendationSource: 'heuristic_fallback',
       }
     }
   }
@@ -777,5 +851,17 @@ async function persistBatterySignalForCommand(command: CommandPayload, tenantId:
       command_id: command.command_id,
       error: (error as any)?.message || 'unknown',
     })
+  }
+}
+
+function appendCommandHistory(entry: any): void {
+  if (!globalThis.commandHistory) {
+    globalThis.commandHistory = []
+  }
+
+  globalThis.commandHistory.unshift(entry)
+
+  if (globalThis.commandHistory.length > 200) {
+    globalThis.commandHistory = globalThis.commandHistory.slice(0, 200)
   }
 }

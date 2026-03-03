@@ -42,6 +42,14 @@ export interface BatteryPhysicsState {
   renewableSurplusKw?: number // kW
   renewableChargePowerKw?: number // kW
   renewableChargeAvailableKw?: number // kW
+  optimization_strategy?: string | null
+  load_profile_type?: string | null
+  strategy_weights?: {
+    cost?: number
+    batteryHealth?: number
+    renewableUse?: number
+    reliability?: number
+  } | null
   active_command?: string | null
   requested_command?: string | null
   decision_source?: string | null

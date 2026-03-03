@@ -164,6 +164,52 @@
           </div>
         </div>
 
+        <div class="mt-3 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400">Strategy and Scenario</p>
+            <span class="rounded-full border border-teal-500/60 bg-teal-500/10 px-2 py-0.5 text-[10px] text-teal-200">
+              {{ strategyLabel }}
+            </span>
+          </div>
+          <div class="mt-2 space-y-1 text-xs text-slate-300">
+            <p>Load Profile: <span class="font-semibold text-slate-100">{{ loadProfileLabel }}</span></p>
+            <p v-if="strategyWeightSummary">Weights: <span class="text-slate-100">{{ strategyWeightSummary }}</span></p>
+            <p v-else>Live strategy weighting is unavailable for the current sample.</p>
+          </div>
+        </div>
+
+        <div class="mt-3 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400">Decision Trace (24h)</p>
+            <button
+              class="rounded-md border border-slate-600 px-2 py-0.5 text-[10px] font-semibold text-slate-200 transition hover:border-cyan-500 hover:text-cyan-200 disabled:cursor-not-allowed disabled:opacity-40"
+              :disabled="traceLoading"
+              @click="refreshDecisionTrace"
+            >
+              Refresh
+            </button>
+          </div>
+          <p v-if="traceError" class="mt-2 text-xs text-amber-300">{{ traceError }}</p>
+          <p v-else-if="traceLoading && decisionTrace.length === 0" class="mt-2 text-xs text-slate-400">Loading trace entries...</p>
+          <div v-else-if="decisionTrace.length > 0" class="mt-2 max-h-52 space-y-2 overflow-auto pr-1">
+            <div
+              v-for="entry in decisionTrace"
+              :key="`${entry.command_id || 'cmd'}:${entry.timestamp}`"
+              class="rounded-md border border-slate-700 bg-slate-950/60 p-2"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[11px] text-slate-400">{{ formatTraceTimestamp(entry.timestamp) }}</span>
+                <span class="rounded-full border px-1.5 py-0.5 text-[10px]" :class="traceSourceBadgeClass(entry.decision_source)">
+                  {{ traceSourceLabel(entry.decision_source) }}
+                </span>
+              </div>
+              <p class="mt-1 text-xs text-slate-200">{{ traceCommandSummary(entry) }}</p>
+              <p class="mt-1 text-[11px] text-slate-400">{{ traceDetailSummary(entry) }}</p>
+            </div>
+          </div>
+          <p v-else class="mt-2 text-xs text-slate-400">No control decisions recorded in the last 24 hours.</p>
+        </div>
+
         <div class="mt-4 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
           <p class="text-[11px] uppercase tracking-wide text-slate-400">Current SoC Sync</p>
           <p class="mt-1 text-xs text-slate-400">Align simulator charge level with manual field telemetry.</p>
@@ -196,7 +242,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useControlTransitionNotifications } from '../../composables/useControlTransitionNotifications'
 import { useTenantContext } from '../../composables/useTenantContext'
 import { useBatteryPhysicsStore } from '~/stores/batteryPhysicsStore'
@@ -204,6 +250,19 @@ import { useBatteryPhysicsStore } from '~/stores/batteryPhysicsStore'
 interface FeedbackState {
   message: string
   type: 'success' | 'error'
+}
+
+interface DecisionTraceEntry {
+  command_id?: string | null
+  timestamp?: string | null
+  requested_command?: string | null
+  resolved_command?: string | null
+  command?: string | null
+  decision_source?: string | null
+  power_kw?: number | null
+  soc_before?: number | null
+  soc_after?: number | null
+  reason?: string | null
 }
 
 const props = withDefaults(
@@ -223,6 +282,11 @@ const transitionNotifications = useControlTransitionNotifications()
 const targetPower = ref(0)
 const manualSocPercent = ref(0)
 const feedback = ref<FeedbackState>({ message: '', type: 'success' })
+const decisionTrace = ref<DecisionTraceEntry[]>([])
+const traceLoading = ref(false)
+const traceError = ref('')
+const traceWindowHours = ref(24)
+const traceInterval = ref<ReturnType<typeof setInterval> | null>(null)
 
 const isBusy = computed(() => batteryPhysicsStore.isLoading)
 
@@ -288,7 +352,7 @@ const autoSourceBadgeClass = computed(() => {
   if (decisionSourceNormalized.value === 'dagster') return 'border-cyan-500/70 bg-cyan-500/15 text-cyan-200'
   if (decisionSourceNormalized.value === 'ml') return 'border-emerald-500/70 bg-emerald-500/15 text-emerald-200'
   if (decisionSourceNormalized.value === 'heuristic') return 'border-amber-500/70 bg-amber-500/15 text-amber-200'
-  return 'border-purple-500/70 bg-purple-500/15 text-purple-200'
+  return 'border-slate-500/70 bg-slate-500/15 text-slate-200'
 })
 
 const autoIntelligenceSummary = computed(() => {
@@ -309,6 +373,38 @@ const autoIntelligenceSummary = computed(() => {
   }
 
   return 'Auto mode is enabled, but the decision source is not currently classified.'
+})
+
+const strategyLabel = computed(() => {
+  const raw = String(batteryPhysicsStore.state.optimization_strategy || 'balanced')
+  return raw.replace(/[_-]/g, ' ').toUpperCase()
+})
+
+const loadProfileLabel = computed(() => {
+  const raw = String(batteryPhysicsStore.state.load_profile_type || 'standard')
+  return raw.replace(/[_-]/g, ' ').toUpperCase()
+})
+
+const strategyWeightSummary = computed(() => {
+  const weights = batteryPhysicsStore.state.strategy_weights
+  if (!weights || typeof weights !== 'object') {
+    return ''
+  }
+
+  const cost = Number(weights.cost ?? 0)
+  const health = Number(weights.batteryHealth ?? 0)
+  const renewable = Number(weights.renewableUse ?? 0)
+  const reliability = Number(weights.reliability ?? 0)
+  if (![cost, health, renewable, reliability].some((value) => Number.isFinite(value) && value > 0)) {
+    return ''
+  }
+
+  return [
+    `cost ${Math.round(cost * 100)}%`,
+    `health ${Math.round(health * 100)}%`,
+    `renewable ${Math.round(renewable * 100)}%`,
+    `reliability ${Math.round(reliability * 100)}%`,
+  ].join(', ')
 })
 
 const powerFlowColor = computed(() => {
@@ -416,10 +512,108 @@ const setFeedback = (
   }, 2800)
 }
 
+const buildTenantRequest = async () => {
+  await tenantContext.loadTenants()
+  const tenantId = tenantContext.currentTenantId.value
+  return {
+    tenantId,
+    request: {
+      query: {
+        tenantId,
+      },
+      headers: {
+        'x-tenant-id': tenantId,
+      },
+    },
+  }
+}
+
+const refreshDecisionTrace = async () => {
+  traceLoading.value = true
+  traceError.value = ''
+
+  try {
+    const { tenantId, request } = await buildTenantRequest()
+    const payload = await $fetch<any>('/api/control/history', {
+      ...request,
+      query: {
+        ...request.query,
+        tenantId,
+        limit: 14,
+        since_hours: traceWindowHours.value,
+      },
+    })
+
+    decisionTrace.value = Array.isArray(payload?.history)
+      ? payload.history.slice(0, 14)
+      : []
+  } catch (error) {
+    traceError.value = (error as Error)?.message || 'Unable to load decision trace'
+  } finally {
+    traceLoading.value = false
+  }
+}
+
+const traceSourceLabel = (source: unknown): string => {
+  const normalized = String(source || 'manual').toLowerCase()
+  if (normalized === 'dagster') return 'Dagster'
+  if (normalized === 'ml') return 'ML'
+  if (normalized === 'heuristic') return 'Heuristic'
+  if (normalized === 'manual') return 'Manual'
+  return 'Other'
+}
+
+const traceSourceBadgeClass = (source: unknown): string => {
+  const normalized = String(source || 'manual').toLowerCase()
+  if (normalized === 'dagster') return 'border-cyan-500/70 bg-cyan-500/15 text-cyan-200'
+  if (normalized === 'ml') return 'border-emerald-500/70 bg-emerald-500/15 text-emerald-200'
+  if (normalized === 'heuristic') return 'border-amber-500/70 bg-amber-500/15 text-amber-200'
+  if (normalized === 'manual') return 'border-slate-500/70 bg-slate-500/15 text-slate-200'
+  return 'border-slate-500/70 bg-slate-500/15 text-slate-200'
+}
+
+const formatTraceTimestamp = (timestamp: unknown): string => {
+  const parsed = new Date(String(timestamp || ''))
+  if (!Number.isFinite(parsed.getTime())) {
+    return 'Unknown time'
+  }
+  return parsed.toLocaleString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+const traceCommandSummary = (entry: DecisionTraceEntry): string => {
+  const requested = String(entry.requested_command || entry.command || 'hold').toUpperCase()
+  const resolved = String(entry.resolved_command || entry.command || 'hold').toUpperCase()
+  return requested === resolved ? resolved : `${requested} -> ${resolved}`
+}
+
+const traceDetailSummary = (entry: DecisionTraceEntry): string => {
+  const power = Number(entry.power_kw || 0)
+  const before = Number(entry.soc_before)
+  const after = Number(entry.soc_after)
+  const delta = Number.isFinite(before) && Number.isFinite(after)
+    ? (after - before) * 100
+    : null
+
+  const powerText = `Power ${power > 0 ? '+' : ''}${power.toFixed(2)} kW`
+  const socText = delta == null
+    ? 'SoC n/a'
+    : `SoC ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%`
+  const reason = String(entry.reason || '').trim()
+  const reasonText = reason ? `Reason: ${reason}` : 'Reason: n/a'
+
+  return `${powerText} | ${socText} | ${reasonText}`
+}
+
 const toggleMode = async () => {
   try {
     const nextManual = !batteryPhysicsStore.state.manualMode
     await batteryPhysicsStore.setAutoMode(!nextManual)
+    await refreshDecisionTrace()
     setFeedback(nextManual ? 'Manual mode enabled' : 'Auto mode enabled', 'success', `mode:${nextManual ? 'manual' : 'auto'}`)
   } catch {
     setFeedback('Failed to switch control mode', 'error', 'mode:error')
@@ -429,6 +623,7 @@ const toggleMode = async () => {
 const applyCommand = async () => {
   try {
     await batteryPhysicsStore.setPowerCommand(targetPower.value)
+    await refreshDecisionTrace()
     setFeedback('Power command applied', 'success', 'power:apply')
   } catch {
     setFeedback('Failed to apply power command', 'error', 'power:apply:error')
@@ -438,6 +633,7 @@ const applyCommand = async () => {
 const quickCharge = async () => {
   try {
     await batteryPhysicsStore.charge(batteryPhysicsStore.state.maxChargePower * 0.8)
+    await refreshDecisionTrace()
     setFeedback('Quick charge started', 'success', 'quick:charge')
   } catch {
     setFeedback('Quick charge failed', 'error', 'quick:charge:error')
@@ -447,6 +643,7 @@ const quickCharge = async () => {
 const quickDischarge = async () => {
   try {
     await batteryPhysicsStore.discharge(batteryPhysicsStore.state.maxDischargePower * 0.8)
+    await refreshDecisionTrace()
     setFeedback('Quick discharge started', 'success', 'quick:discharge')
   } catch {
     setFeedback('Quick discharge failed', 'error', 'quick:discharge:error')
@@ -457,6 +654,7 @@ const setIdle = async () => {
   try {
     await batteryPhysicsStore.idle()
     targetPower.value = 0
+    await refreshDecisionTrace()
     setFeedback('Battery set to hold', 'success', 'hold')
   } catch {
     setFeedback('Failed to hold battery command', 'error', 'hold:error')
@@ -476,4 +674,25 @@ const syncCurrentSoc = async () => {
 
 const title = computed(() => props.title)
 const subtitle = computed(() => props.subtitle)
+
+watch(
+  () => tenantContext.currentTenantId.value,
+  () => {
+    refreshDecisionTrace()
+  }
+)
+
+onMounted(() => {
+  refreshDecisionTrace()
+  traceInterval.value = setInterval(() => {
+    refreshDecisionTrace()
+  }, 15000)
+})
+
+onBeforeUnmount(() => {
+  if (traceInterval.value) {
+    clearInterval(traceInterval.value)
+    traceInterval.value = null
+  }
+})
 </script>
