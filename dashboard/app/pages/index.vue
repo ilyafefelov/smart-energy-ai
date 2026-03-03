@@ -37,6 +37,7 @@
           :color="metricsStore.savingsToday.color as any"
           :trend="metricsStore.savingsToday.trend as any"
           :trendValue="metricsStore.savingsToday.trendValue"
+          :description="metricsStore.savingsSourceDescription"
           :tooltipInfo="metricsStore.getTooltip('savingsToday')"
         />
 
@@ -402,7 +403,7 @@
             <h2 class="text-xl font-bold text-white">💰 Daily Savings Breakdown</h2>
             <button @click="exportSavingsData" class="px-3 py-1 text-xs bg-slate-700 hover:bg-energy-400 hover:text-slate-900 rounded transition font-semibold cursor-pointer">📥 Export</button>
           </div>
-          
+
           <div class="space-y-3">
             <div v-for="entry in savingsBreakdownRows" :key="entry.key">
               <div class="flex justify-between items-center mb-2">
@@ -425,7 +426,8 @@
 
         <!-- Weekly Trend -->
         <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
-          <h2 class="text-xl font-bold text-white mb-4">📈 7-Day Savings Trend</h2>
+          <h2 class="text-xl font-bold text-white mb-1">📈 7-Day Savings Trend</h2>
+          <p class="text-xs text-slate-400 mb-4">{{ weeklyTrendSourceLabel }}</p>
           
           <svg viewBox="0 0 600 250" class="w-full h-full">
             <!-- Grid -->
@@ -559,6 +561,36 @@ const chartZoom = ref(1)
 const chartPanX = ref(0)
 const hoverPrice = ref<{ hour: number; price: number } | null>(null)
 const isRefreshingChart = ref(false)
+const realizedHistoryRows = ref<any[]>([])
+const realizedHistorySource = ref<string>('unavailable')
+
+const buildTenantRequest = () => {
+  const tenantId = tenantContext.currentTenantId.value
+  return {
+    query: {
+      tenantId,
+    },
+    headers: {
+      'x-tenant-id': tenantId,
+    },
+  }
+}
+
+const fetchCanonicalSavingsHistory = async () => {
+  const request = buildTenantRequest()
+  const response = await $fetch<any>('/api/history', {
+    ...request,
+    query: {
+      ...request.query,
+      days: 7,
+      limit: 7,
+    },
+  }).catch(() => null)
+
+  const rows = Array.isArray(response?.data) ? response.data : []
+  realizedHistoryRows.value = rows
+  realizedHistorySource.value = String(response?.source?.economics_source || 'unavailable')
+}
 
 // Chart interactivity
 const zoomChart = () => {
@@ -622,22 +654,43 @@ const parseCurrencyValue = (value: string | number): number => {
 }
 
 const weeklySavingsSeries = computed(() => {
-  const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const base = parseCurrencyValue(metricsStore.savingsToday.value)
-  const trend = metricsStore.savingsToday.trend || 'stable'
+  const canonicalRows = realizedHistoryRows.value
+  const normalizedRows = canonicalRows.length > 0
+    ? canonicalRows.map((row: any) => {
+        const date = new Date(row.date)
+        const label = date.toLocaleDateString('en-US', { weekday: 'short' })
+        const realizedNet = Number(row.realized_net_uah || 0)
+        const fallbackSavings = Number(row.savings || 0)
+        const value = Math.abs(realizedNet) > 0 ? realizedNet : fallbackSavings
+        return {
+          label,
+          value: Number.isFinite(value) ? value : 0,
+        }
+      })
+    : []
 
-  const factorsByTrend: Record<string, number[]> = {
-    up: [0.78, 0.84, 0.92, 1.0, 1.08, 1.14, 1.2],
-    down: [1.2, 1.14, 1.08, 1.0, 0.92, 0.86, 0.8],
-    stable: [0.94, 0.98, 1.01, 1.0, 1.03, 0.99, 1.02],
-  }
+  const labels = normalizedRows.length > 0
+    ? normalizedRows.map((row) => row.label)
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-  const factors = factorsByTrend[trend] || factorsByTrend.stable
-  const values = factors.map((factor) => Number((base * factor).toFixed(2)))
+  const values = normalizedRows.length > 0
+    ? normalizedRows.map((row) => row.value)
+    : (() => {
+        const base = parseCurrencyValue(metricsStore.savingsToday.value)
+        const trend = metricsStore.savingsToday.trend || 'stable'
+        const factorsByTrend: Record<string, number[]> = {
+          up: [0.78, 0.84, 0.92, 1.0, 1.08, 1.14, 1.2],
+          down: [1.2, 1.14, 1.08, 1.0, 0.92, 0.86, 0.8],
+          stable: [0.94, 0.98, 1.01, 1.0, 1.03, 0.99, 1.02],
+        }
+        const factors = factorsByTrend[trend] || factorsByTrend.stable
+        return factors.map((factor) => Number((base * factor).toFixed(2)))
+      })()
+
   const maxValue = Math.max(...values, 1)
 
   return labels.map((label, idx) => {
-    const value = values[idx] || 0
+    const value = Math.max(0, values[idx] || 0)
     const normalized = Math.max(0, Math.min(1, value / maxValue))
     const rawHeight = normalized * 150
     const height = value > 0 ? Math.max(rawHeight, 4) : 0
@@ -650,6 +703,13 @@ const weeklySavingsSeries = computed(() => {
       height,
     }
   })
+})
+
+const weeklyTrendSourceLabel = computed(() => {
+  if (realizedHistoryRows.value.length > 0) {
+    return `Source: canonical history (${realizedHistorySource.value})`
+  }
+  return 'Source: fallback synthetic trend (history unavailable)'
 })
 
 const weeklyAverageSavings = computed(() => {
@@ -901,7 +961,8 @@ onMounted(async () => {
   await Promise.all([
     metricsStore.fetchMetrics(),
     batteryStore.fetchBatteryStatus(),
-    pricesStore.fetchPrices()
+    pricesStore.fetchPrices(),
+    fetchCanonicalSavingsHistory(),
   ])
 
   // Start real-time updates
@@ -928,6 +989,7 @@ watch(
       batteryStore.fetchBatteryStatus(),
       pricesStore.fetchPrices(),
       batteryPhysicsStore.fetchBatteryData(),
+      fetchCanonicalSavingsHistory(),
     ])
   },
 )

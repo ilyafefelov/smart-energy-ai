@@ -179,24 +179,27 @@
       <!-- Historical Performance Trends -->
       <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
         <h2 class="text-lg font-bold text-white mb-4">📊 Historical Performance</h2>
+        <p class="text-xs text-slate-400 mb-4">Source: {{ canonicalHistorySourceLabel }}</p>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="bg-slate-900 rounded-lg p-4">
             <p class="text-sm text-slate-400 mb-2">Daily Savings (Last 7 days)</p>
-            <p class="text-2xl font-bold text-green-400">55,316 ₴</p>
-            <p class="text-xs text-green-300 mt-2">↑ +8.5% vs previous week</p>
+            <p class="text-2xl font-bold text-green-400">{{ Math.round(historyTotalSavings).toLocaleString() }} ₴</p>
+            <p class="text-xs mt-2" :class="historyGrowthPercent >= 0 ? 'text-green-300' : 'text-red-300'">
+              {{ historyGrowthPercent >= 0 ? '↑' : '↓' }} {{ Math.abs(historyGrowthPercent).toFixed(1) }}% vs first day in window
+            </p>
           </div>
 
           <div class="bg-slate-900 rounded-lg p-4">
             <p class="text-sm text-slate-400 mb-2">Avg Daily Saving</p>
-            <p class="text-2xl font-bold text-green-400">7,902 ₴</p>
+            <p class="text-2xl font-bold text-green-400">{{ Math.round(historyAverageSavings).toLocaleString() }} ₴</p>
             <p class="text-xs text-slate-400 mt-2">Consistent performance</p>
           </div>
 
           <div class="bg-slate-900 rounded-lg p-4">
             <p class="text-sm text-slate-400 mb-2">Success Rate</p>
-            <p class="text-2xl font-bold text-energy-400">94.2%</p>
-            <p class="text-xs text-slate-400 mt-2">Profitable trades / total trades</p>
+            <p class="text-2xl font-bold text-energy-400">{{ historySuccessRate.toFixed(1) }}%</p>
+            <p class="text-xs text-slate-400 mt-2">Days with positive realized net / total days</p>
           </div>
         </div>
       </div>
@@ -264,8 +267,27 @@
           </div>
 
           <div class="flex items-center justify-between">
-            <span class="text-sm text-slate-300">Model Version</span>
-            <span class="px-3 py-1 bg-purple-900 text-purple-300 rounded-full text-xs font-semibold">PPO v2.1</span>
+            <span class="text-sm text-slate-300">Control Mode</span>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold"
+              :class="controlStatusBadgeClass"
+            >
+              {{ controlModeLabel }}
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-slate-300">Active Command</span>
+            <span class="px-3 py-1 bg-blue-900 text-blue-300 rounded-full text-xs font-semibold">{{ activeCommandLabel }}</span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-slate-300">Economics Source</span>
+            <span class="px-3 py-1 bg-purple-900 text-purple-300 rounded-full text-xs font-semibold">{{ canonicalHistorySourceLabel }}</span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-slate-300">Auto Transitions (Today)</span>
+            <span class="px-3 py-1 bg-emerald-900 text-emerald-300 rounded-full text-xs font-semibold">{{ latestAutoTransitions }}</span>
           </div>
         </div>
       </div>
@@ -274,7 +296,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { usePricesStore } from '~/stores/pricesStore'
 import { useMetricsStore } from '~/stores/metricsStore'
 import { useTenantContext } from '~/composables/useTenantContext'
@@ -282,11 +304,109 @@ import { useTenantContext } from '~/composables/useTenantContext'
 const pricesStore = usePricesStore()
 const metricsStore = useMetricsStore()
 const tenantContext = useTenantContext()
+const analyticsHistoryRows = ref<any[]>([])
+const controlStatus = ref<any>(null)
+const canonicalHistorySource = ref<string>('unknown')
 
 const tenantOptions = computed(() => tenantContext.tenants.value)
 const selectedTenantId = computed({
   get: () => tenantContext.currentTenantId.value,
   set: (tenantId: string) => tenantContext.setTenant(tenantId),
+})
+
+const buildTenantRequest = () => {
+  const tenantId = tenantContext.currentTenantId.value
+  return {
+    query: {
+      tenantId,
+    },
+    headers: {
+      'x-tenant-id': tenantId,
+    },
+  }
+}
+
+const fetchCanonicalAnalyticsData = async () => {
+  const tenantRequest = buildTenantRequest()
+  const [historyResponse, controlResponse] = await Promise.all([
+    $fetch<any>('/api/history', {
+      ...tenantRequest,
+      query: {
+        ...tenantRequest.query,
+        days: 7,
+        limit: 7,
+      },
+    }).catch(() => null),
+    $fetch<any>('/api/control/status', tenantRequest).catch(() => null),
+  ])
+
+  analyticsHistoryRows.value = Array.isArray(historyResponse?.data) ? historyResponse.data : []
+  canonicalHistorySource.value = String(historyResponse?.source?.economics_source || 'unknown')
+  controlStatus.value = controlResponse || null
+}
+
+const historyNetValues = computed(() => {
+  return analyticsHistoryRows.value.map((row) => {
+    const realizedNet = Number(row?.realized_net_uah || 0)
+    const fallbackSavings = Number(row?.savings || 0)
+    return Math.abs(realizedNet) > 0 ? realizedNet : fallbackSavings
+  })
+})
+
+const historyTotalSavings = computed(() => {
+  return historyNetValues.value.reduce((sum, value) => sum + value, 0)
+})
+
+const historyAverageSavings = computed(() => {
+  if (historyNetValues.value.length === 0) {
+    return 0
+  }
+  return historyTotalSavings.value / historyNetValues.value.length
+})
+
+const historySuccessRate = computed(() => {
+  if (historyNetValues.value.length === 0) {
+    return 0
+  }
+  const positiveDays = historyNetValues.value.filter((value) => value > 0).length
+  return (positiveDays / historyNetValues.value.length) * 100
+})
+
+const historyGrowthPercent = computed(() => {
+  if (historyNetValues.value.length < 2) {
+    return 0
+  }
+
+  const first = Number(historyNetValues.value[0] || 0)
+  const last = Number(historyNetValues.value[historyNetValues.value.length - 1] || 0)
+  if (Math.abs(first) < 0.001) {
+    return last > 0 ? 100 : 0
+  }
+  return ((last - first) / Math.abs(first)) * 100
+})
+
+const latestHistoryRow = computed(() => {
+  return analyticsHistoryRows.value.length > 0
+    ? analyticsHistoryRows.value[analyticsHistoryRows.value.length - 1]
+    : null
+})
+
+const latestAutoTransitions = computed(() => Number(latestHistoryRow.value?.auto_transitions || 0))
+
+const canonicalHistorySourceLabel = computed(() => {
+  if (!canonicalHistorySource.value || canonicalHistorySource.value === 'unknown') {
+    return 'fallback'
+  }
+  return canonicalHistorySource.value
+})
+
+const controlModeLabel = computed(() => String(controlStatus.value?.mode || 'unknown').toUpperCase())
+const activeCommandLabel = computed(() => String(controlStatus.value?.active_command || 'idle').toUpperCase())
+const controlStatusBadgeClass = computed(() => {
+  const mode = String(controlStatus.value?.mode || '').toLowerCase()
+  if (mode === 'automatic') return 'bg-green-900 text-green-300'
+  if (mode === 'manual') return 'bg-red-900 text-red-300'
+  return 'bg-slate-700 text-slate-300'
 })
 
 const lastUpdateTime = computed(() => {
@@ -317,7 +437,8 @@ onMounted(async () => {
 
   await Promise.all([
     pricesStore.fetchPrices(),
-    metricsStore.fetchMetrics()
+    metricsStore.fetchMetrics(),
+    fetchCanonicalAnalyticsData(),
   ])
 
   // Start real-time updates
@@ -336,6 +457,7 @@ watch(
     await Promise.all([
       pricesStore.fetchPrices(),
       metricsStore.fetchMetrics(),
+      fetchCanonicalAnalyticsData(),
     ])
   },
 )
