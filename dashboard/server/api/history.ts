@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
+import { eventHandler } from 'h3'
 
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
 const asNumber = (value: unknown, fallback = 0) => {
@@ -61,10 +62,10 @@ function resolveAppDbConfig(): AppDbConfig {
   }
 
   return {
-    host: process.env.APP_DB_HOST || 'localhost',
-    port: Number(process.env.APP_DB_PORT || 5432),
-    user: process.env.APP_DB_USER || 'energy_user',
-    password: process.env.APP_DB_PASSWORD || 'dev_password',
+    host: process.env.APP_DB_HOST || process.env.DB_HOST || 'localhost',
+    port: Number(process.env.APP_DB_PORT || process.env.DB_PORT || 5432),
+    user: process.env.APP_DB_USER || process.env.DB_USER || 'dagster',
+    password: process.env.APP_DB_PASSWORD || process.env.DB_PASSWORD || 'dagster',
     database: process.env.APP_DB_NAME || 'smart_energy_ai',
   }
 }
@@ -233,7 +234,7 @@ function resolveProjectRoot(): string {
   return resolve(cwd, '..')
 }
 
-export default defineEventHandler(async () => {
+export default eventHandler(async () => {
   // GET /api/history - Legacy optimization history mapped to backend telemetry.
   try {
     const limitDays = 7
