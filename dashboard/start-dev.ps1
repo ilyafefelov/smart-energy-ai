@@ -1,6 +1,7 @@
 # Start Nuxt Dashboard with Real Data (PowerShell)
 
-Set-Location "C:\Users\ilyaf\clawd\projects\smart-energy-ai\dashboard"
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $scriptDir
 
 Write-Host "🚀 Starting Smart Energy AI Dashboard" -ForegroundColor Green
 Write-Host "════════════════════════════════════" -ForegroundColor Green

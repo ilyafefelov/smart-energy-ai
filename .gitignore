@@ -23,9 +23,20 @@ dashboard/data/retraining/job-*.json
 dashboard/data/api_smoke_test_report.json
 dashboard/data/dashboard_render_snapshot.json
 dashboard/data/backups/
+dashboard/data/tenants/
 
 # Generated model artifacts from retraining runs
 models/model_job-*.pkl
+models/tenants/
+
+# Generated local ML runtime state
+energy_ml/configs/tenants/
+energy_ml/configs/config_history.jsonl
+energy_ml/configs/recalculation_status.json
+energy_ml/configs/recalculation_trigger.json
+energy_ml/configs/user_config.json
+energy_ml/outputs/
+energy_ml/energy_ml/outputs/
 
 # Dolt database files (added by bd init)
 .dolt/

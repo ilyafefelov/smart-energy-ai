@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Start Nuxt Dashboard with Real Data
 
-cd "C:\Users\ilyaf\clawd\projects\smart-energy-ai\dashboard" || exit 1
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+cd "$SCRIPT_DIR" || exit 1
 
 echo "🚀 Starting Smart Energy AI Dashboard"
 echo "═══════════════════════════════════════"

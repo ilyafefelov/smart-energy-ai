@@ -73,6 +73,25 @@ Instead of processing a year of data at once, Dagster splits the task into 365 L
 EC2 service bootstrap and operations runbook:
 - `docs/deployment/EC2_DAGSTER_T3_MICRO_RUNBOOK.md`
 
+### Local Runtime Quick Start (Windows)
+
+Use the local launcher to run Dagster and the Nuxt dashboard together without port conflicts:
+
+```powershell
+Set-Location D:\OpenClaw-Backup\clawd\projects\smart-energy-ai
+.\scripts\local\start-local-stack.ps1 -Start both
+```
+
+Canonical local ports:
+- Dagster: `http://127.0.0.1:3000`
+- Dashboard: `http://127.0.0.1:3600`
+
+Optional dependency install when `dashboard/node_modules` is missing:
+
+```powershell
+.\scripts\local\start-local-stack.ps1 -Start dashboard -InstallDashboardDeps
+```
+
 ---
 
 ## 5. Multi-tenancy & Asset Factories
