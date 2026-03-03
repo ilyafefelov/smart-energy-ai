@@ -1,12 +1,12 @@
 <template>
-  <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6 space-y-6">
+  <div class="rounded-xl border border-slate-700 bg-slate-800/40 p-6 space-y-6">
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-xl font-bold text-white">Battery Configuration</h2>
-        <p class="text-sm text-slate-400">These values are persisted per tenant and used by simulation/retraining.</p>
+        <p class="text-sm text-slate-400">Pick chemistry with visual presets, then tune physical limits.</p>
       </div>
       <button
-        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm"
+        class="rounded-lg bg-slate-700 px-4 py-2 text-sm hover:bg-slate-600"
         @click="loadConfig"
         :disabled="isLoading"
       >
@@ -14,50 +14,139 @@
       </button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <label class="block">
-        <span class="text-sm text-slate-300">Battery Type</span>
-        <select v-model="form.battery_type" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2">
-          <option value="LFP">LFP</option>
-          <option value="Lead-Acid">Lead-Acid</option>
-          <option value="VRFB">VRFB</option>
-        </select>
-      </label>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <button
+        v-for="option in batteryOptions"
+        :key="option.id"
+        type="button"
+        class="rounded-xl border p-4 text-left transition"
+        :class="form.battery_type === option.id
+          ? 'border-cyan-400 bg-cyan-500/10 shadow-[0_0_0_1px_rgba(34,211,238,0.25)]'
+          : 'border-slate-700 bg-slate-900/50 hover:border-slate-500 hover:bg-slate-900'"
+        @click="applyBatteryPreset(option.id)"
+      >
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-2xl">{{ option.emoji }}</p>
+            <p class="mt-2 text-base font-semibold text-white">{{ option.name }}</p>
+            <p class="mt-1 text-xs text-slate-400">{{ option.tagline }}</p>
+          </div>
+          <span
+            class="rounded-full px-2 py-1 text-[10px] uppercase tracking-wide"
+            :class="form.battery_type === option.id ? 'bg-cyan-400/20 text-cyan-200' : 'bg-slate-700 text-slate-300'"
+          >
+            {{ option.bestFor }}
+          </span>
+        </div>
 
+        <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
+          <div class="rounded-lg bg-slate-800/70 p-2">
+            <p class="text-slate-400">Cycle life</p>
+            <p class="font-semibold text-white">{{ option.cycles.toLocaleString() }}</p>
+          </div>
+          <div class="rounded-lg bg-slate-800/70 p-2">
+            <p class="text-slate-400">Typical efficiency</p>
+            <p class="font-semibold text-white">{{ option.efficiencyDefault }}%</p>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <label class="block">
         <span class="text-sm text-slate-300">Capacity (kWh)</span>
-        <input v-model.number="form.battery_capacity_kwh" type="number" min="1" max="1000" step="0.1" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+        <input
+          v-model.number="form.battery_capacity_kwh"
+          type="number"
+          min="1"
+          max="1000"
+          step="0.1"
+          class="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+        />
       </label>
 
       <label class="block">
-        <span class="text-sm text-slate-300">Efficiency (0..1)</span>
-        <input v-model.number="form.battery_efficiency" type="number" min="0.7" max="1" step="0.01" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+        <span class="text-sm text-slate-300">Round-trip efficiency (%)</span>
+        <input
+          v-model.number="efficiencyPercent"
+          type="number"
+          min="70"
+          max="100"
+          step="0.1"
+          class="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+        />
       </label>
 
       <label class="block">
-        <span class="text-sm text-slate-300">Charge C-Rate</span>
-        <input v-model.number="form.battery_c_rate_charge" type="number" min="0.1" max="2" step="0.1" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+        <span class="text-sm text-slate-300">Charge C-rate</span>
+        <input
+          v-model.number="form.battery_c_rate_charge"
+          type="number"
+          min="0.1"
+          max="2"
+          step="0.1"
+          class="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+        />
       </label>
 
       <label class="block">
-        <span class="text-sm text-slate-300">Discharge C-Rate</span>
-        <input v-model.number="form.battery_c_rate_discharge" type="number" min="0.1" max="3" step="0.1" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+        <span class="text-sm text-slate-300">Discharge C-rate</span>
+        <input
+          v-model.number="form.battery_c_rate_discharge"
+          type="number"
+          min="0.1"
+          max="3"
+          step="0.1"
+          class="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+        />
       </label>
 
       <label class="block">
-        <span class="text-sm text-slate-300">Min SOC (0..1)</span>
-        <input v-model.number="form.battery_soc_min" type="number" min="0.05" max="0.5" step="0.01" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+        <span class="text-sm text-slate-300">Min SOC reserve (%)</span>
+        <input
+          v-model.number="socMinPercent"
+          type="number"
+          min="5"
+          max="50"
+          step="1"
+          class="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+        />
       </label>
 
       <label class="block">
-        <span class="text-sm text-slate-300">Max SOC (0..1)</span>
-        <input v-model.number="form.battery_soc_max" type="number" min="0.5" max="1" step="0.01" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+        <span class="text-sm text-slate-300">Max SOC (%)</span>
+        <input
+          v-model.number="socMaxPercent"
+          type="number"
+          min="50"
+          max="100"
+          step="1"
+          class="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2"
+        />
       </label>
     </div>
 
-    <div class="flex gap-3">
+    <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+      <p class="text-sm text-slate-300">Battery economics preview</p>
+      <div class="mt-3 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+        <div>
+          <p class="text-slate-400">Usable window</p>
+          <p class="font-semibold text-white">{{ usableCapacityKwh.toFixed(1) }} kWh</p>
+        </div>
+        <div>
+          <p class="text-slate-400">Max discharge power</p>
+          <p class="font-semibold text-white">{{ maxDischargeKw.toFixed(1) }} kW</p>
+        </div>
+        <div>
+          <p class="text-slate-400">Capex estimate</p>
+          <p class="font-semibold text-emerald-300">₴{{ capexEstimate.toLocaleString() }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
       <button
-        class="px-6 py-2 bg-energy-400 hover:bg-cyan-300 text-slate-950 font-semibold rounded"
+        class="rounded bg-energy-400 px-6 py-2 font-semibold text-slate-950 hover:bg-cyan-300"
         @click="save"
         :disabled="isSaving"
       >
@@ -74,9 +163,69 @@ import { useTenantContext } from '../../composables/useTenantContext'
 import { useSettingsStore } from '~/stores/settingsStore'
 import { useBatteryPhysicsStore } from '~/stores/batteryPhysicsStore'
 
+type BatteryType = 'LFP' | 'Lead-Acid' | 'VRFB'
+
 const tenantContext = useTenantContext()
 const settingsStore = useSettingsStore()
 const batteryPhysicsStore = useBatteryPhysicsStore()
+
+const batteryOptions: Array<{
+  id: BatteryType
+  emoji: string
+  name: string
+  tagline: string
+  bestFor: string
+  cycles: number
+  efficiencyDefault: number
+  cRateCharge: number
+  cRateDischarge: number
+  socMin: number
+  socMax: number
+  capexPerKwh: number
+}> = [
+  {
+    id: 'LFP',
+    emoji: '🟢',
+    name: 'LFP',
+    tagline: 'Long cycle life with stable daily arbitrage behavior.',
+    bestFor: 'Balanced',
+    cycles: 8000,
+    efficiencyDefault: 95,
+    cRateCharge: 0.5,
+    cRateDischarge: 1,
+    socMin: 0.1,
+    socMax: 1,
+    capexPerKwh: 13000,
+  },
+  {
+    id: 'Lead-Acid',
+    emoji: '🟡',
+    name: 'Lead-Acid',
+    tagline: 'Lower upfront cost, better for conservative dispatch windows.',
+    bestFor: 'Budget',
+    cycles: 600,
+    efficiencyDefault: 85,
+    cRateCharge: 0.2,
+    cRateDischarge: 0.3,
+    socMin: 0.2,
+    socMax: 0.8,
+    capexPerKwh: 5500,
+  },
+  {
+    id: 'VRFB',
+    emoji: '🔵',
+    name: 'VRFB',
+    tagline: 'Ultra-high cycle endurance for heavy throughput operations.',
+    bestFor: 'Heavy-duty',
+    cycles: 20000,
+    efficiencyDefault: 75,
+    cRateCharge: 0.25,
+    cRateDischarge: 0.25,
+    socMin: 0.05,
+    socMax: 1,
+    capexPerKwh: 22000,
+  },
+]
 
 const isLoading = ref(false)
 const isSaving = ref(false)
@@ -84,7 +233,7 @@ const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
 
 const form = reactive({
-  battery_type: 'LFP',
+  battery_type: 'LFP' as BatteryType,
   battery_capacity_kwh: 10,
   battery_efficiency: 0.95,
   battery_c_rate_charge: 0.5,
@@ -93,9 +242,38 @@ const form = reactive({
   battery_soc_max: 1,
 })
 
-const messageClass = computed(() => (
-  messageType.value === 'success' ? 'text-green-300' : 'text-red-300'
-))
+const selectedBatteryMeta = computed(() => batteryOptions.find((item) => item.id === form.battery_type) || batteryOptions[0])
+
+const efficiencyPercent = computed({
+  get: () => Number((form.battery_efficiency * 100).toFixed(1)),
+  set: (value: number) => {
+    form.battery_efficiency = Math.max(0.7, Math.min(1, Number(value) / 100))
+  },
+})
+
+const socMinPercent = computed({
+  get: () => Math.round(form.battery_soc_min * 100),
+  set: (value: number) => {
+    form.battery_soc_min = Math.max(0.05, Math.min(0.5, Number(value) / 100))
+  },
+})
+
+const socMaxPercent = computed({
+  get: () => Math.round(form.battery_soc_max * 100),
+  set: (value: number) => {
+    form.battery_soc_max = Math.max(0.5, Math.min(1, Number(value) / 100))
+  },
+})
+
+const usableCapacityKwh = computed(() => {
+  const window = Math.max(0, form.battery_soc_max - form.battery_soc_min)
+  return form.battery_capacity_kwh * window
+})
+
+const maxDischargeKw = computed(() => form.battery_capacity_kwh * form.battery_c_rate_discharge)
+const capexEstimate = computed(() => Math.round(form.battery_capacity_kwh * selectedBatteryMeta.value.capexPerKwh))
+
+const messageClass = computed(() => (messageType.value === 'success' ? 'text-green-300' : 'text-red-300'))
 
 const showMessage = (text: string, type: 'success' | 'error') => {
   message.value = text
@@ -103,6 +281,18 @@ const showMessage = (text: string, type: 'success' | 'error') => {
   setTimeout(() => {
     message.value = ''
   }, 4000)
+}
+
+const applyBatteryPreset = (batteryType: BatteryType) => {
+  const preset = batteryOptions.find((item) => item.id === batteryType)
+  if (!preset) return
+
+  form.battery_type = batteryType
+  form.battery_efficiency = Number((preset.efficiencyDefault / 100).toFixed(4))
+  form.battery_c_rate_charge = preset.cRateCharge
+  form.battery_c_rate_discharge = preset.cRateDischarge
+  form.battery_soc_min = preset.socMin
+  form.battery_soc_max = preset.socMax
 }
 
 const loadConfig = async () => {

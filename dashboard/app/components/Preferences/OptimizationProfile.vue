@@ -1,29 +1,57 @@
 <template>
-  <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6 space-y-6">
+  <div class="rounded-xl border border-slate-700 bg-slate-800/40 p-6 space-y-6">
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-xl font-bold text-white">Optimization Strategy</h2>
-        <p class="text-sm text-slate-400">Canonical strategy control. The battery control tab no longer duplicates this setting.</p>
+        <p class="text-sm text-slate-400">Define how the controller trades profit, battery health, and reliability.</p>
       </div>
       <button class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm" @click="loadConfig" :disabled="isLoading">
         {{ isLoading ? 'Loading...' : 'Reload' }}
       </button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       <button
         v-for="strategy in strategies"
         :key="strategy.id"
-        class="p-4 rounded border text-left transition"
-        :class="selectedStrategy === strategy.id ? 'border-energy-400 bg-energy-400 bg-opacity-10' : 'border-slate-700 hover:border-slate-500'"
+        class="rounded-xl border p-4 text-left transition"
+        :class="selectedStrategy === strategy.id
+          ? 'border-emerald-400 bg-emerald-500/10 shadow-[0_0_0_1px_rgba(52,211,153,0.25)]'
+          : 'border-slate-700 bg-slate-900/50 hover:border-slate-500 hover:bg-slate-900'"
         @click="selectedStrategy = strategy.id"
       >
-        <p class="font-semibold text-white">{{ strategy.name }}</p>
-        <p class="text-xs text-slate-400 mt-1">{{ strategy.description }}</p>
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-2xl">{{ strategy.emoji }}</p>
+            <p class="mt-2 font-semibold text-white">{{ strategy.name }}</p>
+            <p class="mt-1 text-xs text-slate-400">{{ strategy.description }}</p>
+          </div>
+          <span
+            class="rounded-full px-2 py-1 text-[10px] uppercase tracking-wide"
+            :class="selectedStrategy === strategy.id ? 'bg-emerald-400/20 text-emerald-200' : 'bg-slate-700 text-slate-300'"
+          >
+            {{ strategy.temperament }}
+          </span>
+        </div>
+
+        <div class="mt-4 grid grid-cols-3 gap-2 text-[11px]">
+          <div class="rounded bg-slate-800/70 p-2">
+            <p class="text-slate-400">Profit</p>
+            <p class="font-semibold text-white">{{ strategy.bias.profit }}%</p>
+          </div>
+          <div class="rounded bg-slate-800/70 p-2">
+            <p class="text-slate-400">Health</p>
+            <p class="font-semibold text-white">{{ strategy.bias.health }}%</p>
+          </div>
+          <div class="rounded bg-slate-800/70 p-2">
+            <p class="text-slate-400">Reserve</p>
+            <p class="font-semibold text-white">{{ strategy.bias.reliability }}%</p>
+          </div>
+        </div>
       </button>
     </div>
 
-    <div v-if="selectedStrategy === 'custom'" class="rounded-lg border border-slate-700 bg-slate-900 bg-opacity-50 p-4 space-y-4">
+    <div v-if="selectedStrategy === 'custom'" class="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-4">
       <p class="text-sm text-slate-300">Custom priority weights (must total 100%)</p>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <label class="block">
@@ -57,6 +85,24 @@
       </label>
     </div>
 
+    <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+      <p class="text-sm text-slate-300">Controller preview</p>
+      <div class="mt-3 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+        <div>
+          <p class="text-slate-400">SOC reserve floor</p>
+          <p class="font-semibold text-white">{{ Math.round(batterySocMin * 100) }}%</p>
+        </div>
+        <div>
+          <p class="text-slate-400">Peak dispatch capability</p>
+          <p class="font-semibold text-white">{{ batteryCRateDischarge.toFixed(2) }}C</p>
+        </div>
+        <div>
+          <p class="text-slate-400">Forecast horizon</p>
+          <p class="font-semibold text-emerald-300">{{ forecastHorizonHours }}h</p>
+        </div>
+      </div>
+    </div>
+
     <div class="flex items-center gap-3">
       <button class="px-6 py-2 bg-energy-400 hover:bg-cyan-300 text-slate-950 font-semibold rounded" @click="save" :disabled="isSaving">
         {{ isSaving ? 'Saving...' : 'Save Optimization Settings' }}
@@ -74,12 +120,58 @@ type StrategyId = 'max-earn' | 'balanced' | 'max-health' | 'max-charge' | 'custo
 
 const tenantContext = useTenantContext()
 
-const strategies: Array<{ id: StrategyId, name: string, description: string }> = [
-  { id: 'max-earn', name: 'Max Earn', description: 'Prioritize arbitrage profit.' },
-  { id: 'balanced', name: 'Balanced', description: 'Balance economics and battery care.' },
-  { id: 'max-health', name: 'Max Battery Health', description: 'Reduce degradation and cycling stress.' },
-  { id: 'max-charge', name: 'Max Charge', description: 'Keep reserve for reliability.' },
-  { id: 'custom', name: 'Custom', description: 'Use custom weights.' },
+const strategies: Array<{
+  id: StrategyId
+  emoji: string
+  name: string
+  description: string
+  temperament: string
+  bias: {
+    profit: number
+    health: number
+    reliability: number
+  }
+}> = [
+  {
+    id: 'max-earn',
+    emoji: '🚀',
+    name: 'Max Earn',
+    description: 'Chase spreads aggressively and prioritize arbitrage margin.',
+    temperament: 'Aggressive',
+    bias: { profit: 70, health: 15, reliability: 15 },
+  },
+  {
+    id: 'balanced',
+    emoji: '⚖️',
+    name: 'Balanced',
+    description: 'Trade profit and degradation intelligently for steady output.',
+    temperament: 'Adaptive',
+    bias: { profit: 45, health: 30, reliability: 25 },
+  },
+  {
+    id: 'max-health',
+    emoji: '🛡️',
+    name: 'Max Battery Health',
+    description: 'Reduce cycle stress and preserve long-term battery value.',
+    temperament: 'Conservative',
+    bias: { profit: 20, health: 65, reliability: 15 },
+  },
+  {
+    id: 'max-charge',
+    emoji: '🔋',
+    name: 'Max Reserve',
+    description: 'Keep more energy for backup and operational reliability.',
+    temperament: 'Resilient',
+    bias: { profit: 20, health: 20, reliability: 60 },
+  },
+  {
+    id: 'custom',
+    emoji: '🎛️',
+    name: 'Custom Weights',
+    description: 'Manually tune profit, health, and reserve priorities.',
+    temperament: 'User-defined',
+    bias: { profit: 33, health: 33, reliability: 34 },
+  },
 ]
 
 const selectedStrategy = ref<StrategyId>('balanced')

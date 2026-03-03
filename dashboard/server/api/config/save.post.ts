@@ -46,8 +46,15 @@ const DEFAULT_CONFIG = {
   dashboard_language: 'en',
   optimization_strategy: 'balanced',
   custom_optimization_weights: null,
+  has_solar: false,
+  has_wind: false,
   solar_capacity_kw: 0,
   wind_capacity_kw: 0,
+  solar_efficiency: 0.2,
+  wind_efficiency: 0.35,
+  solar_tilt_deg: 30,
+  wind_cut_in_speed_mps: 3,
+  wind_rated_speed_mps: 12,
   latitude: 50.45,
   longitude: 30.52,
   timezone: 'Europe/Kiev',
@@ -67,6 +74,16 @@ function normalizeOptimizationStrategy(value: unknown) {
   if (normalized === 'max-health' || normalized === 'max_battery_health') return 'max_battery_health'
   if (normalized === 'max-charge' || normalized === 'max_charge') return 'max_charge'
   return 'balanced'
+}
+
+function normalizeBoolean(value: unknown, fallback = false) {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (normalized === 'true') return true
+    if (normalized === 'false') return false
+  }
+  return fallback
 }
 
 function readJsonFileIfExists(filePath: string) {
@@ -110,6 +127,14 @@ export default defineEventHandler(async (event: any) => {
 
     mergedConfig.load_profile_type = normalizeLoadProfileType(mergedConfig.load_profile_type)
     mergedConfig.optimization_strategy = normalizeOptimizationStrategy(mergedConfig.optimization_strategy)
+    mergedConfig.has_solar = normalizeBoolean(
+      mergedConfig.has_solar,
+      Number(mergedConfig.solar_capacity_kw || 0) > 0,
+    )
+    mergedConfig.has_wind = normalizeBoolean(
+      mergedConfig.has_wind,
+      Number(mergedConfig.wind_capacity_kw || 0) > 0,
+    )
 
     const validation = validateConfiguration(mergedConfig)
     if (!validation.valid) {
@@ -219,6 +244,46 @@ function validateConfiguration(config: any) {
     errors.push('Longitude must be between -180 and 180')
   }
 
+  if (typeof config.has_solar !== 'boolean') {
+    errors.push('Solar capability flag must be boolean')
+  }
+
+  if (typeof config.has_wind !== 'boolean') {
+    errors.push('Wind capability flag must be boolean')
+  }
+
+  if (Number(config.solar_capacity_kw) < 0 || Number(config.solar_capacity_kw) > 10000) {
+    errors.push('Solar capacity must be between 0 and 10000 kW')
+  }
+
+  if (Number(config.wind_capacity_kw) < 0 || Number(config.wind_capacity_kw) > 10000) {
+    errors.push('Wind capacity must be between 0 and 10000 kW')
+  }
+
+  if (Number(config.solar_efficiency) < 0.1 || Number(config.solar_efficiency) > 0.35) {
+    errors.push('Solar efficiency must be between 0.1 and 0.35')
+  }
+
+  if (Number(config.wind_efficiency) < 0.2 || Number(config.wind_efficiency) > 0.6) {
+    errors.push('Wind efficiency must be between 0.2 and 0.6')
+  }
+
+  if (Number(config.solar_tilt_deg) < 0 || Number(config.solar_tilt_deg) > 90) {
+    errors.push('Solar tilt must be between 0 and 90 degrees')
+  }
+
+  if (Number(config.wind_cut_in_speed_mps) < 1 || Number(config.wind_cut_in_speed_mps) > 10) {
+    errors.push('Wind cut-in speed must be between 1 and 10 m/s')
+  }
+
+  if (Number(config.wind_rated_speed_mps) < 4 || Number(config.wind_rated_speed_mps) > 30) {
+    errors.push('Wind rated speed must be between 4 and 30 m/s')
+  }
+
+  if (Number(config.wind_cut_in_speed_mps) >= Number(config.wind_rated_speed_mps)) {
+    errors.push('Wind cut-in speed must be lower than wind rated speed')
+  }
+
   const maxDischargePower = config.battery_capacity_kwh * (config.battery_c_rate_discharge || 1.0)
   if (maxDischargePower < config.load_peak_kw) {
     warnings.push(`Battery max discharge (${maxDischargePower.toFixed(1)}kW) < peak load (${config.load_peak_kw}kW)`)
@@ -263,10 +328,17 @@ function detectSignificantChanges(oldConfig: any, newConfig: any) {
     'tariff_peak_rate_uah_kwh',
     'tariff_off_peak_rate_uah_kwh',
     'optimization_strategy',
+    'has_solar',
+    'has_wind',
     'latitude',
     'longitude',
     'solar_capacity_kw',
     'wind_capacity_kw',
+    'solar_efficiency',
+    'wind_efficiency',
+    'solar_tilt_deg',
+    'wind_cut_in_speed_mps',
+    'wind_rated_speed_mps',
   ]
 
   return significantFields.some((field) => {

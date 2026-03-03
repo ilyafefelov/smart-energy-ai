@@ -9,13 +9,26 @@ type ToastPayload = {
   icon?: string
 }
 
-declare function useToast(): { add: (payload: ToastPayload) => void }
-
 export type ControlStatusSnapshot = {
   mode?: string | null
   active_command?: string | { command?: string | null } | null
   requested_command?: string | null
   decision_source?: string | null
+}
+
+function resolveToast(): { add: (payload: ToastPayload) => void } {
+  const candidate = (globalThis as any)?.useToast
+  if (typeof candidate === 'function') {
+    try {
+      return candidate()
+    } catch {
+      // Fall through to no-op when toast provider is unavailable.
+    }
+  }
+
+  return {
+    add: (_payload: ToastPayload) => undefined,
+  }
 }
 
 type ActionToastInput = {
@@ -30,7 +43,7 @@ type ActionToastInput = {
 const TRANSITION_TOAST_DEBOUNCE_MS = 10000
 
 export function useControlTransitionNotifications() {
-  const toast = useToast()
+  const toast = resolveToast()
   const settingsStore = useSettingsStore()
 
   const lastTransitionToastKey = ref<string | null>(null)

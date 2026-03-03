@@ -68,8 +68,15 @@ export default defineEventHandler(async (event) => {
       // Optimization and generation settings
       optimization_strategy: 'balanced',
       custom_optimization_weights: null,
+      has_solar: false,
+      has_wind: false,
       solar_capacity_kw: 0,
       wind_capacity_kw: 0,
+      solar_efficiency: 0.2,
+      wind_efficiency: 0.35,
+      solar_tilt_deg: 30,
+      wind_cut_in_speed_mps: 3,
+      wind_rated_speed_mps: 12,
       latitude: 50.45,
       longitude: 30.52,
       timezone: 'Europe/Kiev'
@@ -86,6 +93,12 @@ export default defineEventHandler(async (event) => {
         // Merge saved config with defaults (in case new fields were added)
         currentConfig = { ...defaultConfig, ...savedConfig }
         currentConfig.load_profile_type = normalizeLoadProfileType(currentConfig.load_profile_type)
+        currentConfig.has_solar = Boolean(
+          currentConfig.has_solar ?? Number(currentConfig.solar_capacity_kw || 0) > 0,
+        )
+        currentConfig.has_wind = Boolean(
+          currentConfig.has_wind ?? Number(currentConfig.wind_capacity_kw || 0) > 0,
+        )
       } catch (e) {
         console.warn('Could not parse saved config, using defaults:', e)
       }

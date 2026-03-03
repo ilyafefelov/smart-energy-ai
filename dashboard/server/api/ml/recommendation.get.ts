@@ -18,10 +18,35 @@ interface PriceForecastPoint {
 interface PricesCurrentResponse {
   success?: boolean
   prices?: {
+    current?: {
+      price?: number
+    }
     forecast?: {
       next24h?: PriceForecastPoint[]
     }
   }
+}
+
+interface OpenMeteoSnapshot {
+  source: string
+  latitude: number
+  longitude: number
+  timezone: string
+  captured_at: string
+  current: {
+    temperature_c: number | null
+    shortwave_radiation_w_m2: number | null
+    wind_speed_m_s: number | null
+    cloud_cover_percent: number | null
+  }
+  next24h: Array<{
+    hour_offset: number
+    timestamp: string
+    temperature_c: number | null
+    shortwave_radiation_w_m2: number | null
+    wind_speed_m_s: number | null
+    cloud_cover_percent: number | null
+  }>
 }
 
 function toFiniteNumber(value: unknown): number | null {
@@ -79,13 +104,143 @@ interface MLRecommendationResponse {
       version: string
       confidence_level: string
     }
+    feature_provenance?: Record<string, any>
+    model_inputs?: Record<string, any>
   }
   error?: string
+}
+
+function sanitizeTimezone(timezone: string | null | undefined): string {
+  const fallback = 'Europe/Kiev'
+  if (!timezone || typeof timezone !== 'string') return fallback
+  const normalized = timezone.trim()
+  if (!normalized) return fallback
+  return normalized.replace(/[^A-Za-z0-9_\-/+]/g, '') || fallback
+}
+
+async function fetchOpenMeteoSnapshot(latitude: number, longitude: number, timezone: string): Promise<OpenMeteoSnapshot | null> {
+  try {
+    const safeTimezone = sanitizeTimezone(timezone)
+    const query = new URLSearchParams({
+      latitude: latitude.toFixed(4),
+      longitude: longitude.toFixed(4),
+      timezone: safeTimezone,
+      forecast_days: '2',
+      hourly: 'temperature_2m,shortwave_radiation,wind_speed_10m,cloud_cover',
+    })
+
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${query.toString()}`, {
+      headers: {
+        accept: 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      return null
+    }
+
+    const payload = await response.json() as any
+    const hourly = payload?.hourly
+    if (!hourly?.time || !Array.isArray(hourly.time)) {
+      return null
+    }
+
+    const now = Date.now()
+    const times: Array<string> = hourly.time
+    const pickIndex = times.findIndex((item) => {
+      const ts = new Date(item).getTime()
+      return Number.isFinite(ts) && ts >= now
+    })
+
+    const currentIndex = pickIndex >= 0 ? pickIndex : 0
+    const rowAt = (idx: number, key: string) => {
+      const value = hourly?.[key]?.[idx]
+      return toFiniteNumber(value)
+    }
+
+    const next24h = Array.from({ length: 24 }, (_, offset) => {
+      const idx = currentIndex + offset
+      return {
+        hour_offset: offset,
+        timestamp: String(times[idx] || times[currentIndex] || new Date().toISOString()),
+        temperature_c: rowAt(idx, 'temperature_2m'),
+        shortwave_radiation_w_m2: rowAt(idx, 'shortwave_radiation'),
+        wind_speed_m_s: rowAt(idx, 'wind_speed_10m'),
+        cloud_cover_percent: rowAt(idx, 'cloud_cover'),
+      }
+    })
+
+    return {
+      source: 'open-meteo',
+      latitude,
+      longitude,
+      timezone: safeTimezone,
+      captured_at: new Date().toISOString(),
+      current: {
+        temperature_c: rowAt(currentIndex, 'temperature_2m'),
+        shortwave_radiation_w_m2: rowAt(currentIndex, 'shortwave_radiation'),
+        wind_speed_m_s: rowAt(currentIndex, 'wind_speed_10m'),
+        cloud_cover_percent: rowAt(currentIndex, 'cloud_cover'),
+      },
+      next24h,
+    }
+  } catch {
+    return null
+  }
 }
 
 export default defineEventHandler(async (event): Promise<MLRecommendationResponse> => {
   try {
     const tenant = await resolveTenantContext(event)
+    const tenantRequest = {
+      query: {
+        tenantId: tenant.id,
+      },
+      headers: {
+        'x-tenant-id': tenant.id,
+      },
+    }
+
+    const [configPayload, pricesPayload] = await Promise.all([
+      $fetch<any>('/api/config/current', tenantRequest).catch(() => null),
+      $fetch<PricesCurrentResponse>('/api/prices/current', tenantRequest).catch(() => null),
+    ])
+
+    const latitude = toFiniteNumber(configPayload?.data?.latitude) ?? 50.45
+    const longitude = toFiniteNumber(configPayload?.data?.longitude) ?? 30.52
+    const timezone = sanitizeTimezone(configPayload?.data?.timezone)
+    const weatherPayload = await fetchOpenMeteoSnapshot(latitude, longitude, timezone)
+
+    const liveContext = {
+      tenant_id: tenant.id,
+      captured_at: new Date().toISOString(),
+      config: {
+        battery_type: configPayload?.data?.battery_type,
+        battery_capacity_kwh: configPayload?.data?.battery_capacity_kwh,
+        battery_soc_min: configPayload?.data?.battery_soc_min,
+        battery_soc_max: configPayload?.data?.battery_soc_max,
+        optimization_strategy: configPayload?.data?.optimization_strategy,
+        load_profile_type: configPayload?.data?.load_profile_type,
+        load_peak_kw: configPayload?.data?.load_peak_kw,
+        load_base_kw: configPayload?.data?.load_base_kw,
+        has_solar: configPayload?.data?.has_solar,
+        has_wind: configPayload?.data?.has_wind,
+        solar_capacity_kw: configPayload?.data?.solar_capacity_kw,
+        wind_capacity_kw: configPayload?.data?.wind_capacity_kw,
+        solar_efficiency: configPayload?.data?.solar_efficiency,
+        wind_efficiency: configPayload?.data?.wind_efficiency,
+        latitude,
+        longitude,
+        timezone,
+      },
+      price_signal: {
+        source: 'api/prices/current',
+        current_uah_kwh: toFiniteNumber(pricesPayload?.prices?.current?.price),
+        forecast_next24h: pricesPayload?.prices?.forecast?.next24h || [],
+      },
+      weather_signal: weatherPayload,
+    }
+
     // Get the project root path (dashboard/../ = project root)
     const projectRoot = path.resolve(process.cwd(), '..')
     const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
@@ -105,6 +260,7 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
           ...process.env,
           ENERGY_ML_CONFIG_DIR: tenantConfigDir,
           ENERGY_ML_TENANT_ID: tenant.id,
+          ENERGY_ML_LIVE_CONTEXT_JSON: JSON.stringify(liveContext),
         },
       }
     )
@@ -122,13 +278,6 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
       throw new Error(mlResponse.error || 'ML pipeline failed')
     }
     
-    let pricesPayload: PricesCurrentResponse | null = null
-    try {
-      pricesPayload = await $fetch<PricesCurrentResponse>('/api/prices/current')
-    } catch (pricesError) {
-      console.warn('[ML API] Failed to load /api/prices/current for hourly forecast price mapping:', pricesError)
-    }
-
     const hourlyPriceMap = buildHourlyPriceMap(pricesPayload)
     const dailySavings = toFiniteNumber(mlResponse.daily_savings_estimate) ?? 0
     const monthlySavings = toFiniteNumber(mlResponse.monthly_savings_estimate) ?? (dailySavings * 30)
@@ -175,7 +324,19 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
           version: "Phase4F-v1.0",
           confidence_level: mlResponse.confidence > 0.8 ? "High" : 
                            mlResponse.confidence > 0.6 ? "Medium" : "Low"
-        }
+        },
+        feature_provenance: mlResponse.feature_provenance || {
+          config_source: 'tenant_config',
+          price_source: liveContext.price_signal.source,
+          weather_source: weatherPayload?.source || 'weather_unavailable',
+          captured_at: liveContext.captured_at,
+          tenant_id: tenant.id,
+        },
+        model_inputs: mlResponse.model_inputs || {
+          profile: liveContext.config,
+          live_price: liveContext.price_signal.current_uah_kwh,
+          live_weather: weatherPayload?.current || null,
+        },
       }
     }
     

@@ -1,26 +1,54 @@
 <template>
-  <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6 space-y-6">
+  <div class="rounded-xl border border-slate-700 bg-slate-800/40 p-6 space-y-6">
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-xl font-bold text-white">Scenario and Load Profile</h2>
-        <p class="text-sm text-slate-400">Persisted load parameters used by optimization and retraining.</p>
+        <p class="text-sm text-slate-400">Choose an operating profile, then tune demand behavior and seasonality.</p>
       </div>
       <button class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm" @click="loadConfig" :disabled="isLoading">
         {{ isLoading ? 'Loading...' : 'Reload' }}
       </button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <label class="block">
-        <span class="text-sm text-slate-300">Profile Type</span>
-        <select v-model="form.load_profile_type" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2">
-          <option value="standard">Standard</option>
-          <option value="multi-shift">Multi-shift</option>
-          <option value="24/7">24/7</option>
-          <option value="custom">Custom</option>
-        </select>
-      </label>
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <button
+        v-for="profile in profileOptions"
+        :key="profile.id"
+        type="button"
+        class="rounded-xl border p-4 text-left transition"
+        :class="form.load_profile_type === profile.id
+          ? 'border-amber-400 bg-amber-500/10 shadow-[0_0_0_1px_rgba(251,191,36,0.25)]'
+          : 'border-slate-700 bg-slate-900/50 hover:border-slate-500 hover:bg-slate-900'"
+        @click="form.load_profile_type = profile.id"
+      >
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-2xl">{{ profile.emoji }}</p>
+            <p class="mt-2 text-base font-semibold text-white">{{ profile.name }}</p>
+            <p class="mt-1 text-xs text-slate-400">{{ profile.description }}</p>
+          </div>
+          <span
+            class="rounded-full px-2 py-1 text-[10px] uppercase tracking-wide"
+            :class="form.load_profile_type === profile.id ? 'bg-amber-400/20 text-amber-200' : 'bg-slate-700 text-slate-300'"
+          >
+            {{ profile.arbitrage }}
+          </span>
+        </div>
 
+        <div class="mt-4 grid grid-cols-2 gap-2 text-xs">
+          <div class="rounded-lg bg-slate-800/70 p-2">
+            <p class="text-slate-400">Peak window</p>
+            <p class="font-semibold text-white">{{ profile.peakWindow }}</p>
+          </div>
+          <div class="rounded-lg bg-slate-800/70 p-2">
+            <p class="text-slate-400">Typical shape</p>
+            <p class="font-semibold text-white">{{ profile.shape }}</p>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <label class="block">
         <span class="text-sm text-slate-300">Peak Load (kW)</span>
         <input v-model.number="form.load_peak_kw" type="number" min="1" max="500" step="0.1" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
@@ -41,16 +69,28 @@
         <input v-model.number="form.load_night_factor" type="number" min="0.1" max="1" step="0.01" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
       </label>
 
-      <label class="block">
+      <label class="block md:col-span-2">
         <span class="text-sm text-slate-300">Seasonal Variation (0..0.5)</span>
         <input v-model.number="form.load_seasonal_variation" type="number" min="0" max="0.5" step="0.01" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
       </label>
     </div>
 
-    <div class="rounded-lg bg-slate-900 bg-opacity-60 border border-slate-700 p-4">
-      <p class="text-sm text-slate-300">Estimated daily energy</p>
-      <p class="text-2xl font-bold text-energy-400 mt-1">{{ estimatedDailyEnergy.toFixed(1) }} kWh/day</p>
-      <p class="text-xs text-slate-400 mt-2">Computed from base and peak values as a sanity check.</p>
+    <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
+      <p class="text-sm text-slate-300">Load and arbitrage preview</p>
+      <div class="mt-3 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+        <div>
+          <p class="text-slate-400">Estimated daily energy</p>
+          <p class="font-semibold text-white">{{ estimatedDailyEnergy.toFixed(1) }} kWh/day</p>
+        </div>
+        <div>
+          <p class="text-slate-400">Load factor</p>
+          <p class="font-semibold text-white">{{ loadFactorPercent.toFixed(1) }}%</p>
+        </div>
+        <div>
+          <p class="text-slate-400">Peak-base spread</p>
+          <p class="font-semibold text-amber-300">{{ peakSpreadKw.toFixed(1) }} kW</p>
+        </div>
+      </div>
     </div>
 
     <div class="flex items-center gap-3">
@@ -68,13 +108,62 @@ import { useTenantContext } from '../../composables/useTenantContext'
 
 const tenantContext = useTenantContext()
 
+type LoadProfileType = 'standard' | 'multi-shift' | '24/7' | 'custom'
+
+const profileOptions: Array<{
+  id: LoadProfileType
+  emoji: string
+  name: string
+  description: string
+  peakWindow: string
+  shape: string
+  arbitrage: string
+}> = [
+  {
+    id: 'standard',
+    emoji: '🏢',
+    name: 'Standard Business',
+    description: 'Typical office and retail daytime demand with evening drop-off.',
+    peakWindow: '09:00-18:00',
+    shape: 'Single daily peak',
+    arbitrage: 'High potential',
+  },
+  {
+    id: 'multi-shift',
+    emoji: '🏭',
+    name: 'Multi-shift Plant',
+    description: 'Two operating blocks and stronger overnight demand continuity.',
+    peakWindow: '06:00-14:00 + 22:00-06:00',
+    shape: 'Dual plateau',
+    arbitrage: 'Medium potential',
+  },
+  {
+    id: '24/7',
+    emoji: '🌐',
+    name: 'Continuous 24/7',
+    description: 'Stable industrial baseline with minimal downtime windows.',
+    peakWindow: 'Always active',
+    shape: 'Flat baseline',
+    arbitrage: 'Lower potential',
+  },
+  {
+    id: 'custom',
+    emoji: '🧩',
+    name: 'Custom Profile',
+    description: 'User-defined coefficients and business-specific demand behavior.',
+    peakWindow: 'User-managed',
+    shape: 'Flexible',
+    arbitrage: 'Variable',
+  },
+]
+
 const isLoading = ref(false)
 const isSaving = ref(false)
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
 
 const form = reactive({
-  load_profile_type: 'standard',
+  load_profile_type: 'standard' as LoadProfileType,
   load_peak_kw: 10,
   load_base_kw: 2,
   load_weekend_factor: 0.6,
@@ -88,6 +177,13 @@ const estimatedDailyEnergy = computed(() => {
   const daytimeLoad = (form.load_peak_kw + form.load_base_kw) / 2
   const nighttimeLoad = form.load_base_kw * form.load_night_factor
   return (daytimeLoad * daytimeHours) + (nighttimeLoad * nighttimeHours)
+})
+
+const peakSpreadKw = computed(() => Math.max(0, Number(form.load_peak_kw) - Number(form.load_base_kw)))
+
+const loadFactorPercent = computed(() => {
+  if (!form.load_peak_kw || form.load_peak_kw <= 0) return 0
+  return (estimatedDailyEnergy.value / (form.load_peak_kw * 24)) * 100
 })
 
 const messageClass = computed(() => (

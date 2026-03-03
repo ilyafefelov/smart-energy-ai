@@ -506,7 +506,9 @@ import { useControlTransitionNotifications } from '~/composables/useControlTrans
 import { useSettingsStore } from '~/stores/settingsStore'
 
 // Toast for notifications
-const toast = useToast()
+const toast = typeof useToast === 'function'
+  ? useToast()
+  : { add: () => undefined }
 const tenantContext = useTenantContext()
 const settingsStore = useSettingsStore()
 const transitionNotifications = useControlTransitionNotifications()

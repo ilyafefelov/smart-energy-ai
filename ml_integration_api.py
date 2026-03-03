@@ -7,6 +7,7 @@ import sys
 import json
 import logging
 import argparse
+import os
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
@@ -27,6 +28,9 @@ except ImportError:
     from user_config import ConfigurationManager
 
 
+logger = logging.getLogger(__name__)
+
+
 def setup_logging():
     """Setup logging configuration."""
     logging.basicConfig(
@@ -35,9 +39,139 @@ def setup_logging():
     )
 
 
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        numeric = float(value)
+        if numeric != numeric:  # NaN guard
+            return default
+        return numeric
+    except Exception:
+        return default
+
+
+def _load_live_context() -> Dict[str, Any]:
+    raw = os.getenv('ENERGY_ML_LIVE_CONTEXT_JSON')
+    if not raw:
+        return {}
+    try:
+        payload = json.loads(raw)
+        return payload if isinstance(payload, dict) else {}
+    except Exception as exc:
+        logger.warning('Failed to parse ENERGY_ML_LIVE_CONTEXT_JSON: %s', exc)
+        return {}
+
+
+def _extract_hourly_price_map(live_context: Dict[str, Any]) -> Dict[int, float]:
+    result: Dict[int, float] = {}
+    rows = (live_context.get('price_signal') or {}).get('forecast_next24h') or []
+    if not isinstance(rows, list):
+        return result
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        hour = row.get('hour')
+        price = row.get('price')
+        try:
+            hour_int = int(hour)
+        except Exception:
+            continue
+        if hour_int < 0 or hour_int > 23:
+            continue
+        price_float = _safe_float(price, default=-1)
+        if price_float <= 0:
+            continue
+        result[hour_int] = price_float
+
+    return result
+
+
+def _apply_live_price_signal(
+    recommendation: Dict[str, Any],
+    status: Dict[str, Any],
+    live_context: Dict[str, Any],
+) -> Dict[str, Any]:
+    adjusted = recommendation.copy()
+    price_map = _extract_hourly_price_map(live_context)
+    current_hour = datetime.now().hour
+    current_price = _safe_float((live_context.get('price_signal') or {}).get('current_uah_kwh'), default=0.0)
+    if current_price <= 0:
+        current_price = _safe_float(price_map.get(current_hour), default=0.0)
+
+    prices = sorted(price_map.values())
+    if current_price <= 0 or len(prices) < 8:
+        adjusted['live_signal_applied'] = False
+        return adjusted
+
+    p25 = prices[max(0, int(len(prices) * 0.25) - 1)]
+    p75 = prices[min(len(prices) - 1, int(len(prices) * 0.75))]
+
+    battery_soc = _safe_float((status.get('battery_state') or {}).get('soc_percent'), default=50.0)
+    action = str(adjusted.get('action', 'HOLD')).upper()
+    confidence = _safe_float(adjusted.get('confidence'), default=0.5)
+    reasoning = str(adjusted.get('reasoning', '')).strip()
+
+    updated = False
+    if current_price <= p25 and battery_soc < 85 and action in {'HOLD', 'SELL'}:
+        action = 'BUY'
+        confidence = min(0.99, confidence + 0.06)
+        reasoning = f"{reasoning} Live price ({current_price:.2f} UAH/kWh) is in lower quartile ({p25:.2f}); opportunistic charging favored.".strip()
+        updated = True
+    elif current_price >= p75 and battery_soc > 35 and action in {'HOLD', 'BUY'}:
+        action = 'SELL'
+        confidence = min(0.99, confidence + 0.06)
+        reasoning = f"{reasoning} Live price ({current_price:.2f} UAH/kWh) is in upper quartile ({p75:.2f}); discharging/export favored.".strip()
+        updated = True
+
+    adjusted.update({
+        'action': action,
+        'confidence': confidence,
+        'reasoning': reasoning,
+        'live_signal_applied': updated,
+        'live_price_context': {
+            'current_price_uah_kwh': current_price,
+            'q25_price_uah_kwh': p25,
+            'q75_price_uah_kwh': p75,
+            'battery_soc_percent': battery_soc,
+        },
+    })
+    return adjusted
+
+
+def _build_model_inputs(user_config: Any, live_context: Dict[str, Any]) -> Dict[str, Any]:
+    price_signal = live_context.get('price_signal') or {}
+    weather_signal = live_context.get('weather_signal') or {}
+    return {
+        'optimization_strategy': getattr(user_config, 'optimization_strategy', 'balanced'),
+        'load_profile_type': getattr(user_config, 'load_profile_type', 'standard'),
+        'battery': {
+            'type': getattr(user_config, 'battery_type', 'LFP'),
+            'capacity_kwh': getattr(user_config, 'battery_capacity_kwh', 0),
+            'efficiency': getattr(user_config, 'battery_efficiency', 0),
+            'soc_min': getattr(user_config, 'battery_soc_min', None),
+            'soc_max': getattr(user_config, 'battery_soc_max', None),
+        },
+        'generation': {
+            'solar_capacity_kw': getattr(user_config, 'solar_capacity_kw', 0),
+            'wind_capacity_kw': getattr(user_config, 'wind_capacity_kw', 0),
+            'solar_efficiency': getattr(user_config, 'solar_efficiency', None),
+            'wind_efficiency': getattr(user_config, 'wind_efficiency', None),
+        },
+        'location': {
+            'latitude': getattr(user_config, 'latitude', None),
+            'longitude': getattr(user_config, 'longitude', None),
+            'timezone': getattr(user_config, 'timezone', None),
+        },
+        'live_price_uah_kwh': price_signal.get('current_uah_kwh'),
+        'live_weather': weather_signal.get('current'),
+    }
+
+
 def get_recommendation(enhanced: bool = False) -> Dict[str, Any]:
     """Get current ML recommendation using Pipeline Orchestrator."""
     try:
+        live_context = _load_live_context()
+
         # Load user configuration
         config_manager = ConfigurationManager()
         user_config = config_manager.load_config()
@@ -83,8 +217,13 @@ def get_recommendation(enhanced: bool = False) -> Dict[str, Any]:
             except Exception as e:
                 logger.warning(f"Enhanced recommendation failed, using base: {e}")
         
+        # Get pipeline status and apply live price context to the immediate decision.
+        status = orchestrator.get_status()
+        current_recommendation = _apply_live_price_signal(current_recommendation, status, live_context)
+
         # Get 24-hour forecast
         forecast_df = orchestrator.get_hourly_forecast(24)
+        hourly_price_map = _extract_hourly_price_map(live_context)
         
         # Convert forecast to list of dicts
         hourly_forecast = []
@@ -95,11 +234,14 @@ def get_recommendation(enhanced: bool = False) -> Dict[str, Any]:
                 'confidence': row['confidence'],
                 'reasoning': row['reasoning'],
                 'savings_estimate': row['savings_estimate'],
-                'battery_impact': row['battery_impact']
+                'battery_impact': row['battery_impact'],
+                'price_uah_kwh': hourly_price_map.get(int(row['hour'])),
+                'price_uah_mwh': (
+                    hourly_price_map.get(int(row['hour'])) * 1000
+                    if hourly_price_map.get(int(row['hour'])) is not None
+                    else None
+                ),
             })
-        
-        # Get pipeline status for additional context
-        status = orchestrator.get_status()
         
         # Calculate extended savings estimates
         hourly_savings = current_recommendation.get('estimated_savings', 0)
@@ -121,6 +263,19 @@ def get_recommendation(enhanced: bool = False) -> Dict[str, Any]:
                 'health_loss': current_recommendation.get('battery_impact', 0),
                 'cycles_remaining': status['battery_state']['cycles_remaining']
             },
+            'feature_provenance': {
+                'tenant_id': live_context.get('tenant_id'),
+                'captured_at': live_context.get('captured_at'),
+                'sources': {
+                    'profile': 'tenant_user_config',
+                    'prices': (live_context.get('price_signal') or {}).get('source', 'pipeline_default_tariff'),
+                    'weather': (live_context.get('weather_signal') or {}).get('source', 'pipeline_internal_weather_model'),
+                },
+                'used_live_price_signal': bool(current_recommendation.get('live_signal_applied')),
+                'used_live_weather_signal': bool((live_context.get('weather_signal') or {}).get('current')),
+                'feature_count_estimate': 18,
+            },
+            'model_inputs': _build_model_inputs(user_config, live_context),
             'pipeline_status': status,
             'timestamp': datetime.now().isoformat()
         }

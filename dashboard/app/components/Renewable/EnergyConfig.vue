@@ -473,7 +473,9 @@ definePageMeta({
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 
 // Toast notifications
-const toast = useToast()
+const toast = typeof useToast === 'function'
+  ? useToast()
+  : { add: () => undefined }
 
 // Reactive state
 const solarCapacity = ref(10.0)
