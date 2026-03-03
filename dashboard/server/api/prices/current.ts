@@ -4,6 +4,19 @@ import { promisify } from 'util'
 
 type Trend = 'up' | 'down' | 'stable'
 
+function resolveTariffWindow(hour: number): 'peak' | 'offpeak' | 'shoulder' | 'unknown' {
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+    return 'unknown'
+  }
+  if (hour >= 8 && hour <= 20) {
+    return 'peak'
+  }
+  if (hour === 7 || hour === 21) {
+    return 'shoulder'
+  }
+  return 'offpeak'
+}
+
 let PRICE_CACHE: { ts: number; data: any } | null = null
 const CACHE_TTL_MS = 5 * 60 * 1000
 const OREE_DATA_VIEW_URL = 'https://www.oree.com.ua/index.php/pricectr/data_view'
@@ -166,6 +179,10 @@ function summarizePrices(now: Date, series: Array<{ hour: number; timestamp: str
     ? offPeakRows.reduce((sum, p) => sum + p.price, 0) / offPeakRows.length
     : avgPrice
 
+  const currentIntervalStart = series[0]?.timestamp ? new Date(series[0].timestamp) : now
+  const currentIntervalEnd = new Date(currentIntervalStart.getTime() + 3600000)
+  const currentWindow = resolveTariffWindow(currentIntervalStart.getHours())
+
   return {
     success: true,
     prices: {
@@ -173,6 +190,9 @@ function summarizePrices(now: Date, series: Array<{ hour: number; timestamp: str
         price: Number(currentPrice.toFixed(2)),
         timestamp: now.toISOString(),
         trend: currentPrice > avgPrice * 1.05 ? 'up' : currentPrice < avgPrice * 0.95 ? 'down' : 'stable',
+        interval_start: currentIntervalStart.toISOString(),
+        interval_end: currentIntervalEnd.toISOString(),
+        tariff_window: currentWindow,
       },
       today: {
         min: Number(minPrice.toFixed(2)),
@@ -183,6 +203,10 @@ function summarizePrices(now: Date, series: Array<{ hour: number; timestamp: str
       },
       forecast: {
         next24h: series,
+        peak: Number(peakPrice.toFixed(2)),
+        offPeak: Number(offPeakPrice.toFixed(2)),
+      },
+      tariffs: {
         peak: Number(peakPrice.toFixed(2)),
         offPeak: Number(offPeakPrice.toFixed(2)),
       },

@@ -1,11 +1,13 @@
 // Control API - Command Execution Endpoint
 // POST /api/control/execute
 
-import { persistOptimizationHistory } from '../../utils/optimization-history'
+import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
+    const requestTimestamp = resolveIncomingTimestamp(body?.timestamp)
+    const commandId = resolveCommandId(body, requestTimestamp)
     
     // Validate input
     if (!body.command) {
@@ -33,12 +35,14 @@ export default defineEventHandler(async (event) => {
     }
     
     const command = {
+      command_id: commandId,
+      schedule_id: normalizeOptionalString(body.schedule_id),
       command: body.command,
       power_kw: body.power_kw || 0,
       duration_minutes: body.duration_minutes || null,
       reason: body.reason || `Dashboard command: ${body.command}`,
       user_id: body.user_id || 'dashboard',
-      timestamp: new Date().toISOString()
+      timestamp: requestTimestamp,
     }
     
     console.log('Executing control command:', command)
@@ -61,6 +65,7 @@ export default defineEventHandler(async (event) => {
         await persistCommandToOptimizationHistory({
           command,
           executionResult: pythonResult,
+          executionSource: 'python_controller',
           batterySocBeforeRaw: batteryStatusBefore?.battery?.soc,
         })
         
@@ -69,7 +74,7 @@ export default defineEventHandler(async (event) => {
         return {
           success: true,
           result: pythonResult,
-          command_id: generateId(),
+          command_id: command.command_id,
           executed_at: command.timestamp,
           source: 'python_controller'
         }
@@ -136,13 +141,14 @@ export default defineEventHandler(async (event) => {
     await persistCommandToOptimizationHistory({
       command,
       executionResult: simulationResult,
+      executionSource: 'simulation',
       batterySocBeforeRaw: batterySoc * 100,
     })
     
     return {
       success: true,
       result: simulationResult,
-      command_id: generateId(),
+      command_id: command.command_id,
       executed_at: command.timestamp,
       source: 'simulation'
     }
@@ -161,25 +167,65 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-function generateId() {
+function normalizeOptionalString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+  const normalized = value.trim()
+  return normalized ? normalized : null
+}
+
+function resolveIncomingTimestamp(value: unknown): string {
+  if (typeof value === 'string') {
+    const parsed = new Date(value)
+    if (Number.isFinite(parsed.getTime())) {
+      return parsed.toISOString()
+    }
+  }
+  return new Date().toISOString()
+}
+
+function resolveCommandId(body: any, timestampIso: string): string {
+  const explicit = normalizeOptionalString(body?.command_id) || normalizeOptionalString(body?.idempotency_key)
+  if (explicit) {
+    return explicit
+  }
+
   if (!(globalThis as any).__commandIdCounter) {
     ;(globalThis as any).__commandIdCounter = 0
   }
   ;(globalThis as any).__commandIdCounter += 1
-  return `cmd_${Date.now()}_${(globalThis as any).__commandIdCounter}`
+  const suffix = String((globalThis as any).__commandIdCounter)
+  return `cmd_${Date.parse(timestampIso)}_${suffix}`
 }
 
 type CommandPayload = {
+  command_id: string
+  schedule_id: string | null
   command: string
   power_kw: number
   duration_minutes: number | null
+  reason: string
+  user_id: string
   timestamp: string
 }
 
 type PersistInput = {
   command: CommandPayload
   executionResult: any
+  executionSource: 'python_controller' | 'simulation'
   batterySocBeforeRaw: unknown
+}
+
+type PricingContext = {
+  unitPriceUahKwh: number
+  source: string
+  tariffWindow: 'peak' | 'offpeak' | 'shoulder' | 'unknown'
+  intervalStart: string | null
+  intervalEnd: string | null
+  peakPrice: number | null
+  offPeakPrice: number | null
+  fallbackReason: string | null
 }
 
 function mapCommandToAction(command: string): number {
@@ -245,23 +291,123 @@ async function resolveCurrentPriceKwh(): Promise<number> {
   return 8
 }
 
+function resolveTariffWindowFromHour(hour: number): 'peak' | 'offpeak' | 'shoulder' | 'unknown' {
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+    return 'unknown'
+  }
+  if (hour >= 8 && hour <= 20) {
+    return 'peak'
+  }
+  if (hour === 7 || hour === 21) {
+    return 'shoulder'
+  }
+  return 'offpeak'
+}
+
+async function resolvePricingContext(commandTimestamp: string): Promise<PricingContext> {
+  const defaultPrice = await resolveCurrentPriceKwh()
+  const fallback: PricingContext = {
+    unitPriceUahKwh: defaultPrice,
+    source: 'prices_current_fallback',
+    tariffWindow: resolveTariffWindowFromHour(new Date(commandTimestamp).getHours()),
+    intervalStart: commandTimestamp,
+    intervalEnd: new Date(new Date(commandTimestamp).getTime() + 3600000).toISOString(),
+    peakPrice: null,
+    offPeakPrice: null,
+    fallbackReason: 'price_payload_unavailable',
+  }
+
+  try {
+    const payload = await $fetch<any>('/api/prices/current')
+    const basePrice = Number(payload?.prices?.current?.price)
+    const todayAvg = Number(payload?.prices?.today?.avg)
+    const peakPrice = Number(payload?.prices?.forecast?.peak)
+    const offPeakPrice = Number(payload?.prices?.forecast?.offPeak)
+
+    const commandTime = new Date(commandTimestamp)
+    const next24h = Array.isArray(payload?.prices?.forecast?.next24h) ? payload.prices.forecast.next24h : []
+
+    let intervalRow: any | null = null
+    let bestDistance = Number.POSITIVE_INFINITY
+    for (const row of next24h) {
+      const ts = new Date(row?.timestamp || 0)
+      if (!Number.isFinite(ts.getTime()) || !Number.isFinite(commandTime.getTime())) {
+        continue
+      }
+      const distance = Math.abs(ts.getTime() - commandTime.getTime())
+      if (distance < bestDistance) {
+        bestDistance = distance
+        intervalRow = row
+      }
+    }
+
+    const intervalStart = intervalRow?.timestamp ? new Date(intervalRow.timestamp).toISOString() : commandTimestamp
+    const intervalStartDate = new Date(intervalStart)
+    const intervalEnd = new Date(intervalStartDate.getTime() + 3600000).toISOString()
+    const intervalPrice = Number(intervalRow?.price)
+    const unitPriceUahKwh = Number.isFinite(intervalPrice) && intervalPrice > 0
+      ? intervalPrice
+      : Number.isFinite(basePrice) && basePrice > 0
+        ? basePrice
+        : Number.isFinite(todayAvg) && todayAvg > 0
+          ? todayAvg
+          : defaultPrice
+
+    return {
+      unitPriceUahKwh,
+      source: String(payload?.prices?.source || 'prices_current'),
+      tariffWindow: resolveTariffWindowFromHour(intervalStartDate.getHours()),
+      intervalStart,
+      intervalEnd,
+      peakPrice: Number.isFinite(peakPrice) ? peakPrice : null,
+      offPeakPrice: Number.isFinite(offPeakPrice) ? offPeakPrice : null,
+      fallbackReason: null,
+    }
+  } catch {
+    return fallback
+  }
+}
+
+function computeCanonicalEconomics(command: CommandPayload, energyKwh: number, pricing: PricingContext): {
+  baselineCost: number
+  optimizedCost: number
+  economicsMethod: string
+  economicsVersion: string
+  fallbackReason: string | null
+} {
+  const baselineRate = pricing.unitPriceUahKwh
+  const baselineCost = Math.max(0, energyKwh * baselineRate)
+
+  const peakRate = Number.isFinite(pricing.peakPrice) ? Number(pricing.peakPrice) : baselineRate
+  const offPeakRate = Number.isFinite(pricing.offPeakPrice) ? Number(pricing.offPeakPrice) : baselineRate
+
+  let optimizedRate = baselineRate
+
+  if (command.command === 'charge') {
+    optimizedRate = Math.min(baselineRate, offPeakRate)
+  } else if (command.command === 'discharge') {
+    const spread = Math.max(0, peakRate - offPeakRate)
+    optimizedRate = Math.max(0, baselineRate - spread)
+  }
+
+  const optimizedCost = Math.max(0, energyKwh * optimizedRate)
+  return {
+    baselineCost,
+    optimizedCost,
+    economicsMethod: 'tariff_interval',
+    economicsVersion: 'v2',
+    fallbackReason: pricing.fallbackReason,
+  }
+}
+
 async function persistCommandToOptimizationHistory(input: PersistInput): Promise<void> {
   const command = input.command
   const executionResult = input.executionResult || {}
 
-  const priceKwh = await resolveCurrentPriceKwh()
+  const pricing = await resolvePricingContext(command.timestamp)
   const durationHours = deriveDurationHours(command, executionResult)
   const energyKwh = Math.max(0, Math.abs(Number(command.power_kw || 0)) * durationHours)
-
-  const baselineCost = energyKwh * priceKwh
-
-  const optimizationMultiplier = command.command === 'discharge'
-    ? 0.45
-    : command.command === 'charge'
-      ? 0.9
-      : 1.0
-
-  const optimizedCost = baselineCost * optimizationMultiplier
+  const economics = computeCanonicalEconomics(command, energyKwh, pricing)
 
   const socBefore = normalizeSocPercent(
     executionResult?.soc_before ?? executionResult?.result?.soc_before ?? input.batterySocBeforeRaw,
@@ -273,15 +419,57 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
     socBefore,
   )
 
-  await persistOptimizationHistory({
+  const executionKey = buildOptimizationExecutionKey({
+    commandId: command.command_id,
+    scheduleId: command.schedule_id,
+    timestamp: command.timestamp,
+    command: command.command,
+    powerKw: Number(command.power_kw || 0),
+    durationMinutes: command.duration_minutes,
+    userId: command.user_id,
+    reason: command.reason,
+    source: input.executionSource,
+  })
+
+  const persistResult = await persistOptimizationHistory({
+    execution_key: executionKey,
+    command_id: command.command_id,
+    schedule_id: command.schedule_id,
+    execution_source: input.executionSource,
     timestamp: command.timestamp,
     predicted_action: mapCommandToAction(command.command),
     actual_action: mapCommandToAction(command.command),
-    cost_baseline: Number.isFinite(baselineCost) ? baselineCost : null,
-    cost_rl: Number.isFinite(optimizedCost) ? optimizedCost : null,
+    cost_baseline: Number.isFinite(economics.baselineCost) ? economics.baselineCost : null,
+    cost_rl: Number.isFinite(economics.optimizedCost) ? economics.optimizedCost : null,
+    price_uah_kwh: Number.isFinite(pricing.unitPriceUahKwh) ? pricing.unitPriceUahKwh : null,
+    duration_minutes: Number.isFinite(durationHours) ? Math.round(durationHours * 60) : null,
+    energy_kwh: Number.isFinite(energyKwh) ? energyKwh : null,
+    economics_method: economics.economicsMethod,
+    economics_version: economics.economicsVersion,
+    fallback_reason: economics.fallbackReason,
+    price_source: pricing.source,
+    tariff_window: pricing.tariffWindow,
+    interval_start: pricing.intervalStart,
+    interval_end: pricing.intervalEnd,
     battery_soc_start: Number.isFinite(socBefore) ? socBefore : null,
     battery_soc_end: Number.isFinite(socAfter) ? socAfter : null,
     solar_actual: null,
     load_actual: null,
+  })
+
+  if (!persistResult.ok) {
+    console.warn('[control/execute] optimization_history persist failed', {
+      command_id: command.command_id,
+      execution_key: executionKey,
+      error: persistResult.error || 'unknown',
+    })
+    return
+  }
+
+  console.info('[control/execute] optimization_history persist outcome', {
+    command_id: command.command_id,
+    execution_key: executionKey,
+    inserted: persistResult.inserted,
+    updated: persistResult.updated,
   })
 }

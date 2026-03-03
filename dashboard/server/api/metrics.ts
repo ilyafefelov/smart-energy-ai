@@ -140,6 +140,11 @@ export default defineEventHandler(async () => {
         ],
         history_source: historyPayload?.source || 'unavailable',
         economics_source: historyPayload?.source?.economics_source || (ppoBaselineTotal > 0 ? 'ppo_validation_artifact' : 'analytics_cache_fallback'),
+        fallback_reason_code: historyPayload?.source?.fallback_reason_code || 'unknown',
+        reconciliation: historyPayload?.source?.reconciliation || {
+          reconciled_rows: 0,
+          heuristic_rows_remaining: 0,
+        },
         prices_source: pricesPayload?.source || 'unavailable',
       },
     }

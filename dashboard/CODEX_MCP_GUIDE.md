@@ -48,7 +48,7 @@ enabled = true
 cd C:\Users\ilyaf\clawd\projects\smart-energy-ai\dashboard
 npm install
 npm run dev
-# http://localhost:3000
+# http://localhost:3600
 ```
 
 ### 3. Use Codex with MCP
@@ -258,6 +258,42 @@ codex "Build price forecasting feature:
 5. Pinia store for state
 6. Tests for API"
 ```
+
+---
+
+## Economics Source Operations Runbook
+
+### SLO Targets
+
+- `economics_source=optimization_history_db` on at least `95%` of `/api/history` requests in rolling 24h.
+- `metrics.source.economics_source` must match `history.source.economics_source` on `100%` of sampled checks.
+- `abs((cost_baseline - cost_optimized) - savings) <= 0.2` for sampled history rows.
+- `heuristic_rows_remaining` should trend to `0`; alert if above `5%` of recent rows after reconciliation.
+
+### Validation Steps
+
+1. Run smoke check on dashboard port `3600`:
+   - `pwsh ./dashboard/scripts/api_smoke_test.ps1 -BaseUrl http://127.0.0.1:3600 -RequireCanonicalEconomics $true`
+2. Inspect `/api/history` source block:
+   - `economics_source`, `fallback_reason_code`, and `reconciliation` counters.
+3. Inspect `/api/metrics` source block:
+   - Confirm matching `economics_source` and reconciliation counters.
+4. If needed, run bounded reconciliation:
+   - `python scripts/reconcile_optimization_history.py --days 14 --dry-run`
+   - `python scripts/reconcile_optimization_history.py --days 14`
+
+### Rollback / Escalation Criteria
+
+- Trigger rollback if canonical-source coverage drops below `80%` for more than 15 minutes.
+- Trigger rollback if smoke assertion `history_economics_source` fails in two consecutive runs.
+- Trigger rollback if post-reconcile drift exceeds tolerance for two consecutive checks.
+
+### Rollback Actions
+
+1. Keep APIs online but allow fallback sources by setting `RequireCanonicalEconomics` to `false` in emergency smoke checks.
+2. Re-run `/api/control/execute` with known-safe `command_id` payload to verify idempotent writes.
+3. Run reconciliation dry-run and inspect `updated` vs `skipped` counts.
+4. Escalate if DB connectivity or schema migration failures persist; preserve fallback path until canonical writes recover.
 
 ---
 

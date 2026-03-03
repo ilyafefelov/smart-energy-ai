@@ -1,7 +1,10 @@
 // Control API - Schedule Management Endpoint
 // POST /api/control/schedule
 
-export default defineEventHandler(async (event) => {
+import { createError, defineEventHandler, readBody } from 'h3'
+import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
+
+export default defineEventHandler(async (event: any) => {
   try {
     const body = await readBody(event)
     
@@ -38,8 +41,10 @@ export default defineEventHandler(async (event) => {
       })
     }
     
+    const scheduleId = resolveScheduleId(body)
     const schedule = {
-      id: generateScheduleId(),
+      id: scheduleId,
+      command_id: normalizeOptionalString(body.command_id) || `cmd_for_${scheduleId}`,
       command: body.command,
       power_kw: parseFloat(body.power_kw),
       scheduled_time: scheduledTime.toISOString(),
@@ -56,7 +61,7 @@ export default defineEventHandler(async (event) => {
     
     if (execPython) {
       try {
-        const result = await execPython('create_schedule.py', {
+        const result = await (execPython as any)('create_schedule.py', {
           command: schedule.command,
           power_kw: schedule.power_kw.toString(),
           scheduled_time: schedule.scheduled_time,
@@ -66,40 +71,46 @@ export default defineEventHandler(async (event) => {
         
         const pythonResult = JSON.parse(result)
         
+        await persistScheduledIntent(schedule, 'python_controller')
+
         return {
           success: true,
           schedule_id: schedule.id,
+          command_id: schedule.command_id,
           scheduled_time: schedule.scheduled_time,
           result: pythonResult,
           source: 'python_controller'
         }
         
-      } catch (pythonError) {
+      } catch (pythonError: any) {
         console.warn('Python controller scheduling failed:', pythonError.message)
       }
     }
     
     // Fallback to in-memory storage
-    if (!globalThis.scheduledCommands) {
-      globalThis.scheduledCommands = []
+    if (!(globalThis as any).scheduledCommands) {
+      ;(globalThis as any).scheduledCommands = []
     }
     
-    globalThis.scheduledCommands.push(schedule)
+    ;(globalThis as any).scheduledCommands.push(schedule)
     
     // Keep only future schedules (cleanup old ones)
-    globalThis.scheduledCommands = globalThis.scheduledCommands.filter(
-      cmd => new Date(cmd.scheduled_time) > new Date() || cmd.status === 'pending'
+    ;(globalThis as any).scheduledCommands = (globalThis as any).scheduledCommands.filter(
+      (cmd: any) => new Date(cmd.scheduled_time) > new Date() || cmd.status === 'pending'
     )
     
+    await persistScheduledIntent(schedule, 'memory_storage')
+
     return {
       success: true,
       schedule_id: schedule.id,
+      command_id: schedule.command_id,
       scheduled_time: schedule.scheduled_time,
       message: 'Command scheduled successfully',
       source: 'memory_storage'
     }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Schedule creation error:', error)
     
     if (error.statusCode) {
@@ -119,4 +130,83 @@ function generateScheduleId() {
   }
   ;(globalThis as any).__scheduleIdCounter += 1
   return `sched_${Date.now()}_${(globalThis as any).__scheduleIdCounter}`
+}
+
+function normalizeOptionalString(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+  const normalized = value.trim()
+  return normalized ? normalized : null
+}
+
+function resolveScheduleId(body: any): string {
+  const explicit = normalizeOptionalString(body?.schedule_id) || normalizeOptionalString(body?.idempotency_key)
+  if (explicit) {
+    return explicit
+  }
+  return generateScheduleId()
+}
+
+function mapCommandToAction(command: string): number {
+  switch (command) {
+    case 'charge':
+      return 0
+    case 'discharge':
+      return 1
+    case 'hold':
+      return 4
+    default:
+      return 4
+  }
+}
+
+async function persistScheduledIntent(schedule: any, source: 'python_controller' | 'memory_storage'): Promise<void> {
+  const executionSource = source === 'python_controller' ? 'python_schedule_intent' : 'memory_schedule_intent'
+  const executionKey = buildOptimizationExecutionKey({
+    commandId: schedule.command_id,
+    scheduleId: schedule.id,
+    timestamp: schedule.scheduled_time,
+    command: schedule.command,
+    powerKw: Number(schedule.power_kw || 0),
+    durationMinutes: null,
+    userId: schedule.user_id || 'dashboard',
+    reason: schedule.reason || '',
+    source: executionSource,
+  })
+
+  const result = await persistOptimizationHistory({
+    execution_key: executionKey,
+    command_id: schedule.command_id,
+    schedule_id: schedule.id,
+    execution_source: executionSource,
+    timestamp: schedule.scheduled_time,
+    predicted_action: mapCommandToAction(schedule.command),
+    actual_action: null,
+    cost_baseline: null,
+    cost_rl: null,
+    price_uah_kwh: null,
+    duration_minutes: null,
+    energy_kwh: null,
+    economics_method: 'scheduled_intent',
+    economics_version: 'v1',
+    fallback_reason: 'scheduled_intent_only',
+    price_source: null,
+    tariff_window: null,
+    interval_start: schedule.scheduled_time,
+    interval_end: null,
+    battery_soc_start: null,
+    battery_soc_end: null,
+    solar_actual: null,
+    load_actual: null,
+  })
+
+  if (!result.ok) {
+    console.warn('[control/schedule] failed to persist scheduled intent', {
+      schedule_id: schedule.id,
+      command_id: schedule.command_id,
+      execution_key: executionKey,
+      error: result.error || 'unknown',
+    })
+  }
 }

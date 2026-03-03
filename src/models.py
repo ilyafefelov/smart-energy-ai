@@ -2,7 +2,7 @@
 SQLAlchemy ORM models for Smart Energy AI database
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Index
+from sqlalchemy import Column, Integer, String, Float, DateTime, Index, Boolean
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -42,16 +42,34 @@ class OptimizationHistory(Base):
     __tablename__ = "optimization_history"
 
     id = Column(Integer, primary_key=True, index=True)
+    execution_key = Column(String(64), nullable=False, unique=True, index=True)
+    command_id = Column(String(128), nullable=True, index=True)
+    schedule_id = Column(String(128), nullable=True, index=True)
+    execution_source = Column(String(64), nullable=False, default="unknown")
     timestamp = Column(DateTime, nullable=False, index=True)
     predicted_action = Column(Integer, nullable=False)  # 0=charge, 1=discharge, 2=sell, 3=buy, 4=idle
     actual_action = Column(Integer, nullable=True)  # What SCADA actually executed
     cost_baseline = Column(Float, nullable=True)  # Cost if always buying
     cost_rl = Column(Float, nullable=True)  # Actual cost with RL recommendation
+    price_uah_kwh = Column(Float, nullable=True)
+    duration_minutes = Column(Integer, nullable=True)
+    energy_kwh = Column(Float, nullable=True)
+    economics_method = Column(String(64), nullable=True)
+    economics_version = Column(String(64), nullable=True)
+    fallback_reason = Column(String, nullable=True)
+    price_source = Column(String(64), nullable=True)
+    tariff_window = Column(String(32), nullable=True)
+    interval_start = Column(DateTime, nullable=True)
+    interval_end = Column(DateTime, nullable=True)
     battery_soc_start = Column(Float, nullable=True)  # Battery % at start
     battery_soc_end = Column(Float, nullable=True)  # Battery % at end
     solar_actual = Column(Float, nullable=True)  # Actual solar generation (kW)
     load_actual = Column(Float, nullable=True)  # Actual load (kW)
+    is_reconciled = Column(Boolean, nullable=False, default=False)
+    reconciled_at = Column(DateTime, nullable=True)
+    reconciliation_note = Column(String, nullable=True)
     created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
 class RLTrainingLog(Base):

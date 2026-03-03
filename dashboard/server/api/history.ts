@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { eventHandler } from 'h3'
+import { resolveOptimizationDbConfig } from '../utils/optimization-history'
 
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
 const asNumber = (value: unknown, fallback = 0) => {
@@ -34,46 +35,14 @@ type HistoryRow = {
   battery_actions: number
   price_min: number
   price_max: number
-}
-
-type AppDbConfig = {
-  host: string
-  port: number
-  user: string
-  password: string
-  database: string
-}
-
-function resolveAppDbConfig(): AppDbConfig {
-  const url = process.env.DATABASE_URL
-  if (url?.startsWith('postgres://') || url?.startsWith('postgresql://')) {
-    try {
-      const parsed = new URL(url)
-      return {
-        host: parsed.hostname || 'localhost',
-        port: Number(parsed.port || 5432),
-        user: decodeURIComponent(parsed.username || 'energy_user'),
-        password: decodeURIComponent(parsed.password || 'dev_password'),
-        database: parsed.pathname.replace(/^\//, '') || 'smart_energy_ai',
-      }
-    } catch {
-      // Fall through to env defaults.
-    }
-  }
-
-  return {
-    host: process.env.APP_DB_HOST || process.env.DB_HOST || 'localhost',
-    port: Number(process.env.APP_DB_PORT || process.env.DB_PORT || 5432),
-    user: process.env.APP_DB_USER || process.env.DB_USER || 'dagster',
-    password: process.env.APP_DB_PASSWORD || process.env.DB_PASSWORD || 'dagster',
-    database: process.env.APP_DB_NAME || 'smart_energy_ai',
-  }
+  reconciled_rows?: number
+  heuristic_rows?: number
 }
 
 async function fetchAppDbHistory(limitDays: number): Promise<Array<Partial<HistoryRow> & { date: string }> | null> {
   try {
     const { Pool } = await import('pg')
-    const config = resolveAppDbConfig()
+    const config = resolveOptimizationDbConfig()
     const pool = new Pool(config)
 
     try {
@@ -86,7 +55,9 @@ async function fetchAppDbHistory(limitDays: number): Promise<Array<Partial<Histo
           DATE(timestamp) AS day,
           SUM(COALESCE(cost_baseline, 0)) AS baseline_cost,
           SUM(COALESCE(cost_rl, 0)) AS optimized_cost,
-          SUM(CASE WHEN predicted_action IN (0, 1) THEN 1 ELSE 0 END) AS battery_actions
+          SUM(CASE WHEN predicted_action IN (0, 1) THEN 1 ELSE 0 END) AS battery_actions,
+          SUM(CASE WHEN COALESCE(is_reconciled, FALSE) THEN 1 ELSE 0 END) AS reconciled_rows,
+          SUM(CASE WHEN COALESCE(economics_method, '') = 'heuristic_multiplier' THEN 1 ELSE 0 END) AS heuristic_rows
         FROM optimization_history
         WHERE timestamp >= NOW() - INTERVAL '45 days'
         GROUP BY DATE(timestamp)
@@ -104,6 +75,8 @@ async function fetchAppDbHistory(limitDays: number): Promise<Array<Partial<Histo
         cost_optimized: asNumber(row.optimized_cost, 0),
         savings: asNumber(row.baseline_cost, 0) - asNumber(row.optimized_cost, 0),
         battery_actions: asNumber(row.battery_actions, 0),
+        reconciled_rows: asNumber(row.reconciled_rows, 0),
+        heuristic_rows: asNumber(row.heuristic_rows, 0),
       }))
     } finally {
       await pool.end().catch(() => {})
@@ -294,6 +267,23 @@ export default eventHandler(async () => {
           ? 'ppo_validation_artifact'
           : 'analytics_cache_fallback'
 
+    const totalReconciledRows = (selectedRows || []).reduce(
+      (sum, row) => sum + asNumber((row as any)?.reconciled_rows, 0),
+      0,
+    )
+    const totalHeuristicRows = (selectedRows || []).reduce(
+      (sum, row) => sum + asNumber((row as any)?.heuristic_rows, 0),
+      0,
+    )
+
+    const fallbackReasonCode = appDbRows
+      ? 'none'
+      : dagsterRows
+        ? 'optimization_history_unavailable_or_empty'
+        : ppoRows
+          ? 'optimization_history_and_dagster_unavailable_or_empty'
+          : 'all_canonical_sources_unavailable'
+
     const rows: HistoryRow[] = []
     for (let i = 0; i < limitDays; i += 1) {
       const date = new Date()
@@ -345,8 +335,13 @@ export default eventHandler(async () => {
           'energy_ml/outputs/*.json',
         ],
         economics_source: economicsSource,
+        fallback_reason_code: fallbackReasonCode,
         control_history_source: controlHistoryPayload?.source || 'unavailable',
         prices_source: pricesPayload?.prices?.source || 'unavailable',
+        reconciliation: {
+          reconciled_rows: totalReconciledRows,
+          heuristic_rows_remaining: totalHeuristicRows,
+        },
       },
     }
   } catch (error: any) {

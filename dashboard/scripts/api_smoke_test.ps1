@@ -1,5 +1,6 @@
 param(
-  [string]$BaseUrl = 'http://127.0.0.1:3212'
+  [string]$BaseUrl = 'http://127.0.0.1:3600',
+  [bool]$RequireCanonicalEconomics = $true
 )
 
 $ErrorActionPreference = 'Stop'
@@ -52,6 +53,51 @@ function Add-Result {
       note = $Note
       message = $message
     }) | Out-Null
+}
+
+function Add-Assertion {
+  param(
+    [string]$Name,
+    [bool]$Passed,
+    [string]$Message
+  )
+
+  $status = if ($Passed) { 200 } else { 500 }
+  $payload = [pscustomobject]@{
+    success = $Passed
+    message = $Message
+  }
+
+  Add-Result -Method 'ASSERT' -Path "/assertions/$Name" -Status $status -Parsed $payload -Raw $Message -Note 'assertion'
+}
+
+function Get-EconomicsSource {
+  param(
+    [object]$Payload
+  )
+
+  if ($null -eq $Payload) {
+    return ''
+  }
+
+  if (-not ($Payload.PSObject.Properties.Name -contains 'source')) {
+    return ''
+  }
+
+  $source = $Payload.source
+  if ($null -eq $source) {
+    return ''
+  }
+
+  if ($source -is [hashtable]) {
+    return [string]($source['economics_source'])
+  }
+
+  if ($source.PSObject.Properties.Name -contains 'economics_source') {
+    return [string]$source.economics_source
+  }
+
+  return ''
 }
 
 function Invoke-Api {
@@ -134,8 +180,8 @@ function Invoke-Api {
 
 # GET endpoints
 $null = Invoke-Api -Method 'GET' -Path '/api/battery'
-$null = Invoke-Api -Method 'GET' -Path '/api/history'
-$null = Invoke-Api -Method 'GET' -Path '/api/metrics'
+$historyResp = Invoke-Api -Method 'GET' -Path '/api/history'
+$metricsResp = Invoke-Api -Method 'GET' -Path '/api/metrics'
 $null = Invoke-Api -Method 'GET' -Path '/api/prices'
 $null = Invoke-Api -Method 'GET' -Path '/api/battery/status'
 $null = Invoke-Api -Method 'GET' -Path '/api/battery/simulate'
@@ -174,7 +220,48 @@ $null = Invoke-Api -Method 'POST' -Path '/api/config/save' -Body @{
   tariff_peak_rate_uah_kwh = 12
   tariff_off_peak_rate_uah_kwh = 6
 }
-$null = Invoke-Api -Method 'POST' -Path '/api/control/execute' -Body @{ command = 'hold'; power_kw = 0; reason = 'api smoke test' }
+$executeResp = Invoke-Api -Method 'POST' -Path '/api/control/execute' -Body @{ command = 'hold'; power_kw = 0; reason = 'api smoke test' }
+
+$historyAfterExecute = Invoke-Api -Method 'GET' -Path '/api/history' -Note 'post-execute-canonical-check'
+$metricsAfterExecute = Invoke-Api -Method 'GET' -Path '/api/metrics' -Note 'post-execute-canonical-check'
+
+if ($RequireCanonicalEconomics) {
+  $historySource = Get-EconomicsSource -Payload $historyAfterExecute
+  if (-not $historySource) {
+    $historyRetry = Invoke-Api -Method 'GET' -Path '/api/history' -Note 'canonical-assertion-retry'
+    $historySource = Get-EconomicsSource -Payload $historyRetry
+    if ($historyRetry) {
+      $historyAfterExecute = $historyRetry
+    }
+  }
+  $historyCanonical = $historySource -eq 'optimization_history_db'
+  Add-Assertion -Name 'history_economics_source' -Passed $historyCanonical -Message "Expected economics_source=optimization_history_db after execute, got '$historySource'"
+
+  $metricsSource = Get-EconomicsSource -Payload $metricsAfterExecute
+  if (-not $metricsSource) {
+    $metricsRetry = Invoke-Api -Method 'GET' -Path '/api/metrics' -Note 'canonical-assertion-retry'
+    $metricsSource = Get-EconomicsSource -Payload $metricsRetry
+    if ($metricsRetry) {
+      $metricsAfterExecute = $metricsRetry
+    }
+  }
+  $metricsAligned = $metricsSource -eq $historySource
+  Add-Assertion -Name 'metrics_economics_source_alignment' -Passed $metricsAligned -Message "Expected metrics economics_source to match history ('$historySource'), got '$metricsSource'"
+}
+
+$historyRows = @()
+if ($historyAfterExecute -and ($historyAfterExecute.PSObject.Properties.Name -contains 'data')) {
+  $historyRows = @($historyAfterExecute.data)
+}
+if ($historyRows.Count -gt 0) {
+  $row = $historyRows[0]
+  $baseline = [double]($row.cost_baseline)
+  $optimized = [double]($row.cost_optimized)
+  $savings = [double]($row.savings)
+
+  Add-Assertion -Name 'history_value_sanity' -Passed ($baseline -ge 0 -and $optimized -ge 0) -Message "Expected non-negative costs, got baseline=$baseline optimized=$optimized"
+  Add-Assertion -Name 'history_savings_consistency' -Passed ([math]::Abs(($baseline - $optimized) - $savings) -lt 0.2) -Message "Expected savings≈baseline-optimized within tolerance, got baseline=$baseline optimized=$optimized savings=$savings"
+}
 
 $scheduledTime = (Get-Date).ToUniversalTime().AddHours(1).ToString('o')
 $scheduleResp = Invoke-Api -Method 'POST' -Path '/api/control/schedule' -Body @{ command = 'charge'; power_kw = 1; scheduled_time = $scheduledTime; reason = 'api smoke test' }
