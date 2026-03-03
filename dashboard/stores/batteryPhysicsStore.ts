@@ -42,6 +42,13 @@ export interface BatteryPhysicsState {
   renewableSurplusKw?: number // kW
   renewableChargePowerKw?: number // kW
   renewableChargeAvailableKw?: number // kW
+  active_command?: string | null
+  requested_command?: string | null
+  decision_source?: string | null
+  execution_mode?: string | null
+  command_reason?: string | null
+  control_source?: string | null
+  control_fallback_reason_code?: string | null
   manualMode: boolean
   autoOptimization: boolean
   

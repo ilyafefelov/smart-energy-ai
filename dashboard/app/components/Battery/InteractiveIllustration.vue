@@ -140,6 +140,31 @@
         </div>
 
         <div class="mt-4 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+          <p class="text-[11px] uppercase tracking-wide text-slate-400">Control Semantics</p>
+          <div class="mt-2 space-y-1 text-xs text-slate-300">
+            <p>`Apply Command` sends the slider target as manual battery power.</p>
+            <p>`Quick Charge` = +80% of max charge power ({{ quickChargeFormula }}).</p>
+            <p>`Quick Discharge` = -80% of max discharge power ({{ quickDischargeFormula }}).</p>
+            <p>`Hold` sets battery command to 0 kW.</p>
+          </div>
+        </div>
+
+        <div class="mt-3 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-[11px] uppercase tracking-wide text-slate-400">Auto Intelligence</p>
+            <span class="rounded-full border px-2 py-0.5 text-[10px]" :class="autoSourceBadgeClass">{{ autoSourceLabel }}</span>
+          </div>
+          <div class="mt-2 space-y-1 text-xs text-slate-300">
+            <p>{{ autoIntelligenceSummary }}</p>
+            <p>Requested: <span class="font-semibold text-slate-100">{{ requestedCommandLabel }}</span> | Active: <span class="font-semibold text-slate-100">{{ activeCommandLabel }}</span></p>
+            <p v-if="batteryPhysicsStore.state.command_reason">Reason: <span class="text-slate-100">{{ batteryPhysicsStore.state.command_reason }}</span></p>
+            <p v-if="batteryPhysicsStore.state.control_fallback_reason_code && batteryPhysicsStore.state.control_fallback_reason_code !== 'none'">
+              Fallback code: <span class="text-amber-300">{{ batteryPhysicsStore.state.control_fallback_reason_code }}</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
           <p class="text-[11px] uppercase tracking-wide text-slate-400">Current SoC Sync</p>
           <p class="mt-1 text-xs text-slate-400">Align simulator charge level with manual field telemetry.</p>
           <div class="mt-2 flex items-center gap-2">
@@ -226,6 +251,64 @@ const signedPower = computed(() => {
 const commandText = computed(() => {
   const value = Number(targetPower.value || 0)
   return `${value > 0 ? '+' : ''}${value.toFixed(1)} kW`
+})
+
+const quickChargeFormula = computed(() => {
+  const quickKw = Number((batteryPhysicsStore.state.maxChargePower * 0.8).toFixed(2))
+  return `0.8 x ${batteryPhysicsStore.state.maxChargePower.toFixed(2)} kW = +${quickKw.toFixed(2)} kW`
+})
+
+const quickDischargeFormula = computed(() => {
+  const quickKw = Number((batteryPhysicsStore.state.maxDischargePower * 0.8).toFixed(2))
+  return `0.8 x ${batteryPhysicsStore.state.maxDischargePower.toFixed(2)} kW = -${quickKw.toFixed(2)} kW`
+})
+
+const decisionSourceNormalized = computed(() => {
+  return String(batteryPhysicsStore.state.decision_source || '').trim().toLowerCase()
+})
+
+const requestedCommandLabel = computed(() => {
+  return String(batteryPhysicsStore.state.requested_command || 'n/a').toUpperCase()
+})
+
+const activeCommandLabel = computed(() => {
+  return String(batteryPhysicsStore.state.active_command || 'n/a').toUpperCase()
+})
+
+const autoSourceLabel = computed(() => {
+  if (batteryPhysicsStore.state.manualMode) return 'Manual Mode'
+  if (decisionSourceNormalized.value === 'dagster') return 'Dagster Auto'
+  if (decisionSourceNormalized.value === 'ml') return 'ML Auto'
+  if (decisionSourceNormalized.value === 'heuristic') return 'Heuristic Fallback'
+  return 'Auto (Unknown Source)'
+})
+
+const autoSourceBadgeClass = computed(() => {
+  if (batteryPhysicsStore.state.manualMode) return 'border-slate-600 bg-slate-700/40 text-slate-300'
+  if (decisionSourceNormalized.value === 'dagster') return 'border-cyan-500/70 bg-cyan-500/15 text-cyan-200'
+  if (decisionSourceNormalized.value === 'ml') return 'border-emerald-500/70 bg-emerald-500/15 text-emerald-200'
+  if (decisionSourceNormalized.value === 'heuristic') return 'border-amber-500/70 bg-amber-500/15 text-amber-200'
+  return 'border-purple-500/70 bg-purple-500/15 text-purple-200'
+})
+
+const autoIntelligenceSummary = computed(() => {
+  if (batteryPhysicsStore.state.manualMode) {
+    return 'Manual mode bypasses auto optimization and executes your direct command inputs.'
+  }
+
+  if (decisionSourceNormalized.value === 'dagster') {
+    return 'Auto mode is using Dagster orchestration with live prices, battery state, and tenant config context.'
+  }
+
+  if (decisionSourceNormalized.value === 'ml') {
+    return 'Auto mode is using ML recommendations from live market, weather, and battery signals.'
+  }
+
+  if (decisionSourceNormalized.value === 'heuristic') {
+    return 'Auto mode is in fallback heuristic mode (price-threshold rules) because primary recommendation sources were unavailable.'
+  }
+
+  return 'Auto mode is enabled, but the decision source is not currently classified.'
 })
 
 const powerFlowColor = computed(() => {
