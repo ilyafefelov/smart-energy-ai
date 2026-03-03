@@ -1,0 +1,24 @@
+[Unit]
+Description=Dagster Webserver (Smart Energy AI)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=__SERVICE_USER__
+Group=__SERVICE_GROUP__
+WorkingDirectory=__REPO_ROOT__
+EnvironmentFile=/etc/smart-energy-ai/dagster.env
+ExecStart=/bin/bash -lc '${DAGSTER_WEBSERVER_CMD} -h 0.0.0.0 -p ${DAGSTER_PORT} -m ${DAGSTER_MODULE}'
+Restart=always
+RestartSec=10
+TimeoutStartSec=120
+TimeoutStopSec=30
+KillMode=process
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

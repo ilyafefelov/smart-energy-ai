@@ -70,6 +70,9 @@ Architecture optimized for Free Tier constraints:
 **Lambda 15-min limit workaround:**
 Instead of processing a year of data at once, Dagster splits the task into 365 Lambda invocations (per day/week), storing intermediate results in S3.
 
+EC2 service bootstrap and operations runbook:
+- `docs/deployment/EC2_DAGSTER_T3_MICRO_RUNBOOK.md`
+
 ---
 
 ## 5. Multi-tenancy & Asset Factories
