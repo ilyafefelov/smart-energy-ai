@@ -8,7 +8,7 @@ import glob
 import json
 import os
 import pickle
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -58,9 +58,9 @@ def _to_rows(dataframe: Any) -> List[Dict[str, Any]]:
 
 def _normalize_action(action_kw: float) -> str:
     if action_kw > 0.05:
-        return "BUY"
-    if action_kw < -0.05:
         return "SELL"
+    if action_kw < -0.05:
+        return "BUY"
     return "HOLD"
 
 
@@ -98,7 +98,7 @@ def _normalize_schedule(rows: List[Dict[str, Any]], fx_rate: float) -> List[Dict
 
     rows_sorted = sorted(rows, key=lambda row: int(_safe_float(row.get("hour", 0))))
     for row in rows_sorted[:24]:
-        hour = int(_safe_float(row.get("hour", 0))) % 24
+        hour_offset = int(_safe_float(row.get("hour", 0))) % 24
         action_kw = _safe_float(row.get("action_kw", 0.0))
         action = _normalize_action(action_kw)
         net_cost_eur = _safe_float(row.get("net_cost_eur", 0.0))
@@ -106,7 +106,8 @@ def _normalize_schedule(rows: List[Dict[str, Any]], fx_rate: float) -> List[Dict
 
         normalized.append(
             {
-                "hour": hour,
+                "hour": hour_offset,
+                "hour_offset": hour_offset,
                 "action": action,
                 "action_kw": round(action_kw, 4),
                 "net_cost_eur": round(net_cost_eur, 6),
@@ -121,8 +122,7 @@ def _normalize_schedule(rows: List[Dict[str, Any]], fx_rate: float) -> List[Dict
 
 
 def _build_recommendation(schedule: List[Dict[str, Any]], source_asset: str) -> Dict[str, Any]:
-    current_hour = datetime.now().hour
-    current_row = next((row for row in schedule if int(row.get("hour", -1)) == current_hour), None)
+    current_row = next((row for row in schedule if int(row.get("hour_offset", row.get("hour", -1))) == 0), None)
 
     if current_row is None:
         current_row = schedule[0] if schedule else {"action": "HOLD", "action_kw": 0.0}
@@ -197,6 +197,7 @@ def main() -> None:
 
     schedule = _normalize_schedule(selected_rows, args.fx_rate)
     recommendation = _build_recommendation(schedule, selected_asset)
+    schedule_start_utc = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
 
     print(
         json.dumps(
@@ -208,9 +209,10 @@ def main() -> None:
                 "dagster_home": str(selected_root),
                 "tenant_id": args.tenant_id,
                 "selected_client_id": selected_client_id,
+                "schedule_start_utc": schedule_start_utc.isoformat(),
                 "schedule": schedule,
                 "recommendation": recommendation,
-                "generated_at": datetime.utcnow().isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
             }
         )
     )

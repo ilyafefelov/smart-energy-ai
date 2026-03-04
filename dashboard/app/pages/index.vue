@@ -388,7 +388,7 @@
                 <td class="text-center py-3 px-4">
                   <span v-if="price.action === 'BUY'" class="text-lg">💰 Buy</span>
                   <span v-else-if="price.action === 'SELL'" class="text-lg">⚡ Sell</span>
-                  <span v-else class="text-lg">—</span>
+                  <span v-else class="text-lg">⏸ Hold</span>
                 </td>
               </tr>
             </tbody>
@@ -605,7 +605,7 @@ const dashboardForecastRows = computed<DashboardForecastPoint[]>(() => {
 
       return {
         hour,
-        timeLabel: String(row.time || `${String(hour).padStart(2, '0')}:00`),
+        timeLabel: `${String(hour).padStart(2, '0')}:00`,
         action,
         price: Number(row.price_uah_kwh || 0),
         timestamp,
@@ -967,7 +967,7 @@ const exportPriceData = () => {
     const vsAvg = forecastAveragePrice.value > 0
       ? ((price.price - forecastAveragePrice.value) / forecastAveragePrice.value * 100).toFixed(0)
       : '0'
-    const action = price.action === 'BUY' ? 'Buy' : price.action === 'SELL' ? 'Sell' : '-'
+    const action = price.action === 'BUY' ? 'Buy' : price.action === 'SELL' ? 'Sell' : 'Hold'
     
     csv += `${hour}:00,${priceValue},${status},${vsAvg}%,${action}\n`
   })

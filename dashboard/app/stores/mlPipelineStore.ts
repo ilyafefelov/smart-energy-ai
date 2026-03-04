@@ -118,7 +118,7 @@ export const useMLPipelineStore = defineStore('mlPipeline', () => {
       if (Array.isArray(response.schedule)) {
         schedule24h.value = response.schedule.map((row: any) => ({
           hour: Number(row?.hour ?? 0),
-          time: String(row?.time || `${String(Number(row?.hour ?? 0)).padStart(2, '0')}:00`),
+          time: `${String(Math.max(0, Math.min(23, Number(row?.hour ?? 0)))).padStart(2, '0')}:00`,
           price_uah_kwh: Number(row?.price_uah_kwh || 0),
           recommended_action: String(row?.recommended_action || 'HOLD').toUpperCase() as Schedule24hRow['recommended_action'],
           expected_profit_uah: Number(row?.expected_profit_uah || 0),

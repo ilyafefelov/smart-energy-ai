@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -196,3 +197,26 @@ def test_control_history_exposes_decision_trace_fields(tenant_id: str) -> None:
     assert first.get("optimization_strategy") is not None
     assert first.get("load_profile_type") is not None
     assert "strategy_weights" in first
+
+
+@pytest.mark.integration
+def test_dagster_schedule_contract_uses_clock_hour_and_freshness_sla(tenant_id: str) -> None:
+    payload = _fetch_json("/api/dagster/recommendation", tenant_id=tenant_id)
+    assert payload.get("status") == "success"
+
+    source_metadata = payload.get("source_metadata") or {}
+    assert int(source_metadata.get("dagster_snapshot_max_age_minutes") or 0) == 15
+
+    schedule = ((payload.get("schedule_24h") or {}).get("schedule") or [])
+    assert isinstance(schedule, list)
+    assert len(schedule) > 0
+
+    for row in schedule[:24]:
+        hour = int(row.get("hour") or 0)
+        assert 0 <= hour <= 23
+
+        time_label = str(row.get("time") or "")
+        assert re.match(r"^\d{2}:00$", time_label), f"Expected clock-hour format HH:00, got '{time_label}'"
+
+        action = str(row.get("recommended_action") or "")
+        assert action in {"BUY", "SELL", "HOLD"}

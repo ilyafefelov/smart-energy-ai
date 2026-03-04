@@ -1,7 +1,7 @@
 // API endpoint to get recommendations from Dagster ML pipeline
 // Connects dashboard to ML recommendation engine via Dagster/MLflow APIs
 
-import { exec } from 'child_process'
+import { exec, execFile } from 'child_process'
 import path from 'path'
 import { promisify } from 'util'
 import {
@@ -16,6 +16,11 @@ import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/ten
 
 const DAGSTER_API = process.env.DAGSTER_API_URL || 'http://localhost:3000'
 const execAsync = promisify(exec)
+const MAX_SNAPSHOT_AGE_MINUTES = 15
+const HYBRID_REFRESH_COOLDOWN_MS = 5 * 60 * 1000
+
+const hybridRefreshLastAttemptByTenant = new Map<string, number>()
+const hybridRefreshInFlightTenants = new Set<string>()
 
 type DagsterMaterializedRecommendation = {
   success: boolean
@@ -29,6 +34,7 @@ type DagsterMaterializedRecommendation = {
   selected_client_id?: string
   schedule?: Array<{
     hour: number
+    hour_offset?: number
     action: 'BUY' | 'SELL' | 'HOLD'
     action_kw: number
     net_cost_eur: number
@@ -37,6 +43,8 @@ type DagsterMaterializedRecommendation = {
     price_uah_kwh: number
     solver?: string
   }>
+  schedule_start_utc?: string
+  generated_at?: string
   recommendation?: {
     action: 'BUY' | 'SELL' | 'HOLD'
     confidence: number
@@ -44,6 +52,130 @@ type DagsterMaterializedRecommendation = {
     rationale: string
   }
   error?: string
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function normalizeClockHour(value: unknown, fallback = 0): number {
+  const parsed = Math.floor(toFiniteNumber(value) ?? fallback)
+  const safe = ((parsed % 24) + 24) % 24
+  return safe
+}
+
+function formatClockHour(hour: number): string {
+  return `${String(normalizeClockHour(hour)).padStart(2, '0')}:00`
+}
+
+function normalizeScheduleAction(action: unknown): 'BUY' | 'SELL' | 'HOLD' {
+  const normalized = String(action || 'HOLD').trim().toUpperCase()
+  if (normalized === 'DISCHARGE') return 'SELL'
+  if (normalized === 'BUY' || normalized === 'SELL') return normalized
+  return 'HOLD'
+}
+
+function resolveSnapshotTimestamp(snapshot: DagsterMaterializedRecommendation | null): Date | null {
+  if (!snapshot) return null
+
+  const candidates = [snapshot.materialization_time, snapshot.generated_at]
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    const parsed = new Date(candidate)
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed
+    }
+  }
+
+  return null
+}
+
+function evaluateSnapshotFreshness(snapshot: DagsterMaterializedRecommendation | null) {
+  const materializedAt = resolveSnapshotTimestamp(snapshot)
+  if (!materializedAt) {
+    return {
+      isFresh: false,
+      ageMinutes: null as number | null,
+      materializedAtIso: null as string | null,
+      reason: 'missing_timestamp',
+    }
+  }
+
+  const ageMs = Date.now() - materializedAt.getTime()
+  const ageMinutes = ageMs / 60000
+  return {
+    isFresh: ageMinutes <= MAX_SNAPSHOT_AGE_MINUTES,
+    ageMinutes: Number(ageMinutes.toFixed(2)),
+    materializedAtIso: materializedAt.toISOString(),
+    reason: ageMinutes <= MAX_SNAPSHOT_AGE_MINUTES ? 'fresh' : 'stale',
+  }
+}
+
+function maybeTriggerHybridDagsterRefresh(params: {
+  projectRoot: string
+  tenantId: string
+  configPayload: any
+}) {
+  const { projectRoot, tenantId, configPayload } = params
+  const now = Date.now()
+  const lastAttempt = hybridRefreshLastAttemptByTenant.get(tenantId) || 0
+
+  if (hybridRefreshInFlightTenants.has(tenantId)) {
+    return {
+      requested: false,
+      reason: 'refresh_in_flight',
+      cooldown_ms: HYBRID_REFRESH_COOLDOWN_MS,
+      last_attempt_at: lastAttempt > 0 ? new Date(lastAttempt).toISOString() : null,
+    }
+  }
+
+  if (now - lastAttempt < HYBRID_REFRESH_COOLDOWN_MS) {
+    return {
+      requested: false,
+      reason: 'cooldown_active',
+      cooldown_ms: HYBRID_REFRESH_COOLDOWN_MS,
+      last_attempt_at: lastAttempt > 0 ? new Date(lastAttempt).toISOString() : null,
+    }
+  }
+
+  hybridRefreshLastAttemptByTenant.set(tenantId, now)
+  hybridRefreshInFlightTenants.add(tenantId)
+
+  const tenantConfigDir = path.join(projectRoot, 'energy_ml', 'configs', 'tenants', tenantId)
+  const latitude = toFiniteNumber(configPayload?.data?.latitude) ?? 50.45
+  const longitude = toFiniteNumber(configPayload?.data?.longitude) ?? 30.52
+  const timezone = String(configPayload?.data?.timezone || 'Europe/Kiev')
+
+  execFile(
+    'python',
+    ['-m', 'dagster', 'asset', 'materialize', '--select', '*optimization_schedule_milp_asset', '-m', 'src.definitions'],
+    {
+      cwd: projectRoot,
+      timeout: 180000,
+      env: {
+        ...process.env,
+        ENERGY_ML_CONFIG_DIR: tenantConfigDir,
+        ENERGY_ML_TENANT_ID: tenantId,
+        WEATHER_LATITUDE: String(latitude),
+        WEATHER_LONGITUDE: String(longitude),
+        WEATHER_TIMEZONE: timezone,
+      },
+    },
+    (error) => {
+      if (error) {
+        console.warn('[recommendation] Hybrid refresh failed:', error.message)
+      }
+      hybridRefreshInFlightTenants.delete(tenantId)
+    },
+  )
+
+  return {
+    requested: true,
+    reason: 'stale_snapshot_hybrid_refresh_triggered',
+    cooldown_ms: HYBRID_REFRESH_COOLDOWN_MS,
+    last_attempt_at: new Date(now).toISOString(),
+  }
 }
 
 function resolveDagsterDbConfig() {
@@ -171,7 +303,9 @@ export default defineEventHandler(async (event) => {
       $fetch<any>('/api/config/current', tenantRequest).catch(() => null),
     ])
 
-    const materializedDagster = postgresDagster || fileDagster
+    const latestDagsterSnapshot = postgresDagster || fileDagster
+    const snapshotFreshness = evaluateSnapshotFreshness(latestDagsterSnapshot)
+    const materializedDagster = snapshotFreshness.isFresh ? latestDagsterSnapshot : null
 
     const currentPrice = Number(pricesPayload?.prices?.current?.price || 0)
     const avgPrice = Number(pricesPayload?.prices?.today?.avg || currentPrice || 0)
@@ -180,11 +314,26 @@ export default defineEventHandler(async (event) => {
     const optimizationStrategy = normalizeOptimizationStrategy(configPayload?.data?.optimization_strategy)
     const loadProfileType = normalizeLoadProfileType(configPayload?.data?.load_profile_type)
     const strategyWeights = buildStrategyWeights(optimizationStrategy)
-    const recommendationSource = postgresDagster
-      ? 'dagster_postgres_snapshot'
-      : fileDagster
-        ? 'dagster_asset_file'
+    const recommendationSource = materializedDagster
+      ? postgresDagster
+        ? 'dagster_postgres_snapshot'
+        : 'dagster_asset_file'
+      : latestDagsterSnapshot
+        ? 'ml_api_fallback_stale_snapshot'
         : 'ml_api_fallback'
+
+    const hybridRefresh = !snapshotFreshness.isFresh
+      ? maybeTriggerHybridDagsterRefresh({
+          projectRoot,
+          tenantId: tenant.id,
+          configPayload,
+        })
+      : {
+          requested: false,
+          reason: 'fresh_snapshot',
+          cooldown_ms: HYBRID_REFRESH_COOLDOWN_MS,
+          last_attempt_at: null as string | null,
+        }
 
     const recommendation = materializedDagster
       ? {
@@ -230,6 +379,7 @@ export default defineEventHandler(async (event) => {
           pricesPayload?.prices?.forecast?.next24h || [],
           materializedDagster.schedule || [],
           recommendation.confidence,
+          materializedDagster.schedule_start_utc || materializedDagster.generated_at || null,
         )
       : buildDeterministicSchedule(
           pricesPayload?.prices?.forecast?.next24h || [],
@@ -277,11 +427,16 @@ export default defineEventHandler(async (event) => {
       source_metadata: {
         tenant_filter_applied: true,
         recommendation_source: recommendationSource,
-        dagster_asset_name: materializedDagster?.asset || null,
-        dagster_snapshot_run_id: materializedDagster?.run_id || null,
-        dagster_snapshot_materialized_at: materializedDagster?.materialization_time || null,
-        dagster_asset_file: materializedDagster?.asset_file || null,
-        dagster_selected_client_id: materializedDagster?.selected_client_id || null,
+        dagster_asset_name: latestDagsterSnapshot?.asset || null,
+        dagster_snapshot_run_id: latestDagsterSnapshot?.run_id || null,
+        dagster_snapshot_materialized_at: snapshotFreshness.materializedAtIso,
+        dagster_asset_file: latestDagsterSnapshot?.asset_file || null,
+        dagster_selected_client_id: latestDagsterSnapshot?.selected_client_id || null,
+        dagster_snapshot_is_fresh: snapshotFreshness.isFresh,
+        dagster_snapshot_age_minutes: snapshotFreshness.ageMinutes,
+        dagster_snapshot_max_age_minutes: MAX_SNAPSHOT_AGE_MINUTES,
+        dagster_snapshot_freshness_reason: snapshotFreshness.reason,
+        hybrid_refresh: hybridRefresh,
       },
     }
   } catch (error: any) {
@@ -301,33 +456,38 @@ export default defineEventHandler(async (event) => {
 
 function buildScheduleFromDagsterAsset(
   forecast: Array<{ hour: number; timestamp: string; price: number }>,
-  dagsterSchedule: Array<{ hour: number; action: string; action_kw: number; expected_profit_uah: number; price_uah_kwh: number }>,
+  dagsterSchedule: Array<{ hour: number; hour_offset?: number; action: string; action_kw: number; expected_profit_uah: number; price_uah_kwh: number }>,
   baseConfidence: number,
+  scheduleStartUtc?: string | null,
 ) {
-  const scheduleByHour = new Map<number, { action: string; action_kw: number; expected_profit_uah: number; price_uah_kwh: number }>()
-  for (const row of dagsterSchedule) {
-    const hour = Number(row?.hour)
-    if (!Number.isFinite(hour)) continue
-    scheduleByHour.set(hour, {
-      action: row.action || 'HOLD',
-      action_kw: Number(row.action_kw || 0),
-      expected_profit_uah: Number(row.expected_profit_uah || 0),
-      price_uah_kwh: Number(row.price_uah_kwh || 0),
-    })
-  }
+  const startDate = scheduleStartUtc ? new Date(scheduleStartUtc) : null
+  const inferredStartHour = !startDate || Number.isNaN(startDate.getTime())
+    ? (forecast.length > 0 ? normalizeClockHour(forecast[0]?.hour, new Date().getHours()) : new Date().getHours())
+    : startDate.getUTCHours()
+
+  const normalizedDagster = dagsterSchedule
+    .slice(0, 24)
+    .map((row, index) => ({
+      offset: normalizeClockHour(row?.hour_offset ?? row?.hour ?? index, index),
+      action: normalizeScheduleAction(row?.action),
+      action_kw: Number(row?.action_kw || 0),
+      expected_profit_uah: Number(row?.expected_profit_uah || 0),
+      price_uah_kwh: Number(row?.price_uah_kwh || 0),
+    }))
+    .sort((a, b) => a.offset - b.offset)
 
   const rows = forecast.length > 0
-    ? forecast.slice(0, 24).map((row) => {
-        const hour = Number(row.hour)
-        const dagsterRow = scheduleByHour.get(hour)
-        const action = dagsterRow?.action || 'HOLD'
+    ? forecast.slice(0, 24).map((row, index) => {
+        const hour = normalizeClockHour(row.hour, inferredStartHour + index)
+        const dagsterRow = normalizedDagster[index]
+        const action = normalizeScheduleAction(dagsterRow?.action)
         const actionKw = Number(dagsterRow?.action_kw || 0)
         const rationale = action === 'HOLD'
           ? `Dagster schedule holds at ${hour}:00 (action_kw=${actionKw.toFixed(2)}).`
           : `Dagster schedule recommends ${action} at ${hour}:00 (action_kw=${actionKw.toFixed(2)}).`
         return {
           hour,
-          time: new Date(row.timestamp).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+          time: formatClockHour(hour),
           price_uah_kwh: Number(Number(row.price || dagsterRow?.price_uah_kwh || 0).toFixed(2)),
           recommended_action: action,
           expected_profit_uah: Number(Number(dagsterRow?.expected_profit_uah || 0).toFixed(2)),
@@ -336,16 +496,16 @@ function buildScheduleFromDagsterAsset(
           rationale,
         }
       })
-    : dagsterSchedule.slice(0, 24).map((row) => {
-        const hour = Number(row.hour)
-        const action = row.action || 'HOLD'
+    : normalizedDagster.map((row, index) => {
+        const hour = normalizeClockHour(inferredStartHour + index, inferredStartHour + index)
+        const action = normalizeScheduleAction(row.action)
         const actionKw = Number(row.action_kw || 0)
         const rationale = action === 'HOLD'
           ? `Dagster schedule holds at ${hour}:00 (action_kw=${actionKw.toFixed(2)}).`
           : `Dagster schedule recommends ${action} at ${hour}:00 (action_kw=${actionKw.toFixed(2)}).`
         return {
           hour,
-          time: `${String(hour).padStart(2, '0')}:00`,
+          time: formatClockHour(hour),
           price_uah_kwh: Number(Number(row.price_uah_kwh || 0).toFixed(2)),
           recommended_action: action,
           expected_profit_uah: Number(Number(row.expected_profit_uah || 0).toFixed(2)),
@@ -389,7 +549,7 @@ function buildDeterministicSchedule(
     const price = Number(row.price || 0)
     const ml = actionByHour.get(hour)
 
-    let action = ml?.action || 'HOLD'
+    let action = normalizeScheduleAction(ml?.action || 'HOLD')
     if (!ml) {
       if (avgPrice > 0 && price < avgPrice * 0.9) {
         action = 'BUY'
@@ -410,7 +570,7 @@ function buildDeterministicSchedule(
 
     return {
       hour,
-      time: new Date(row.timestamp).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }),
+      time: formatClockHour(hour),
       price_uah_kwh: Number(price.toFixed(2)),
       recommended_action: action,
       expected_profit_uah: Number(expectedProfit.toFixed(2)),
