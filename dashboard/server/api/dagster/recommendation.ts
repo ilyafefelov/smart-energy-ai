@@ -112,6 +112,62 @@ function evaluateSnapshotFreshness(snapshot: DagsterMaterializedRecommendation |
   }
 }
 
+function evaluateScheduleQuality(snapshot: DagsterMaterializedRecommendation | null) {
+  if (!snapshot || !Array.isArray(snapshot.schedule)) {
+    return {
+      isValid: false,
+      reason: 'missing_schedule',
+      rowCount: 0,
+    }
+  }
+
+  const rows = snapshot.schedule.slice(0, 24)
+  if (rows.length < 24) {
+    return {
+      isValid: false,
+      reason: 'insufficient_rows',
+      rowCount: rows.length,
+    }
+  }
+
+  const hourOffsets = new Set<number>()
+  for (const row of rows) {
+    const rawOffset = toFiniteNumber((row as any)?.hour_offset ?? row?.hour)
+    if (rawOffset == null) {
+      return {
+        isValid: false,
+        reason: 'invalid_hour_offset',
+        rowCount: rows.length,
+      }
+    }
+
+    const offset = normalizeClockHour(rawOffset, 0)
+    if (hourOffsets.has(offset)) {
+      return {
+        isValid: false,
+        reason: 'duplicate_hour_offset',
+        rowCount: rows.length,
+      }
+    }
+    hourOffsets.add(offset)
+
+    const actionKw = toFiniteNumber(row?.action_kw)
+    if (actionKw == null) {
+      return {
+        isValid: false,
+        reason: 'invalid_action_kw',
+        rowCount: rows.length,
+      }
+    }
+  }
+
+  return {
+    isValid: true,
+    reason: 'valid',
+    rowCount: rows.length,
+  }
+}
+
 function maybeTriggerHybridDagsterRefresh(params: {
   projectRoot: string
   tenantId: string
@@ -305,7 +361,8 @@ export default defineEventHandler(async (event) => {
 
     const latestDagsterSnapshot = postgresDagster || fileDagster
     const snapshotFreshness = evaluateSnapshotFreshness(latestDagsterSnapshot)
-    const materializedDagster = snapshotFreshness.isFresh ? latestDagsterSnapshot : null
+    const scheduleQuality = evaluateScheduleQuality(latestDagsterSnapshot)
+    const materializedDagster = snapshotFreshness.isFresh && scheduleQuality.isValid ? latestDagsterSnapshot : null
 
     const currentPrice = Number(pricesPayload?.prices?.current?.price || 0)
     const avgPrice = Number(pricesPayload?.prices?.today?.avg || currentPrice || 0)
@@ -319,10 +376,12 @@ export default defineEventHandler(async (event) => {
         ? 'dagster_postgres_snapshot'
         : 'dagster_asset_file'
       : latestDagsterSnapshot
-        ? 'ml_api_fallback_stale_snapshot'
+        ? snapshotFreshness.isFresh
+          ? 'ml_api_fallback_invalid_schedule'
+          : 'ml_api_fallback_stale_snapshot'
         : 'ml_api_fallback'
 
-    const hybridRefresh = !snapshotFreshness.isFresh
+    const hybridRefresh = latestDagsterSnapshot && (!snapshotFreshness.isFresh || !scheduleQuality.isValid)
       ? maybeTriggerHybridDagsterRefresh({
           projectRoot,
           tenantId: tenant.id,
@@ -436,6 +495,9 @@ export default defineEventHandler(async (event) => {
         dagster_snapshot_age_minutes: snapshotFreshness.ageMinutes,
         dagster_snapshot_max_age_minutes: MAX_SNAPSHOT_AGE_MINUTES,
         dagster_snapshot_freshness_reason: snapshotFreshness.reason,
+        dagster_schedule_quality_valid: scheduleQuality.isValid,
+        dagster_schedule_quality_reason: scheduleQuality.reason,
+        dagster_schedule_quality_row_count: scheduleQuality.rowCount,
         hybrid_refresh: hybridRefresh,
       },
     }
