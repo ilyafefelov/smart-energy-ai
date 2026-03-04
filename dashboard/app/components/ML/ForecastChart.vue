@@ -83,6 +83,30 @@ const mlStore = useMLStore()
 const mlPipelineStore = useMLPipelineStore()
 const tenantContext = useTenantContext()
 
+const dagsterScheduleRows = computed<ForecastRow[]>(() => {
+  const source = mlPipelineStore.schedule24h.slice(0, 24)
+  if (source.length === 0) {
+    return []
+  }
+
+  return source.map((point, idx) => {
+    const action = String(point.recommended_action || 'HOLD').toUpperCase() as ForecastRow['action']
+    const status: ForecastRow['status'] = action === 'BUY'
+      ? 'Off-Peak'
+      : action === 'SELL' || action === 'DISCHARGE'
+        ? 'Peak'
+        : 'Normal'
+
+    return {
+      key: `dagster-${idx}-${point.hour}`,
+      time: Number(point.hour) % 24,
+      action: action === 'DISCHARGE' ? 'SELL' : action,
+      price: Number(point.price_uah_kwh || 0),
+      status,
+    }
+  })
+})
+
 const mlForecastRows = computed<ForecastRow[]>(() => {
   const source = mlStore.dailyForecast.slice(0, 24)
   if (source.length === 0) {
@@ -141,10 +165,17 @@ const priceHeuristicRows = computed<ForecastRow[]>(() => {
 })
 
 const forecastRows = computed<ForecastRow[]>(() => {
+  if (dagsterScheduleRows.value.length > 0) {
+    return dagsterScheduleRows.value
+  }
   return mlForecastRows.value.length > 0 ? mlForecastRows.value : priceHeuristicRows.value
 })
 
-const forecastSourceLabel = computed(() => (mlForecastRows.value.length > 0 ? 'ML hourly forecast' : 'Live price heuristic'))
+const forecastSourceLabel = computed(() => {
+  if (dagsterScheduleRows.value.length > 0) return 'Dagster schedule (ML pipeline)'
+  if (mlForecastRows.value.length > 0) return 'ML hourly forecast'
+  return 'Live price heuristic'
+})
 
 const executionStatusLine = computed(() => {
   const link = mlPipelineStore.recommendationExecutionLink
@@ -173,6 +204,7 @@ const holdHours = computed(() => forecastRows.value.filter((h) => h.action === '
 onMounted(async () => {
   await tenantContext.loadTenants()
   await Promise.all([
+    mlPipelineStore.fetchSchedule24h(tenantContext.currentTenantId.value),
     mlStore.fetchRecommendation(tenantContext.currentTenantId.value),
     mlPipelineStore.fetchRecommendationExecutionLink(tenantContext.currentTenantId.value),
   ])
@@ -182,6 +214,7 @@ watch(
   () => tenantContext.currentTenantId.value,
   async (tenantId) => {
     await Promise.all([
+      mlPipelineStore.fetchSchedule24h(tenantId),
       mlStore.fetchRecommendation(tenantId),
       mlPipelineStore.fetchRecommendationExecutionLink(tenantId),
     ])

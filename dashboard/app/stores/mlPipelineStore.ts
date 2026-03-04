@@ -16,6 +16,17 @@ type RecommendationExecutionLink = {
   synced_at: string | null
 }
 
+type Schedule24hRow = {
+  hour: number
+  time: string
+  price_uah_kwh: number
+  recommended_action: 'BUY' | 'SELL' | 'HOLD' | 'DISCHARGE'
+  expected_profit_uah: number
+  confidence: number
+  is_peak: boolean
+  rationale?: string
+}
+
 function resolveTenantRequest(tenantId?: string) {
   const normalized = typeof tenantId === 'string' ? tenantId.trim().toLowerCase() : ''
   if (!normalized) {
@@ -43,7 +54,7 @@ export const useMLPipelineStore = defineStore('mlPipeline', () => {
     battery_soc: 72.6,
   })
   
-  const schedule24h = ref([])
+  const schedule24h = ref<Schedule24hRow[]>([])
 
   const recommendationExecutionLink = ref<RecommendationExecutionLink>({
     mode: 'unknown',
@@ -104,8 +115,17 @@ export const useMLPipelineStore = defineStore('mlPipeline', () => {
   const fetchSchedule24h = async (tenantId?: string) => {
     try {
       const response = await $fetch('/api/dagster/schedule-24h', resolveTenantRequest(tenantId))
-      if (response.schedule) {
-        schedule24h.value = response.schedule
+      if (Array.isArray(response.schedule)) {
+        schedule24h.value = response.schedule.map((row: any) => ({
+          hour: Number(row?.hour ?? 0),
+          time: String(row?.time || `${String(Number(row?.hour ?? 0)).padStart(2, '0')}:00`),
+          price_uah_kwh: Number(row?.price_uah_kwh || 0),
+          recommended_action: String(row?.recommended_action || 'HOLD').toUpperCase() as Schedule24hRow['recommended_action'],
+          expected_profit_uah: Number(row?.expected_profit_uah || 0),
+          confidence: Number(row?.confidence || 0),
+          is_peak: Boolean(row?.is_peak),
+          rationale: typeof row?.rationale === 'string' ? row.rationale : undefined,
+        }))
       }
     } catch (e) {
       console.error('[MLPipeline] Schedule fetch error:', e)
@@ -190,6 +210,7 @@ export const useMLPipelineStore = defineStore('mlPipeline', () => {
     setInterval(() => {
       const tenantId = tenantContext.currentTenantId.value
       fetchRecommendation(tenantId)
+      fetchSchedule24h(tenantId)
       fetchMLflowStatus(tenantId)
       fetchRecommendationExecutionLink(tenantId)
     }, interval)

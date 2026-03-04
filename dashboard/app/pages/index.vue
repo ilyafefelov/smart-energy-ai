@@ -149,6 +149,9 @@
               <span v-if="hoverPrice">{{ hoverPrice.hour }}:00 → {{ hoverPrice.price.toFixed(2) }}₴/kWh</span>
               <span v-else>Hover for details • Zoom: {{ chartZoom.toFixed(1) }}x</span>
             </p>
+            <p class="text-xs text-slate-500 mt-1">
+              Source: {{ hasDagsterScheduleData ? 'Dagster schedule (ML pipeline)' : 'Price heuristic fallback' }}
+            </p>
           </div>
           <div class="flex gap-2">
             <button 
@@ -185,7 +188,7 @@
         </div>
 
         <!-- Simple SVG Chart -->
-        <div v-if="pricesStore.forecast.length > 0" class="relative overflow-hidden">
+        <div v-if="dashboardForecastRows.length > 0" class="relative overflow-hidden">
           <div class="overflow-x-auto">
             <svg 
               viewBox="0 0 1200 400" 
@@ -199,10 +202,10 @@
               @mouseleave="onChartLeave"
             >
               <!-- Good buying zones (light green background) -->
-              <g v-for="(f, i) in pricesStore.forecast" :key="`buy-${i}`">
+              <g v-for="(f, i) in dashboardForecastRows" :key="`buy-${i}`">
                 <rect
-                  v-if="f.price < (pricesStore.todayAvg * 0.85)"
-                  :x="(i / pricesStore.forecast.length) * 1200 - 15"
+                  v-if="f.action === 'BUY'"
+                  :x="(i / dashboardForecastRows.length) * 1200 - 15"
                   y="0"
                   width="30"
                   height="400"
@@ -212,10 +215,10 @@
               </g>
 
               <!-- Good selling zones (light red background) -->
-              <g v-for="(f, i) in pricesStore.forecast" :key="`sell-${i}`">
+              <g v-for="(f, i) in dashboardForecastRows" :key="`sell-${i}`">
                 <rect
-                  v-if="f.price > (pricesStore.todayAvg * 1.15)"
-                  :x="(i / pricesStore.forecast.length) * 1200 - 15"
+                  v-if="f.action === 'SELL'"
+                  :x="(i / dashboardForecastRows.length) * 1200 - 15"
                   y="0"
                   width="30"
                   height="400"
@@ -256,8 +259,8 @@
               </defs>
 
               <!-- Axis labels -->
-              <text x="10" y="25" font-size="12" fill="#94a3b8">{{ pricesStore.peakPrice.toFixed(1) }}₴</text>
-              <text x="10" y="375" font-size="12" fill="#94a3b8">{{ pricesStore.offPeakPrice.toFixed(1) }}₴</text>
+              <text x="10" y="25" font-size="12" fill="#94a3b8">{{ forecastPeakPrice.toFixed(1) }}₴</text>
+              <text x="10" y="375" font-size="12" fill="#94a3b8">{{ forecastOffPeakPrice.toFixed(1) }}₴</text>
             </svg>
           </div>
 
@@ -369,22 +372,22 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(price, idx) in pricesStore.forecast.slice(0, 8)" :key="idx" class="border-b border-slate-800 hover:bg-slate-900 bg-opacity-30 transition">
-                <td class="py-3 px-4 text-white font-medium">{{ (new Date().getHours() + idx) % 24 }}:00</td>
+              <tr v-for="(price, idx) in forecastTableRows" :key="idx" class="border-b border-slate-800 hover:bg-slate-900 bg-opacity-30 transition">
+                <td class="py-3 px-4 text-white font-medium">{{ price.timeLabel }}</td>
                 <td class="text-right py-3 px-4">
                   <span class="font-bold text-cyan-400">{{ price.price.toFixed(2) }}</span>
                 </td>
                 <td class="py-3 px-4">
-                  <span v-if="price.price > (pricesStore.todayAvg * 1.15)" class="px-2 py-1 bg-red-900 bg-opacity-40 text-red-300 rounded text-xs">📈 Peak</span>
-                  <span v-else-if="price.price < (pricesStore.todayAvg * 0.85)" class="px-2 py-1 bg-green-900 bg-opacity-40 text-green-300 rounded text-xs">📉 Off-Peak</span>
+                  <span v-if="price.action === 'SELL'" class="px-2 py-1 bg-red-900 bg-opacity-40 text-red-300 rounded text-xs">📈 Peak</span>
+                  <span v-else-if="price.action === 'BUY'" class="px-2 py-1 bg-green-900 bg-opacity-40 text-green-300 rounded text-xs">📉 Off-Peak</span>
                   <span v-else class="px-2 py-1 bg-yellow-900 bg-opacity-40 text-yellow-300 rounded text-xs">➡️ Normal</span>
                 </td>
-                <td class="text-right py-3 px-4" :class="price.price > pricesStore.todayAvg ? 'text-red-400' : 'text-green-400'">
-                  {{ ((price.price - pricesStore.todayAvg) / pricesStore.todayAvg * 100).toFixed(0) }}%
+                <td class="text-right py-3 px-4" :class="price.price > forecastAveragePrice ? 'text-red-400' : 'text-green-400'">
+                  {{ forecastAveragePrice > 0 ? ((price.price - forecastAveragePrice) / forecastAveragePrice * 100).toFixed(0) : 0 }}%
                 </td>
                 <td class="text-center py-3 px-4">
-                  <span v-if="price.price < (pricesStore.todayAvg * 0.85)" class="text-lg">💰 Buy</span>
-                  <span v-else-if="price.price > (pricesStore.todayAvg * 1.15)" class="text-lg">⚡ Sell</span>
+                  <span v-if="price.action === 'BUY'" class="text-lg">💰 Buy</span>
+                  <span v-else-if="price.action === 'SELL'" class="text-lg">⚡ Sell</span>
                   <span v-else class="text-lg">—</span>
                 </td>
               </tr>
@@ -533,6 +536,7 @@ import { usePricesStore } from '~/stores/pricesStore'
 import { useRetrainingStore } from '~/stores/retrainingStore'
 import { useSettingsStore } from '~/stores/settingsStore'
 import { useMLStore } from '~/stores/mlStore'
+import { useMLPipelineStore } from '~/stores/mlPipelineStore'
 import { useBatteryPhysicsStore } from '~/stores/batteryPhysicsStore'
 import { useTenantContext } from '~/composables/useTenantContext'
 import MetricCard from '~/components/DashboardCards/MetricCard.vue'
@@ -548,7 +552,16 @@ const pricesStore = usePricesStore()
 const retrainingStore = useRetrainingStore()
 const settingsStore = useSettingsStore()
 const mlStore = useMLStore()
+const mlPipelineStore = useMLPipelineStore()
 const tenantContext = useTenantContext()
+
+interface DashboardForecastPoint {
+  hour: number
+  timeLabel: string
+  action: 'BUY' | 'SELL' | 'HOLD'
+  price: number
+  timestamp: Date
+}
 
 const tenantOptions = computed(() => tenantContext.tenants.value)
 const selectedTenantId = computed({
@@ -575,6 +588,73 @@ const buildTenantRequest = () => {
     },
   }
 }
+
+const dashboardForecastRows = computed<DashboardForecastPoint[]>(() => {
+  const dagsterSchedule = mlPipelineStore.schedule24h.slice(0, 24)
+  if (dagsterSchedule.length > 0) {
+    return dagsterSchedule.map((row, index) => {
+      const hour = Math.max(0, Math.min(23, Number(row.hour || 0)))
+      const actionRaw = String(row.recommended_action || 'HOLD').toUpperCase()
+      const action = actionRaw === 'BUY'
+        ? 'BUY'
+        : actionRaw === 'SELL' || actionRaw === 'DISCHARGE'
+          ? 'SELL'
+          : 'HOLD'
+      const timestamp = new Date()
+      timestamp.setHours(hour, 0, 0, 0)
+
+      return {
+        hour,
+        timeLabel: String(row.time || `${String(hour).padStart(2, '0')}:00`),
+        action,
+        price: Number(row.price_uah_kwh || 0),
+        timestamp,
+      }
+    })
+  }
+
+  const nowHour = new Date().getHours()
+  const avg = pricesStore.todayAvg
+  return pricesStore.forecast.slice(0, 24).map((row, index) => {
+    const price = Number(row.price || 0)
+    const hour = (nowHour + index) % 24
+    let action: DashboardForecastPoint['action'] = 'HOLD'
+    if (avg > 0 && price < avg * 0.85) {
+      action = 'BUY'
+    } else if (avg > 0 && price > avg * 1.15) {
+      action = 'SELL'
+    }
+
+    return {
+      hour,
+      timeLabel: `${String(hour).padStart(2, '0')}:00`,
+      action,
+      price,
+      timestamp: row.timestamp instanceof Date ? row.timestamp : new Date(),
+    }
+  })
+})
+
+const forecastAveragePrice = computed(() => {
+  const rows = dashboardForecastRows.value
+  if (rows.length === 0) return 0
+  return rows.reduce((sum, row) => sum + row.price, 0) / rows.length
+})
+
+const forecastPeakPrice = computed(() => {
+  const rows = dashboardForecastRows.value
+  if (rows.length === 0) return 0
+  return Math.max(...rows.map((row) => row.price))
+})
+
+const forecastOffPeakPrice = computed(() => {
+  const rows = dashboardForecastRows.value
+  if (rows.length === 0) return 0
+  return Math.min(...rows.map((row) => row.price))
+})
+
+const forecastTableRows = computed(() => dashboardForecastRows.value.slice(0, 8))
+const hasDagsterScheduleData = computed(() => mlPipelineStore.schedule24h.length > 0)
 
 const fetchCanonicalSavingsHistory = async () => {
   const request = buildTenantRequest()
@@ -613,14 +693,19 @@ const onChartHover = (event: MouseEvent) => {
   const x = event.clientX - rect.left
 
   // Calculate which hour is being hovered
-  const dataPoints = pricesStore.forecast.length
+  const dataPoints = dashboardForecastRows.value.length
+  if (dataPoints <= 0) {
+    hoverPrice.value = null
+    return
+  }
   const pointWidth = 1200 / dataPoints
   const hoverIndex = Math.floor(x / pointWidth)
 
   if (hoverIndex >= 0 && hoverIndex < dataPoints) {
+    const point = dashboardForecastRows.value[hoverIndex]
     hoverPrice.value = {
-      hour: (new Date().getHours() + hoverIndex) % 24,
-      price: pricesStore.forecast[hoverIndex].price
+      hour: point?.hour ?? ((new Date().getHours() + hoverIndex) % 24),
+      price: Number(point?.price || 0),
     }
   }
 }
@@ -775,21 +860,20 @@ const totalDailySavings = computed(() => {
 })
 
 const projectTrajectory = computed(() => {
-  const prices = pricesStore.forecast.slice(0, 24)
-  if (prices.length === 0) {
+  const rows = dashboardForecastRows.value.slice(0, 24)
+  if (rows.length === 0) {
     return [batteryStore.soc]
   }
 
-  const avgPrice = prices.reduce((sum, row) => sum + row.price, 0) / prices.length
   const minSoc = batteryStore.minSOC
   const maxSoc = 100
   let soc = Number(batteryStore.soc)
 
   const trajectory = [soc]
-  for (const row of prices) {
-    if (row.price <= avgPrice * 0.9) {
+  for (const row of rows) {
+    if (row.action === 'BUY') {
       soc = Math.min(maxSoc, soc + 4)
-    } else if (row.price >= avgPrice * 1.1) {
+    } else if (row.action === 'SELL') {
       soc = Math.max(minSoc, soc - 5)
     } else {
       soc = Math.max(minSoc, Math.min(maxSoc, soc - 0.5))
@@ -821,14 +905,14 @@ const batteryLowerBoundY = computed(() => mapSocToY(batteryStore.minSOC))
 
 // Chart points for price forecast
 const chartPoints = computed(() => {
-  if (pricesStore.forecast.length === 0) return ''
+  if (dashboardForecastRows.value.length === 0) return ''
 
-  const minPrice = Math.min(...pricesStore.forecast.map(f => f.price))
-  const maxPrice = Math.max(...pricesStore.forecast.map(f => f.price))
+  const minPrice = Math.min(...dashboardForecastRows.value.map((f) => f.price))
+  const maxPrice = Math.max(...dashboardForecastRows.value.map((f) => f.price))
   const range = maxPrice - minPrice || 1
 
-  return pricesStore.forecast.map((f, i) => {
-    const x = (i / pricesStore.forecast.length) * 1200
+  return dashboardForecastRows.value.map((f, i) => {
+    const x = (i / dashboardForecastRows.value.length) * 1200
     const y = 350 - ((f.price - minPrice) / range) * 300
     return `${x},${y}`
   }).join(' ')
@@ -869,35 +953,21 @@ const exportPriceData = () => {
   const dateStr = now.toISOString().split('T')[0]
   const filename = `price-history-${dateStr}.csv`
   
-  // Get the last 8 hours of price data
-  const priceData = pricesStore.forecast.slice(0, 8)
+  // Export currently visible forecast rows (Dagster schedule preferred).
+  const priceData = forecastTableRows.value
   
   // Build CSV header
   let csv = 'Hour,Price(₴/kWh),Status,vs Average,Action\n'
   
   // Build CSV rows
-  priceData.forEach((price, idx) => {
-    const hour = (new Date().getHours() + idx) % 24
+  priceData.forEach((price) => {
+    const hour = Number(price.hour)
     const priceValue = price.price.toFixed(2)
-    
-    // Determine status
-    let status = 'Normal'
-    if (price.price > (pricesStore.todayAvg * 1.15)) {
-      status = 'Peak'
-    } else if (price.price < (pricesStore.todayAvg * 0.85)) {
-      status = 'Off-Peak'
-    }
-    
-    // Calculate vs Average percentage
-    const vsAvg = ((price.price - pricesStore.todayAvg) / pricesStore.todayAvg * 100).toFixed(0)
-    
-    // Determine action
-    let action = '-'
-    if (price.price < (pricesStore.todayAvg * 0.85)) {
-      action = 'Buy'
-    } else if (price.price > (pricesStore.todayAvg * 1.15)) {
-      action = 'Sell'
-    }
+    const status = price.action === 'SELL' ? 'Peak' : price.action === 'BUY' ? 'Off-Peak' : 'Normal'
+    const vsAvg = forecastAveragePrice.value > 0
+      ? ((price.price - forecastAveragePrice.value) / forecastAveragePrice.value * 100).toFixed(0)
+      : '0'
+    const action = price.action === 'BUY' ? 'Buy' : price.action === 'SELL' ? 'Sell' : '-'
     
     csv += `${hour}:00,${priceValue},${status},${vsAvg}%,${action}\n`
   })
@@ -932,7 +1002,10 @@ const exportSavingsData = () => {
 
 const refreshPriceData = async () => {
   console.log('Refresh clicked - Price Data')
-  await pricesStore.fetchPrices()
+  await Promise.all([
+    pricesStore.fetchPrices(),
+    mlPipelineStore.fetchSchedule24h(tenantContext.currentTenantId.value),
+  ])
 }
 
 
@@ -941,7 +1014,10 @@ const refreshChartData = async () => {
   isRefreshingChart.value = true
 
   try {
-    await pricesStore.fetchPrices()
+    await Promise.all([
+      pricesStore.fetchPrices(),
+      mlPipelineStore.fetchSchedule24h(tenantContext.currentTenantId.value),
+    ])
     console.log('✅ Price forecast updated successfully')
   } catch (e) {
     console.error('❌ Failed to refresh chart:', e)
@@ -962,6 +1038,7 @@ onMounted(async () => {
     metricsStore.fetchMetrics(),
     batteryStore.fetchBatteryStatus(),
     pricesStore.fetchPrices(),
+    mlPipelineStore.fetchSchedule24h(tenantContext.currentTenantId.value),
     fetchCanonicalSavingsHistory(),
   ])
 
@@ -988,6 +1065,7 @@ watch(
       metricsStore.fetchMetrics(),
       batteryStore.fetchBatteryStatus(),
       pricesStore.fetchPrices(),
+      mlPipelineStore.fetchSchedule24h(tenantContext.currentTenantId.value),
       batteryPhysicsStore.fetchBatteryData(),
       fetchCanonicalSavingsHistory(),
     ])
