@@ -11,8 +11,8 @@
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 108,
-    "open": 272,
+    "fixed": 109,
+    "open": 271,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 62,
-        "open": 235,
+        "fixed": 63,
+        "open": 234,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 87.0,
-      "strict": 87.0,
+      "score": 87.2,
+      "strict": 87.2,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 62,
+      "failing": 61,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.8699300699300697,
-          "failing": 62,
-          "weighted_failures": 18.600000000000023
+          "pass_rate": 0.8720279720279719,
+          "failing": 61,
+          "weighted_failures": 18.300000000000022
         }
       }
     },
@@ -3807,17 +3807,23 @@
           "nesting depth 16"
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Moved reusable ML-STAR metric packaging, predictor behavior, and deployment text into ml_star_pipeline_support.py while keeping the Dagster asset module focused on orchestration.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T20:15:09+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Moved reusable ML-STAR metric packaging, predictor behavior, and deployment text into ml_star_pipeline_support.py while keeping the Dagster asset module focused on orchestration. and I am not gaming the score.",
+        "attested_at": "2026-03-06T20:15:09+00:00",
+        "scan_verified": false
+      }
     },
     "structural::ml_integration_api.py": {
       "id": "structural::ml_integration_api.py",
