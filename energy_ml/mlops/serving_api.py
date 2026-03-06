@@ -5,7 +5,10 @@ FastAPI serving layer with real-time prediction, WebSocket updates, and health c
 
 import logging
 import asyncio
-from typing import Dict, List, Optional, Any
+import importlib.util
+import sys
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 import json
 import time
@@ -21,6 +24,45 @@ from .optimization_engine import OptimizationEngine
 from .monitoring_dashboard import get_monitoring_dashboard
 from .retraining_pipeline import get_retraining_pipeline, get_ab_test_manager
 from ..user_config import UserConfigModel
+
+try:
+    from energy_ml.mlops.serving_api_support import (
+        build_feature_vector,
+        build_fallback_prediction,
+        build_health_components,
+        build_health_response_payload,
+        build_prediction_response_payload,
+        coerce_prediction_output,
+        estimate_power_kw,
+        estimate_profit_uah,
+        prediction_value_from_decision,
+        prune_disconnected_websockets,
+        simulate_battery_response,
+        summarize_model_versions,
+    )
+except ImportError:
+    _SUPPORT_MODULE_NAME = "energy_ml.mlops.serving_api_support"
+    _SUPPORT_PATH = Path(__file__).with_name("serving_api_support.py")
+    _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
+    if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
+        raise ImportError(f"Unable to load serving API support module from {_SUPPORT_PATH}")
+    _SUPPORT_MODULE = sys.modules.get(_SUPPORT_MODULE_NAME)
+    if _SUPPORT_MODULE is None:
+        _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
+        sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
+        _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
+    build_feature_vector = _SUPPORT_MODULE.build_feature_vector
+    build_fallback_prediction = _SUPPORT_MODULE.build_fallback_prediction
+    build_health_components = _SUPPORT_MODULE.build_health_components
+    build_health_response_payload = _SUPPORT_MODULE.build_health_response_payload
+    build_prediction_response_payload = _SUPPORT_MODULE.build_prediction_response_payload
+    coerce_prediction_output = _SUPPORT_MODULE.coerce_prediction_output
+    estimate_power_kw = _SUPPORT_MODULE.estimate_power_kw
+    estimate_profit_uah = _SUPPORT_MODULE.estimate_profit_uah
+    prediction_value_from_decision = _SUPPORT_MODULE.prediction_value_from_decision
+    prune_disconnected_websockets = _SUPPORT_MODULE.prune_disconnected_websockets
+    simulate_battery_response = _SUPPORT_MODULE.simulate_battery_response
+    summarize_model_versions = _SUPPORT_MODULE.summarize_model_versions
 
 logger = logging.getLogger(__name__)
 
@@ -124,27 +166,16 @@ class MLServingAPI:
         async def health_check():
             """Health check endpoint with detailed status"""
             start_time = time.time()
-            
-            # Check component health
-            components = {
-                "model_registry": self._check_model_registry(),
-                "feature_store": self._check_feature_store(),
-                "physics_engines": len(self.physics_engines) > 0,
-                "optimization_engines": len(self.optimization_engines) > 0,
-                "cached_model": self.cached_model is not None
-            }
-            
-            all_healthy = all(components.values())
-            latency_ms = (time.time() - start_time) * 1000
-            
-            return HealthCheckResponse(
-                status="healthy" if all_healthy else "degraded",
-                timestamp=datetime.now().isoformat(),
-                version="2.0.0",
-                models_loaded=self.cached_model is not None,
-                latency_ms=latency_ms,
-                components=components
+            components = build_health_components(
+                self._check_model_registry(),
+                self._check_feature_store(),
+                len(self.physics_engines),
+                len(self.optimization_engines),
+                self.cached_model,
             )
+            latency_ms = (time.time() - start_time) * 1000
+
+            return HealthCheckResponse(**build_health_response_payload(components, latency_ms, datetime.now()))
             
         @self.app.post("/predict", response_model=PredictionResponse)
         async def predict_optimization(request: PredictionRequest, background_tasks: BackgroundTasks):
@@ -310,25 +341,7 @@ class MLServingAPI:
                 development_models = self.model_registry.list_model_versions("energy_optimizer", stage="development")
                 
                 return {
-                    "production": [
-                        {
-                            "version_id": m.version_id,
-                            "created_at": m.created_at.isoformat(),
-                            "performance_mape": m.performance_metrics.get("test_mape", 0),
-                            "health_status": m.health_status
-                        }
-                        for m in production_models[:5]  # Latest 5
-                    ],
-                    "staging": [
-                        {
-                            "version_id": m.version_id,
-                            "created_at": m.created_at.isoformat(),
-                            "performance_mape": m.performance_metrics.get("test_mape", 0),
-                            "health_status": m.health_status
-                        }
-                        for m in staging_models[:5]
-                    ],
-                    "development": len(development_models)
+                    **summarize_model_versions(production_models, staging_models, development_models)
                 }
                 
             except Exception as e:
@@ -396,15 +409,7 @@ class MLServingAPI:
         """Adapt raw model output into the optimizer's dict contract."""
         if hasattr(model, "predict"):
             try:
-                feature_vector = [[
-                    float(features.get("battery_soc", 0.0)),
-                    float(features.get("grid_price_uah_kwh", 0.0)),
-                    float(features.get("solar_generation_kw", 0.0)),
-                    float(features.get("wind_generation_kw", 0.0)),
-                    float(features.get("load_demand_kw", 0.0)),
-                    float(features.get("temperature_celsius", 25.0)),
-                ]]
-                raw_prediction = model.predict(feature_vector)
+                raw_prediction = model.predict(build_feature_vector(features))
                 return self._coerce_prediction_output(raw_prediction, features)
             except Exception as exc:
                 logger.warning(f"Model prediction adapter failed, using fallback decision seed: {exc}")
@@ -413,72 +418,11 @@ class MLServingAPI:
 
     def _coerce_prediction_output(self, raw_prediction: Any, features: Dict[str, Any]) -> Dict[str, Any]:
         """Normalize raw model output into a prediction envelope."""
-        if isinstance(raw_prediction, dict):
-            prediction = raw_prediction.copy()
-            prediction.setdefault("action", "HOLD")
-            prediction.setdefault("confidence", 0.5)
-            prediction.setdefault("reasoning", "Serving API normalized model output.")
-            prediction.setdefault("timestamp", datetime.now().isoformat())
-            return prediction
-
-        if hasattr(raw_prediction, "tolist"):
-            raw_prediction = raw_prediction.tolist()
-
-        if isinstance(raw_prediction, list):
-            if raw_prediction and isinstance(raw_prediction[0], list):
-                raw_prediction = raw_prediction[0]
-            elif len(raw_prediction) == 1:
-                raw_prediction = raw_prediction[0]
-
-        if isinstance(raw_prediction, tuple):
-            raw_prediction = list(raw_prediction)
-
-        if isinstance(raw_prediction, list):
-            if raw_prediction and isinstance(raw_prediction[0], dict):
-                return self._coerce_prediction_output(raw_prediction[0], features)
-
-            if raw_prediction:
-                try:
-                    action_idx = int(raw_prediction[0])
-                    confidence = float(raw_prediction[1]) if len(raw_prediction) > 1 else 0.5
-                    action = ["BUY", "SELL", "HOLD"][action_idx % 3]
-                    return {
-                        "action": action,
-                        "confidence": max(0.0, min(1.0, confidence)),
-                        "reasoning": f"Serving API adapted model output to {action}.",
-                        "timestamp": datetime.now().isoformat(),
-                    }
-                except (TypeError, ValueError):
-                    pass
-
-        return self._build_fallback_prediction(features)
+        return coerce_prediction_output(raw_prediction, features, datetime.now())
 
     def _build_fallback_prediction(self, features: Dict[str, Any]) -> Dict[str, Any]:
         """Create a conservative prediction envelope when the raw model is not directly adaptable."""
-        battery_soc = float(features.get("battery_soc", 0.5))
-        price = float(features.get("grid_price_uah_kwh", 0.0))
-        renewable_supply = float(features.get("solar_generation_kw", 0.0)) + float(features.get("wind_generation_kw", 0.0))
-        load_demand = float(features.get("load_demand_kw", 0.0))
-
-        if renewable_supply > load_demand and battery_soc < 0.85:
-            action = "BUY"
-            confidence = 0.72
-            reasoning = "Fallback prediction favors charging because renewable generation exceeds current load."
-        elif price >= 10.0 and battery_soc > 0.3:
-            action = "SELL"
-            confidence = 0.70
-            reasoning = "Fallback prediction favors discharge during a high grid-price interval."
-        else:
-            action = "HOLD"
-            confidence = 0.60
-            reasoning = "Fallback prediction holds to preserve battery flexibility under mixed conditions."
-
-        return {
-            "action": action,
-            "confidence": confidence,
-            "reasoning": reasoning,
-            "timestamp": datetime.now().isoformat(),
-        }
+        return build_fallback_prediction(features, datetime.now())
 
     def _build_prediction_response(
         self,
@@ -489,43 +433,17 @@ class MLServingAPI:
         strategy: str,
     ) -> PredictionResponse:
         """Fill the serving response model from the optimizer's dict contract."""
-        action = str(decision.get("action", "HOLD"))
-        power_kw = float(decision.get("power_kw", self._estimate_power_kw(action, request)))
-        duration_h = float(decision.get("duration_h", 0.0 if action == "HOLD" else 1.0))
-        expected_profit_uah = float(
-            decision.get(
-                "expected_profit_uah",
-                self._estimate_profit_uah(action, power_kw, duration_h, request.grid_price_uah_kwh),
-            )
-        )
-        health_impact_percent = float(
-            decision.get("health_impact_percent", 0.0 if action == "HOLD" else min(100.0, power_kw * duration_h * 0.1))
-        )
-
         return PredictionResponse(
-            action=action,
-            power_kw=power_kw,
-            duration_h=duration_h,
-            confidence=float(decision.get("confidence", 0.5)),
-            expected_profit_uah=expected_profit_uah,
-            health_impact_percent=health_impact_percent,
-            reasoning=str(decision.get("reasoning", "Optimization completed.")),
-            strategy_used=str(decision.get("optimization_strategy", strategy)),
-            prediction_id=prediction_id,
-            timestamp=datetime.now().isoformat(),
-            model_version=model_version,
+            **build_prediction_response_payload(decision, request, prediction_id, model_version, strategy, datetime.now())
         )
 
     def _estimate_power_kw(self, action: str, request: PredictionRequest) -> float:
         """Choose a bounded power estimate when the optimizer does not provide one."""
-        if action == "HOLD":
-            return 0.0
-        return min(max(request.load_demand_kw, 0.0), 5.0)
+        return estimate_power_kw(action, float(request.load_demand_kw))
 
     def _estimate_profit_uah(self, action: str, power_kw: float, duration_h: float, grid_price_uah_kwh: float) -> float:
         """Compute a simple profit proxy for a stable API envelope."""
-        direction = 1.0 if action == "SELL" else -1.0 if action == "BUY" else 0.0
-        return direction * power_kw * duration_h * grid_price_uah_kwh
+        return estimate_profit_uah(action, power_kw, duration_h, grid_price_uah_kwh)
 
     def _simulate_battery_request(self, request: BatterySimulationRequest) -> Dict[str, Any]:
         """Adapt the request to the current battery physics engine contract."""
@@ -535,59 +453,13 @@ class MLServingAPI:
             battery_temperature_c=request.temperature,
         )
         physics_data = physics_engine.simulate_battery_behavior(config)
-        initial_state = dict(physics_data.get("current_state", {}))
-        power_limits = physics_data.get("power_limits", {})
-        efficiency_model = physics_data.get("efficiency_model", {})
-        constraints = physics_data.get("physics_constraints", {})
-
-        if request.power_kw >= 0:
-            applied_power_kw = min(float(request.power_kw), float(power_limits.get("max_charge_power_kw", request.power_kw)))
-            efficiency = float(efficiency_model.get("charge_efficiency", 1.0))
-            energy_delta_kwh = applied_power_kw * request.duration_h * efficiency
-        else:
-            applied_power_kw = -min(abs(float(request.power_kw)), float(power_limits.get("max_discharge_power_kw", abs(request.power_kw))))
-            efficiency = max(float(efficiency_model.get("discharge_efficiency", 1.0)), 1e-6)
-            energy_delta_kwh = applied_power_kw * request.duration_h / efficiency
-
-        initial_soc_percent = float(initial_state.get("soc_percent", 50.0))
-        soc_delta_percent = (energy_delta_kwh / max(config.battery_capacity_kwh, 1e-6)) * 100.0
-        final_soc_percent = initial_soc_percent + soc_delta_percent
-        min_soc = float(constraints.get("min_soc_physics", 0.0))
-        max_soc = float(constraints.get("max_soc_physics", 100.0))
-        final_soc_percent = min(max(final_soc_percent, min_soc), max_soc)
-
-        final_state = {
-            **initial_state,
-            "soc_percent": final_soc_percent,
-            "temperature": request.temperature,
-            "cycles_completed": float(initial_state.get("cycles_completed", 0.0)) + abs(applied_power_kw) * request.duration_h / max(config.battery_capacity_kwh, 1e-6),
-            "estimated_energy_delta_kwh": energy_delta_kwh,
-        }
-
-        return {
-            "initial_state": initial_state,
-            "final_state": final_state,
-            "physics_summary": {
-                "chemistry": physics_data.get("chemistry", request.battery_type),
-                "power_limits": power_limits,
-                "efficiency_model": efficiency_model,
-                "degradation_model": physics_data.get("degradation_model", {}),
-                "thermal_model": physics_data.get("thermal_model", {}),
-            },
-            "simulation_params": {
-                "requested_power_kw": request.power_kw,
-                "applied_power_kw": applied_power_kw,
-                "duration_h": request.duration_h,
-                "temperature": request.temperature,
-                "battery_type": request.battery_type,
-            },
-        }
+        return simulate_battery_response(physics_data, request, float(config.battery_capacity_kwh))
             
     async def _log_prediction_async(self, model_version: str, features: Dict[str, Any], decision, user_id: str, latency_ms: float):
         """Log prediction asynchronously for monitoring"""
         
         try:
-            prediction_value = float(decision.get("expected_profit_uah", decision.get("confidence", 0.0)))
+            prediction_value = prediction_value_from_decision(decision)
             self.monitoring_dashboard.monitor.log_prediction(
                 model_version=model_version,
                 features=features,
@@ -645,10 +517,7 @@ class MLServingAPI:
             except Exception:
                 disconnected.append(websocket)
                 
-        # Remove disconnected clients
-        for ws in disconnected:
-            if ws in self.websocket_connections:
-                self.websocket_connections.remove(ws)
+        self.websocket_connections = prune_disconnected_websockets(self.websocket_connections, disconnected)
                 
     def _start_background_tasks(self):
         """Start background monitoring tasks"""
