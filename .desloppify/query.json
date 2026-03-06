@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "test_coverage::src/optimizer_v2.py::untested_module"
+    "test_coverage::src/oree_playwright_scraper.py::untested_critical"
   ],
   "status": "fixed",
   "resolved": [
-    "test_coverage::src/optimizer_v2.py::untested_module"
+    "test_coverage::src/oree_playwright_scraper.py::untested_critical"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 87.5,
-  "objective_score": 91.9,
-  "strict_score": 87.0,
+  "overall_score": 87.6,
+  "objective_score": 92.3,
+  "strict_score": 87.2,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 87.4,
-  "prev_objective_score": 91.8,
-  "prev_strict_score": 87.0,
+  "prev_overall_score": 87.5,
+  "prev_objective_score": 92.1,
+  "prev_strict_score": 87.1,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_hybrid_controller_and_optimizer_v2.py, and I am not gaming the score by resolving without fixing.",
+  "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_oree_scrapers.py, and I am not gaming the score by resolving without fixing.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -210,8 +210,8 @@
       {
         "type": "refactor",
         "detector": "test_coverage",
-        "count": 15,
-        "description": "15 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "count": 13,
+        "description": "13 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
         "command": "desloppify show test_coverage --status open",
         "impact": 0.0,
         "dimension": "Test health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 279,
+        "total_count": 277,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -322,7 +322,7 @@
           "actions": [
             7
           ],
-          "file_count": 15,
+          "file_count": 13,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -376,8 +376,8 @@
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 87.0,
-      "gap": 8.0,
+      "current": 87.2,
+      "gap": 7.8,
       "state": "below",
       "warning": null
     },

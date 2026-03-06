@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 87.5,
-  "objective_score": 91.9,
-  "strict_score": 87.0,
+  "overall_score": 87.6,
+  "objective_score": 92.3,
+  "strict_score": 87.2,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 101,
-    "open": 279,
+    "fixed": 103,
+    "open": 277,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -25,15 +25,15 @@
       "2": {
         "auto_resolved": 36,
         "false_positive": 0,
-        "fixed": 22,
-        "open": 29,
+        "fixed": 23,
+        "open": 28,
         "wontfix": 75
       },
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 59,
-        "open": 238,
+        "fixed": 60,
+        "open": 237,
         "wontfix": 72
       },
       "4": {
@@ -2455,18 +2455,18 @@
       }
     },
     "Test health": {
-      "score": 85.9,
-      "strict": 85.9,
+      "score": 88.0,
+      "strict": 88.0,
       "verified_strict_score": 19.1,
       "checks": 1788,
-      "failing": 15,
+      "failing": 13,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1782,
-          "pass_rate": 0.8589487246976271,
-          "failing": 15,
-          "weighted_failures": 251.35337258882842
+          "pass_rate": 0.8800510585729878,
+          "failing": 13,
+          "weighted_failures": 213.74901362293565
         },
         "subjective_review": {
           "potential": 6,
@@ -7909,17 +7909,23 @@
         "loc_weight": 19.493588689617926,
         "complexity_score": 112
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_oree_scrapers.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:52:25+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_oree_scrapers.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:52:25+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::final_integration_verification.py::untested_module": {
       "id": "test_coverage::final_integration_verification.py::untested_module",
@@ -24400,17 +24406,23 @@
         "importer_count": 0,
         "loc_weight": 18.110770276274835
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_oree_scrapers.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-06T10:41:52+00:00",
       "last_seen": "2026-03-06T10:41:52+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:52:16+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_oree_scrapers.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:52:16+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/user_config.py::untested_module": {
       "id": "test_coverage::energy_ml/user_config.py::untested_module",
