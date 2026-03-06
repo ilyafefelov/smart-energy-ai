@@ -7,6 +7,7 @@
 {"created_at":"2026-03-03T00:43:35Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-qrs","issue_id":"smart-energy-ai-1ws","type":"discovered-from"}
 {"created_at":"2026-03-03T05:01:15Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-u6f","issue_id":"smart-energy-ai-213","type":"discovered-from"}
 {"created_at":"2026-03-04T03:04:00Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-bka","issue_id":"smart-energy-ai-29t","type":"discovered-from"}
+{"created_at":"2026-03-06T11:08:32Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-p6m","issue_id":"smart-energy-ai-2yh","type":"discovered-from"}
 {"created_at":"2026-03-02T22:17:54Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-4qs","issue_id":"smart-energy-ai-329","type":"parent-child"}
 {"created_at":"2026-03-02T23:16:11Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-a59","issue_id":"smart-energy-ai-329","type":"blocks"}
 {"created_at":"2026-03-03T00:39:04Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-qrs","issue_id":"smart-energy-ai-35y","type":"discovered-from"}
@@ -56,6 +57,7 @@
 {"created_at":"2026-03-02T22:17:42Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-snj","issue_id":"smart-energy-ai-n26","type":"parent-child"}
 {"created_at":"2026-03-02T22:17:43Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-q0l","issue_id":"smart-energy-ai-oil","type":"parent-child"}
 {"created_at":"2026-03-02T23:23:45Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-qrs","issue_id":"smart-energy-ai-oil","type":"blocks"}
+{"created_at":"2026-03-06T11:02:25Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-7ly","issue_id":"smart-energy-ai-p6m","type":"discovered-from"}
 {"created_at":"2026-03-02T23:16:11Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-329","issue_id":"smart-energy-ai-q1r","type":"blocks"}
 {"created_at":"2026-03-02T23:16:12Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-3zm","issue_id":"smart-energy-ai-q1r","type":"blocks"}
 {"created_at":"2026-03-02T22:44:41Z","created_by":"Illya Fefelov","depends_on_id":"smart-energy-ai-4qs","issue_id":"smart-energy-ai-q1r","type":"parent-child"}
