@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T19:30:02+00:00",
+  "updated": "2026-03-06T19:30:32+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -7172,6 +7172,20 @@
         "status": "fixed",
         "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_data_fetcher.py, and I am not gaming the score by resolving without fixing."
       }
+    },
+    {
+      "timestamp": "2026-03-06T19:30:32+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "test_coverage::src/data_fetcher.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Covered data_fetcher with focused pytest coverage in tests/unit/test_data_fetcher.py.",
+      "detail": {
+        "sha": "1514df32bf9e",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -7568,11 +7582,19 @@
       "recorded_at": "2026-03-06T19:28:23+00:00",
       "note": "Covered models, store_results, and trigger with focused pytest coverage in tests/unit/test_dagster_api_helper_modules.py.",
       "cluster_name": null
+    },
+    {
+      "sha": "1514df32bf9e",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "test_coverage::src/data_fetcher.py::untested_critical"
+      ],
+      "recorded_at": "2026-03-06T19:30:32+00:00",
+      "note": "Covered data_fetcher with focused pytest coverage in tests/unit/test_data_fetcher.py.",
+      "cluster_name": null
     }
   ],
-  "uncommitted_issues": [
-    "test_coverage::src/data_fetcher.py::untested_critical"
-  ],
+  "uncommitted_issues": [],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
 }
