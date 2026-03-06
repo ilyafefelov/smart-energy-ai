@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "test_coverage::scripts/fetch_oree_data_view.py::untested_module"
+    "test_coverage::scripts/notion_sync.py::untested_module"
   ],
   "status": "fixed",
   "resolved": [
-    "test_coverage::scripts/fetch_oree_data_view.py::untested_module"
+    "test_coverage::scripts/notion_sync.py::untested_module"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 85.2,
-  "objective_score": 86.3,
-  "strict_score": 84.8,
+  "overall_score": 85.4,
+  "objective_score": 86.8,
+  "strict_score": 85.0,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 85.2,
-  "prev_objective_score": 86.2,
-  "prev_strict_score": 84.8,
+  "prev_overall_score": 85.3,
+  "prev_objective_score": 86.7,
+  "prev_strict_score": 84.9,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually Added focused tests for decimal parsing, OREE HTML table extraction, and CLI success and error JSON output. and I am not gaming the score.",
+  "attestation": "I have actually Added focused tests for git commit parsing, markdown discovery, summary generation, and sync summary file output. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -210,8 +210,8 @@
       {
         "type": "refactor",
         "detector": "test_coverage",
-        "count": 55,
-        "description": "55 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "count": 52,
+        "description": "52 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
         "command": "desloppify show test_coverage --status open",
         "impact": 0.0,
         "dimension": "Test health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 319,
+        "total_count": 316,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -322,7 +322,7 @@
           "actions": [
             7
           ],
-          "file_count": 55,
+          "file_count": 52,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -376,8 +376,8 @@
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 84.8,
-      "gap": 10.2,
+      "current": 85.0,
+      "gap": 10.0,
       "state": "below",
       "warning": null
     },

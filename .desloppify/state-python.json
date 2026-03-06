@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 85.2,
-  "objective_score": 86.3,
-  "strict_score": 84.8,
+  "overall_score": 85.4,
+  "objective_score": 86.8,
+  "strict_score": 85.0,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 61,
-    "open": 319,
+    "fixed": 64,
+    "open": 316,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -25,15 +25,15 @@
       "2": {
         "auto_resolved": 36,
         "false_positive": 0,
-        "fixed": 16,
-        "open": 35,
+        "fixed": 17,
+        "open": 34,
         "wontfix": 75
       },
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 25,
-        "open": 272,
+        "fixed": 27,
+        "open": 270,
         "wontfix": 72
       },
       "4": {
@@ -2455,18 +2455,18 @@
       }
     },
     "Test health": {
-      "score": 55.5,
-      "strict": 55.5,
+      "score": 57.9,
+      "strict": 57.9,
       "verified_strict_score": 19.1,
       "checks": 1788,
-      "failing": 55,
+      "failing": 52,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1782,
-          "pass_rate": 0.5532329953438981,
-          "failing": 55,
-          "weighted_failures": 796.1388022971736
+          "pass_rate": 0.5779560553576683,
+          "failing": 52,
+          "weighted_failures": 752.082309352635
         },
         "subjective_review": {
           "potential": 6,
@@ -7763,17 +7763,23 @@
         "importer_count": 0,
         "loc_weight": 11.180339887498949
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for git commit parsing, markdown discovery, summary generation, and sync summary file output.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:28:31+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for git commit parsing, markdown discovery, summary generation, and sync summary file output. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:28:31+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/oree_playwright_scraper.py::untested_critical": {
       "id": "test_coverage::src/oree_playwright_scraper.py::untested_critical",
@@ -8580,17 +8586,23 @@
         "loc_weight": 18.384776310850235,
         "complexity_score": 250
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for successful and failed Notion page creation payload handling.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:28:11+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for successful and failed Notion page creation payload handling. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:28:11+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/assets/ml_star_optimized_pipeline.py::untested_critical": {
       "id": "test_coverage::energy_ml/assets/ml_star_optimized_pipeline.py::untested_critical",
@@ -8662,17 +8674,23 @@
         "importer_count": 0,
         "loc_weight": 14.491376746189438
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for generated weather and price frames, storage success and rollback behavior, and main reporting output.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:28:21+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for generated weather and price frames, storage success and rollback behavior, and main reporting output. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:28:21+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/assets/__init__.py::untested_module": {
       "id": "test_coverage::src/assets/__init__.py::untested_module",
