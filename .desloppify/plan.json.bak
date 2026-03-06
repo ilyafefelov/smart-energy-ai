@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T19:15:49+00:00",
+  "updated": "2026-03-06T19:15:50+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -568,8 +568,8 @@
     "test_coverage::src/dagster_api/database.py::untested_module": {
       "issue_id": "test_coverage::src/dagster_api/database.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T19:15:50+00:00"
     },
     "test_coverage::recalculate_pipeline.py::untested_module": {
       "issue_id": "test_coverage::recalculate_pipeline.py::untested_module",
@@ -2180,7 +2180,6 @@
       "issue_ids": [
         "test_coverage::src/generate_plots_mpl.py::untested_module",
         "test_coverage::src/oree_real_prices.py::untested_critical",
-        "test_coverage::src/dagster_api/database.py::untested_module",
         "test_coverage::src/physics/economics.py::untested_module",
         "test_coverage::src/dagster_api/store_results.py::untested_module",
         "test_coverage::src/generate_plots.py::untested_module",
@@ -7031,6 +7030,20 @@
       "actor": "user",
       "note": "Added focused pytest coverage in tests/unit/test_dagster_api_service_modules.py and validated with Python 3.13 pytest.",
       "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T19:15:50+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/dagster_api/database.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_dagster_api_service_modules.py and validated with Python 3.13 pytest.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_dagster_api_service_modules.py, and I am not gaming the score by resolving without fixing."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -7407,7 +7420,8 @@
   ],
   "uncommitted_issues": [
     "test_coverage::src/dagster_api/asset_service.py::untested_module",
-    "test_coverage::src/dagster_api/cli.py::untested_module"
+    "test_coverage::src/dagster_api/cli.py::untested_module",
+    "test_coverage::src/dagster_api/database.py::untested_module"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
