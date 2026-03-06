@@ -17,14 +17,26 @@ checkpoints/
 *.pth
 *.pt
 .tmp_dagster_home_*/
+.tmp_main.bundle.js
+
+# Generated Copilot and review-session artifacts
+.copilot-tracking/
+.desloppify/external_review_sessions/
+.desloppify/review_packets/
+.desloppify/review_packet_blind.json
+.desloppify/state-python.json.bak
+.desloppify/subagents/runs/
 
 # Generated dashboard/runtime artifacts
 dashboard/data/battery_state.json
+dashboard/data/battery_control_state.json
 dashboard/data/retraining/job-*.json
 dashboard/data/api_smoke_test_report.json
 dashboard/data/dashboard_render_snapshot.json
 dashboard/data/backups/
 dashboard/data/tenants/
+.playwright-mcp/*.log
+data/dagster_home/storage/
 
 # Generated model artifacts from retraining runs
 models/model_job-*.pkl
