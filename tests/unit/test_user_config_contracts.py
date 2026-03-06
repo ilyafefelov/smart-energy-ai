@@ -132,3 +132,57 @@ def test_arbitrage_potential_uses_materialized_degradation_cost(tmp_path: Path) 
 
     assert arbitrage["daily_degradation_cost"] == pytest.approx(round(10.0 * 13000 / 8000, 2))
     assert arbitrage["daily_profit_net"] < arbitrage["daily_arbitrage_gross"]
+
+
+def test_resolve_config_supports_input_payload_and_validation_failures(tmp_path: Path) -> None:
+    manager = ConfigurationManager(config_dir=tmp_path)
+
+    resolved = manager.resolve_config({"battery_capacity_kwh": 15.0, "load_profile_type": "24/7"})
+    invalid = manager.resolve_config({"battery_capacity_kwh": 0.0})
+
+    assert resolved.success is True
+    assert resolved.source == "input"
+    assert resolved.config is not None
+    assert resolved.config.battery_capacity_kwh == 15.0
+    assert resolved.config.load_profile_type == "24_7"
+
+    assert invalid.success is False
+    assert invalid.source == "invalid"
+    assert invalid.config is None
+    assert invalid.errors
+
+
+def test_validate_complete_config_collects_errors_and_operational_warnings(tmp_path: Path) -> None:
+    manager = ConfigurationManager(config_dir=tmp_path)
+    config = UserConfigModel(
+        battery_type="LFP",
+        battery_capacity_kwh=10.0,
+        battery_c_rate_discharge=0.2,
+        load_peak_kw=12.0,
+        tariff_peak_hours_start=23,
+        tariff_peak_hours_end=6,
+        tariff_peak_rate_uah_kwh=7.0,
+        tariff_off_peak_rate_uah_kwh=8.0,
+        ml_lookback_hours=24,
+        ml_forecast_horizon_hours=24,
+    )
+
+    object.__setattr__(config, "ml_lookback_hours", 12)
+
+    result = manager.validate_complete_config(config)
+
+    assert result.success is False
+    assert "Peak hours start must be before peak hours end" in result.errors
+    assert any("Peak rate should be higher" in warning for warning in result.warnings)
+    assert any("Battery max discharge" in warning for warning in result.warnings)
+    assert any("ML lookback hours should be much larger" in warning for warning in result.warnings)
+
+
+def test_load_profile_templates_expose_full_day_coefficients() -> None:
+    manager = ConfigurationManager()
+
+    templates = manager.get_load_profile_templates()
+
+    assert set(templates) == {"standard", "multi-shift", "24_7", "custom"}
+    assert len(templates["24_7"]["hourly_coefficients"]) == 24
+    assert len(templates["standard"]["hourly_coefficients"]) == 24

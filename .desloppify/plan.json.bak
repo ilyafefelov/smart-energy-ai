@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T17:12:32+00:00",
+  "updated": "2026-03-06T17:36:54+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -1018,8 +1018,8 @@
     "test_coverage::energy_ml/user_config.py::untested_module": {
       "issue_id": "test_coverage::energy_ml/user_config.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T17:36:46+00:00"
     },
     "test_coverage::src/assets/core/weather.py::untested_module": {
       "issue_id": "test_coverage::src/assets/core/weather.py::untested_module",
@@ -1054,8 +1054,8 @@
     "test_coverage::energy_ml/tariff_models.py::untested_module": {
       "issue_id": "test_coverage::energy_ml/tariff_models.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T17:36:38+00:00"
     },
     "dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP": {
       "issue_id": "dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP",
@@ -2235,11 +2235,9 @@
         "test_coverage::src/training_analyzer.py::untested_module",
         "test_coverage::src/hybrid_ml_controller.py::untested_module",
         "test_coverage::src/oree_effective_scraper.py::untested_module",
-        "test_coverage::energy_ml/user_config.py::untested_module",
         "test_coverage::src/assets/core/weather.py::untested_module",
         "test_coverage::src/assets/core/optimization_schedule_checks.py::untested_module",
-        "test_coverage::src/baseline_calculator.py::untested_module",
-        "test_coverage::energy_ml/tariff_models.py::untested_module"
+        "test_coverage::src/baseline_calculator.py::untested_module"
       ],
       "created_at": "2026-03-06T10:42:05+00:00",
       "updated_at": "2026-03-06T10:42:05+00:00",
@@ -6038,6 +6036,83 @@
         "status": "fixed",
         "attestation": "I have actually Added focused script coverage for control status success metadata and error envelope handling. and I am not gaming the score."
       }
+    },
+    {
+      "timestamp": "2026-03-06T17:12:51+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "test_coverage::energy_ml/scripts/execute_control_command.py::untested_module",
+        "test_coverage::energy_ml/scripts/get_battery_physics.py::untested_critical",
+        "test_coverage::energy_ml/scripts/get_control_status.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "4a19d73046d9",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T17:36:36+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::energy_ml/tariff_models.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit tests covering tariff boundaries, daily and annual cost calculations, and battery savings outputs.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T17:36:38+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::energy_ml/tariff_models.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit tests covering tariff boundaries, daily and annual cost calculations, and battery savings outputs.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit tests covering tariff boundaries, daily and annual cost calculations, and battery savings outputs. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T17:36:45+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::energy_ml/user_config.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extended user config contract coverage for resolve_config, comprehensive validation warnings, and load profile templates.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T17:36:46+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::energy_ml/user_config.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extended user config contract coverage for resolve_config, comprehensive validation warnings, and load profile templates.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extended user config contract coverage for resolve_config, comprehensive validation warnings, and load profile templates. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T17:36:54+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::ml_integration_api.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added direct root API surface tests for recommendation, forecast, status, strategy, renewable helpers, and CLI JSON output.",
+      "detail": {}
     }
   ],
   "epic_triage_meta": {
@@ -6268,12 +6343,23 @@
       "recorded_at": "2026-03-06T17:09:19+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "4a19d73046d9",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "test_coverage::energy_ml/scripts/execute_control_command.py::untested_module",
+        "test_coverage::energy_ml/scripts/get_battery_physics.py::untested_critical",
+        "test_coverage::energy_ml/scripts/get_control_status.py::untested_module"
+      ],
+      "recorded_at": "2026-03-06T17:12:51+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "test_coverage::energy_ml/scripts/execute_control_command.py::untested_module",
-    "test_coverage::energy_ml/scripts/get_battery_physics.py::untested_critical",
-    "test_coverage::energy_ml/scripts/get_control_status.py::untested_module"
+    "test_coverage::energy_ml/tariff_models.py::untested_module",
+    "test_coverage::energy_ml/user_config.py::untested_module"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

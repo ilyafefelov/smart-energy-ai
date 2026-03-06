@@ -1,345 +1,23 @@
 {
-  "command": "next",
-  "items": [
-    {
-      "id": "auto/test_coverage",
-      "kind": "cluster",
-      "action_type": "refactor",
-      "summary": "Fix 92 test coverage issues",
-      "member_count": 62,
-      "members": [
-        {
-          "id": "test_coverage::energy_ml/tariff_models.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "energy_ml/tariff_models.py",
-          "summary": "Untested module (195 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::energy_ml/tariff_models.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::energy_ml/user_config.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "energy_ml/user_config.py",
-          "summary": "Untested module (560 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::energy_ml/user_config.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::ml_integration_api.py::untested_critical",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "ml_integration_api.py",
-          "summary": "Untested critical module (539 LOC, 0 importers) \u2014 high blast radius",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::ml_integration_api.py::untested_critical\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::recalculate_pipeline.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "recalculate_pipeline.py",
-          "summary": "Untested module (348 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::recalculate_pipeline.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/combine_datasets.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/combine_datasets.py",
-          "summary": "Untested module (82 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/combine_datasets.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/create_dashboard_page.py::untested_critical",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/create_dashboard_page.py",
-          "summary": "Untested critical module (338 LOC, 0 importers) \u2014 high blast radius",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/create_dashboard_page.py::untested_critical\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/create_notion_docs.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/create_notion_docs.py",
-          "summary": "Untested module (182 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/create_notion_docs.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/demo_complete_mlops_system.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/demo_complete_mlops_system.py",
-          "summary": "Untested module (455 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/demo_complete_mlops_system.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/fetch_oree_data_view.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/fetch_oree_data_view.py",
-          "summary": "Untested module (91 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/fetch_oree_data_view.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/generate_nuxt_structure.py::untested_critical",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/generate_nuxt_structure.py",
-          "summary": "Untested critical module (168 LOC, 0 importers) \u2014 high blast radius",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/generate_nuxt_structure.py::untested_critical\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/generate_sample_data.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/generate_sample_data.py",
-          "summary": "Untested module (210 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/generate_sample_data.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/notion_sync.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/notion_sync.py",
-          "summary": "Untested module (125 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/notion_sync.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/parse_oree_indices.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/parse_oree_indices.py",
-          "summary": "Untested module (160 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/parse_oree_indices.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/read_dagster_schedule.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/read_dagster_schedule.py",
-          "summary": "Untested module (222 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/read_dagster_schedule.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/reconcile_optimization_history.py::untested_critical",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/reconcile_optimization_history.py",
-          "summary": "Untested critical module (207 LOC, 0 importers) \u2014 high blast radius",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/reconcile_optimization_history.py::untested_critical\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/run_tests.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/run_tests.py",
-          "summary": "Untested module (293 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/run_tests.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/train_model.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/train_model.py",
-          "summary": "Untested module (195 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/train_model.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/validate_deployment.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/validate_deployment.py",
-          "summary": "Untested module (123 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/validate_deployment.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/validate_ppo_oree.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/validate_ppo_oree.py",
-          "summary": "Untested module (185 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/validate_ppo_oree.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::scripts/validation_check.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "scripts/validation_check.py",
-          "summary": "Untested module (176 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::scripts/validation_check.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::src/assets/__init__.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "src/assets/__init__.py",
-          "summary": "Untested module (29 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::src/assets/__init__.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::src/assets/benchmarks/performance.py::untested_critical",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "src/assets/benchmarks/performance.py",
-          "summary": "Untested critical module (595 LOC, 0 importers) \u2014 high blast radius",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::src/assets/benchmarks/performance.py::untested_critical\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::src/assets/core/market.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "src/assets/core/market.py",
-          "summary": "Untested module (374 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::src/assets/core/market.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::src/assets/core/optimization_schedule.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "src/assets/core/optimization_schedule.py",
-          "summary": "Untested module (164 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::src/assets/core/optimization_schedule.py::untested_module\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "test_coverage::src/assets/core/optimization_schedule_checks.py::untested_module",
-          "kind": "issue",
-          "confidence": "high",
-          "detector": "test_coverage",
-          "file": "src/assets/core/optimization_schedule_checks.py",
-          "summary": "Untested module (305 LOC, 0 importers)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"test_coverage::src/assets/core/optimization_schedule_checks.py::untested_module\" --note \"<what you did>\" --confirm"
-        }
-      ],
-      "cluster_name": "auto/test_coverage",
-      "cluster_auto": true,
-      "detector": "test_coverage",
-      "members_truncated": true,
-      "members_sample_limit": 25,
-      "primary_command": "add tests for untested production modules \u2014 prioritize by import count"
-    },
-    {
-      "id": "structural::src/assets/core/optimization_schedule_checks.py",
-      "kind": "issue",
-      "confidence": "medium",
-      "detector": "structural",
-      "file": "src/assets/core/optimization_schedule_checks.py",
-      "summary": "Large file: large (305 LOC)",
-      "detail": {
-        "loc": 305
-      },
-      "status": "open",
-      "primary_command": "desloppify plan resolve \"structural::src/assets/core/optimization_schedule_checks.py\" --note \"<what you did>\" --confirm",
-      "queue_position": 63
-    },
-    {
-      "id": "structural::src/optimization/milp_scheduler.py",
-      "kind": "issue",
-      "confidence": "medium",
-      "detector": "structural",
-      "file": "src/optimization/milp_scheduler.py",
-      "summary": "Large file: large (315 LOC) / complexity score 40",
-      "detail": {
-        "loc": 315,
-        "complexity_score": 40,
-        "complexity_signals": [
-          "function with 9 params",
-          "nesting depth 5",
-          "long function (_solve_with_linprog: 113 LOC)"
-        ]
-      },
-      "status": "open",
-      "primary_command": "desloppify plan resolve \"structural::src/optimization/milp_scheduler.py\" --note \"<what you did>\" --confirm",
-      "queue_position": 64
-    },
-    {
-      "id": "structural::energy_ml/assets/ml_star_optimized_pipeline.py",
-      "kind": "issue",
-      "confidence": "low",
-      "detector": "structural",
-      "file": "energy_ml/assets/ml_star_optimized_pipeline.py",
-      "summary": "Large file: large (377 LOC) / complexity score 36",
-      "detail": {
-        "loc": 377,
-        "complexity_score": 36,
-        "complexity_signals": [
-          "nesting depth 16"
-        ]
-      },
-      "status": "open",
-      "primary_command": "desloppify plan resolve \"structural::energy_ml/assets/ml_star_optimized_pipeline.py\" --note \"<what you did>\" --confirm",
-      "queue_position": 65
-    },
-    {
-      "id": "structural::energy_ml/assets/ml_star_phase3.py",
-      "kind": "issue",
-      "confidence": "low",
-      "detector": "structural",
-      "file": "energy_ml/assets/ml_star_phase3.py",
-      "summary": "Large file: complexity score 78",
-      "detail": {
-        "complexity_score": 78,
-        "complexity_signals": [
-          "long function (ml_star_phase3_optimized_model: 158 LOC)"
-        ],
-        "loc": 214
-      },
-      "status": "open",
-      "primary_command": "desloppify plan resolve \"structural::energy_ml/assets/ml_star_phase3.py\" --note \"<what you did>\" --confirm",
-      "queue_position": 66
-    }
+  "command": "resolve",
+  "patterns": [
+    "test_coverage::ml_integration_api.py::untested_critical"
   ],
-  "queue": {
-    "total": 5
-  },
+  "status": "fixed",
+  "resolved": [
+    "test_coverage::ml_integration_api.py::untested_critical"
+  ],
+  "count": 1,
+  "next_command": "desloppify next",
+  "overall_score": 85.0,
+  "objective_score": 85.8,
+  "strict_score": 84.6,
+  "verified_strict_score": 78.6,
+  "prev_overall_score": 84.9,
+  "prev_objective_score": 85.6,
+  "prev_strict_score": 84.5,
+  "prev_verified_strict_score": 78.6,
+  "attestation": "I have actually Added direct root API surface tests for recommendation, forecast, status, strategy, renewable helpers, and CLI JSON output. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -467,30 +145,22 @@
         "type": "reorganize",
         "detector": "orphaned",
         "count": 61,
-        "description": "61 orphaned issues in 1 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "61 orphaned issues \u2014 delete dead files or relocate with `desloppify move`",
+        "command": "desloppify show orphaned --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 1,
-        "clusters": [
-          "auto/orphaned"
-        ],
-        "cluster_count": 1,
         "lane": "restructure"
       },
       {
         "type": "reorganize",
         "detector": "flat_dirs",
         "count": 3,
-        "description": "3 flat_dirs issues in 1 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "3 flat_dirs issues \u2014 create subdirectories and use `desloppify move`",
+        "command": "desloppify show flat_dirs --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 2,
-        "clusters": [
-          "auto/flat_dirs-overload"
-        ],
-        "cluster_count": 1,
         "lane": "restructure"
       },
       {
@@ -508,66 +178,44 @@
         "type": "reorganize",
         "detector": "facade",
         "count": 11,
-        "description": "11 facade issues in 1 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "11 facade issues \u2014 flatten re-export facades or consolidate barrel files",
+        "command": "desloppify show facade --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 4,
-        "clusters": [
-          "auto/facade-file"
-        ],
-        "cluster_count": 1,
         "lane": "restructure"
       },
       {
         "type": "refactor",
         "detector": "structural",
         "count": 67,
-        "description": "67 structural issues in 4 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "67 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
         "priority": 5,
-        "clusters": [
-          "auto/structural-battery_physics.py",
-          "auto/structural-pipeline.py",
-          "auto/structural-features.py",
-          "auto/structural-ml_integration_api.py"
-        ],
-        "cluster_count": 4,
         "lane": "refactor_0"
       },
       {
         "type": "refactor",
         "detector": "dict_keys",
         "count": 48,
-        "description": "48 dict_keys issues in 4 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "48 dict_keys issues \u2014 fix dict key mismatches \u2014 dead writes are likely dead code, schema drift suggests a typo or missed rename",
+        "command": "desloppify show dict_keys --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 6,
-        "clusters": [
-          "auto/dict_keys-phantom_read",
-          "auto/dict_keys-overwritten_key",
-          "auto/dict_keys-dead_write",
-          "auto/dict_keys-schema_drift"
-        ],
-        "cluster_count": 4,
         "lane": "refactor_0"
       },
       {
         "type": "refactor",
         "detector": "test_coverage",
-        "count": 62,
-        "description": "62 test_coverage issues in 1 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "count": 59,
+        "description": "59 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "command": "desloppify show test_coverage --status open",
         "impact": 0.0,
         "dimension": "Test health",
         "priority": 7,
-        "clusters": [
-          "auto/test_coverage"
-        ],
-        "cluster_count": 1,
         "lane": "test_coverage"
       },
       {
@@ -596,20 +244,11 @@
         "type": "manual_fix",
         "detector": "smells",
         "count": 45,
-        "description": "45 smells issues in 6 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "45 smells issues \u2014 inspect with `desloppify next` and fix manually",
+        "command": "desloppify show smells --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 10,
-        "clusters": [
-          "auto/smells-silent_except",
-          "auto/smells-hardcoded_url",
-          "auto/smells-high_cyclomatic_complexity",
-          "auto/smells-nested_closure",
-          "auto/smells-magic_number",
-          "auto/smells-deferred_import"
-        ],
-        "cluster_count": 6,
         "lane": "refactor_0"
       },
       {
@@ -627,22 +266,18 @@
         "type": "manual_fix",
         "detector": "stale_exclude",
         "count": 9,
-        "description": "9 stale_exclude issues in 1 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "9 stale_exclude issues \u2014 remove stale exclusion or verify it's still needed",
+        "command": "desloppify show stale_exclude --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 12,
-        "clusters": [
-          "auto/stale_exclude"
-        ],
-        "cluster_count": 1,
         "lane": "refactor_1"
       }
     ],
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 326,
+        "total_count": 323,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -687,7 +322,7 @@
           "actions": [
             7
           ],
-          "file_count": 62,
+          "file_count": 59,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -716,7 +351,7 @@
       }
     },
     "debt": {
-      "overall_gap": 0.2,
+      "overall_gap": 0.1,
       "wontfix_count": 147,
       "worst_dimension": "Code quality",
       "worst_gap": 5.5,
@@ -724,8 +359,8 @@
     },
     "milestone": "All T1 items cleared!",
     "primary_action": {
-      "command": "desloppify next",
-      "description": "61 orphaned issues in 1 cluster(s) \u2014 run `desloppify next`"
+      "command": "desloppify show orphaned --status open",
+      "description": "61 orphaned issues \u2014 delete dead files or relocate with `desloppify move`"
     },
     "why_now": "4 independent workstreams, safe to parallelize. Rescan after each phase to verify.",
     "verification_step": {
@@ -736,17 +371,31 @@
       {
         "type": "wontfix_gap",
         "severity": "high",
-        "message": "Strict/lenient gap is 0.2 pts with 147 wontfix issues"
+        "message": "Strict/lenient gap is 0.1 pts with 147 wontfix issues"
       }
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 84.3,
-      "gap": 10.7,
+      "current": 84.6,
+      "gap": 10.4,
       "state": "below",
       "warning": null
     },
     "reminders": [
+      {
+        "type": "rereview_needed",
+        "message": "Subjective results may be stale after resolve. Re-run `desloppify review --prepare` to refresh, or reset with `desloppify scan --reset-subjective` before a clean rerun.",
+        "command": "desloppify review --prepare",
+        "priority": 1,
+        "severity": "high"
+      },
+      {
+        "type": "rescan_needed",
+        "message": "Rescan to verify \u2014 cascading effects may create new issues.",
+        "command": "desloppify scan",
+        "priority": 1,
+        "severity": "high"
+      },
       {
         "type": "review_not_run",
         "message": "Mechanical checks look good! Run a subjective design review to catch issues linters miss: desloppify review --prepare",
@@ -762,604 +411,11 @@
       "stagnant_nudge": 15,
       "review_findings_pending": 3,
       "badge_recommendation": 1,
-      "review_not_run": 2
+      "review_not_run": 2,
+      "rereview_needed": 1,
+      "rescan_needed": 1
     }
   },
-  "agent_notes": [
-    "Do NOT use `desloppify plan skip` unless the user explicitly asks you to skip an item.",
-    "If you cannot fix an item, report it and move to the next one.",
-    "For cluster items: if the autofix_hint finds 0 results, drill into individual issues with the primary_command."
-  ],
-  "plan": {
-    "active": true,
-    "focus": null,
-    "clusters": [
-      {
-        "name": "auto/structural-battery_physics.py",
-        "description": "Review file size: battery_physics.py",
-        "item_count": 2
-      },
-      {
-        "name": "auto/structural-pipeline.py",
-        "description": "Review file size: pipeline.py",
-        "item_count": 2
-      },
-      {
-        "name": "auto/structural-features.py",
-        "description": "Review file size: features.py",
-        "item_count": 2
-      },
-      {
-        "name": "auto/structural-ml_integration_api.py",
-        "description": "Review file size: ml_integration_api.py",
-        "item_count": 2
-      },
-      {
-        "name": "auto/flat_dirs-overload",
-        "description": "Fix 3 overload issues",
-        "item_count": 3
-      },
-      {
-        "name": "auto/orphaned",
-        "description": "Fix 61 orphaned issues",
-        "item_count": 61
-      },
-      {
-        "name": "auto/facade-file",
-        "description": "Fix 11 file issues",
-        "item_count": 11
-      },
-      {
-        "name": "auto/test_coverage",
-        "description": "Fix 92 test coverage issues",
-        "item_count": 62
-      },
-      {
-        "name": "auto/dict_keys-phantom_read",
-        "description": "Fix 7 phantom read issues",
-        "item_count": 7
-      },
-      {
-        "name": "auto/dict_keys-overwritten_key",
-        "description": "Fix 31 overwritten key issues",
-        "item_count": 31
-      },
-      {
-        "name": "auto/dict_keys-dead_write",
-        "description": "Fix 7 dead write issues",
-        "item_count": 7
-      },
-      {
-        "name": "auto/dict_keys-schema_drift",
-        "description": "Fix 3 schema drift issues",
-        "item_count": 3
-      },
-      {
-        "name": "auto/smells-silent_except",
-        "description": "Fix 3 silent except issues",
-        "item_count": 3
-      },
-      {
-        "name": "auto/smells-hardcoded_url",
-        "description": "Fix 2 hardcoded url issues",
-        "item_count": 2
-      },
-      {
-        "name": "auto/smells-high_cyclomatic_complexity",
-        "description": "Fix 17 high cyclomatic complexity issues",
-        "item_count": 17
-      },
-      {
-        "name": "auto/smells-nested_closure",
-        "description": "Fix 3 nested closure issues",
-        "item_count": 3
-      },
-      {
-        "name": "auto/smells-magic_number",
-        "description": "Fix 11 magic number issues",
-        "item_count": 11
-      },
-      {
-        "name": "auto/smells-deferred_import",
-        "description": "Fix 8 deferred import issues",
-        "item_count": 8
-      },
-      {
-        "name": "auto/stale_exclude",
-        "description": "Fix 9 stale exclude issues",
-        "item_count": 9
-      },
-      {
-        "name": "auto/stale-review",
-        "description": "Re-review 4 stale subjective dimensions",
-        "item_count": 0
-      },
-      {
-        "name": "auth-boundaries",
-        "description": "Tenant authorization and Dagster result isolation fixes across dashboard APIs and storage.",
-        "item_count": 0
-      },
-      {
-        "name": "python-contracts",
-        "description": "Python result-contract, typing, and schema-shape fixes centered on user_config, serving_api, schedule assets, and ingestion paths.",
-        "item_count": 14
-      },
-      {
-        "name": "init-side-effects",
-        "description": "Import-time bootstrap, singleton initialization, and migration-drift issues in MLOps and market-data modules.",
-        "item_count": 15
-      },
-      {
-        "name": "serving-api-contracts",
-        "description": "Serving API contract-coherence fixes for ML serving and battery simulation adapters.",
-        "item_count": 0
-      },
-      {
-        "name": "helper-envelope-contracts",
-        "description": "Public helper contract fixes for optimizer strategy envelopes and battery specification serialization.",
-        "item_count": 0
-      },
-      {
-        "name": "contract-coherence-low-risk",
-        "description": "Low-risk contract cleanup across simulator, ingestion, pipeline, optimizer, and feature-store interfaces.",
-        "item_count": 0
-      },
-      {
-        "name": "contract-coherence-design",
-        "description": "Deeper contract-design alignment for configuration loading, error semantics, and structured pipeline inputs.",
-        "item_count": 0
-      }
-    ],
-    "total_ordered": 0,
-    "total_skipped": 0,
-    "plan_overrides_narrative": true
-  },
-  "overall_score": 84.7,
-  "objective_score": 85.2,
-  "strict_score": 84.3,
-  "scorecard_dimensions": [
-    {
-      "name": "File health",
-      "score": 86.0,
-      "strict": 86.0,
-      "checks": 143,
-      "failing": 64,
-      "tier": 3,
-      "subjective": false
-    },
-    {
-      "name": "AI generated debt",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "ai_generated_debt"
-      ]
-    },
-    {
-      "name": "API coherence",
-      "score": 55.0,
-      "strict": 55.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "api_surface_coherence"
-      ]
-    },
-    {
-      "name": "Abstraction fit",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "abstraction_fitness"
-      ]
-    },
-    {
-      "name": "Auth consistency",
-      "score": 24.0,
-      "strict": 24.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "authorization_consistency"
-      ]
-    },
-    {
-      "name": "Code quality",
-      "score": 90.3,
-      "strict": 84.8,
-      "checks": 1032,
-      "failing": 178,
-      "tier": 3,
-      "subjective": false
-    },
-    {
-      "name": "Contracts",
-      "score": 48.0,
-      "strict": 48.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "contract_coherence"
-      ]
-    },
-    {
-      "name": "Convention drift",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "convention_outlier"
-      ]
-    },
-    {
-      "name": "Cross-module arch",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "cross_module_architecture"
-      ]
-    },
-    {
-      "name": "Dep health",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "dependency_health"
-      ]
-    },
-    {
-      "name": "Design coherence",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "design_coherence"
-      ]
-    },
-    {
-      "name": "Duplication",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 796,
-      "failing": 0,
-      "tier": 3,
-      "subjective": false
-    },
-    {
-      "name": "Elegance",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 30,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "high_level_elegance",
-        "mid_level_elegance",
-        "low_level_elegance"
-      ]
-    },
-    {
-      "name": "Error consistency",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "error_consistency"
-      ]
-    },
-    {
-      "name": "Init coupling",
-      "score": 33.0,
-      "strict": 33.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "initialization_coupling"
-      ]
-    },
-    {
-      "name": "Security",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 286,
-      "failing": 0,
-      "tier": 4,
-      "subjective": false
-    },
-    {
-      "name": "Structure nav",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "package_organization"
-      ]
-    },
-    {
-      "name": "Test health",
-      "score": 49.2,
-      "strict": 49.2,
-      "checks": 1788,
-      "failing": 62,
-      "tier": 4,
-      "subjective": false
-    },
-    {
-      "name": "Test strategy",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "test_strategy"
-      ]
-    },
-    {
-      "name": "Type safety",
-      "score": 38.5,
-      "strict": 38.5,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "type_safety"
-      ]
-    }
-  ],
-  "subjective_measures": [
-    {
-      "name": "AI generated debt",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "ai_generated_debt"
-      ]
-    },
-    {
-      "name": "API coherence",
-      "score": 55.0,
-      "strict": 55.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "api_surface_coherence"
-      ]
-    },
-    {
-      "name": "Abstraction fit",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "abstraction_fitness"
-      ]
-    },
-    {
-      "name": "Auth consistency",
-      "score": 24.0,
-      "strict": 24.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "authorization_consistency"
-      ]
-    },
-    {
-      "name": "Contracts",
-      "score": 48.0,
-      "strict": 48.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "contract_coherence"
-      ]
-    },
-    {
-      "name": "Convention drift",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "convention_outlier"
-      ]
-    },
-    {
-      "name": "Cross-module arch",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "cross_module_architecture"
-      ]
-    },
-    {
-      "name": "Dep health",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "dependency_health"
-      ]
-    },
-    {
-      "name": "Design coherence",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "design_coherence"
-      ]
-    },
-    {
-      "name": "Elegance",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 30,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "high_level_elegance",
-        "mid_level_elegance",
-        "low_level_elegance"
-      ]
-    },
-    {
-      "name": "Error consistency",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "error_consistency"
-      ]
-    },
-    {
-      "name": "Init coupling",
-      "score": 33.0,
-      "strict": 33.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "initialization_coupling"
-      ]
-    },
-    {
-      "name": "Structure nav",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "package_organization"
-      ]
-    },
-    {
-      "name": "Test strategy",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "test_strategy"
-      ]
-    },
-    {
-      "name": "Type safety",
-      "score": 38.5,
-      "strict": 38.5,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "type_safety"
-      ]
-    }
-  ],
   "config": {
     "target_strict_score": 95,
     "review_max_age_days": 30,
