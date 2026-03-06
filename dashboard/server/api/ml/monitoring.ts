@@ -4,21 +4,32 @@
  */
 
 import { createError, eventHandler, getMethod } from 'h3'
+import { resolve } from 'path'
+import { readDagsterAssetChecks } from '../../utils/dagster-asset-checks'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default eventHandler(async (event: any) => {
   const method = getMethod(event)
 
   if (method === 'GET') {
     try {
+      const tenant = await resolveTenantContext(event)
+      const tenantRequest = {
+        query: { tenantId: tenant.id },
+        headers: { 'x-tenant-id': tenant.id },
+      }
       const timestamp = new Date().toISOString()
       const now = new Date()
       const currentHour = now.getHours()
+      const projectRoot = resolve(process.cwd(), '..')
 
-      const [mlflowStatus, mlRecommendation, pricesPayload, batteryStatus] = await Promise.all([
+      const [mlflowStatus, mlRecommendation, pricesPayload, batteryStatus, dagsterRecommendation, dagsterAssetChecks] = await Promise.all([
         $fetch<any>('/api/mlflow/status').catch(() => null),
-        $fetch<any>('/api/ml/recommendation').catch(() => null),
-        $fetch<any>('/api/prices/current').catch(() => null),
-        $fetch<any>('/api/battery/status').catch(() => null),
+        $fetch<any>('/api/ml/recommendation', tenantRequest).catch(() => null),
+        $fetch<any>('/api/prices/current', tenantRequest).catch(() => null),
+        $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
+        $fetch<any>('/api/dagster/recommendation', tenantRequest).catch(() => null),
+        readDagsterAssetChecks(projectRoot),
       ])
 
       const confidence = Number(mlRecommendation?.data?.confidence || 0.75)
@@ -69,6 +80,34 @@ export default eventHandler(async (event: any) => {
         })
       }
 
+      const dagsterCheckStatus = dagsterAssetChecks.summary?.overall_status || 'unknown'
+      if (dagsterCheckStatus === 'degraded') {
+        alerts.push({
+          rule_name: 'dagster_asset_check_failure',
+          message: `Dagster schedule contract checks failing: ${(dagsterAssetChecks.summary?.failing_check_names || []).join(', ')}`,
+          severity: 'critical',
+          timestamp,
+        })
+      } else if (dagsterCheckStatus === 'unknown') {
+        alerts.push({
+          rule_name: 'dagster_asset_checks_not_run',
+          message: 'Dagster schedule contract checks have not produced evaluations yet.',
+          severity: 'warning',
+          timestamp,
+        })
+      }
+
+      const dagsterSourceMetadata = dagsterRecommendation?.source_metadata || {}
+      const dagsterSnapshotFresh = dagsterSourceMetadata?.dagster_snapshot_is_fresh !== false
+      if (dagsterSourceMetadata?.dagster_snapshot_is_fresh === false) {
+        alerts.push({
+          rule_name: 'dagster_snapshot_stale',
+          message: `Dagster snapshot stale (${dagsterSourceMetadata?.dagster_snapshot_age_minutes || 'unknown'} minutes old); fallback recommendation path is active.`,
+          severity: 'warning',
+          timestamp,
+        })
+      }
+
       const activeModel = mlflowStatus?.active_model || null
       const modelCreatedAt = activeModel?.last_updated || timestamp
       const modelVersion = activeModel?.version || 'Phase4F-v1.0'
@@ -83,6 +122,14 @@ export default eventHandler(async (event: any) => {
       if (driftScore > 0.2) retrainReasons.push('Data drift threshold exceeded')
       if (mape > 12) retrainReasons.push('MAPE above allowed threshold')
       if (batteryHealthPercent < 90) retrainReasons.push('Battery operating profile changed materially')
+
+      const scheduleContractStatus = dagsterCheckStatus === 'healthy'
+        ? 'healthy'
+        : dagsterCheckStatus === 'warning'
+          ? 'degraded'
+          : dagsterCheckStatus === 'degraded'
+            ? 'degraded'
+            : 'degraded'
 
       const performanceHistory = Array.from({ length: 24 }, (_, i) => {
         const hourOffset = (currentHour + i) % 24
@@ -172,7 +219,7 @@ export default eventHandler(async (event: any) => {
         },
 
         system_health: {
-          overall_status: shouldRetrain ? 'degraded' : 'healthy',
+          overall_status: shouldRetrain || scheduleContractStatus !== 'healthy' || !dagsterSnapshotFresh ? 'degraded' : 'healthy',
           components: {
             model_registry: {
               healthy: Boolean(activeModel),
@@ -193,10 +240,38 @@ export default eventHandler(async (event: any) => {
               healthy: alerts.filter(a => a.severity === 'critical').length === 0,
               message: alerts.length > 0 ? `${alerts.length} active alert(s)` : 'No critical alerts',
               details: { critical_alerts: alerts.filter(a => a.severity === 'critical').length }
+            },
+            dagster_schedule_contract: {
+              healthy: dagsterCheckStatus === 'healthy' && dagsterSnapshotFresh,
+              message: dagsterCheckStatus === 'healthy'
+                ? 'Dagster schedule contract checks passing'
+                : dagsterCheckStatus === 'unknown'
+                  ? 'Dagster schedule checks not evaluated yet'
+                  : 'Dagster schedule contract requires attention',
+              details: {
+                overall_status: dagsterCheckStatus,
+                failed_checks: dagsterAssetChecks.summary?.failed_checks || 0,
+                warning_checks: dagsterAssetChecks.summary?.warning_checks || 0,
+                not_run_checks: dagsterAssetChecks.summary?.not_run_checks || 0,
+                snapshot_is_fresh: dagsterSourceMetadata?.dagster_snapshot_is_fresh ?? null,
+              }
             }
           },
-          failed_components: [],
+          failed_components: [
+            ...(dagsterCheckStatus === 'degraded' ? ['dagster_schedule_contract'] : []),
+            ...(!dagsterSnapshotFresh ? ['dagster_snapshot_freshness'] : []),
+          ],
           last_check: timestamp,
+        },
+
+        dagster_schedule_contract: {
+          summary: dagsterAssetChecks.summary,
+          assets: dagsterAssetChecks.assets,
+          recommendation_source: dagsterSourceMetadata?.recommendation_source || null,
+          snapshot_is_fresh: dagsterSourceMetadata?.dagster_snapshot_is_fresh ?? null,
+          snapshot_age_minutes: dagsterSourceMetadata?.dagster_snapshot_age_minutes ?? null,
+          snapshot_max_age_minutes: dagsterSourceMetadata?.dagster_snapshot_max_age_minutes ?? null,
+          freshness_reason: dagsterSourceMetadata?.dagster_snapshot_freshness_reason || null,
         },
 
         energy_market: {
@@ -215,7 +290,9 @@ export default eventHandler(async (event: any) => {
           solar_generation_kw: 0.12,
           temperature_celsius: 0.08,
           hour_of_day: 0.05,
-        }
+        },
+
+        tenant: getTenantResponseMetadata(tenant),
       }
 
     } catch (error: any) {

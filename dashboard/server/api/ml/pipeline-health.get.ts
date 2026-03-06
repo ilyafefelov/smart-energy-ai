@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
 import { defineEventHandler } from 'h3'
+import { readDagsterAssetChecks } from '../../utils/dagster-asset-checks'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 const DEFAULT_MLFLOW_URI = process.env.MLFLOW_API_URL || 'http://localhost:5000'
@@ -85,12 +86,13 @@ export default defineEventHandler(async (event: any) => {
     const projectRoot = path.resolve(process.cwd(), '..')
     const bridgeScriptPath = path.join(projectRoot, 'ml_integration_api.py')
 
-    const [mlflowStatus, recommendation, monitoring, dagsterRecommendation, mlflowReachability] = await Promise.all([
+    const [mlflowStatus, recommendation, monitoring, dagsterRecommendation, mlflowReachability, dagsterAssetChecks] = await Promise.all([
       $fetch<any>('/api/mlflow/status', tenantRequest).catch(() => null),
       $fetch<any>('/api/ml/recommendation', tenantRequest).catch(() => null),
       $fetch<any>('/api/ml/monitoring', tenantRequest).catch(() => null),
       $fetch<any>('/api/dagster/recommendation', tenantRequest).catch(() => null),
       checkMlflowReachability(DEFAULT_MLFLOW_URI),
+      readDagsterAssetChecks(projectRoot),
     ])
 
     const mlflowDocker = inspectMlflowDocker(projectRoot)
@@ -102,6 +104,13 @@ export default defineEventHandler(async (event: any) => {
 
     const driftStatus = recommendation?.data?.drift_diagnostics?.status || 'unknown'
     const driftScore = recommendation?.data?.drift_diagnostics?.score ?? null
+    const dagsterSourceMetadata = dagsterRecommendation?.source_metadata || {}
+    const dagsterCheckStatus = dagsterAssetChecks.summary?.overall_status || 'unknown'
+    const dagsterCheckHealth: HealthStatus = dagsterAssetChecks.success
+      ? dagsterCheckStatus === 'healthy'
+        ? 'healthy'
+        : 'degraded'
+      : 'degraded'
 
     const components = {
       recommendation_api: {
@@ -117,6 +126,20 @@ export default defineEventHandler(async (event: any) => {
         status: deriveStatus(dagsterOk),
         available: dagsterOk,
         source: dagsterRecommendation?.source_metadata?.recommendation_source || null,
+        snapshot_age_minutes: dagsterSourceMetadata?.dagster_snapshot_age_minutes ?? null,
+        snapshot_is_fresh: dagsterSourceMetadata?.dagster_snapshot_is_fresh ?? null,
+      },
+      dagster_schedule_checks: {
+        status: dagsterCheckHealth,
+        available: dagsterAssetChecks.success,
+        overall_status: dagsterCheckStatus,
+        total_checks: dagsterAssetChecks.summary?.total_checks || 0,
+        failed_checks: dagsterAssetChecks.summary?.failed_checks || 0,
+        warning_checks: dagsterAssetChecks.summary?.warning_checks || 0,
+        not_run_checks: dagsterAssetChecks.summary?.not_run_checks || 0,
+        latest_evaluated_at: dagsterAssetChecks.summary?.latest_evaluated_at || null,
+        failing_check_names: dagsterAssetChecks.summary?.failing_check_names || [],
+        unevaluated_check_names: dagsterAssetChecks.summary?.unevaluated_check_names || [],
       },
       ml_bridge: {
         status: deriveStatus(bridgeScriptExists),
@@ -154,10 +177,13 @@ export default defineEventHandler(async (event: any) => {
         down_components: downCount,
       },
       components,
+      dagster_asset_checks: dagsterAssetChecks,
       recommendations: [
         mlflowDocker.status !== 'healthy' ? 'Check Docker MLflow service definitions in docker-compose.yml and Dockerfile.' : null,
         components.mlflow.status !== 'healthy' ? `Start/recover MLflow at ${DEFAULT_MLFLOW_URI} or update MLFLOW_API_URL.` : null,
         driftStatus === 'drifted' ? 'Trigger accelerated retraining due to inference drift.' : null,
+        dagsterCheckStatus === 'degraded' ? 'Investigate Dagster optimization schedule asset-check failures before trusting live recommendations.' : null,
+        dagsterCheckStatus === 'unknown' ? 'Run the optimization schedule contract checks job to populate Dagster asset-check history.' : null,
       ].filter(Boolean),
     }
   } catch (error: any) {

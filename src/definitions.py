@@ -19,6 +19,7 @@ from .assets.core.feature_matrix import feature_matrix_asset
 from .assets.core.price_forecast import price_forecast_asset
 from .assets.core.optimization_schedule import optimization_schedule_asset
 from .assets.core.optimization_schedule_milp import optimization_schedule_milp_asset
+from .assets.core.optimization_schedule_checks import optimization_schedule_contract_checks
 
 # Import Phase 2 assets
 from .assets.benchmarks.performance import (
@@ -37,6 +38,14 @@ logger = logging.getLogger(__name__)
 
 # Generate dynamic client assets using the asset factory
 client_assets = create_all_assets()
+optimization_assets_selection = AssetSelection.assets(
+    optimization_schedule_asset,
+    optimization_schedule_milp_asset,
+)
+optimization_schedule_checks_selection = AssetSelection.checks_for_assets(
+    optimization_schedule_asset,
+    optimization_schedule_milp_asset,
+)
 
 # Define jobs
 daily_data_refresh_job = define_asset_job(
@@ -49,8 +58,14 @@ daily_data_refresh_job = define_asset_job(
         price_forecast_asset,
         optimization_schedule_asset,
         optimization_schedule_milp_asset,
-    ),
+    ) | optimization_schedule_checks_selection,
     description="Daily refresh of market, weather, and client state data"
+)
+
+optimization_schedule_contract_checks_job = define_asset_job(
+    name="optimization_schedule_contract_checks",
+    selection=optimization_assets_selection | optimization_schedule_checks_selection,
+    description="Run optimization schedule assets together with Dagster contract checks",
 )
 
 benchmark_job = define_asset_job(
@@ -120,7 +135,8 @@ all_assets = [
 # Main definitions for Dagster
 defs = Definitions(
     assets=all_assets,
-    jobs=[daily_data_refresh_job, benchmark_job, multi_tenant_job],
+    asset_checks=optimization_schedule_contract_checks,
+    jobs=[daily_data_refresh_job, optimization_schedule_contract_checks_job, benchmark_job, multi_tenant_job],
     schedules=[daily_refresh_schedule, weekly_benchmark_schedule],
     resources=resources
 )

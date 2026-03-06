@@ -74,6 +74,130 @@
       </div>
     </UCard>
 
+    <UCard>
+      <template #header>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <UIcon name="i-heroicons-shield-check" class="w-6 h-6 text-cyan-500" />
+            <h2 class="text-xl font-semibold">🛡️ Dagster Schedule Contract</h2>
+          </div>
+          <UBadge
+            :color="getDagsterContractColor(dashboardData.dagster_schedule_contract?.summary?.overall_status)"
+            :label="formatContractStatus(dashboardData.dagster_schedule_contract?.summary?.overall_status)"
+            size="sm"
+          />
+        </div>
+      </template>
+
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+        <div class="rounded-lg border border-cyan-200 dark:border-cyan-900 bg-cyan-50 dark:bg-cyan-950/20 p-4">
+          <p class="text-xs uppercase tracking-[0.24em] text-cyan-700 dark:text-cyan-300">Snapshot</p>
+          <p class="mt-2 text-2xl font-semibold text-cyan-900 dark:text-cyan-100">
+            {{ dashboardData.dagster_schedule_contract?.snapshot_is_fresh ? 'Fresh' : 'Fallback' }}
+          </p>
+          <p class="mt-1 text-xs text-cyan-800/70 dark:text-cyan-200/70">
+            {{ dagsterSnapshotLabel }}
+          </p>
+        </div>
+
+        <div class="rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/20 p-4">
+          <p class="text-xs uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">Passing</p>
+          <p class="mt-2 text-2xl font-semibold text-emerald-900 dark:text-emerald-100">
+            {{ dashboardData.dagster_schedule_contract?.summary?.passed_checks || 0 }}
+          </p>
+          <p class="mt-1 text-xs text-emerald-800/70 dark:text-emerald-200/70">Checks green across both schedule assets</p>
+        </div>
+
+        <div class="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/20 p-4">
+          <p class="text-xs uppercase tracking-[0.24em] text-red-700 dark:text-red-300">Failing</p>
+          <p class="mt-2 text-2xl font-semibold text-red-900 dark:text-red-100">
+            {{ dashboardData.dagster_schedule_contract?.summary?.failed_checks || 0 }}
+          </p>
+          <p class="mt-1 text-xs text-red-800/70 dark:text-red-200/70">Contract violations that invalidate live schedule trust</p>
+        </div>
+
+        <div class="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/20 p-4">
+          <p class="text-xs uppercase tracking-[0.24em] text-amber-700 dark:text-amber-300">Unevaluated</p>
+          <p class="mt-2 text-2xl font-semibold text-amber-900 dark:text-amber-100">
+            {{ dagsterUnevaluatedCount }}
+          </p>
+          <p class="mt-1 text-xs text-amber-800/70 dark:text-amber-200/70">Checks that have not produced a terminal result yet</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div
+          v-for="asset in dashboardData.dagster_schedule_contract?.assets || []"
+          :key="asset.asset_name"
+          class="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950/40 p-4"
+        >
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-gray-500">Asset</p>
+              <h3 class="text-lg font-semibold">{{ asset.asset_name }}</h3>
+            </div>
+            <UBadge
+              :color="getDagsterContractColor(asset.summary?.overall_status)"
+              :label="formatContractStatus(asset.summary?.overall_status)"
+              size="sm"
+            />
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 mb-4 text-center">
+            <div class="rounded-lg bg-gray-50 dark:bg-gray-900 p-3">
+              <p class="text-xs text-gray-500">Pass</p>
+              <p class="text-lg font-semibold text-emerald-600">{{ asset.summary?.passed_checks || 0 }}</p>
+            </div>
+            <div class="rounded-lg bg-gray-50 dark:bg-gray-900 p-3">
+              <p class="text-xs text-gray-500">Fail/Warn</p>
+              <p class="text-lg font-semibold text-red-600">{{ (asset.summary?.failed_checks || 0) + (asset.summary?.warning_checks || 0) }}</p>
+            </div>
+            <div class="rounded-lg bg-gray-50 dark:bg-gray-900 p-3">
+              <p class="text-xs text-gray-500">Not Run</p>
+              <p class="text-lg font-semibold text-amber-600">{{ (asset.summary?.not_run_checks || 0) + (asset.summary?.planned_checks || 0) }}</p>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div
+              v-for="check in asset.checks || []"
+              :key="`${asset.asset_name}-${check.check_name}`"
+              class="flex items-start justify-between gap-4 rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2"
+            >
+              <div>
+                <p class="font-medium text-sm">{{ check.check_name }}</p>
+                <p class="text-xs text-gray-500">
+                  {{ check.description || 'Latest Dagster asset-check evaluation for schedule contract enforcement.' }}
+                </p>
+              </div>
+              <div class="text-right shrink-0">
+                <UBadge :color="getDagsterCheckBadgeColor(check.status)" :label="check.status.toUpperCase()" size="xs" />
+                <p class="mt-1 text-[11px] text-gray-500">{{ formatTime(check.timestamp) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <UAlert
+        v-if="(dashboardData.dagster_schedule_contract?.summary?.failing_check_names || []).length > 0"
+        class="mt-6"
+        icon="i-heroicons-exclamation-triangle"
+        color="red"
+        title="Schedule contract failures detected"
+        :description="`Failing checks: ${(dashboardData.dagster_schedule_contract?.summary?.failing_check_names || []).join(', ')}`"
+      />
+
+      <UAlert
+        v-else-if="dagsterUnevaluatedCount > 0"
+        class="mt-6"
+        icon="i-heroicons-clock"
+        color="amber"
+        title="Schedule checks have not been fully evaluated yet"
+        :description="`Run the Dagster optimization_schedule_contract_checks job to populate ${(dashboardData.dagster_schedule_contract?.summary?.unevaluated_check_names || []).length} unevaluated checks.`"
+      />
+    </UCard>
+
     <!-- Model Deployment Status -->
     <UCard>
       <template #header>
@@ -574,6 +698,50 @@ const getDriftColor = (score) => {
 const getRetrainingColor = (needed) => {
   return needed ? 'text-red-600' : 'text-green-600'
 }
+
+const formatContractStatus = (status) => {
+  return String(status || 'unknown').replace(/_/g, ' ').toUpperCase()
+}
+
+const getDagsterContractColor = (status) => {
+  const colors = {
+    healthy: 'green',
+    warning: 'amber',
+    degraded: 'red',
+    unknown: 'gray',
+    not_applicable: 'gray',
+  }
+  return colors[String(status || 'unknown').toLowerCase()] || 'gray'
+}
+
+const getDagsterCheckBadgeColor = (status) => {
+  const colors = {
+    passed: 'green',
+    warning: 'amber',
+    failed: 'red',
+    not_run: 'gray',
+    planned: 'blue',
+  }
+  return colors[String(status || 'not_run').toLowerCase()] || 'gray'
+}
+
+const dagsterUnevaluatedCount = computed(() => {
+  const summary = dashboardData.value.dagster_schedule_contract?.summary || {}
+  return Number(summary.not_run_checks || 0) + Number(summary.planned_checks || 0)
+})
+
+const dagsterSnapshotLabel = computed(() => {
+  const contract = dashboardData.value.dagster_schedule_contract || {}
+  if (contract.snapshot_is_fresh === true) {
+    const age = contract.snapshot_age_minutes
+    return age == null ? 'Dagster schedule snapshot within SLA' : `${Number(age).toFixed(1)} minutes old`
+  }
+  if (contract.snapshot_is_fresh === false) {
+    const age = contract.snapshot_age_minutes
+    return age == null ? 'Fallback path active because snapshot freshness is unknown' : `Fallback active, snapshot ${Number(age).toFixed(1)} minutes old`
+  }
+  return 'Snapshot freshness not yet available'
+})
 
 // Lifecycle
 onMounted(async () => {
