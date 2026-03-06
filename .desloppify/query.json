@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/mlops/optimization_engine.py"
+    "structural::energy_ml/mlops/feature_store.py"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/mlops/optimization_engine.py"
+    "structural::energy_ml/mlops/feature_store.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 88.2,
+  "overall_score": 88.3,
   "objective_score": 93.9,
-  "strict_score": 87.8,
+  "strict_score": 87.9,
   "verified_strict_score": 78.6,
   "prev_overall_score": 88.2,
-  "prev_objective_score": 93.8,
+  "prev_objective_score": 93.9,
   "prev_strict_score": 87.8,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually I split OptimizationEngine scoring, constraint, and response-building helpers into energy_ml/mlops/optimization_engine_support.py, preserved the public API and direct-file fallback loader in energy_ml/mlops/optimization_engine.py, kept current-hour and timestamp decisions in the public module for monkeypatched tests, and validated with .venv pytest on tests/unit/test_optimization_engine_contracts.py plus tests/unit/test_mlops_registry_dashboard_and_optimization.py. and I am not gaming the score.",
+  "attestation": "I have actually I split feature-store schema, metadata, and synthetic feature-generation helpers into energy_ml/mlops/feature_store_support.py, preserved the public FeatureStore and ParquetSource APIs with a direct-file fallback loader in energy_ml/mlops/feature_store.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py -k feature_store. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 90.1,
+          "strict": 90.3,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 50,
-        "description": "50 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 49,
+        "description": "49 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 257,
+        "total_count": 256,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -376,8 +376,8 @@
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 87.8,
-      "gap": 7.2,
+      "current": 87.9,
+      "gap": 7.1,
       "state": "below",
       "warning": null
     },

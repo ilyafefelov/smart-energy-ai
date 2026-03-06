@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 88.2,
+  "overall_score": 88.3,
   "objective_score": 93.9,
-  "strict_score": 87.8,
+  "strict_score": 87.9,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 123,
-    "open": 257,
+    "fixed": 124,
+    "open": 256,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 77,
-        "open": 220,
+        "fixed": 78,
+        "open": 219,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 90.1,
-      "strict": 90.1,
+      "score": 90.3,
+      "strict": 90.3,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 47,
+      "failing": 46,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.9013986013986013,
-          "failing": 47,
-          "weighted_failures": 14.100000000000012
+          "pass_rate": 0.9034965034965035,
+          "failing": 46,
+          "weighted_failures": 13.800000000000011
         }
       }
     },
@@ -3429,17 +3429,23 @@
       "detail": {
         "loc": 499
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "I split feature-store schema, metadata, and synthetic feature-generation helpers into energy_ml/mlops/feature_store_support.py, preserved the public FeatureStore and ParquetSource APIs with a direct-file fallback loader in energy_ml/mlops/feature_store.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py -k feature_store.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T22:34:13+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually I split feature-store schema, metadata, and synthetic feature-generation helpers into energy_ml/mlops/feature_store_support.py, preserved the public FeatureStore and ParquetSource APIs with a direct-file fallback loader in energy_ml/mlops/feature_store.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py -k feature_store. and I am not gaming the score.",
+        "attested_at": "2026-03-06T22:34:13+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/physics/economics.py": {
       "id": "structural::src/physics/economics.py",
