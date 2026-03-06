@@ -3,24 +3,81 @@ Phase 3: Automated Retraining Pipeline
 Production ML pipeline with drift monitoring, automated retraining, and A/B testing
 """
 
+import importlib.util
 import logging
 import json
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
+import sys
 from pathlib import Path
-import hashlib
-import pickle
 
 import numpy as np
 import polars as pl
 from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error
-from sklearn.model_selection import train_test_split
 from xgboost import XGBRegressor
-import joblib
 
 from .model_registry import ModelRegistry, get_model_registry
 from .feature_store import FeatureStore, get_feature_store
+
+try:
+    from energy_ml.mlops.retraining_pipeline_support import (
+        analyze_ab_test_config,
+        build_drift_report_payload,
+        build_insufficient_drift_report,
+        build_model_performance_payload,
+        build_prediction_log,
+        build_training_metrics,
+        build_training_result,
+        calculate_ks_drift,
+        compute_feature_statistics,
+        create_ab_test_config,
+        dataclass_to_timestamped_dict,
+        drift_feature_columns,
+        evaluate_retraining_triggers,
+        load_json_file,
+        prepare_training_arrays,
+        recent_drift_window,
+        reference_drift_window,
+        route_ab_prediction,
+        save_json_file,
+        training_feature_columns,
+        trim_recent_predictions,
+        update_ab_metrics,
+    )
+except ImportError:
+    _SUPPORT_MODULE_NAME = "energy_ml.mlops.retraining_pipeline_support"
+    _SUPPORT_PATH = Path(__file__).with_name("retraining_pipeline_support.py")
+    _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
+    if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
+        raise ImportError(f"Unable to load retraining support module from {_SUPPORT_PATH}")
+    _SUPPORT_MODULE = sys.modules.get(_SUPPORT_MODULE_NAME)
+    if _SUPPORT_MODULE is None:
+        _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
+        sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
+        _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
+    analyze_ab_test_config = _SUPPORT_MODULE.analyze_ab_test_config
+    build_drift_report_payload = _SUPPORT_MODULE.build_drift_report_payload
+    build_insufficient_drift_report = _SUPPORT_MODULE.build_insufficient_drift_report
+    build_model_performance_payload = _SUPPORT_MODULE.build_model_performance_payload
+    build_prediction_log = _SUPPORT_MODULE.build_prediction_log
+    build_training_metrics = _SUPPORT_MODULE.build_training_metrics
+    build_training_result = _SUPPORT_MODULE.build_training_result
+    calculate_ks_drift = _SUPPORT_MODULE.calculate_ks_drift
+    compute_feature_statistics = _SUPPORT_MODULE.compute_feature_statistics
+    create_ab_test_config = _SUPPORT_MODULE.create_ab_test_config
+    dataclass_to_timestamped_dict = _SUPPORT_MODULE.dataclass_to_timestamped_dict
+    drift_feature_columns = _SUPPORT_MODULE.drift_feature_columns
+    evaluate_retraining_triggers = _SUPPORT_MODULE.evaluate_retraining_triggers
+    load_json_file = _SUPPORT_MODULE.load_json_file
+    prepare_training_arrays = _SUPPORT_MODULE.prepare_training_arrays
+    recent_drift_window = _SUPPORT_MODULE.recent_drift_window
+    reference_drift_window = _SUPPORT_MODULE.reference_drift_window
+    route_ab_prediction = _SUPPORT_MODULE.route_ab_prediction
+    save_json_file = _SUPPORT_MODULE.save_json_file
+    training_feature_columns = _SUPPORT_MODULE.training_feature_columns
+    trim_recent_predictions = _SUPPORT_MODULE.trim_recent_predictions
+    update_ab_metrics = _SUPPORT_MODULE.update_ab_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +94,7 @@ class DriftReport:
     detection_method: str
     
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            **asdict(self),
-            'timestamp': self.timestamp.isoformat()
-        }
+        return dataclass_to_timestamped_dict(self, asdict)
 
 @dataclass
 class ModelPerformance:
@@ -56,10 +110,7 @@ class ModelPerformance:
     error_rate: float
     
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            **asdict(self),
-            'timestamp': self.timestamp.isoformat()
-        }
+        return dataclass_to_timestamped_dict(self, asdict)
 
 class DriftDetector:
     """Statistical drift detection for energy features"""
@@ -72,20 +123,7 @@ class DriftDetector:
     def set_reference_data(self, reference_df: pl.DataFrame, feature_columns: List[str]):
         """Set reference data for drift detection"""
         self.reference_data = reference_df
-        
-        # Calculate reference statistics for each feature
-        for feature in feature_columns:
-            if feature in reference_df.columns:
-                values = reference_df[feature].to_numpy()
-                values = values[~np.isnan(values)]  # Remove NaNs
-                
-                self.feature_statistics[feature] = {
-                    'mean': float(np.mean(values)),
-                    'std': float(np.std(values)),
-                    'min': float(np.min(values)),
-                    'max': float(np.max(values)),
-                    'median': float(np.median(values))
-                }
+        self.feature_statistics = compute_feature_statistics(reference_df, feature_columns)
                 
         logger.info(f"Set reference data with {len(reference_df)} samples for {len(feature_columns)} features")
         
@@ -114,40 +152,20 @@ class DriftDetector:
             feature_drifts[feature] = drift_score
             overall_drift_score = max(overall_drift_score, drift_score)
             
-        # Determine if drift is detected
-        is_drift_detected = overall_drift_score > (1.0 - self.sensitivity)
-        
         return DriftReport(
-            timestamp=datetime.now(),
-            drift_score=overall_drift_score,
-            drift_threshold=1.0 - self.sensitivity,
-            is_drift_detected=is_drift_detected,
-            feature_drifts=feature_drifts,
-            sample_size=len(current_df),
-            reference_period=f"{len(self.reference_data)} samples",
-            detection_method="KS-approximation"
+            **build_drift_report_payload(
+                timestamp=datetime.now(),
+                overall_drift_score=overall_drift_score,
+                sensitivity=self.sensitivity,
+                feature_drifts=feature_drifts,
+                sample_size=len(current_df),
+                reference_sample_size=len(self.reference_data),
+            )
         )
         
     def _calculate_ks_drift(self, feature: str, current_values: np.ndarray) -> float:
         """Calculate drift score using KS-test approximation"""
-        
-        ref_stats = self.feature_statistics[feature]
-        
-        # Simple statistical comparison (approximates KS test)
-        current_mean = np.mean(current_values)
-        current_std = np.std(current_values)
-        
-        # Normalized difference in means
-        mean_diff = abs(current_mean - ref_stats['mean']) / max(ref_stats['std'], 0.001)
-        
-        # Difference in standard deviations
-        std_ratio = current_std / max(ref_stats['std'], 0.001)
-        std_diff = abs(1.0 - std_ratio)
-        
-        # Combined drift score (0 = no drift, 1 = maximum drift)
-        drift_score = min(1.0, (mean_diff * 0.7 + std_diff * 0.3) / 3.0)
-        
-        return drift_score
+        return calculate_ks_drift(self.feature_statistics[feature], current_values)
 
 class ModelMonitor:
     """Real-time model performance monitoring"""
@@ -172,19 +190,11 @@ class ModelMonitor:
         """Log model prediction for performance tracking"""
         
         prediction_log = {
-            'timestamp': datetime.now().isoformat(),
-            'model_version': model_version,
-            'prediction': prediction,
-            'actual': actual,
-            'latency_ms': latency_ms,
-            'features': features
+            **build_prediction_log(datetime.now(), model_version, features, prediction, actual, latency_ms)
         }
         
         self.recent_predictions.append(prediction_log)
-        
-        # Keep only recent predictions
-        if len(self.recent_predictions) > self.performance_window_size:
-            self.recent_predictions = self.recent_predictions[-self.performance_window_size:]
+        self.recent_predictions = trim_recent_predictions(self.recent_predictions, self.performance_window_size)
             
     def calculate_performance_metrics(self, model_version: str) -> Optional[ModelPerformance]:
         """Calculate performance metrics for model version"""
@@ -198,39 +208,10 @@ class ModelMonitor:
         if len(model_predictions) < 10:  # Need minimum samples
             return None
             
-        # Extract predictions and actuals
-        predictions = [p['prediction'] for p in model_predictions]
-        actuals = [p['actual'] for p in model_predictions]
-        
-        # Calculate metrics
-        mape = mean_absolute_percentage_error(actuals, predictions) * 100
-        rmse = np.sqrt(mean_squared_error(actuals, predictions))
-        mae = np.mean(np.abs(np.array(predictions) - np.array(actuals)))
-        
-        # R² score
-        ss_res = np.sum((np.array(actuals) - np.array(predictions)) ** 2)
-        ss_tot = np.sum((np.array(actuals) - np.mean(actuals)) ** 2)
-        r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
-        
-        # Latency metrics
-        latencies = [p['latency_ms'] for p in model_predictions if p['latency_ms'] is not None]
-        latency_p95 = np.percentile(latencies, 95) if latencies else 0.0
-        
-        # Error rate (predictions with errors > 20% MAPE)
-        errors = [abs(p - a) / max(abs(a), 0.001) > 0.2 for p, a in zip(predictions, actuals)]
-        error_rate = np.mean(errors) * 100
-        
-        performance = ModelPerformance(
-            timestamp=datetime.now(),
-            model_version=model_version,
-            mape=mape,
-            rmse=rmse,
-            mae=mae,
-            r2_score=r2,
-            prediction_count=len(model_predictions),
-            latency_p95_ms=latency_p95,
-            error_rate=error_rate
-        )
+        payload = build_model_performance_payload(model_version, model_predictions, datetime.now())
+        if payload is None:
+            return None
+        performance = ModelPerformance(**payload)
         
         # Log performance
         self._log_performance(performance)
@@ -265,61 +246,25 @@ class RetrainingPipeline:
         
     def check_retraining_triggers(self) -> Dict[str, Any]:
         """Check if model retraining should be triggered"""
-        
-        triggers = {
-            'should_retrain': False,
-            'reasons': [],
-            'performance_degraded': False,
-            'drift_detected': False,
-            'last_training_age_hours': 0
-        }
-        
-        # Get current production model
         production_versions = self.model_registry.list_model_versions("energy_optimizer", stage="production")
-        if not production_versions:
-            triggers['should_retrain'] = True
-            triggers['reasons'].append("No production model found")
-            return triggers
-            
-        current_version = production_versions[0]
-        
-        # Check model age
-        age = datetime.now() - current_version.created_at
-        triggers['last_training_age_hours'] = age.total_seconds() / 3600
-        
-        if age < timedelta(hours=self.min_retraining_interval_hours):
-            logger.info(f"Model too recent for retraining: {age}")
-            return triggers
-            
-        # Check performance degradation
-        performance = self.monitor.calculate_performance_metrics(current_version.version_id)
-        if performance and performance.mape > self.performance_threshold_mape:
-            triggers['should_retrain'] = True
-            triggers['performance_degraded'] = True
-            triggers['reasons'].append(f"Performance degraded: MAPE {performance.mape:.1f}% > {self.performance_threshold_mape}%")
-            
-        # Check data drift
-        drift_report = self._check_data_drift()
-        if drift_report.is_drift_detected:
-            triggers['should_retrain'] = True
-            triggers['drift_detected'] = True
-            triggers['reasons'].append(f"Data drift detected: score {drift_report.drift_score:.3f}")
-            
-        return triggers
+        current_version = production_versions[0] if production_versions else None
+        performance = self.monitor.calculate_performance_metrics(current_version.version_id) if current_version else None
+        drift_report = self._check_data_drift() if current_version else None
+        return evaluate_retraining_triggers(
+            production_versions,
+            performance,
+            drift_report,
+            self.performance_threshold_mape,
+            self.min_retraining_interval_hours,
+            datetime.now(),
+        )
         
     def trigger_retraining(self, reason: str = "Manual trigger") -> Dict[str, Any]:
         """Trigger automated model retraining"""
         
         logger.info(f"Starting model retraining: {reason}")
         
-        training_result = {
-            'started_at': datetime.now().isoformat(),
-            'reason': reason,
-            'success': False,
-            'new_model_version': None,
-            'metrics': {},
-            'error': None
-        }
+        training_result = build_training_result(reason, datetime.now())
         
         try:
             # Get training data
@@ -335,27 +280,8 @@ class RetrainingPipeline:
             if len(training_data) < 100:
                 raise ValueError(f"Insufficient training data: {len(training_data)} samples")
                 
-            # Prepare training data
-            feature_columns = [
-                'battery_soc', 'grid_price_uah_kwh', 'solar_generation_kw', 
-                'load_demand_kw', 'temperature_celsius', 'is_peak_hour',
-                'day_of_week', 'hour_of_day', 'price_ma_24h', 'load_ma_7d'
-            ]
-            
-            # Create target variable (next hour price for prediction)
-            training_data = training_data.sort('timestamp')
-            training_data = training_data.with_columns(
-                pl.col('grid_price_uah_kwh').shift(-1).alias('target_price')
-            ).drop_nulls()
-            
-            # Extract features and targets
-            X = training_data.select(feature_columns).to_numpy()
-            y = training_data['target_price'].to_numpy()
-            
-            # Split data
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=42, shuffle=False  # Time series: no shuffling
-            )
+            feature_columns = training_feature_columns()
+            X_train, X_test, y_train, y_test = prepare_training_arrays(training_data, feature_columns)
             
             # Train new model
             model = XGBRegressor(
@@ -378,14 +304,7 @@ class RetrainingPipeline:
             train_mape = mean_absolute_percentage_error(y_train, y_pred_train) * 100
             test_mape = mean_absolute_percentage_error(y_test, y_pred_test) * 100
             
-            metrics = {
-                'train_mape': train_mape,
-                'test_mape': test_mape,
-                'train_rmse': np.sqrt(mean_squared_error(y_train, y_pred_train)),
-                'test_rmse': np.sqrt(mean_squared_error(y_test, y_pred_test)),
-                'training_samples': len(X_train),
-                'test_samples': len(X_test)
-            }
+            metrics = build_training_metrics(y_train, y_pred_train, y_test, y_pred_test, len(X_train), len(X_test))
             
             training_result['metrics'] = metrics
             
@@ -428,9 +347,7 @@ class RetrainingPipeline:
     def _check_data_drift(self) -> DriftReport:
         """Check for data drift in recent data"""
         
-        # Get recent data (last 7 days)
-        end_time = datetime.now()
-        start_time = end_time - timedelta(days=7)
+        start_time, end_time = recent_drift_window(datetime.now())
         
         recent_data = self.feature_store.load_batch_features(
             "energy_features",
@@ -439,33 +356,14 @@ class RetrainingPipeline:
         )
         
         if len(recent_data) < 50:
-            # Not enough data for drift detection
-            return DriftReport(
-                timestamp=datetime.now(),
-                drift_score=0.0,
-                drift_threshold=self.drift_threshold,
-                is_drift_detected=False,
-                feature_drifts={},
-                sample_size=len(recent_data),
-                reference_period="insufficient data",
-                detection_method="skipped"
-            )
-            
-        feature_columns = [
-            'battery_soc', 'grid_price_uah_kwh', 'solar_generation_kw', 
-            'load_demand_kw', 'temperature_celsius'
-        ]
-        
-        return self.drift_detector.detect_drift(recent_data, feature_columns)
+            return DriftReport(**build_insufficient_drift_report(datetime.now(), self.drift_threshold, len(recent_data)))
+        return self.drift_detector.detect_drift(recent_data, drift_feature_columns())
         
     def _initialize_drift_detection(self):
         """Initialize drift detection with reference data"""
         
         try:
-            # Get reference data (30-60 days ago to avoid recent changes)
-            end_time = datetime.now() - timedelta(days=30)
-            start_time = end_time - timedelta(days=30)
-            
+            start_time, end_time = reference_drift_window(datetime.now())
             reference_data = self.feature_store.load_batch_features(
                 "energy_features",
                 start_time,
@@ -473,12 +371,7 @@ class RetrainingPipeline:
             )
             
             if len(reference_data) > 100:
-                feature_columns = [
-                    'battery_soc', 'grid_price_uah_kwh', 'solar_generation_kw', 
-                    'load_demand_kw', 'temperature_celsius'
-                ]
-                
-                self.drift_detector.set_reference_data(reference_data, feature_columns)
+                self.drift_detector.set_reference_data(reference_data, drift_feature_columns())
                 logger.info("Initialized drift detection with reference data")
             else:
                 logger.warning("Insufficient reference data for drift detection")
@@ -502,20 +395,14 @@ class ABTestManager:
                       traffic_split: float = 0.5,
                       duration_hours: int = 168) -> Dict[str, Any]:  # Default 1 week
         """Create new A/B test between model versions"""
-        
-        test_config = {
-            'test_name': test_name,
-            'control_version': control_version,
-            'treatment_version': treatment_version,
-            'traffic_split': traffic_split,
-            'start_time': datetime.now().isoformat(),
-            'end_time': (datetime.now() + timedelta(hours=duration_hours)).isoformat(),
-            'status': 'active',
-            'metrics': {
-                'control': {'predictions': 0, 'errors': 0, 'total_mape': 0.0},
-                'treatment': {'predictions': 0, 'errors': 0, 'total_mape': 0.0}
-            }
-        }
+        test_config = create_ab_test_config(
+            test_name,
+            control_version,
+            treatment_version,
+            traffic_split,
+            duration_hours,
+            datetime.now(),
+        )
         
         self.active_tests[test_name] = test_config
         self._save_ab_config()
@@ -525,27 +412,7 @@ class ABTestManager:
         
     def route_prediction(self, user_id: str = "default") -> str:
         """Route prediction request to appropriate model version"""
-        
-        for test_name, config in self.active_tests.items():
-            if config['status'] != 'active':
-                continue
-                
-            # Check if test is still active
-            end_time = datetime.fromisoformat(config['end_time'])
-            if datetime.now() > end_time:
-                config['status'] = 'completed'
-                continue
-                
-            # Simple hash-based routing for consistent assignment
-            user_hash = int(hashlib.md5(f"{user_id}_{test_name}".encode()).hexdigest(), 16)
-            
-            if (user_hash % 100) < (config['traffic_split'] * 100):
-                return config['treatment_version']
-            else:
-                return config['control_version']
-                
-        # Default to production model if no active tests
-        return "production"
+        return route_ab_prediction(self.active_tests, user_id, datetime.now())
         
     def log_ab_result(self, 
                      test_name: str,
@@ -559,25 +426,8 @@ class ABTestManager:
             return
             
         config = self.active_tests[test_name]
-        
-        # Determine which group (control or treatment)
-        if version == config['control_version']:
-            group = 'control'
-        elif version == config['treatment_version']:
-            group = 'treatment'
-        else:
+        if not update_ab_metrics(config, version, prediction, actual, error):
             return
-            
-        # Update metrics
-        metrics = config['metrics'][group]
-        metrics['predictions'] += 1
-        
-        if error:
-            metrics['errors'] += 1
-            
-        if actual is not None:
-            mape = abs(prediction - actual) / max(abs(actual), 0.001)
-            metrics['total_mape'] += mape
             
         self._save_ab_config()
         
@@ -586,73 +436,15 @@ class ABTestManager:
         
         if test_name not in self.active_tests:
             raise ValueError(f"A/B test not found: {test_name}")
-            
-        config = self.active_tests[test_name]
-        control_metrics = config['metrics']['control']
-        treatment_metrics = config['metrics']['treatment']
-        
-        # Calculate performance metrics
-        control_error_rate = control_metrics['errors'] / max(control_metrics['predictions'], 1)
-        treatment_error_rate = treatment_metrics['errors'] / max(treatment_metrics['predictions'], 1)
-        
-        control_avg_mape = control_metrics['total_mape'] / max(control_metrics['predictions'], 1) * 100
-        treatment_avg_mape = treatment_metrics['total_mape'] / max(treatment_metrics['predictions'], 1) * 100
-        
-        # Statistical significance (simplified)
-        sample_size_adequate = min(control_metrics['predictions'], treatment_metrics['predictions']) >= 100
-        
-        # Winner determination
-        winner = None
-        if sample_size_adequate:
-            if treatment_avg_mape < control_avg_mape * 0.95:  # 5% improvement threshold
-                winner = 'treatment'
-            elif control_avg_mape < treatment_avg_mape * 0.95:
-                winner = 'control'
-                
-        analysis = {
-            'test_name': test_name,
-            'status': config['status'],
-            'sample_size_adequate': sample_size_adequate,
-            'winner': winner,
-            'control': {
-                'version': config['control_version'],
-                'predictions': control_metrics['predictions'],
-                'error_rate': control_error_rate * 100,
-                'avg_mape': control_avg_mape
-            },
-            'treatment': {
-                'version': config['treatment_version'],
-                'predictions': treatment_metrics['predictions'],
-                'error_rate': treatment_error_rate * 100,
-                'avg_mape': treatment_avg_mape
-            },
-            'improvement': {
-                'mape_improvement_percent': ((control_avg_mape - treatment_avg_mape) / control_avg_mape) * 100 if control_avg_mape > 0 else 0,
-                'error_rate_improvement_percent': ((control_error_rate - treatment_error_rate) / control_error_rate) * 100 if control_error_rate > 0 else 0
-            }
-        }
-        
-        return analysis
+        return analyze_ab_test_config(test_name, self.active_tests[test_name])
         
     def _load_ab_config(self) -> Dict[str, Dict[str, Any]]:
         """Load A/B test configuration from disk"""
-        if not self.ab_config_path.exists():
-            return {}
-            
-        try:
-            with open(self.ab_config_path) as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Failed to load A/B config: {e}")
-            return {}
+        return load_json_file(self.ab_config_path, logger, "A/B config")
             
     def _save_ab_config(self):
         """Save A/B test configuration to disk"""
-        try:
-            with open(self.ab_config_path, 'w') as f:
-                json.dump(self.active_tests, f, indent=2)
-        except Exception as e:
-            logger.error(f"Failed to save A/B config: {e}")
+        save_json_file(self.ab_config_path, self.active_tests, logger, "A/B config")
 
 # Singleton instances for global access
 _retraining_pipeline_instance = None
