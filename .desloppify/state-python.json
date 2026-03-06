@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 85.9,
-  "objective_score": 88.1,
-  "strict_score": 85.5,
+  "overall_score": 86.1,
+  "objective_score": 88.6,
+  "strict_score": 85.7,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 73,
-    "open": 307,
+    "fixed": 76,
+    "open": 304,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -25,15 +25,15 @@
       "2": {
         "auto_resolved": 36,
         "false_positive": 0,
-        "fixed": 19,
-        "open": 32,
+        "fixed": 20,
+        "open": 31,
         "wontfix": 75
       },
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 34,
-        "open": 263,
+        "fixed": 36,
+        "open": 261,
         "wontfix": 72
       },
       "4": {
@@ -2455,18 +2455,18 @@
       }
     },
     "Test health": {
-      "score": 65.3,
-      "strict": 65.3,
+      "score": 67.7,
+      "strict": 67.7,
       "verified_strict_score": 19.1,
       "checks": 1788,
-      "failing": 43,
+      "failing": 40,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1782,
-          "pass_rate": 0.6520312348573416,
-          "failing": 43,
-          "weighted_failures": 620.0803394842172
+          "pass_rate": 0.676186277395982,
+          "failing": 40,
+          "weighted_failures": 577.0360536803602
         },
         "subjective_review": {
           "potential": 6,
@@ -7146,17 +7146,23 @@
         "importer_count": 0,
         "loc_weight": 13.2664991614216
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for import reporting, functionality checks, dashboard API validation, and summary output based on current runtime behavior.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:51:57+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for import reporting, functionality checks, dashboard API validation, and summary output based on current runtime behavior. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:51:57+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::scripts/demo_complete_mlops_system.py::untested_module": {
       "id": "test_coverage::scripts/demo_complete_mlops_system.py::untested_module",
@@ -7743,17 +7749,23 @@
         "loc_weight": 24.392621835300936,
         "complexity_score": 28
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for benchmark helper metrics, scenario generation, MLflow tracking output, and benchmark smoke harness behavior.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:52:16+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for benchmark helper metrics, scenario generation, MLflow tracking output, and benchmark smoke harness behavior. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:52:16+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/enhanced_price_ingester.py::untested_module": {
       "id": "test_coverage::src/enhanced_price_ingester.py::untested_module",
@@ -8747,17 +8759,23 @@
         "importer_count": 0,
         "loc_weight": 5.385164807134504
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for repository asset registration using stubbed Dagster and asset modules.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:52:07+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for repository asset registration using stubbed Dagster and asset modules. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:52:07+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/ml_integration_api.py::untested_critical": {
       "id": "test_coverage::energy_ml/ml_integration_api.py::untested_critical",
