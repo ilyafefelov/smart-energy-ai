@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T21:14:26+00:00",
+  "updated": "2026-03-06T21:31:13+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -34,8 +34,8 @@
     "structural::energy_ml/energy_ml/assets/features.py": {
       "issue_id": "structural::energy_ml/energy_ml/assets/features.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/structural-features.py",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T21:31:13+00:00"
     },
     "structural::energy_ml/features.py": {
       "issue_id": "structural::energy_ml/features.py",
@@ -2039,7 +2039,6 @@
       "name": "auto/structural-features.py",
       "description": "Review file size: features.py",
       "issue_ids": [
-        "structural::energy_ml/energy_ml/assets/features.py",
         "structural::energy_ml/features.py"
       ],
       "created_at": "2026-03-06T10:42:05+00:00",
@@ -8029,6 +8028,45 @@
         "status": "fixed",
         "attestation": "I have actually extracted pure helper logic from energy_ml/energy_ml/assets/models.py into energy_ml/energy_ml/assets/model_support.py, and I am not gaming the score by resolving without fixing."
       }
+    },
+    {
+      "timestamp": "2026-03-06T21:14:51+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/models.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "da0b9f2177cc",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T21:31:11+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/features.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted nested feature engineering builders into feature_support while preserving direct-file fallback loading and asset outputs.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T21:31:13+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/features.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted nested feature engineering builders into feature_support while preserving direct-file fallback loading and asset outputs.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually extracted pure helper logic from energy_ml/energy_ml/assets/features.py into energy_ml/energy_ml/assets/feature_support.py, and I am not gaming the score by resolving without fixing."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -8603,10 +8641,20 @@
       "recorded_at": "2026-03-06T21:08:19+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "da0b9f2177cc",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/models.py"
+      ],
+      "recorded_at": "2026-03-06T21:14:51+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/energy_ml/assets/models.py"
+    "structural::energy_ml/energy_ml/assets/features.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

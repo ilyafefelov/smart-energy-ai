@@ -11,8 +11,8 @@
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 117,
-    "open": 263,
+    "fixed": 118,
+    "open": 262,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 71,
-        "open": 226,
+        "fixed": 72,
+        "open": 225,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 88.9,
-      "strict": 88.9,
+      "score": 89.1,
+      "strict": 89.1,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 53,
+      "failing": 52,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.8888111888111887,
-          "failing": 53,
-          "weighted_failures": 15.900000000000016
+          "pass_rate": 0.8909090909090908,
+          "failing": 52,
+          "weighted_failures": 15.600000000000016
         }
       }
     },
@@ -3307,17 +3307,23 @@
       "detail": {
         "loc": 520
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted nested feature engineering builders into feature_support while preserving direct-file fallback loading and asset outputs.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T21:31:13+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually extracted pure helper logic from energy_ml/energy_ml/assets/features.py into energy_ml/energy_ml/assets/feature_support.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T21:31:13+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/assets/core/client_state.py": {
       "id": "structural::src/assets/core/client_state.py",
