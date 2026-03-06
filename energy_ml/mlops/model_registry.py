@@ -3,20 +3,55 @@ Phase 1: Model Registry and Deployment Pipeline
 Production ML model management with versioning, staging, and health checks
 """
 
+import importlib.util
 import logging
 import pickle
 import json
-import hashlib
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 import shutil
+import sys
 
 import joblib
 import numpy as np
-from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error
 from xgboost import XGBRegressor
+
+try:
+    from energy_ml.mlops.model_registry_support import (
+        build_registry_index_entry,
+        evaluate_model_health,
+        generate_version_id,
+        load_model_version_metadata,
+        model_version_to_dict,
+        read_json_file,
+        update_registry_index_entry,
+        validate_production_criteria,
+        validate_staging_criteria,
+        write_json_file,
+    )
+except ImportError:
+    _SUPPORT_MODULE_NAME = "energy_ml.mlops.model_registry_support"
+    _SUPPORT_PATH = Path(__file__).with_name("model_registry_support.py")
+    _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
+    if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
+        raise ImportError(f"Unable to load model registry support module from {_SUPPORT_PATH}")
+    _SUPPORT_MODULE = sys.modules.get(_SUPPORT_MODULE_NAME)
+    if _SUPPORT_MODULE is None:
+        _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
+        sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
+        _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
+    build_registry_index_entry = _SUPPORT_MODULE.build_registry_index_entry
+    evaluate_model_health = _SUPPORT_MODULE.evaluate_model_health
+    generate_version_id = _SUPPORT_MODULE.generate_version_id
+    load_model_version_metadata = _SUPPORT_MODULE.load_model_version_metadata
+    model_version_to_dict = _SUPPORT_MODULE.model_version_to_dict
+    read_json_file = _SUPPORT_MODULE.read_json_file
+    update_registry_index_entry = _SUPPORT_MODULE.update_registry_index_entry
+    validate_production_criteria = _SUPPORT_MODULE.validate_production_criteria
+    validate_staging_criteria = _SUPPORT_MODULE.validate_staging_criteria
+    write_json_file = _SUPPORT_MODULE.write_json_file
 
 logger = logging.getLogger(__name__)
 
@@ -37,19 +72,7 @@ class ModelVersion:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
-        return {
-            'version_id': self.version_id,
-            'model_name': self.model_name,
-            'algorithm': self.algorithm,
-            'created_at': self.created_at.isoformat(),
-            'performance_metrics': self.performance_metrics,
-            'feature_schema': self.feature_schema,
-            'model_size_bytes': self.model_size_bytes,
-            'deployment_stage': self.deployment_stage,
-            'health_status': self.health_status,
-            'validation_results': self.validation_results,
-            'artifacts_path': str(self.artifacts_path)
-        }
+        return model_version_to_dict(self)
 
 
 class ModelRegistry:
@@ -88,11 +111,9 @@ class ModelRegistry:
         Returns:
             ModelVersion object with metadata
         """
-        # Generate version ID based on model hash and timestamp
         model_bytes = pickle.dumps(model)
-        model_hash = hashlib.md5(model_bytes).hexdigest()[:8]
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        version_id = f"{model_name}-{timestamp}-{model_hash}"
+        now = datetime.now()
+        version_id = generate_version_id(model_name, model_bytes, now)
         
         # Create model artifacts directory
         artifacts_path = self.models_path / version_id
@@ -115,7 +136,7 @@ class ModelRegistry:
             version_id=version_id,
             model_name=model_name,
             algorithm=algorithm,
-            created_at=datetime.now(),
+            created_at=now,
             performance_metrics=performance_metrics,
             feature_schema=feature_schema,
             model_size_bytes=len(model_bytes),
@@ -126,20 +147,15 @@ class ModelRegistry:
         )
         
         # Save metadata
-        with open(metadata_file, 'w') as f:
-            json.dump(model_version.to_dict(), f, indent=2)
+        write_json_file(metadata_file, model_version.to_dict())
             
         # Update registry index
         if model_name not in self.registry_index:
             self.registry_index[model_name] = []
-            
-        self.registry_index[model_name].append({
-            'version_id': version_id,
-            'created_at': model_version.created_at.isoformat(),
-            'stage': 'development',
-            'health': health_status,
-            'metrics': performance_metrics
-        })
+
+        self.registry_index[model_name].append(
+            build_registry_index_entry(version_id, model_version.created_at, health_status, performance_metrics)
+        )
         
         self._save_registry_index()
         
@@ -264,11 +280,8 @@ class ModelRegistry:
         try:
             with open(metadata_file) as f:
                 metadata = json.load(f)
-                
-            metadata['created_at'] = datetime.fromisoformat(metadata['created_at'])
-            metadata['artifacts_path'] = Path(metadata['artifacts_path'])
-            
-            return ModelVersion(**metadata)
+
+            return ModelVersion(**load_model_version_metadata(metadata))
         except Exception as e:
             logger.error(f"Failed to load model version {version_id}: {e}")
             return None
@@ -357,107 +370,21 @@ class ModelRegistry:
         Returns:
             Tuple of (health_status, validation_results)
         """
-        results = {}
-        
-        try:
-            # Check if model is callable
-            if not hasattr(model, 'predict'):
-                return "failed", {"error": "Model missing predict method"}
-                
-            # Test prediction with dummy data
-            dummy_features = np.random.random((1, len(feature_schema)))
-            pred = model.predict(dummy_features)
-            
-            results['dummy_prediction'] = float(pred[0]) if hasattr(pred, '__getitem__') else float(pred)
-            
-            # Validate prediction format
-            if np.isnan(results['dummy_prediction']) or np.isinf(results['dummy_prediction']):
-                return "failed", {"error": "Model produces invalid predictions", "results": results}
-                
-            # Check feature importance (for tree models)
-            if hasattr(model, 'feature_importances_'):
-                importance_dict = {
-                    feature: float(importance) 
-                    for feature, importance in zip(feature_schema, model.feature_importances_)
-                }
-                results['feature_importance'] = importance_dict
-                
-                # Warn if any feature has zero importance
-                zero_importance = [f for f, imp in importance_dict.items() if imp == 0]
-                if zero_importance:
-                    results['warnings'] = f"Features with zero importance: {zero_importance}"
-                    
-            # Performance validation if data provided
-            if validation_data:
-                X_val = validation_data.get('X')
-                y_val = validation_data.get('y')
-                
-                if X_val is not None and y_val is not None:
-                    y_pred = model.predict(X_val)
-                    
-                    mape = mean_absolute_percentage_error(y_val, y_pred)
-                    rmse = np.sqrt(mean_squared_error(y_val, y_pred))
-                    
-                    results['validation_mape'] = float(mape)
-                    results['validation_rmse'] = float(rmse)
-                    
-                    # Health status based on validation performance
-                    if mape > 0.15:  # >15% error
-                        return "degraded", results
-                        
-            return "healthy", results
-            
-        except Exception as e:
-            return "failed", {"error": str(e), "results": results}
+        return evaluate_model_health(model, feature_schema, validation_data)
             
     def _validate_staging_criteria(self, model_version: ModelVersion) -> bool:
         """Validate model meets staging deployment criteria"""
-        criteria = []
-        
-        # Health check
-        criteria.append(model_version.health_status == "healthy")
-        
-        # Performance criteria
-        mape = model_version.performance_metrics.get('mape', float('inf'))
-        criteria.append(mape < 0.12)  # <12% error for staging
-        
-        # Model size reasonable
-        criteria.append(model_version.model_size_bytes < 50 * 1024 * 1024)  # <50MB
-        
-        # Feature schema not empty
-        criteria.append(len(model_version.feature_schema) > 0)
-        
-        return all(criteria)
+        return validate_staging_criteria(model_version)
         
     def _validate_production_criteria(self, model_version: ModelVersion) -> bool:
         """Validate model meets production deployment criteria"""
-        criteria = []
-        
-        # All staging criteria
-        criteria.append(self._validate_staging_criteria(model_version))
-        
-        # Stricter performance for production
-        mape = model_version.performance_metrics.get('mape', float('inf'))
-        criteria.append(mape < 0.10)  # <10% error for production
-        
-        # Validation results exist
-        criteria.append('validation_mape' in model_version.validation_results)
-        
-        # Model not too old (within 30 days)
-        age = datetime.now() - model_version.created_at
-        criteria.append(age < timedelta(days=30))
-        
-        return all(criteria)
+        return validate_production_criteria(model_version, datetime.now())
         
     def _load_registry_index(self) -> Dict[str, List[Dict[str, Any]]]:
         """Load registry index from disk"""
         index_file = self.registry_path / "index.json"
-        if not index_file.exists():
-            return {}
-            
         try:
-            with open(index_file) as f:
-                return json.load(f)
+            return read_json_file(index_file, {})
         except Exception as e:
             logger.error(f"Failed to load registry index: {e}")
             return {}
@@ -466,8 +393,7 @@ class ModelRegistry:
         """Save registry index to disk"""
         index_file = self.registry_path / "index.json"
         try:
-            with open(index_file, 'w') as f:
-                json.dump(self.registry_index, f, indent=2)
+            write_json_file(index_file, self.registry_index)
         except Exception as e:
             logger.error(f"Failed to save registry index: {e}")
             
@@ -475,17 +401,8 @@ class ModelRegistry:
         """Update model metadata file"""
         metadata_file = model_version.artifacts_path / "metadata.json"
         try:
-            with open(metadata_file, 'w') as f:
-                json.dump(model_version.to_dict(), f, indent=2)
-                
-            # Update registry index
-            for model_versions in self.registry_index.values():
-                for version_info in model_versions:
-                    if version_info['version_id'] == model_version.version_id:
-                        version_info['stage'] = model_version.deployment_stage
-                        version_info['health'] = model_version.health_status
-                        break
-                        
+            write_json_file(metadata_file, model_version.to_dict())
+            self.registry_index = update_registry_index_entry(self.registry_index, model_version)
             self._save_registry_index()
             
         except Exception as e:
