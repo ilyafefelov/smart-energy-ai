@@ -72,7 +72,7 @@ async def demonstrate_phase1_model_registry():
         feature_store = get_feature_store()
         
         # Get real-time features
-        features = feature_store.get_online_features(
+        features = feature_store.load_online_features(
             "energy_features",
             {"user_id": "demo_user", "timestamp": datetime.now()}
         )

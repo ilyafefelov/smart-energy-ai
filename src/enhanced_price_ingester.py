@@ -31,7 +31,10 @@ class EnhancedPriceIngester:
         """
         Fetch OREE prices from:
         https://www.oree.com.ua/index.php/pricectr?lang=english
-        This is their English price page
+
+        This is their English price page. Recoverable request, parsing, and
+        source-shape failures are logged and return ``None`` so the caller can
+        continue down the source fallback chain.
         """
         try:
             logger.info("🌐 Fetching OREE prices from price control page...")
@@ -44,7 +47,9 @@ class EnhancedPriceIngester:
             
             # Try to find price tables
             df = self._extract_oree_table(soup)
-            if df is not None and len(df) >= 24:
+            if df is None or len(df) < 24:
+                logger.debug("OREE primary table extraction did not yield a complete 24-hour price set")
+            else:
                 logger.info(f"✅ Got OREE prices: {len(df)} hours")
                 return df
             
@@ -52,9 +57,11 @@ class EnhancedPriceIngester:
             tables = soup.find_all('table')
             for table_idx, table in enumerate(tables):
                 df = self._extract_price_from_table(table)
-                if df is not None and len(df) >= 24:
-                    logger.info(f"✅ Got prices from table {table_idx}")
-                    return df
+                if df is None or len(df) < 24:
+                    continue
+
+                logger.info(f"✅ Got prices from table {table_idx}")
+                return df
             
             logger.warning("⚠️ Could not extract prices from OREE page")
             return None
@@ -208,7 +215,10 @@ class EnhancedPriceIngester:
     def fetch_pxe_prices(self) -> Optional[pd.DataFrame]:
         """
         Fetch from PXE (Polish Power Exchange)
-        They have Ukraine prices
+
+        They have Ukraine prices. Recoverable request, parsing, and response
+        shape failures are logged and return ``None`` so the caller can try the
+        next configured source.
         """
         try:
             logger.info("🌐 Fetching PXE (Polish) prices...")
@@ -223,14 +233,18 @@ class EnhancedPriceIngester:
                 try:
                     logger.debug(f"  Trying {url}...")
                     response = self.session.get(url, timeout=10)
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        df = self._parse_pxe_data(data)
-                        
-                        if df is not None and len(df) >= 24:
-                            logger.info(f"✅ Got PXE prices: {len(df)} hours")
-                            return df
+
+                    if response.status_code != 200:
+                        continue
+
+                    data = response.json()
+                    df = self._parse_pxe_data(data)
+
+                    if df is None or len(df) < 24:
+                        continue
+
+                    logger.info(f"✅ Got PXE prices: {len(df)} hours")
+                    return df
                 
                 except Exception as e:
                     logger.debug(f"  PXE error: {str(e)[:50]}")
@@ -300,6 +314,9 @@ class EnhancedPriceIngester:
         https://www.ukrstat.gov.ua/operativ/operativ2018/energ/ser_cin_el_energ/
         
         This gives us historical electricity prices for training
+
+        Recoverable request and parsing failures are logged and return ``None``
+        so training callers can decide whether to skip or fall back.
         """
         try:
             logger.info("📊 Fetching historical prices from ukrstat...")
@@ -314,13 +331,17 @@ class EnhancedPriceIngester:
                 try:
                     logger.debug(f"  Trying {url}...")
                     response = self.session.get(url, timeout=15)
-                    
-                    if response.status_code == 200:
-                        df = self._parse_ukrstat_prices(response.content)
-                        
-                        if df is not None and len(df) > 0:
-                            logger.info(f"✅ Got {len(df)} historical price records")
-                            return df
+
+                    if response.status_code != 200:
+                        continue
+
+                    df = self._parse_ukrstat_prices(response.content)
+
+                    if df is None or len(df) == 0:
+                        continue
+
+                    logger.info(f"✅ Got {len(df)} historical price records")
+                    return df
                 
                 except Exception as e:
                     logger.debug(f"  ukrstat error: {str(e)[:50]}")
@@ -429,6 +450,10 @@ class EnhancedPriceIngester:
         1. OREE (primary - Ukraine)
         2. PXE (secondary - Poland/Ukraine)
         3. Realistic pattern (fallback)
+
+        This method does not propagate recoverable source failures. Lower-level
+        fetchers log and return ``None`` until a source succeeds, after which
+        the deterministic fallback is used.
         """
         logger.info("🚀 Starting enhanced price fetching...")
         
@@ -454,7 +479,10 @@ class EnhancedPriceIngester:
     def fetch_historical_for_training(self) -> Optional[pd.DataFrame]:
         """
         Fetch historical data for RL training
-        Returns time series of prices for analysis
+
+        Returns time series of prices for analysis. Recoverable fetch/parsing
+        failures are logged and return ``None`` to keep the training contract
+        explicit for callers.
         """
         logger.info("📊 Fetching historical prices for training...")
         

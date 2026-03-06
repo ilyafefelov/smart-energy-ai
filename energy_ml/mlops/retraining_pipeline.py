@@ -326,7 +326,7 @@ class RetrainingPipeline:
             end_time = datetime.now()
             start_time = end_time - timedelta(days=30)  # Last 30 days
             
-            training_data = self.feature_store.get_batch_features(
+            training_data = self.feature_store.load_batch_features(
                 "energy_features",
                 start_time,
                 end_time
@@ -432,7 +432,7 @@ class RetrainingPipeline:
         end_time = datetime.now()
         start_time = end_time - timedelta(days=7)
         
-        recent_data = self.feature_store.get_batch_features(
+        recent_data = self.feature_store.load_batch_features(
             "energy_features",
             start_time,
             end_time
@@ -466,7 +466,7 @@ class RetrainingPipeline:
             end_time = datetime.now() - timedelta(days=30)
             start_time = end_time - timedelta(days=30)
             
-            reference_data = self.feature_store.get_batch_features(
+            reference_data = self.feature_store.load_batch_features(
                 "energy_features",
                 start_time,
                 end_time

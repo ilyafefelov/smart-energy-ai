@@ -126,10 +126,10 @@ class FeatureStore:
             
         logger.info(f"Registered feature view: {feature_view.name}")
         
-    def get_online_features(self, 
+    def load_online_features(self, 
                            feature_view_name: str,
                            entity_keys: Dict[str, Any]) -> Dict[str, Any]:
-        """Get online features for real-time prediction
+        """Load online features for real-time prediction.
         
         Args:
             feature_view_name: Name of feature view
@@ -181,12 +181,12 @@ class FeatureStore:
         # Generate fresh features if cache miss or expired
         return self._generate_real_time_features(feature_view, entity_keys)
         
-    def get_batch_features(self, 
+    def load_batch_features(self, 
                           feature_view_name: str,
                           start_time: datetime,
                           end_time: datetime,
                           entity_filter: Optional[Dict[str, Any]] = None) -> pl.DataFrame:
-        """Get batch features for training
+        """Load batch features for training.
         
         Args:
             feature_view_name: Name of feature view

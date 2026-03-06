@@ -34,7 +34,10 @@ class OREERealPriceFetcher:
     def fetch_oree_prices(self) -> Optional[pd.DataFrame]:
         """
         Fetch REAL OREE prices from main website
+
         Handles: https://www.oree.com.ua/index.php/pricectr?lang=english
+        Recoverable timeout, connection, parsing, and source-structure failures
+        are logged and return ``None`` so callers can choose a fallback source.
         """
         try:
             logger.info("🌐 Fetching REAL OREE prices...")

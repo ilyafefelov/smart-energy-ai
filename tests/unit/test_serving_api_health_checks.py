@@ -141,7 +141,7 @@ def build_route_test_api(cached_model=None, feature_store=None, optimization_eng
     api = MLServingAPI.__new__(MLServingAPI)
     api.app = FastAPI()
     api.model_registry = DummyModelRegistry()
-    api.feature_store = feature_store or SimpleNamespace(get_online_features=lambda *_args, **_kwargs: {})
+    api.feature_store = feature_store or SimpleNamespace(load_online_features=lambda *_args, **_kwargs: {})
     api.monitoring_dashboard = DummyMonitoringDashboard()
     api.retraining_pipeline = DummyRetrainingPipeline()
     api.ab_test_manager = ab_test_manager or SimpleNamespace(
@@ -243,7 +243,7 @@ def test_predict_uses_current_optimizer_contract_and_returns_stable_shape():
 
     api = build_route_test_api(
         cached_model=SimpleNamespace(predict=lambda *_args, **_kwargs: [1, 0.82]),
-        feature_store=SimpleNamespace(get_online_features=lambda *_args, **_kwargs: {"existing_feature": 1.0}),
+        feature_store=SimpleNamespace(load_online_features=lambda *_args, **_kwargs: {"existing_feature": 1.0}),
         optimization_engine=RecordingOptimizationEngine(),
     )
     client = TestClient(api.app)

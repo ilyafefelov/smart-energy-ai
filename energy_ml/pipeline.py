@@ -5,7 +5,7 @@ into a unified decision-making pipeline.
 """
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Optional, Any, TypedDict
 import json
 from pathlib import Path
 
@@ -23,6 +23,82 @@ from energy_ml.mlops.renewable_forecasting import RenewableForecaster
 
 
 logger = logging.getLogger(__name__)
+
+
+class LivePriceForecastRow(TypedDict, total=False):
+    hour: int
+    price: float
+
+
+class LivePriceSignal(TypedDict, total=False):
+    current_uah_kwh: float
+    forecast_next24h: List[LivePriceForecastRow]
+
+
+class LiveBatterySignal(TypedDict, total=False):
+    soc_percent: float
+    soc: float
+    health_percent: float
+    health: float
+    cycles_remaining: float
+
+
+class LiveContextPayload(TypedDict, total=False):
+    price_signal: LivePriceSignal
+    battery_signal: LiveBatterySignal
+    weather_signal: Dict[str, Any]
+
+
+class RecommendationDetails(TypedDict):
+    hour: int
+    load_kw: float
+    tariff_rate_uah_mwh: float
+    battery_soc_percent: float
+    battery_health_percent: float
+    battery_cycles_remaining: float
+    price_source: str
+    is_peak_hour: bool
+    charge_cost_uah_kwh: float
+    discharge_revenue_uah_kwh: float
+    degradation_cost_uah_kwh: float
+
+
+class RecommendationPayload(TypedDict):
+    action: str
+    reasoning: str
+    confidence: float
+    estimated_savings: float
+    battery_impact: float
+    timestamp: str
+    details: RecommendationDetails
+
+
+class PipelineBatteryState(TypedDict):
+    soc_percent: float
+    health_percent: float
+    cycles_remaining: float
+
+
+class PipelineLoadStatus(TypedDict):
+    type: str
+    peak_kw: float
+    current_hour: int
+    current_load_kw: float
+
+
+class PipelineTariffStatus(TypedDict):
+    region: str
+    current_rate_uah_mwh: float
+    is_peak_hour: bool
+
+
+class PipelineStatusPayload(TypedDict):
+    config: Dict[str, Any]
+    battery_state: PipelineBatteryState
+    load_profile: PipelineLoadStatus
+    tariff: PipelineTariffStatus
+    last_recommendation: Optional[RecommendationPayload]
+    timestamp: str
 
 
 class PipelineOrchestrator:
@@ -66,9 +142,9 @@ class PipelineOrchestrator:
         self.renewable_forecaster = RenewableForecaster()
         
         # State tracking
-        self._last_recommendation = None
+        self._last_recommendation: Optional[RecommendationPayload] = None
         self._last_recommendation_time = None
-        self._live_context: Dict[str, Any] = {}
+        self._live_context: LiveContextPayload = {}
         self._live_price_map_kwh: Dict[int, float] = {}
         self._live_current_price_kwh: Optional[float] = None
         self._live_battery_state: Dict[str, float] = {}
@@ -83,9 +159,15 @@ class PipelineOrchestrator:
         except Exception:
             return default
 
-    def set_live_context(self, live_context: Optional[Dict[str, Any]]) -> None:
-        """Attach live signals (price/battery/weather metadata) for inference-time decisions."""
-        context = live_context if isinstance(live_context, dict) else {}
+    def set_live_context(self, live_context: Optional[LiveContextPayload]) -> None:
+        """Attach live signals and refresh the derived inference-time caches.
+
+        This method replaces the stored live context and recomputes the cached
+        price and battery signal snapshots consumed by recommendation logic.
+        Invalid or missing fields clear the corresponding cached values instead
+        of preserving stale state from previous calls.
+        """
+        context: LiveContextPayload = live_context if isinstance(live_context, dict) else {}
         self._live_context = context
 
         price_signal = context.get('price_signal') if isinstance(context.get('price_signal'), dict) else {}
@@ -187,7 +269,7 @@ class PipelineOrchestrator:
     
     def calculate_recommendation(self, 
                                user_config: Optional[UserConfigModel] = None,
-                               current_hour: Optional[int] = None) -> Dict[str, Any]:
+                               current_hour: Optional[int] = None) -> RecommendationPayload:
         """Calculate optimal energy action for current hour.
         
         Main pipeline entry point that integrates:
@@ -268,7 +350,7 @@ class PipelineOrchestrator:
         
         timestamp = datetime.now().isoformat()
         
-        recommendation = {
+        recommendation: RecommendationPayload = {
             'action': action,
             'reasoning': reasoning,
             'confidence': confidence,
@@ -461,7 +543,7 @@ class PipelineOrchestrator:
             })
         
         return pl.DataFrame(forecasts)
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> PipelineStatusPayload:
         """Get current pipeline status and state.
         
         Returns:

@@ -8,7 +8,7 @@ import numpy as np
 import os
 import logging
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 from src.data_pipeline.ingest_weather import WeatherIngester
 from src.data_pipeline.ingest_prices import PriceIngester
@@ -29,7 +29,7 @@ class RealDataOptimizer:
         self.max_charge_rate = 50  # kW
         self.max_discharge_rate = 50  # kW
     
-    def fetch_real_data(self) -> Optional[Tuple[list, list, list]]:
+    def fetch_real_data(self) -> Optional[Tuple[List[float], List[float], List[float]]]:
         """
         Fetch REAL data from APIs
         

@@ -166,7 +166,7 @@ class MLServingAPI:
                     raise HTTPException(status_code=503, detail="No model available for prediction")
                     
                 # Get real-time features
-                features = self.feature_store.get_online_features(
+                features = self.feature_store.load_online_features(
                     "energy_features",
                     {"user_id": request.user_id, "timestamp": datetime.now()}
                 )

@@ -3,7 +3,7 @@
 Handles battery, load profile, and tariff settings persistence with complete ML integration.
 """
 from pathlib import Path
-from typing import Any, Dict, Optional, Literal, List
+from typing import Any, Dict, Optional, Literal, List, TypedDict
 import json
 import os
 from pydantic import BaseModel, ValidationError, Field, field_validator
@@ -90,6 +90,60 @@ class UserConfigModel(BaseModel):
         extra = 'allow'
 
 
+class UserConfigPayload(TypedDict, total=False):
+    """Typed payload accepted when config is provided as a plain mapping."""
+
+    battery_type: Literal["LFP", "Lead-Acid", "VRFB"]
+    battery_capacity_kwh: float
+    battery_efficiency: float
+    battery_c_rate_charge: float
+    battery_c_rate_discharge: float
+    battery_dod_max: float
+    battery_soc_min: float
+    battery_soc_max: float
+    battery_cycles_max: int
+    battery_degradation_per_cycle: float
+    load_profile_type: Literal["standard", "multi-shift", "24_7", "custom"]
+    load_peak_kw: float
+    load_base_kw: float
+    load_custom_hourly: List[float]
+    load_seasonal_variation: float
+    load_weekend_factor: float
+    load_night_factor: float
+    tariff_region: Literal["ukraine"]
+    tariff_peak_hours_start: int
+    tariff_peak_hours_end: int
+    tariff_peak_rate_uah_kwh: float
+    tariff_off_peak_rate_uah_kwh: float
+    ml_retrain_frequency_days: int
+    ml_confidence_threshold: float
+    ml_model_type: Literal["xgboost", "lightgbm", "catboost", "ensemble"]
+    ml_lookback_hours: int
+    ml_forecast_horizon_hours: int
+    dashboard_refresh_seconds: int
+    dashboard_show_degradation_cost: bool
+    dashboard_show_arbitrage_opportunities: bool
+    dashboard_currency_symbol: str
+    dashboard_language: Literal["en", "uk"]
+    optimization_strategy: Literal["max_earn", "max_battery_health", "max_charge", "balanced"]
+    custom_optimization_weights: Dict[str, float]
+    has_solar: bool
+    has_wind: bool
+    solar_capacity_kw: float
+    wind_capacity_kw: float
+    solar_efficiency: float
+    wind_efficiency: float
+    solar_tilt_deg: float
+    wind_cut_in_speed_mps: float
+    wind_rated_speed_mps: float
+    latitude: float
+    longitude: float
+    timezone: str
+    enable_physics_simulation: bool
+    battery_temperature_c: float
+    battery_aging_model: Literal["calendar", "cycle", "combined"]
+
+
 class ConfigurationManagerError(RuntimeError):
     """Raised when configuration persistence or loading cannot complete."""
 
@@ -120,7 +174,7 @@ class ConfigLoadResult(ConfigurationOperationResult):
     """Result returned when loading persisted user configuration."""
 
     config: Optional[UserConfigModel] = None
-    source: Literal["file", "defaults", "invalid"] = "defaults"
+    source: Literal["file", "defaults", "invalid", "input"] = "defaults"
 
 
 class ConfigSaveResult(ConfigurationOperationResult):
@@ -213,6 +267,32 @@ class ConfigurationManager:
 
         error_text = "; ".join(result.errors) if result.errors else "Configuration could not be loaded"
         raise ConfigurationManagerError(error_text)
+
+    def resolve_config(self, config_data: Optional[UserConfigPayload] = None) -> ConfigLoadResult:
+        """Resolve config from an explicit payload or persisted storage without raising.
+
+        Args:
+            config_data: Optional mapping of user config values supplied by a caller.
+
+        Returns:
+            ConfigLoadResult containing either a parsed config or validation errors.
+        """
+        if config_data is None:
+            return self.load_config()
+
+        try:
+            return ConfigLoadResult(
+                success=True,
+                config=UserConfigModel(**config_data),
+                source='input',
+            )
+        except ValidationError as exc:
+            return ConfigLoadResult(
+                success=False,
+                config=None,
+                source='invalid',
+                errors=[f"Provided configuration failed validation: {exc}"],
+            )
     
     def save_config(self, config: UserConfigModel) -> ConfigSaveResult:
         """Save user configuration to disk with history tracking.
