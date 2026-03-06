@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T22:44:52+00:00",
+  "updated": "2026-03-06T22:48:03+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -8388,6 +8388,45 @@
         "status": "fixed",
         "attestation": "I have actually extracted the renewable weather shaping, forecast math, combination logic, and prediction integration into renewable_forecasting_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing."
       }
+    },
+    {
+      "timestamp": "2026-03-06T22:45:10+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/mlops/renewable_forecasting.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "f6af171a1b8d",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T22:48:02+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/mlops/monitoring_dashboard.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted alert rule defaults, alert serialization and persistence, threshold evaluation, dashboard summary builders, system-health aggregation, and monitoring response assembly into monitoring_dashboard_support.py while preserving the public AlertManager and MonitoringDashboard APIs.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T22:48:03+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/mlops/monitoring_dashboard.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted alert rule defaults, alert serialization and persistence, threshold evaluation, dashboard summary builders, system-health aggregation, and monitoring response assembly into monitoring_dashboard_support.py while preserving the public AlertManager and MonitoringDashboard APIs.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually extracted alert serialization, persistence, threshold logic, dashboard summary assembly, and monitoring response builders into monitoring_dashboard_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -9052,10 +9091,20 @@
       "recorded_at": "2026-03-06T22:40:37+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "f6af171a1b8d",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/mlops/renewable_forecasting.py"
+      ],
+      "recorded_at": "2026-03-06T22:45:10+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/mlops/renewable_forecasting.py"
+    "structural::energy_ml/mlops/monitoring_dashboard.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

@@ -11,8 +11,8 @@
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 126,
-    "open": 254,
+    "fixed": 127,
+    "open": 253,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 80,
-        "open": 217,
+        "fixed": 81,
+        "open": 216,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 90.8,
-      "strict": 90.8,
+      "score": 91.0,
+      "strict": 91.0,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 44,
+      "failing": 43,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.9076923076923076,
-          "failing": 44,
-          "weighted_failures": 13.20000000000001
+          "pass_rate": 0.9097902097902097,
+          "failing": 43,
+          "weighted_failures": 12.90000000000001
         }
       }
     },
@@ -3212,17 +3212,23 @@
       "detail": {
         "loc": 557
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted alert rule defaults, alert serialization and persistence, threshold evaluation, dashboard summary builders, system-health aggregation, and monitoring response assembly into monitoring_dashboard_support.py while preserving the public AlertManager and MonitoringDashboard APIs.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T22:48:03+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually extracted alert serialization, persistence, threshold logic, dashboard summary assembly, and monitoring response builders into monitoring_dashboard_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T22:48:03+00:00",
+        "scan_verified": false
+      }
     },
     "structural::energy_ml/user_config.py": {
       "id": "structural::energy_ml/user_config.py",
