@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/assets/ml_star_optimized_pipeline.py"
+    "structural::energy_ml/assets/ml_star_phase3.py"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/assets/ml_star_optimized_pipeline.py"
+    "structural::energy_ml/assets/ml_star_phase3.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 87.9,
-  "objective_score": 93.1,
+  "overall_score": 88.0,
+  "objective_score": 93.2,
   "strict_score": 87.5,
   "verified_strict_score": 78.6,
   "prev_overall_score": 87.9,
   "prev_objective_score": 93.1,
   "prev_strict_score": 87.5,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually Moved reusable ML-STAR metric packaging, predictor behavior, and deployment text into ml_star_pipeline_support.py while keeping the Dagster asset module focused on orchestration. and I am not gaming the score.",
+  "attestation": "I have actually Moved standalone ML-STAR phase 3 training, predictor, and metrics packaging into ml_star_phase3_support.py so the Dagster asset module stays focused on asset orchestration. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 87.2,
+          "strict": 87.4,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 64,
-        "description": "64 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 63,
+        "description": "63 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 271,
+        "total_count": 270,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -351,7 +351,7 @@
       }
     },
     "debt": {
-      "overall_gap": 0.1,
+      "overall_gap": 0.2,
       "wontfix_count": 147,
       "worst_dimension": "Code quality",
       "worst_gap": 5.5,
@@ -371,7 +371,7 @@
       {
         "type": "wontfix_gap",
         "severity": "high",
-        "message": "Strict/lenient gap is 0.1 pts with 147 wontfix issues"
+        "message": "Strict/lenient gap is 0.2 pts with 147 wontfix issues"
       }
     ],
     "strict_target": {
