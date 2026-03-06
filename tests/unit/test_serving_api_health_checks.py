@@ -1,3 +1,4 @@
+import asyncio
 import importlib.util
 from pathlib import Path
 import sys
@@ -316,3 +317,97 @@ def test_simulate_battery_uses_current_physics_contract():
     assert payload["simulation_params"]["applied_power_kw"] == 4.0
     assert payload["initial_state"]["soc_percent"] == 60.0
     assert payload["final_state"]["soc_percent"] > payload["initial_state"]["soc_percent"]
+
+
+def test_predict_uses_fallback_prediction_when_model_output_is_not_adaptable():
+    api = build_route_test_api(
+        cached_model=SimpleNamespace(predict=lambda *_args, **_kwargs: object()),
+        feature_store=SimpleNamespace(load_online_features=lambda *_args, **_kwargs: {}),
+    )
+    client = TestClient(api.app)
+
+    response = client.post(
+        "/predict",
+        json={
+            "battery_soc": 0.55,
+            "grid_price_uah_kwh": 14.0,
+            "solar_generation_kw": 0.0,
+            "wind_generation_kw": 0.0,
+            "load_demand_kw": 3.5,
+            "temperature_celsius": 24.0,
+            "strategy": "unknown-strategy",
+        },
+    )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["action"] == "SELL"
+    assert payload["strategy_used"] == "balanced"
+    assert payload["expected_profit_uah"] == 49.0
+    assert payload["power_kw"] == 3.5
+
+
+def test_models_retrain_returns_not_needed_message_without_scheduling_work():
+    background_calls = []
+    api = build_route_test_api(cached_model=SimpleNamespace(predict=lambda *_args, **_kwargs: [1, 0.8]))
+    api.retraining_pipeline = SimpleNamespace(
+        check_retraining_triggers=lambda: {"should_retrain": False, "reasons": []}
+    )
+
+    async def record_retrain():
+        background_calls.append("called")
+
+    api._retrain_model_async = record_retrain
+    client = TestClient(api.app)
+
+    response = client.post("/models/retrain")
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Retraining not needed at this time"
+    assert background_calls == []
+
+
+def test_models_retrain_schedules_background_retraining_when_triggers_fire():
+    background_calls = []
+    api = build_route_test_api(cached_model=SimpleNamespace(predict=lambda *_args, **_kwargs: [1, 0.8]))
+    api.retraining_pipeline = SimpleNamespace(
+        check_retraining_triggers=lambda: {
+            "should_retrain": True,
+            "reasons": ["Data drift detected: score 0.991"],
+        }
+    )
+
+    async def record_retrain():
+        background_calls.append("called")
+
+    api._retrain_model_async = record_retrain
+    client = TestClient(api.app)
+
+    response = client.post("/models/retrain")
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Model retraining initiated"
+    assert response.json()["reasons"] == ["Data drift detected: score 0.991"]
+    assert background_calls == ["called"]
+
+
+def test_broadcast_websocket_update_removes_disconnected_clients():
+    delivered_messages = []
+
+    class WorkingSocket:
+        async def send_json(self, message):
+            delivered_messages.append(message)
+
+    class FailingSocket:
+        async def send_json(self, message):
+            raise RuntimeError("socket closed")
+
+    api = MLServingAPI.__new__(MLServingAPI)
+    working_socket = WorkingSocket()
+    failing_socket = FailingSocket()
+    api.websocket_connections = [working_socket, failing_socket]
+
+    asyncio.run(api._broadcast_websocket_update({"type": "prediction", "data": {"ok": True}}))
+
+    assert delivered_messages == [{"type": "prediction", "data": {"ok": True}}]
+    assert api.websocket_connections == [working_socket]
