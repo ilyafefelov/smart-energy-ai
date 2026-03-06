@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 87.1,
-  "objective_score": 91.1,
-  "strict_score": 86.7,
+  "overall_score": 87.3,
+  "objective_score": 91.4,
+  "strict_score": 86.8,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 94,
-    "open": 286,
+    "fixed": 97,
+    "open": 283,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 52,
-        "open": 245,
+        "fixed": 55,
+        "open": 242,
         "wontfix": 72
       },
       "4": {
@@ -2455,18 +2455,18 @@
       }
     },
     "Test health": {
-      "score": 81.2,
-      "strict": 81.2,
+      "score": 83.2,
+      "strict": 83.2,
       "verified_strict_score": 19.1,
       "checks": 1788,
-      "failing": 22,
+      "failing": 19,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1782,
-          "pass_rate": 0.8114373193565195,
-          "failing": 22,
-          "weighted_failures": 336.0186969066821
+          "pass_rate": 0.83185893723694,
+          "failing": 19,
+          "weighted_failures": 299.6273738437729
         },
         "subjective_review": {
           "potential": 6,
@@ -7501,17 +7501,23 @@
         "importer_count": 0,
         "loc_weight": 5.0
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_price_ingester_and_plot_helpers.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:36:10+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_price_ingester_and_plot_helpers.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:36:10+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/physics/battery_lfp.py::untested_module": {
       "id": "test_coverage::src/physics/battery_lfp.py::untested_module",
@@ -7607,17 +7613,23 @@
         "importer_count": 0,
         "loc_weight": 8.54400374531753
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_price_ingester_and_plot_helpers.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:36:01+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_price_ingester_and_plot_helpers.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:36:01+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::scripts/run_tests.py::untested_module": {
       "id": "test_coverage::scripts/run_tests.py::untested_module",
@@ -7822,17 +7834,23 @@
         "importer_count": 0,
         "loc_weight": 22.847319317591726
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_price_ingester_and_plot_helpers.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:35:53+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_price_ingester_and_plot_helpers.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:35:53+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::scripts/notion_sync.py::untested_module": {
       "id": "test_coverage::scripts/notion_sync.py::untested_module",

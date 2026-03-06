@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T19:32:43+00:00",
+  "updated": "2026-03-06T19:36:09+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -652,8 +652,8 @@
     "test_coverage::src/generate_business_plot.py::untested_module": {
       "issue_id": "test_coverage::src/generate_business_plot.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T19:36:02+00:00"
     },
     "test_coverage::scripts/run_tests.py::untested_module": {
       "issue_id": "test_coverage::scripts/run_tests.py::untested_module",
@@ -694,8 +694,8 @@
     "test_coverage::src/enhanced_price_ingester.py::untested_module": {
       "issue_id": "test_coverage::src/enhanced_price_ingester.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T19:35:53+00:00"
     },
     "test_coverage::scripts/notion_sync.py::untested_module": {
       "issue_id": "test_coverage::scripts/notion_sync.py::untested_module",
@@ -2184,8 +2184,6 @@
         "test_coverage::src/generate_plots.py::untested_module",
         "test_coverage::src/physics/battery_lfp.py::untested_module",
         "test_coverage::src/optimizer_v2.py::untested_module",
-        "test_coverage::src/generate_business_plot.py::untested_module",
-        "test_coverage::src/enhanced_price_ingester.py::untested_module",
         "test_coverage::src/oree_playwright_scraper.py::untested_critical",
         "test_coverage::src/rl_training.py::untested_module",
         "test_coverage::src/oree_selenium_scraper.py::untested_critical",
@@ -7234,6 +7232,82 @@
         "status": "fixed",
         "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_db_and_engine_selection.py, and I am not gaming the score by resolving without fixing."
       }
+    },
+    {
+      "timestamp": "2026-03-06T19:33:08+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "test_coverage::src/db.py::untested_module",
+        "test_coverage::src/engines/selection.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Covered db.py and engines/selection.py with focused pytest coverage in tests/unit/test_db_and_engine_selection.py.",
+      "detail": {
+        "sha": "3e7026e652dc",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T19:35:51+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/enhanced_price_ingester.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_price_ingester_and_plot_helpers.py and validated with Python 3.13 pytest.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T19:35:53+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/enhanced_price_ingester.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_price_ingester_and_plot_helpers.py and validated with Python 3.13 pytest.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_price_ingester_and_plot_helpers.py, and I am not gaming the score by resolving without fixing."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T19:36:00+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/generate_business_plot.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_price_ingester_and_plot_helpers.py and validated with Python 3.13 pytest.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T19:36:02+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/generate_business_plot.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_price_ingester_and_plot_helpers.py and validated with Python 3.13 pytest.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_price_ingester_and_plot_helpers.py, and I am not gaming the score by resolving without fixing."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T19:36:09+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/generate_plots.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_price_ingester_and_plot_helpers.py and validated with Python 3.13 pytest.",
+      "detail": {}
     }
   ],
   "epic_triage_meta": {
@@ -7640,11 +7714,22 @@
       "recorded_at": "2026-03-06T19:30:32+00:00",
       "note": "Covered data_fetcher with focused pytest coverage in tests/unit/test_data_fetcher.py.",
       "cluster_name": null
+    },
+    {
+      "sha": "3e7026e652dc",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "test_coverage::src/db.py::untested_module",
+        "test_coverage::src/engines/selection.py::untested_module"
+      ],
+      "recorded_at": "2026-03-06T19:33:08+00:00",
+      "note": "Covered db.py and engines/selection.py with focused pytest coverage in tests/unit/test_db_and_engine_selection.py.",
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "test_coverage::src/db.py::untested_module",
-    "test_coverage::src/engines/selection.py::untested_module"
+    "test_coverage::src/enhanced_price_ingester.py::untested_module",
+    "test_coverage::src/generate_business_plot.py::untested_module"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
