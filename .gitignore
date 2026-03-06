@@ -58,3 +58,6 @@ energy_ml/energy_ml/outputs/
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+
+# Root-local runtime state recreated as needed
+mlflow.db

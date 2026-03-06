@@ -5,6 +5,9 @@
 
 The system is built on the **Software-Defined Assets (SDA)** principle using Dagster. It solves the multi-objective optimization problem: maximizing profit from buying/selling electricity while accounting for physical degradation of Lithium-Ion (LFP) batteries.
 
+Current Dagster dependency and job map:
+- `docs/technical/DAGSTER_PIPELINE_DEPENDENCY_MAP.md`
+
 ### Key Thesis Benchmark
 The system implements **Dual-Engine Architecture** for Feature Engineering, allowing dynamic switching between:
 1. **CPU-Optimized:** Rust-based Polars (for AWS Free Tier / Edge Devices)
