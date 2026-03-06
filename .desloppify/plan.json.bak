@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T20:44:51+00:00",
+  "updated": "2026-03-06T20:47:25+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -7834,6 +7834,45 @@
         "status": "fixed",
         "attestation": "I have actually Moved reusable demo printing and scenario helper logic into demo_complete_system_support.py so the main script stays focused on executable flow and entry points. and I am not gaming the score."
       }
+    },
+    {
+      "timestamp": "2026-03-06T20:45:00+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/demo_complete_system.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "8f499b1906b7",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T20:47:24+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/data_sources.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted nested data-source cache and output-builder helpers into data_source_support.py so the asset module stays focused on Dagster asset orchestration.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T20:47:25+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/data_sources.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted nested data-source cache and output-builder helpers into data_source_support.py so the asset module stays focused on Dagster asset orchestration.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted nested data-source cache and output-builder helpers into data_source_support.py so the asset module stays focused on Dagster asset orchestration. and I am not gaming the score."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -8358,10 +8397,20 @@
       "recorded_at": "2026-03-06T20:35:21+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "8f499b1906b7",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/demo_complete_system.py"
+      ],
+      "recorded_at": "2026-03-06T20:45:00+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/demo_complete_system.py"
+    "structural::energy_ml/energy_ml/assets/data_sources.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
