@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 86.3,
-  "objective_score": 89.1,
-  "strict_score": 85.9,
+  "overall_score": 86.5,
+  "objective_score": 89.5,
+  "strict_score": 86.1,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 79,
-    "open": 301,
+    "fixed": 82,
+    "open": 298,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 39,
-        "open": 258,
+        "fixed": 42,
+        "open": 255,
         "wontfix": 72
       },
       "4": {
@@ -2455,18 +2455,18 @@
       }
     },
     "Test health": {
-      "score": 70.5,
-      "strict": 70.5,
+      "score": 72.8,
+      "strict": 72.8,
       "verified_strict_score": 19.1,
       "checks": 1788,
-      "failing": 37,
+      "failing": 34,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1782,
-          "pass_rate": 0.704025546350669,
-          "failing": 37,
-          "weighted_failures": 527.4264764031078
+          "pass_rate": 0.7268314866758286,
+          "failing": 34,
+          "weighted_failures": 486.7862907436733
         },
         "subjective_review": {
           "potential": 6,
@@ -23199,17 +23199,23 @@
         "importer_count": 0,
         "loc_weight": 9.899494936611665
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_core_forecast_and_weather_assets.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T23:31:03+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:08:53+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "production",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_core_forecast_and_weather_assets.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:08:53+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/engines/selection.py::untested_module": {
       "id": "test_coverage::src/engines/selection.py::untested_module",
@@ -23249,17 +23255,23 @@
         "importer_count": 0,
         "loc_weight": 12.24744871391589
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_core_forecast_and_weather_assets.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T23:31:03+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:09:02+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_core_forecast_and_weather_assets.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:09:02+00:00",
+        "scan_verified": false
+      }
     },
     "smells::energy_ml/optimizer/ml_star_optimizer.py::sig_variance::optimize": {
       "id": "smells::energy_ml/optimizer/ml_star_optimizer.py::sig_variance::optimize",
@@ -24336,17 +24348,23 @@
         "importer_count": 0,
         "loc_weight": 18.49324200890693
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_core_forecast_and_weather_assets.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-06T10:41:52+00:00",
       "last_seen": "2026-03-06T10:41:52+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:09:11+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_core_forecast_and_weather_assets.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:09:11+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/assets/core/optimization_schedule_checks.py::untested_module": {
       "id": "test_coverage::src/assets/core/optimization_schedule_checks.py::untested_module",
