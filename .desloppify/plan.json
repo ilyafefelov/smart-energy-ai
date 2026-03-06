@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T22:48:25+00:00",
+  "updated": "2026-03-06T22:54:16+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -8441,6 +8441,45 @@
         "sha": "63f73bc9b65b",
         "branch": "chore/desloppify-quality-pass"
       }
+    },
+    {
+      "timestamp": "2026-03-06T22:53:55+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/mlops/serving_api.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted health payload construction, prediction normalization, response shaping, battery simulation adaptation, model-version summaries, and websocket pruning helpers into serving_api_support.py while preserving the public MLServingAPI surface and route wiring.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T22:53:57+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/mlops/serving_api.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted health payload construction, prediction normalization, response shaping, battery simulation adaptation, model-version summaries, and websocket pruning helpers into serving_api_support.py while preserving the public MLServingAPI surface and route wiring.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually extracted the serving API shaping and simulation helpers into serving_api_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T22:54:16+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/mlops/serving_api.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "c6a06ab5ffd6",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -9123,6 +9162,16 @@
         "structural::energy_ml/mlops/monitoring_dashboard.py"
       ],
       "recorded_at": "2026-03-06T22:48:25+00:00",
+      "note": null,
+      "cluster_name": null
+    },
+    {
+      "sha": "c6a06ab5ffd6",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/mlops/serving_api.py"
+      ],
+      "recorded_at": "2026-03-06T22:54:16+00:00",
       "note": null,
       "cluster_name": null
     }

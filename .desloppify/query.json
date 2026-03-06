@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/mlops/monitoring_dashboard.py"
+    "structural::energy_ml/mlops/serving_api.py"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/mlops/monitoring_dashboard.py"
+    "structural::energy_ml/mlops/serving_api.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 88.3,
-  "objective_score": 94.1,
+  "overall_score": 88.4,
+  "objective_score": 94.2,
   "strict_score": 87.9,
   "verified_strict_score": 78.6,
   "prev_overall_score": 88.3,
   "prev_objective_score": 94.1,
   "prev_strict_score": 87.9,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually extracted alert serialization, persistence, threshold logic, dashboard summary assembly, and monitoring response builders into monitoring_dashboard_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing.",
+  "attestation": "I have actually extracted the serving API shaping and simulation helpers into serving_api_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 91.0,
+          "strict": 91.2,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 46,
-        "description": "46 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 45,
+        "description": "45 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 253,
+        "total_count": 252,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
