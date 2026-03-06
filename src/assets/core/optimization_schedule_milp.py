@@ -8,7 +8,13 @@ import polars as pl
 from dagster import AssetIn, asset
 
 from ...optimization import MilpBatteryScheduler, MilpSchedulerConfig
-from .optimization_schedule import _extract_price_horizon, _get_client_series, _load_client_capacities
+from .optimization_schedule import (
+    _extract_price_horizon,
+    _get_client_series,
+    _load_client_capacities,
+    build_empty_optimization_schedule,
+    build_optimization_schedule_frame,
+)
 
 
 @asset(
@@ -27,7 +33,7 @@ def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, clie
     prices = _extract_price_horizon(price_forecast)
     if not prices:
         context.log.warning("No forecast prices available for MILP schedule")
-        return pl.DataFrame()
+        return build_empty_optimization_schedule()
 
     horizon = min(24, len(prices))
     capacity_by_client = _load_client_capacities()
@@ -78,6 +84,8 @@ def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, clie
             "soc_after_kwh": float(row["soc_after_kwh"]),
             "throughput_total_kwh": float(row["throughput_total_kwh"]),
             "price_eur_mwh": float(row["price_eur_mwh"]),
+            "load_kwh": float(row["load_kwh"]),
+            "solar_kwh": float(row["solar_kwh"]),
             "grid_import_kwh": float(row["grid_import_kwh"]),
             "grid_export_kwh": float(row["grid_export_kwh"]),
             "purchase_cost_eur": float(row["purchase_cost_eur"]),
@@ -85,13 +93,16 @@ def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, clie
             "degradation_penalty_eur": float(row["degradation_penalty_eur"]),
             "net_cost_eur": float(row["net_cost_eur"]),
             "total_net_cost_eur": float(result["objective"]["net_cost_eur"]),
+            "final_soc_kwh": float(result["constraints"]["final_soc_kwh"]),
+            "throughput_limit_kwh": float(result["constraints"]["throughput_limit_kwh"]),
+            "algorithm": str(result["metadata"]["algorithm"]),
             "solver": str(result["metadata"]["solver"]),
         } for row in result["schedule"]]
 
-        output_frames.append(pl.DataFrame(rows))
+        output_frames.append(build_optimization_schedule_frame(rows))
 
     if not output_frames:
-        return pl.DataFrame()
+        return build_empty_optimization_schedule()
 
     combined = pl.concat(output_frames, how="vertical").sort(["client_id", "hour"])
     context.log.info(f"optimization_schedule_milp generated rows={len(combined)} clients={len(output_frames)}")

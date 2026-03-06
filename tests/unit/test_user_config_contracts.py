@@ -1,0 +1,105 @@
+import importlib.util
+from pathlib import Path
+
+import pytest
+
+
+MODULE_PATH = Path(__file__).resolve().parents[2] / "energy_ml" / "user_config.py"
+SPEC = importlib.util.spec_from_file_location("user_config_under_test", MODULE_PATH)
+USER_CONFIG_MODULE = importlib.util.module_from_spec(SPEC)
+assert SPEC is not None and SPEC.loader is not None
+SPEC.loader.exec_module(USER_CONFIG_MODULE)
+
+CONFIG_MODELS_PATH = Path(__file__).resolve().parents[2] / "energy_ml" / "config_models.py"
+CONFIG_MODELS_SPEC = importlib.util.spec_from_file_location("config_models_under_test", CONFIG_MODELS_PATH)
+CONFIG_MODELS_MODULE = importlib.util.module_from_spec(CONFIG_MODELS_SPEC)
+assert CONFIG_MODELS_SPEC is not None and CONFIG_MODELS_SPEC.loader is not None
+CONFIG_MODELS_SPEC.loader.exec_module(CONFIG_MODELS_MODULE)
+
+ConfigurationManager = USER_CONFIG_MODULE.ConfigurationManager
+ConfigurationManagerError = USER_CONFIG_MODULE.ConfigurationManagerError
+UserConfigModel = USER_CONFIG_MODULE.UserConfigModel
+LoadProfileConfig = CONFIG_MODELS_MODULE.LoadProfileConfig
+
+
+def test_load_config_missing_file_returns_defaults_with_source(tmp_path: Path) -> None:
+    manager = ConfigurationManager(config_dir=tmp_path)
+
+    result = manager.load_config()
+
+    assert result.success is True
+    assert result.source == "defaults"
+    assert result.config is not None
+    assert result.config.battery_type == "LFP"
+    assert result.warnings
+
+
+def test_load_config_invalid_file_returns_failure_without_defaults(tmp_path: Path) -> None:
+    manager = ConfigurationManager(config_dir=tmp_path)
+    manager.config_file.write_text("{invalid json", encoding="utf-8")
+
+    result = manager.load_config()
+
+    assert result.success is False
+    assert result.source == "invalid"
+    assert result.config is None
+    assert result.errors
+
+    with pytest.raises(ConfigurationManagerError):
+        manager.load_config_or_raise()
+
+
+def test_validation_methods_share_common_result_contract(tmp_path: Path) -> None:
+    manager = ConfigurationManager(config_dir=tmp_path)
+
+    battery_result = manager.validate_battery_config("InvalidType", 0.0, 1.2)
+    load_result = manager.validate_load_profile("invalid", 0.0)
+    complete_result = manager.validate_complete_config(UserConfigModel())
+
+    assert battery_result.success is False
+    assert battery_result.valid is False
+    assert isinstance(battery_result.errors, list)
+    assert isinstance(battery_result.warnings, list)
+
+    assert load_result.success is False
+    assert load_result.valid is False
+    assert isinstance(load_result.errors, list)
+    assert isinstance(load_result.warnings, list)
+
+    assert complete_result.success is True
+    assert complete_result.valid is True
+    assert complete_result.config is not None
+
+
+def test_save_and_trigger_results_use_shared_envelope(tmp_path: Path) -> None:
+    manager = ConfigurationManager(config_dir=tmp_path)
+    config = UserConfigModel(battery_capacity_kwh=12.0)
+
+    save_result = manager.save_config(config)
+    trigger_result = manager.trigger_ml_recalculation(config)
+
+    assert save_result.success is True
+    assert save_result.data is not None
+    assert save_result.config is not None
+    assert save_result.errors == []
+
+    assert trigger_result.success is True
+    assert trigger_result.trigger_id
+    assert trigger_result.trigger_state == "triggered"
+    assert trigger_result.errors == []
+
+
+def test_load_profile_uses_single_canonical_machine_token() -> None:
+    user_config = UserConfigModel(load_profile_type="24/7")
+    runtime_profile = LoadProfileConfig.create_24_7_profile(peak_load_kw=20.0)
+    legacy_profile = LoadProfileConfig(
+        profile_type="24/7",
+        name="Legacy Continuous",
+        description="Legacy token should normalize",
+        hourly_coefficients={hour: 0.8 for hour in range(24)},
+        peak_load_kw=20.0,
+    )
+
+    assert user_config.load_profile_type == "24_7"
+    assert runtime_profile.profile_type == "24_7"
+    assert legacy_profile.profile_type == "24_7"

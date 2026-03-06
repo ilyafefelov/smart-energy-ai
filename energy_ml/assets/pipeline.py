@@ -60,7 +60,7 @@ def integrated_pipeline_asset(
         # Load configuration
         if user_config_data is None:
             config_manager = ConfigurationManager()
-            config = config_manager.load_config()
+            config = config_manager.load_config_or_raise()
         else:
             config = UserConfigModel(**user_config_data)
         
@@ -149,7 +149,7 @@ def engineered_features_asset(integrated_pipeline: Dict[str, Any]) -> pl.DataFra
         
         # Create orchestrator for context
         config_manager = ConfigurationManager()
-        config = config_manager.load_config()
+        config = config_manager.load_config_or_raise()
         orchestrator = PipelineOrchestrator(config)
         
         # Extract features
@@ -312,7 +312,7 @@ def optimization_preferences_asset(user_config_data: Dict[str, Any] = None) -> D
         # Load configuration
         if user_config_data is None:
             config_manager = ConfigurationManager()
-            config = config_manager.load_config()
+            config = config_manager.load_config_or_raise()
         else:
             config = UserConfigModel(**user_config_data)
         
@@ -373,7 +373,7 @@ def battery_physics_asset(user_config_data: Dict[str, Any] = None) -> Dict[str, 
         # Load configuration
         if user_config_data is None:
             config_manager = ConfigurationManager()
-            config = config_manager.load_config()
+            config = config_manager.load_config_or_raise()
         else:
             config = UserConfigModel(**user_config_data)
         
@@ -433,7 +433,7 @@ def renewable_generation_asset(user_config_data: Dict[str, Any] = None) -> Dict[
         # Load configuration
         if user_config_data is None:
             config_manager = ConfigurationManager()
-            config = config_manager.load_config()
+            config = config_manager.load_config_or_raise()
         else:
             config = UserConfigModel(**user_config_data)
         

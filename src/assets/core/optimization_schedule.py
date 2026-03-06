@@ -3,13 +3,56 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import polars as pl
 import yaml
 from dagster import AssetIn, asset
 
 from ...optimization import BaselineDPOptimizer, BaselineOptimizationConfig
+
+
+OPTIMIZATION_SCHEDULE_SCHEMA: Dict[str, pl.DataType] = {
+    "client_id": pl.Utf8,
+    "hour": pl.Int64,
+    "action_kw": pl.Float64,
+    "charge_kwh": pl.Float64,
+    "discharge_kwh": pl.Float64,
+    "soc_before_kwh": pl.Float64,
+    "soc_after_kwh": pl.Float64,
+    "throughput_total_kwh": pl.Float64,
+    "price_eur_mwh": pl.Float64,
+    "load_kwh": pl.Float64,
+    "solar_kwh": pl.Float64,
+    "grid_import_kwh": pl.Float64,
+    "grid_export_kwh": pl.Float64,
+    "purchase_cost_eur": pl.Float64,
+    "export_revenue_eur": pl.Float64,
+    "degradation_penalty_eur": pl.Float64,
+    "net_cost_eur": pl.Float64,
+    "total_net_cost_eur": pl.Float64,
+    "final_soc_kwh": pl.Float64,
+    "throughput_limit_kwh": pl.Float64,
+    "algorithm": pl.Utf8,
+    "solver": pl.Utf8,
+}
+
+
+def build_empty_optimization_schedule() -> pl.DataFrame:
+    """Return the canonical empty optimization schedule frame."""
+    return pl.DataFrame(schema=OPTIMIZATION_SCHEDULE_SCHEMA)
+
+
+def build_optimization_schedule_frame(rows: List[Dict[str, Any]]) -> pl.DataFrame:
+    """Materialize optimization schedule rows with the shared contract."""
+    if not rows:
+        return build_empty_optimization_schedule()
+
+    normalized_rows = [
+        {column: row.get(column) for column in OPTIMIZATION_SCHEDULE_SCHEMA}
+        for row in rows
+    ]
+    return pl.DataFrame(normalized_rows, schema=OPTIMIZATION_SCHEDULE_SCHEMA)
 
 
 def _load_client_capacities() -> Dict[str, float]:
@@ -69,19 +112,7 @@ def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_st
     prices = _extract_price_horizon(price_forecast)
     if not prices:
         context.log.warning("No forecast price column found; returning empty optimization schedule")
-        return pl.DataFrame(
-            schema={
-                "client_id": pl.Utf8,
-                "hour": pl.Int64,
-                "action_kw": pl.Float64,
-                "soc_before_kwh": pl.Float64,
-                "soc_after_kwh": pl.Float64,
-                "grid_import_kwh": pl.Float64,
-                "grid_export_kwh": pl.Float64,
-                "net_cost_eur": pl.Float64,
-                "total_net_cost_eur": pl.Float64,
-            }
-        )
+        return build_empty_optimization_schedule()
 
     horizon = min(24, len(prices))
     capacity_by_client = _load_client_capacities()
@@ -137,6 +168,8 @@ def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_st
             "soc_after_kwh": float(row["soc_after_kwh"]),
             "throughput_total_kwh": float(row["throughput_total_kwh"]),
             "price_eur_mwh": float(row["price_eur_mwh"]),
+            "load_kwh": float(row["load_kwh"]),
+            "solar_kwh": float(row["solar_kwh"]),
             "grid_import_kwh": float(row["grid_import_kwh"]),
             "grid_export_kwh": float(row["grid_export_kwh"]),
             "purchase_cost_eur": float(row["purchase_cost_eur"]),
@@ -147,12 +180,13 @@ def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_st
             "final_soc_kwh": float(result["constraints"]["final_soc_kwh"]),
             "throughput_limit_kwh": float(result["constraints"]["throughput_limit_kwh"]),
             "algorithm": str(result["metadata"]["algorithm"]),
+            "solver": None,
         } for row in result["schedule"]]
 
-        output_frames.append(pl.DataFrame(schedule_rows))
+        output_frames.append(build_optimization_schedule_frame(schedule_rows))
 
     if not output_frames:
-        return pl.DataFrame()
+        return build_empty_optimization_schedule()
 
     combined = pl.concat(output_frames, how="vertical").sort(["client_id", "hour"])
     context.log.info(

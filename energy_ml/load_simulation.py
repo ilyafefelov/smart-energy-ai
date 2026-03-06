@@ -179,7 +179,7 @@ def create_simulator(profile: LoadProfileConfig) -> BaseLoadSimulator:
         return StandardWorkSimulator(profile)
     elif profile.profile_type == 'multi-shift':
         return MultiShiftSimulator(profile)
-    elif profile.profile_type == '24/7':
+    elif profile.profile_type == '24_7':
         return ContinuousSimulator(profile)
     elif profile.profile_type == 'custom':
         return CustomSimulator(profile)

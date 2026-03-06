@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import polars as pl
 
+from src.assets.core.optimization_schedule import (
+    OPTIMIZATION_SCHEDULE_SCHEMA,
+    build_empty_optimization_schedule,
+    build_optimization_schedule_frame,
+)
 from src.assets.core.optimization_schedule_checks import (
     evaluate_schedule_action_semantics,
     evaluate_schedule_completeness,
@@ -67,6 +72,42 @@ def test_schedule_contract_checks_fail_for_duplicate_missing_and_inconsistent_ro
     assert action_semantics["passed"] is False
     assert action_semantics["metadata"]["simultaneous_charge_discharge_count"] == 1
     assert action_semantics["metadata"]["action_balance_mismatch_count"] == 1
+
+
+def test_schedule_frame_builder_uses_canonical_schema_for_empty_and_sparse_rows() -> None:
+    empty_schedule = build_empty_optimization_schedule()
+    sparse_schedule = build_optimization_schedule_frame(
+        [
+            {
+                "client_id": "client_a",
+                "hour": 0,
+                "action_kw": 0.0,
+                "charge_kwh": 0.0,
+                "discharge_kwh": 0.0,
+                "soc_before_kwh": 50.0,
+                "soc_after_kwh": 50.0,
+                "throughput_total_kwh": 0.0,
+                "price_eur_mwh": 42.0,
+                "load_kwh": 5.0,
+                "solar_kwh": 0.0,
+                "grid_import_kwh": 5.0,
+                "grid_export_kwh": 0.0,
+                "purchase_cost_eur": 0.21,
+                "export_revenue_eur": 0.0,
+                "degradation_penalty_eur": 0.0,
+                "net_cost_eur": 0.21,
+                "total_net_cost_eur": 5.04,
+                "algorithm": "mip_scheduler",
+                "solver": "highs",
+            }
+        ]
+    )
+
+    assert empty_schedule.schema == OPTIMIZATION_SCHEDULE_SCHEMA
+    assert sparse_schedule.schema == OPTIMIZATION_SCHEDULE_SCHEMA
+    assert sparse_schedule.columns == list(OPTIMIZATION_SCHEDULE_SCHEMA.keys())
+    assert sparse_schedule.get_column("final_soc_kwh").to_list() == [None]
+    assert sparse_schedule.get_column("throughput_limit_kwh").to_list() == [None]
 
 
 def test_definitions_register_schedule_checks_and_job() -> None:

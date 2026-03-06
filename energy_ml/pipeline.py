@@ -47,7 +47,7 @@ class PipelineOrchestrator:
         self.config_manager = ConfigurationManager()
         
         if user_config is None:
-            self.config = self.config_manager.load_config()
+            self.config = self.config_manager.load_config_or_raise()
         else:
             self.config = user_config
         
@@ -429,7 +429,7 @@ class PipelineOrchestrator:
         if self.config.load_peak_kw <= 0:
             errors.append(f"Invalid peak load: {self.config.load_peak_kw}")
         
-        if self.config.load_profile_type not in ['standard', 'multi-shift', '24/7', 'custom']:
+        if self.config.load_profile_type not in ['standard', 'multi-shift', '24_7', 'custom']:
             errors.append(f"Unknown load profile: {self.config.load_profile_type}")
         
         is_valid = len(errors) == 0

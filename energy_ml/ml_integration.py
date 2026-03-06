@@ -378,7 +378,7 @@ class PredictionService:
             # Mock user config for optimization
             from energy_ml.user_config import ConfigurationManager
             config_manager = ConfigurationManager()
-            config = config_manager.load_config()
+            config = config_manager.load_config_or_raise()
             
             # Set strategy in config
             setattr(config, 'optimization_strategy', user_strategy)

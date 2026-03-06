@@ -12,6 +12,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
 
+logger = logging.getLogger(__name__)
+
 # Add the current directory to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -43,12 +45,17 @@ def setup_logging():
     )
 
 
+def load_user_config() -> Any:
+    """Load user config using the shared ConfigurationManager contract."""
+    config_manager = ConfigurationManager()
+    return config_manager.load_config_or_raise()
+
+
 def get_recommendation(enhanced: bool = False) -> Dict[str, Any]:
     """Get current ML recommendation using Pipeline Orchestrator."""
     try:
         # Load user configuration
-        config_manager = ConfigurationManager()
-        user_config = config_manager.load_config()
+        user_config = load_user_config()
 
         # Initialize Pipeline Orchestrator
         orchestrator = PipelineOrchestrator(user_config)
@@ -153,8 +160,7 @@ def get_recommendation(enhanced: bool = False) -> Dict[str, Any]:
 def get_forecast(hours: int = 24) -> Dict[str, Any]:
     """Get hourly forecast for specified number of hours."""
     try:
-        config_manager = ConfigurationManager()
-        user_config = config_manager.load_config()
+        user_config = load_user_config()
         orchestrator = PipelineOrchestrator(user_config)
 
         forecast_df = orchestrator.get_hourly_forecast(hours)
@@ -192,8 +198,7 @@ def get_forecast(hours: int = 24) -> Dict[str, Any]:
 def get_pipeline_status() -> Dict[str, Any]:
     """Get current pipeline status."""
     try:
-        config_manager = ConfigurationManager()
-        user_config = config_manager.load_config()
+        user_config = load_user_config()
         orchestrator = PipelineOrchestrator(user_config)
 
         status = orchestrator.get_status()
@@ -219,7 +224,7 @@ def set_optimization_strategy(
     """Set user optimization strategy."""
     try:
         config_manager = ConfigurationManager()
-        user_config = config_manager.load_config()
+        user_config = config_manager.load_config_or_raise()
 
         # Update optimization strategy in user config
         user_config.optimization_strategy = strategy
@@ -227,7 +232,9 @@ def set_optimization_strategy(
             user_config.custom_optimization_weights = custom_weights
 
         # Save updated config
-        config_manager.save_config(user_config)
+        save_result = config_manager.save_config(user_config)
+        if not save_result.success:
+            raise RuntimeError('; '.join(save_result.errors) or 'Failed to save user configuration')
 
         # Get strategy details
         optimization_engine = OptimizationEngine()
@@ -254,8 +261,7 @@ def set_optimization_strategy(
 def get_optimization_strategy() -> Dict[str, Any]:
     """Get current optimization strategy."""
     try:
-        config_manager = ConfigurationManager()
-        user_config = config_manager.load_config()
+        user_config = load_user_config()
 
         optimization_engine = OptimizationEngine()
         strategy_info = optimization_engine.get_strategy_info(
@@ -285,8 +291,7 @@ def get_optimization_strategy() -> Dict[str, Any]:
 def get_battery_physics() -> Dict[str, Any]:
     """Get battery physics simulation data."""
     try:
-        config_manager = ConfigurationManager()
-        user_config = config_manager.load_config()
+        user_config = load_user_config()
 
         physics_engine = BatteryPhysicsEngine()
         physics_data = physics_engine.simulate_battery_behavior(user_config)
@@ -309,8 +314,7 @@ def get_battery_physics() -> Dict[str, Any]:
 def get_renewable_forecast() -> Dict[str, Any]:
     """Get renewable energy forecast data."""
     try:
-        config_manager = ConfigurationManager()
-        user_config = config_manager.load_config()
+        user_config = load_user_config()
 
         renewable_forecaster = RenewableForecaster()
         forecast_data = renewable_forecaster.generate_forecasts(user_config)

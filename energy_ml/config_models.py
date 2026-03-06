@@ -89,7 +89,7 @@ class BatteryConfig(BaseModel):
 class LoadProfileConfig(BaseModel):
     """Load profile configuration for business operation simulation."""
     
-    profile_type: Literal['standard', 'multi-shift', '24/7', 'custom'] = Field(
+    profile_type: Literal['standard', 'multi-shift', '24_7', 'custom'] = Field(
         description="Type of load profile"
     )
     name: str = Field(
@@ -110,6 +110,14 @@ class LoadProfileConfig(BaseModel):
         description="Peak load during operating hours"
     )
     
+    @field_validator('profile_type', mode='before')
+    @classmethod
+    def normalize_profile_type(cls, value: str) -> str:
+        """Normalize legacy profile tokens to a canonical machine value."""
+        if value == '24/7':
+            return '24_7'
+        return value
+
     @field_validator('hourly_coefficients')
     @classmethod
     def validate_hourly_coefficients(cls, v):
@@ -174,7 +182,7 @@ class LoadProfileConfig(BaseModel):
         coefficients[14] = 0.6  # 2 PM shift change
         
         return cls(
-            profile_type='24/7',
+            profile_type='24_7',
             name='Continuous Operation (24/7)',
             description='Round-the-clock operation with minor variations',
             hourly_coefficients=coefficients,
