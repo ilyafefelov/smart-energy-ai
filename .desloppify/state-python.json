@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 85.8,
-  "objective_score": 87.7,
-  "strict_score": 85.4,
+  "overall_score": 85.9,
+  "objective_score": 88.1,
+  "strict_score": 85.5,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 70,
-    "open": 310,
+    "fixed": 73,
+    "open": 307,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 31,
-        "open": 266,
+        "fixed": 34,
+        "open": 263,
         "wontfix": 72
       },
       "4": {
@@ -2455,18 +2455,18 @@
       }
     },
     "Test health": {
-      "score": 63.2,
-      "strict": 63.2,
+      "score": 65.3,
+      "strict": 65.3,
       "verified_strict_score": 19.1,
       "checks": 1788,
-      "failing": 46,
+      "failing": 43,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1782,
-          "pass_rate": 0.6303386158568288,
-          "failing": 46,
-          "weighted_failures": 658.736586543131
+          "pass_rate": 0.6520312348573416,
+          "failing": 43,
+          "weighted_failures": 620.0803394842172
         },
         "subjective_review": {
           "potential": 6,
@@ -7059,17 +7059,23 @@
         "importer_count": 0,
         "loc_weight": 13.96424004376894
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for retraining path helpers, config merge and parsing, and main success and failure flows.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:38:44+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for retraining path helpers, config merge and parsing, and main success and failure flows. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:38:44+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/dagster_api/database.py::untested_module": {
       "id": "test_coverage::src/dagster_api/database.py::untested_module",
@@ -7402,17 +7408,23 @@
         "importer_count": 0,
         "loc_weight": 11.090536506409418
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for deployment file checks and success and failure validation branches.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:38:53+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for deployment file checks and success and failure validation branches. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:38:53+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/energy_ml/utils.py::untested_critical": {
       "id": "test_coverage::energy_ml/energy_ml/utils.py::untested_critical",
@@ -8415,17 +8427,23 @@
         "importer_count": 0,
         "loc_weight": 13.601470508735444
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for OREE data loading, baseline and optimized cost calculations, validation output, and missing-file handling.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:39:01+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for OREE data loading, baseline and optimized cost calculations, validation output, and missing-file handling. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:39:01+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/hybrid_ml_controller.py::assertion_free::test_hybrid_ml_integration.py": {
       "id": "test_coverage::src/hybrid_ml_controller.py::assertion_free::test_hybrid_ml_integration.py",
