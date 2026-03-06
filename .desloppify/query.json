@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "test_coverage::ml_integration_api.py::untested_critical"
+    "test_coverage::recalculate_pipeline.py::untested_module"
   ],
   "status": "fixed",
   "resolved": [
-    "test_coverage::ml_integration_api.py::untested_critical"
+    "test_coverage::recalculate_pipeline.py::untested_module"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 85.0,
-  "objective_score": 85.8,
-  "strict_score": 84.6,
+  "overall_score": 85.1,
+  "objective_score": 86.0,
+  "strict_score": 84.7,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 84.9,
-  "prev_objective_score": 85.6,
-  "prev_strict_score": 84.5,
+  "prev_overall_score": 85.0,
+  "prev_objective_score": 85.8,
+  "prev_strict_score": 84.6,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually Added direct root API surface tests for recommendation, forecast, status, strategy, renewable helpers, and CLI JSON output. and I am not gaming the score.",
+  "attestation": "I have actually Added focused tests for config bootstrap and fallback behavior, artifact persistence, and main success and failure orchestration. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -210,8 +210,8 @@
       {
         "type": "refactor",
         "detector": "test_coverage",
-        "count": 59,
-        "description": "59 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "count": 58,
+        "description": "58 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
         "command": "desloppify show test_coverage --status open",
         "impact": 0.0,
         "dimension": "Test health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 323,
+        "total_count": 322,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -322,7 +322,7 @@
           "actions": [
             7
           ],
-          "file_count": 59,
+          "file_count": 58,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -351,7 +351,7 @@
       }
     },
     "debt": {
-      "overall_gap": 0.1,
+      "overall_gap": 0.2,
       "wontfix_count": 147,
       "worst_dimension": "Code quality",
       "worst_gap": 5.5,
@@ -371,13 +371,13 @@
       {
         "type": "wontfix_gap",
         "severity": "high",
-        "message": "Strict/lenient gap is 0.1 pts with 147 wontfix issues"
+        "message": "Strict/lenient gap is 0.2 pts with 147 wontfix issues"
       }
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 84.6,
-      "gap": 10.4,
+      "current": 84.7,
+      "gap": 10.3,
       "state": "below",
       "warning": null
     },
