@@ -4,15 +4,15 @@
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
   "overall_score": 88.0,
-  "objective_score": 93.2,
+  "objective_score": 93.3,
   "strict_score": 87.6,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 111,
-    "open": 269,
+    "fixed": 112,
+    "open": 268,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 65,
-        "open": 232,
+        "fixed": 66,
+        "open": 231,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 87.6,
-      "strict": 87.6,
+      "score": 87.8,
+      "strict": 87.8,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 59,
+      "failing": 58,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.8762237762237761,
-          "failing": 59,
-          "weighted_failures": 17.70000000000002
+          "pass_rate": 0.8783216783216782,
+          "failing": 58,
+          "weighted_failures": 17.40000000000002
         }
       }
     },
@@ -4129,17 +4129,23 @@
       "detail": {
         "loc": 337
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Moved reusable demo printing and scenario helper logic into demo_complete_system_support.py so the main script stays focused on executable flow and entry points.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T20:44:51+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Moved reusable demo printing and scenario helper logic into demo_complete_system_support.py so the main script stays focused on executable flow and entry points. and I am not gaming the score.",
+        "attested_at": "2026-03-06T20:44:51+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/data_pipeline/ingest_prices.py": {
       "id": "structural::src/data_pipeline/ingest_prices.py",
