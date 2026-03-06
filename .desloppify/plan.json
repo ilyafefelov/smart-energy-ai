@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T22:09:39+00:00",
+  "updated": "2026-03-06T22:25:53+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -8207,6 +8207,45 @@
         "sha": "536f6dfbe659",
         "branch": "chore/desloppify-quality-pass"
       }
+    },
+    {
+      "timestamp": "2026-03-06T22:25:31+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/ml_integration.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "I split PredictionService validation, mock inference, reasoning, and response-shaping helpers into energy_ml/ml_integration_support.py, preserved the public service API and direct-file fallback loader in energy_ml/ml_integration.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T22:25:33+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/ml_integration.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "I split PredictionService validation, mock inference, reasoning, and response-shaping helpers into energy_ml/ml_integration_support.py, preserved the public service API and direct-file fallback loader in energy_ml/ml_integration.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually I split PredictionService validation, mock inference, reasoning, and response-shaping helpers into energy_ml/ml_integration_support.py, preserved the public service API and direct-file fallback loader in energy_ml/ml_integration.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T22:25:53+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/ml_integration.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "86e562101fd0",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -8829,6 +8868,16 @@
         "structural::energy_ml/energy_ml/utils.py"
       ],
       "recorded_at": "2026-03-06T22:09:39+00:00",
+      "note": null,
+      "cluster_name": null
+    },
+    {
+      "sha": "86e562101fd0",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/ml_integration.py"
+      ],
+      "recorded_at": "2026-03-06T22:25:53+00:00",
       "note": null,
       "cluster_name": null
     }

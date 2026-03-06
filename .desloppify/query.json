@@ -1,11 +1,11 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/energy_ml/utils.py"
+    "structural::energy_ml/ml_integration.py"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/energy_ml/utils.py"
+    "structural::energy_ml/ml_integration.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
@@ -14,10 +14,10 @@
   "strict_score": 87.8,
   "verified_strict_score": 78.6,
   "prev_overall_score": 88.2,
-  "prev_objective_score": 93.7,
+  "prev_objective_score": 93.8,
   "prev_strict_score": 87.8,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually I split the nested solar and irradiance calculation helpers into energy_ml/energy_ml/utils_support.py, preserved the public API in energy_ml/energy_ml/utils.py with a direct-file fallback loader, and validated with .venv pytest on tests/unit/test_energy_ml_utils.py and tests/unit/test_feature_engineering_and_load_utils.py. and I am not gaming the score.",
+  "attestation": "I have actually I split PredictionService validation, mock inference, reasoning, and response-shaping helpers into energy_ml/ml_integration_support.py, preserved the public service API and direct-file fallback loader in energy_ml/ml_integration.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 89.7,
+          "strict": 89.9,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 52,
-        "description": "52 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 51,
+        "description": "51 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 259,
+        "total_count": 258,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -304,7 +304,7 @@
             10,
             11
           ],
-          "file_count": 78,
+          "file_count": 77,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false

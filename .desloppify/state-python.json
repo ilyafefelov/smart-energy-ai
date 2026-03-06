@@ -11,8 +11,8 @@
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 121,
-    "open": 259,
+    "fixed": 122,
+    "open": 258,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 75,
-        "open": 222,
+        "fixed": 76,
+        "open": 221,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 89.7,
-      "strict": 89.7,
+      "score": 89.9,
+      "strict": 89.9,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 49,
+      "failing": 48,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.897202797202797,
-          "failing": 49,
-          "weighted_failures": 14.700000000000014
+          "pass_rate": 0.8993006993006992,
+          "failing": 48,
+          "weighted_failures": 14.400000000000013
         }
       }
     },
@@ -3721,17 +3721,23 @@
       "detail": {
         "loc": 400
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "I split PredictionService validation, mock inference, reasoning, and response-shaping helpers into energy_ml/ml_integration_support.py, preserved the public service API and direct-file fallback loader in energy_ml/ml_integration.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T22:25:33+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually I split PredictionService validation, mock inference, reasoning, and response-shaping helpers into energy_ml/ml_integration_support.py, preserved the public service API and direct-file fallback loader in energy_ml/ml_integration.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py. and I am not gaming the score.",
+        "attested_at": "2026-03-06T22:25:33+00:00",
+        "scan_verified": false
+      }
     },
     "structural::energy_ml/mlops/optimization_engine.py": {
       "id": "structural::energy_ml/mlops/optimization_engine.py",
