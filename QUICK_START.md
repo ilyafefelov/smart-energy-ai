@@ -11,6 +11,8 @@ Set-Location D:\OpenClaw-Backup\clawd\projects\smart-energy-ai
 .\scripts\local\start-local-stack.ps1 -Start both
 ```
 
+`dashboard/` is the canonical Nuxt app used by the local launcher and runtime checks. The former `nuxt_dashboard/` tree has been archived to `archive/nuxt_dashboard_legacy_20260306/` and is not started by the root scripts.
+
 Canonical local endpoints:
 
 - Dagster UI: `http://127.0.0.1:3000`

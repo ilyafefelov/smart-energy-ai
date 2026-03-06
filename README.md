@@ -91,6 +91,8 @@ The launcher auto-seeds missing runtime JSON state from tracked templates under:
 - `energy_ml/outputs/templates/`
 - `energy_ml/energy_ml/outputs/templates/`
 
+The canonical Nuxt app is `dashboard/`. The former `nuxt_dashboard/` legacy parallel tree was archived to `archive/nuxt_dashboard_legacy_20260306/` and is no longer part of the active runtime surface.
+
 Canonical local ports:
 - Dagster: `http://127.0.0.1:3000`
 - Dashboard: `http://127.0.0.1:3600`

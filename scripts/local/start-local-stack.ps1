@@ -9,6 +9,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# `dashboard/` is the canonical Nuxt app started by this launcher.
+# The former `nuxt_dashboard/` tree was archived to `archive/nuxt_dashboard_legacy_20260306/` and is not booted here.
+
 function Test-Endpoint {
   param(
     [string]$Url,

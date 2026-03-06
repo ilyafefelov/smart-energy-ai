@@ -51,7 +51,8 @@ smart-energy-ai/
 │       ├── market.py
 │       ├── weather.py
 │       └── client_state.py
-├── dashboard/                    # Streamlit web interface
+├── dashboard/                    # Canonical Nuxt dashboard app
+├── archive/                      # Archived legacy trees and historical snapshots
 ├── config/                       # Configuration files
 ├── data/                        # Data storage
 │   ├── raw/

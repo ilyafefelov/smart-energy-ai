@@ -1,5 +1,8 @@
 # Smart Energy AI - Nuxt3 Dashboard
 
+This folder is a legacy parallel Nuxt dashboard tree retained for migration and reference work.
+The canonical runtime app used by the repository root scripts is `dashboard/`, not `nuxt_dashboard/`.
+
 Modern, premium dashboard for AI-powered battery optimization in Ukraine energy market.
 
 ## Features

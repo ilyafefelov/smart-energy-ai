@@ -1,11 +1,9 @@
 /**
- * API Endpoint for Renewable Energy Forecasting
- * 
- * Provides solar and wind generation forecasting including:
- * - Hourly generation forecasts
- * - Weather data integration
- * - Capacity factor calculations
- * - Combined renewable output
+ * API endpoint for ML-backed renewable energy forecasting.
+ *
+ * Exposes the Python pipeline under a dedicated route so the query-based
+ * /api/renewable/forecast handler remains the single source of truth for the
+ * dashboard's forecast/current/optimize contract.
  */
 import { exec } from 'child_process'
 import { promisify } from 'util'
@@ -62,39 +60,35 @@ interface RenewableForecastResponse {
   error?: string
 }
 
-export default defineEventHandler(async (event): Promise<RenewableForecastResponse> => {
+export default defineEventHandler(async (): Promise<RenewableForecastResponse> => {
   try {
-    // Get the project root path
     const projectRoot = path.resolve(process.cwd(), '..')
     const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
-    
-    console.log(`[Renewable API] Getting renewable energy forecast`)
-    
-    // Call the Python ML pipeline
+
+    console.log('[Renewable API] Getting ML renewable energy forecast')
+
     const { stdout, stderr } = await execAsync(
       `python "${pythonScript}" --action=get_renewable_forecast --format=json`,
       {
         cwd: projectRoot,
-        timeout: 30000 // 30 second timeout
+        timeout: 30000
       }
     )
-    
+
     if (stderr) {
       console.warn(`[Renewable API] Python stderr: ${stderr}`)
     }
-    
+
     console.log(`[Renewable API] Python stdout: ${stdout}`)
-    
-    // Parse the JSON response from Python
+
     const mlResponse = JSON.parse(stdout.trim())
-    
+
     if (!mlResponse.success) {
       throw new Error(mlResponse.error || 'Renewable forecast failed')
     }
-    
-    // Transform response to match interface
+
     const forecastData = mlResponse.forecast_data || {}
-    
+
     const response: RenewableForecastResponse = {
       success: true,
       data: {
@@ -124,7 +118,7 @@ export default defineEventHandler(async (event): Promise<RenewableForecastRespon
           temperature_c: forecastData.weather_data?.temperature_c || 20,
           cloud_cover_fraction: forecastData.weather_data?.cloud_cover_fraction || 0.5,
           current_hour: forecastData.weather_data?.current_hour || new Date().getHours(),
-          location: forecastData.weather_data?.location || "Unknown"
+          location: forecastData.weather_data?.location || 'Unknown'
         },
         capacity_factors: {
           solar: forecastData.capacity_factors?.solar || 0,
@@ -142,13 +136,12 @@ export default defineEventHandler(async (event): Promise<RenewableForecastRespon
         }
       }
     }
-    
-    console.log(`[Renewable API] Forecast completed: ${response.data.total_renewable.current_generation_kw} kW current generation`)
+
+    console.log(`[Renewable API] ML forecast completed: ${response.data.total_renewable.current_generation_kw} kW current generation`)
     return response
-    
   } catch (error) {
     console.error('[Renewable API] Error:', error)
-    
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
