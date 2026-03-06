@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 85.4,
-  "objective_score": 86.8,
-  "strict_score": 85.0,
+  "overall_score": 85.6,
+  "objective_score": 87.3,
+  "strict_score": 85.2,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 64,
-    "open": 316,
+    "fixed": 67,
+    "open": 313,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -25,15 +25,15 @@
       "2": {
         "auto_resolved": 36,
         "false_positive": 0,
-        "fixed": 17,
-        "open": 34,
+        "fixed": 18,
+        "open": 33,
         "wontfix": 75
       },
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 27,
-        "open": 270,
+        "fixed": 29,
+        "open": 268,
         "wontfix": 72
       },
       "4": {
@@ -2455,18 +2455,18 @@
       }
     },
     "Test health": {
-      "score": 57.9,
-      "strict": 57.9,
+      "score": 60.6,
+      "strict": 60.6,
       "verified_strict_score": 19.1,
       "checks": 1788,
-      "failing": 52,
+      "failing": 49,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1782,
-          "pass_rate": 0.5779560553576683,
-          "failing": 52,
-          "weighted_failures": 752.082309352635
+          "pass_rate": 0.6042979863594589,
+          "failing": 49,
+          "weighted_failures": 705.1409883074442
         },
         "subjective_review": {
           "potential": 6,
@@ -6851,17 +6851,23 @@
         "loc_weight": 12.96148139681572,
         "complexity_score": 36
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for rendered directory tree output from the Nuxt structure printer.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:31:10+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for rendered directory tree output from the Nuxt structure printer. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:31:10+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/oree_real_prices.py::untested_critical": {
       "id": "test_coverage::src/oree_real_prices.py::untested_critical",
@@ -7159,17 +7165,23 @@
         "importer_count": 0,
         "loc_weight": 21.330729007701542
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused orchestration tests for main phase aggregation, phase helper success/failure paths, and mission summary output.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:31:01+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused orchestration tests for main phase aggregation, phase helper success/failure paths, and mission summary output. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:31:01+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/assets/core/client_state.py::untested_module": {
       "id": "test_coverage::src/assets/core/client_state.py::untested_module",
@@ -7976,17 +7988,23 @@
         "importer_count": 0,
         "loc_weight": 12.649110640673518
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused tests for HTML parsing, month save flow, merge behavior, and invalid month handling.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T18:31:20+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused tests for HTML parsing, month save flow, merge behavior, and invalid month handling. and I am not gaming the score.",
+        "attested_at": "2026-03-06T18:31:20+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/energy_ml/assets/data_sources.py::untested_module": {
       "id": "test_coverage::energy_ml/energy_ml/assets/data_sources.py::untested_module",

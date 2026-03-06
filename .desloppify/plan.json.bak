@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T18:28:31+00:00",
+  "updated": "2026-03-06T18:31:18+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -526,8 +526,8 @@
     "test_coverage::scripts/generate_nuxt_structure.py::untested_critical": {
       "issue_id": "test_coverage::scripts/generate_nuxt_structure.py::untested_critical",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T18:31:10+00:00"
     },
     "test_coverage::src/oree_real_prices.py::untested_critical": {
       "issue_id": "test_coverage::src/oree_real_prices.py::untested_critical",
@@ -586,8 +586,8 @@
     "test_coverage::scripts/demo_complete_mlops_system.py::untested_module": {
       "issue_id": "test_coverage::scripts/demo_complete_mlops_system.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T18:31:01+00:00"
     },
     "test_coverage::scripts/create_notion_docs.py::untested_module": {
       "issue_id": "test_coverage::scripts/create_notion_docs.py::untested_module",
@@ -2180,13 +2180,11 @@
       "issue_ids": [
         "test_coverage::src/generate_plots_mpl.py::untested_module",
         "test_coverage::src/dagster_api/cli.py::untested_module",
-        "test_coverage::scripts/generate_nuxt_structure.py::untested_critical",
         "test_coverage::src/oree_real_prices.py::untested_critical",
         "test_coverage::src/assets/core/market.py::untested_module",
         "test_coverage::scripts/train_model.py::untested_module",
         "test_coverage::src/dagster_api/database.py::untested_module",
         "test_coverage::scripts/validation_check.py::untested_module",
-        "test_coverage::scripts/demo_complete_mlops_system.py::untested_module",
         "test_coverage::src/physics/economics.py::untested_module",
         "test_coverage::src/dagster_api/store_results.py::untested_module",
         "test_coverage::scripts/validate_deployment.py::untested_module",
@@ -6340,6 +6338,83 @@
         "status": "fixed",
         "attestation": "I have actually Added focused tests for git commit parsing, markdown discovery, summary generation, and sync summary file output. and I am not gaming the score."
       }
+    },
+    {
+      "timestamp": "2026-03-06T18:28:53+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "test_coverage::scripts/create_dashboard_page.py::untested_critical",
+        "test_coverage::scripts/generate_sample_data.py::untested_module",
+        "test_coverage::scripts/notion_sync.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused coverage for create_dashboard_page, notion_sync, and generate_sample_data script surfaces.",
+      "detail": {
+        "sha": "9ff3639f08ee",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T18:30:59+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::scripts/demo_complete_mlops_system.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused orchestration tests for main phase aggregation, phase helper success/failure paths, and mission summary output.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T18:31:01+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::scripts/demo_complete_mlops_system.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused orchestration tests for main phase aggregation, phase helper success/failure paths, and mission summary output.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused orchestration tests for main phase aggregation, phase helper success/failure paths, and mission summary output. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T18:31:09+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::scripts/generate_nuxt_structure.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for rendered directory tree output from the Nuxt structure printer.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T18:31:10+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::scripts/generate_nuxt_structure.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for rendered directory tree output from the Nuxt structure printer.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused tests for rendered directory tree output from the Nuxt structure printer. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T18:31:18+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::scripts/parse_oree_indices.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for HTML parsing, month save flow, merge behavior, and invalid month handling.",
+      "detail": {}
     }
   ],
   "epic_triage_meta": {
@@ -6616,12 +6691,23 @@
       "recorded_at": "2026-03-06T18:26:15+00:00",
       "note": "Added focused coverage for combine_datasets, fetch_oree_data_view, and create_notion_docs script surfaces.",
       "cluster_name": null
+    },
+    {
+      "sha": "9ff3639f08ee",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "test_coverage::scripts/create_dashboard_page.py::untested_critical",
+        "test_coverage::scripts/generate_sample_data.py::untested_module",
+        "test_coverage::scripts/notion_sync.py::untested_module"
+      ],
+      "recorded_at": "2026-03-06T18:28:53+00:00",
+      "note": "Added focused coverage for create_dashboard_page, notion_sync, and generate_sample_data script surfaces.",
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "test_coverage::scripts/create_dashboard_page.py::untested_critical",
-    "test_coverage::scripts/generate_sample_data.py::untested_module",
-    "test_coverage::scripts/notion_sync.py::untested_module"
+    "test_coverage::scripts/demo_complete_mlops_system.py::untested_module",
+    "test_coverage::scripts/generate_nuxt_structure.py::untested_critical"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
