@@ -4,20 +4,39 @@ import sys
 from types import SimpleNamespace
 import types
 
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
 
 class DummyBatteryPhysicsEngine:
-    def __init__(self, *_args, **_kwargs):
-        self.current_model = SimpleNamespace(state=SimpleNamespace())
+    CHEMISTRY_PARAMS = {"LFP": {}, "Lead-Acid": {}, "VRFB": {}}
 
-
-class DummyOptimizationEngine:
     def __init__(self, *_args, **_kwargs):
         pass
 
+    def simulate_battery_behavior(self, *_args, **_kwargs):
+        return {
+            "chemistry": "LFP",
+            "current_state": {"soc_percent": 60.0, "cycles_completed": 1000, "temperature": 25.0},
+            "power_limits": {"max_charge_power_kw": 4.0, "max_discharge_power_kw": 5.0},
+            "efficiency_model": {"charge_efficiency": 0.95, "discharge_efficiency": 0.9},
+            "physics_constraints": {"min_soc_physics": 10.0, "max_soc_physics": 100.0},
+            "degradation_model": {},
+            "thermal_model": {},
+        }
 
-class DummyStrategy:
-    def __init__(self, value):
-        self.value = value
+
+class DummyOptimizationEngine:
+    OPTIMIZATION_STRATEGIES = {"balanced": {}, "max_earn": {}, "max_battery_health": {}, "max_charge": {}}
+
+    def __init__(self, *_args, **_kwargs):
+        pass
+
+    def optimize_decision(self, base_prediction, strategy, physics_data=None, renewable_data=None, weights=None):
+        return {
+            **base_prediction,
+            "optimization_strategy": strategy,
+        }
 
 
 class DummyModelRegistry:
@@ -59,13 +78,16 @@ def load_serving_api_class():
     battery_physics.BatteryPhysicsEngine = DummyBatteryPhysicsEngine
     optimization_engine = types.ModuleType("energy_ml.mlops.optimization_engine")
     optimization_engine.OptimizationEngine = DummyOptimizationEngine
-    optimization_engine.OptimizationStrategy = [DummyStrategy("balanced")]
     monitoring_dashboard = types.ModuleType("energy_ml.mlops.monitoring_dashboard")
     monitoring_dashboard.get_monitoring_dashboard = lambda: DummyMonitoringDashboard()
     monitoring_dashboard.monitor_energy_model = lambda: {}
     retraining_pipeline = types.ModuleType("energy_ml.mlops.retraining_pipeline")
     retraining_pipeline.get_retraining_pipeline = lambda: DummyRetrainingPipeline()
-    retraining_pipeline.get_ab_test_manager = lambda: SimpleNamespace(active_tests={})
+    retraining_pipeline.get_ab_test_manager = lambda: SimpleNamespace(
+        active_tests={},
+        route_prediction=lambda *_args, **_kwargs: "production",
+        log_ab_result=lambda **_kwargs: None,
+    )
 
     sys.modules["energy_ml.mlops.model_registry"] = model_registry
     sys.modules["energy_ml.mlops.feature_store"] = feature_store
@@ -115,6 +137,36 @@ def make_api_with_dependencies(model_registry, feature_store):
     return api
 
 
+def build_route_test_api(cached_model=None, feature_store=None, optimization_engine=None, physics_engine=None, ab_test_manager=None):
+    api = MLServingAPI.__new__(MLServingAPI)
+    api.app = FastAPI()
+    api.model_registry = DummyModelRegistry()
+    api.feature_store = feature_store or SimpleNamespace(get_online_features=lambda *_args, **_kwargs: {})
+    api.monitoring_dashboard = DummyMonitoringDashboard()
+    api.retraining_pipeline = DummyRetrainingPipeline()
+    api.ab_test_manager = ab_test_manager or SimpleNamespace(
+        active_tests={},
+        route_prediction=lambda *_args, **_kwargs: "production",
+        log_ab_result=lambda **_kwargs: None,
+    )
+    api.physics_engines = {
+        "LFP": physics_engine or DummyBatteryPhysicsEngine(),
+        "Lead-Acid": physics_engine or DummyBatteryPhysicsEngine(),
+        "VRFB": physics_engine or DummyBatteryPhysicsEngine(),
+    }
+    api.optimization_engines = {
+        "balanced": optimization_engine or DummyOptimizationEngine(),
+        "max_earn": optimization_engine or DummyOptimizationEngine(),
+        "max_battery_health": optimization_engine or DummyOptimizationEngine(),
+        "max_charge": optimization_engine or DummyOptimizationEngine(),
+    }
+    api.websocket_connections = []
+    api.cached_model = cached_model
+    api.cached_model_version = "test-model"
+    api._setup_routes()
+    return api
+
+
 def test_check_model_registry_returns_false_for_none_versions():
     api = make_api_with_dependencies(
         SimpleNamespace(list_model_versions=lambda *_args, **_kwargs: None),
@@ -156,3 +208,111 @@ def test_health_check_helpers_return_true_when_backends_are_ready():
 
     assert api._check_model_registry() is True
     assert api._check_feature_store() is True
+
+
+def test_predict_preserves_service_unavailable_status_code():
+    api = build_route_test_api(cached_model=None)
+    client = TestClient(api.app)
+
+    response = client.post(
+        "/predict",
+        json={
+            "battery_soc": 0.5,
+            "grid_price_uah_kwh": 12.0,
+            "load_demand_kw": 3.0,
+        },
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "No model available for prediction"
+
+
+def test_predict_uses_current_optimizer_contract_and_returns_stable_shape():
+    recorded_calls = []
+
+    class RecordingOptimizationEngine(DummyOptimizationEngine):
+        def optimize_decision(self, base_prediction, strategy, physics_data=None, renewable_data=None, weights=None):
+            recorded_calls.append((base_prediction, strategy))
+            return {
+                **base_prediction,
+                "action": "SELL",
+                "confidence": 0.88,
+                "reasoning": "Optimized sell decision.",
+                "optimization_strategy": strategy,
+            }
+
+    api = build_route_test_api(
+        cached_model=SimpleNamespace(predict=lambda *_args, **_kwargs: [1, 0.82]),
+        feature_store=SimpleNamespace(get_online_features=lambda *_args, **_kwargs: {"existing_feature": 1.0}),
+        optimization_engine=RecordingOptimizationEngine(),
+    )
+    client = TestClient(api.app)
+
+    response = client.post(
+        "/predict",
+        json={
+            "battery_soc": 0.55,
+            "grid_price_uah_kwh": 13.5,
+            "solar_generation_kw": 1.0,
+            "wind_generation_kw": 0.0,
+            "load_demand_kw": 4.0,
+            "temperature_celsius": 24.0,
+            "strategy": "balanced",
+        },
+    )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert recorded_calls[0][0]["action"] == "SELL"
+    assert recorded_calls[0][1] == "balanced"
+    assert payload["action"] == "SELL"
+    assert payload["strategy_used"] == "balanced"
+    assert payload["model_version"] == "test-model"
+    assert payload["power_kw"] == 4.0
+
+
+def test_simulate_battery_preserves_bad_request_status_code():
+    api = build_route_test_api(cached_model=SimpleNamespace(predict=lambda *_args, **_kwargs: [1, 0.8]))
+    client = TestClient(api.app)
+
+    response = client.post(
+        "/simulate/battery",
+        json={
+            "battery_type": "Unknown",
+            "power_kw": 2.0,
+            "duration_h": 1.0,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unsupported battery type: Unknown"
+
+
+def test_simulate_battery_uses_current_physics_contract():
+    class RecordingPhysicsEngine(DummyBatteryPhysicsEngine):
+        def simulate_battery_behavior(self, user_config):
+            assert user_config.battery_type == "LFP"
+            assert user_config.battery_temperature_c == 28.0
+            return super().simulate_battery_behavior(user_config)
+
+    api = build_route_test_api(
+        cached_model=SimpleNamespace(predict=lambda *_args, **_kwargs: [1, 0.8]),
+        physics_engine=RecordingPhysicsEngine(),
+    )
+    client = TestClient(api.app)
+
+    response = client.post(
+        "/simulate/battery",
+        json={
+            "battery_type": "LFP",
+            "power_kw": 5.0,
+            "duration_h": 1.5,
+            "temperature": 28.0,
+        },
+    )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["simulation_params"]["applied_power_kw"] == 4.0
+    assert payload["initial_state"]["soc_percent"] == 60.0
+    assert payload["final_state"]["soc_percent"] > payload["initial_state"]["soc_percent"]
