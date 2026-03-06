@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T19:52:25+00:00",
+  "updated": "2026-03-06T19:52:58+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -7511,6 +7511,21 @@
         "status": "fixed",
         "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_oree_scrapers.py, and I am not gaming the score by resolving without fixing."
       }
+    },
+    {
+      "timestamp": "2026-03-06T19:52:58+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "test_coverage::src/oree_effective_scraper.py::untested_module",
+        "test_coverage::src/oree_playwright_scraper.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Covered oree_effective_scraper and oree_playwright_scraper with focused pytest coverage in tests/unit/test_oree_scrapers.py.",
+      "detail": {
+        "sha": "b4e1d0be1a57",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -7962,12 +7977,20 @@
       "recorded_at": "2026-03-06T19:48:07+00:00",
       "note": "Covered hybrid_ml_controller and optimizer_v2 with focused pytest coverage in tests/unit/test_hybrid_controller_and_optimizer_v2.py.",
       "cluster_name": null
+    },
+    {
+      "sha": "b4e1d0be1a57",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "test_coverage::src/oree_effective_scraper.py::untested_module",
+        "test_coverage::src/oree_playwright_scraper.py::untested_critical"
+      ],
+      "recorded_at": "2026-03-06T19:52:58+00:00",
+      "note": "Covered oree_effective_scraper and oree_playwright_scraper with focused pytest coverage in tests/unit/test_oree_scrapers.py.",
+      "cluster_name": null
     }
   ],
-  "uncommitted_issues": [
-    "test_coverage::src/oree_effective_scraper.py::untested_module",
-    "test_coverage::src/oree_playwright_scraper.py::untested_critical"
-  ],
+  "uncommitted_issues": [],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
 }
