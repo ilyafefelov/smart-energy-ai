@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 86.7,
-  "objective_score": 90.1,
-  "strict_score": 86.3,
+  "overall_score": 86.9,
+  "objective_score": 90.5,
+  "strict_score": 86.5,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 85,
-    "open": 295,
+    "fixed": 88,
+    "open": 292,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 44,
-        "open": 253,
+        "fixed": 47,
+        "open": 250,
         "wontfix": 72
       },
       "4": {
@@ -2455,18 +2455,18 @@
       }
     },
     "Test health": {
-      "score": 75.9,
-      "strict": 75.9,
+      "score": 78.0,
+      "strict": 78.0,
       "verified_strict_score": 19.1,
       "checks": 1788,
-      "failing": 31,
+      "failing": 28,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1782,
-          "pass_rate": 0.7585928117570443,
-          "failing": 31,
-          "weighted_failures": 430.187609448947
+          "pass_rate": 0.7789406036023936,
+          "failing": 28,
+          "weighted_failures": 393.92784438053457
         },
         "subjective_review": {
           "potential": 6,
@@ -6763,17 +6763,23 @@
         "importer_count": 0,
         "loc_weight": 12.288205727444508
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_dagster_api_service_modules.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:15:41+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_dagster_api_service_modules.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:15:41+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::run_ml_star_phase3_realdata.py::untested_module": {
       "id": "test_coverage::run_ml_star_phase3_realdata.py::untested_module",
@@ -7096,17 +7102,23 @@
         "importer_count": 0,
         "loc_weight": 11.40175425099138
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_dagster_api_service_modules.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:15:50+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_dagster_api_service_modules.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:15:50+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::recalculate_pipeline.py::untested_module": {
       "id": "test_coverage::recalculate_pipeline.py::untested_module",
@@ -8369,17 +8381,23 @@
         "importer_count": 0,
         "loc_weight": 12.569805089976535
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_dagster_api_service_modules.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:15:31+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_dagster_api_service_modules.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:15:31+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/mlops/serving_api.py::untested_critical": {
       "id": "test_coverage::energy_ml/mlops/serving_api.py::untested_critical",
