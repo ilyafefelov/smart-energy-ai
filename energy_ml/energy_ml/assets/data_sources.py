@@ -8,9 +8,12 @@ Phase 4A Changes:
 - Added tenacity retry logic for API resilience
 - Enhanced caching and error handling
 """
+import importlib.util
 import polars as pl
-from datetime import datetime, timedelta
+from datetime import datetime
 import requests
+import sys
+from pathlib import Path
 from typing import Dict, Any
 from dagster import asset, Output, Definitions
 import logging
@@ -24,16 +27,44 @@ from energy_ml.utils import get_solar_position, calculate_irradiance, wind_power
 
 logger = logging.getLogger(__name__)
 
+
+def _load_support_module():
+    try:
+        from energy_ml.assets import data_source_support as support_module
+
+        return support_module
+    except Exception:
+        support_path = Path(__file__).with_name("data_source_support.py")
+        module_name = "energy_ml.assets.data_source_support"
+        existing_module = sys.modules.get(module_name)
+        if existing_module is not None:
+            return existing_module
+
+        spec = importlib.util.spec_from_file_location(module_name, support_path)
+        module = importlib.util.module_from_spec(spec)
+        assert spec is not None and spec.loader is not None
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+
+
+_SUPPORT_MODULE = _load_support_module()
+build_battery_state_output = _SUPPORT_MODULE.build_battery_state_output
+build_definitions = _SUPPORT_MODULE.build_definitions
+build_forecast_error_output = _SUPPORT_MODULE.build_forecast_error_output
+build_forecast_frame = _SUPPORT_MODULE.build_forecast_frame
+build_forecast_output = _SUPPORT_MODULE.build_forecast_output
+build_price_output = _SUPPORT_MODULE.build_price_output
+build_solar_output = _SUPPORT_MODULE.build_solar_output
+build_weather_error_output = _SUPPORT_MODULE.build_weather_error_output
+build_weather_frame = _SUPPORT_MODULE.build_weather_frame
+build_weather_output = _SUPPORT_MODULE.build_weather_output
+build_wind_output = _SUPPORT_MODULE.build_wind_output
+is_cache_fresh = _SUPPORT_MODULE.is_cache_fresh
+
 # In-memory caches with TTL
 _weather_cache = {"data": None, "timestamp": None}
 _forecast_cache = {"data": None, "timestamp": None}
-
-
-def _is_cache_fresh(cache_dict: Dict, ttl_seconds: int) -> bool:
-    """Check if cache is still fresh."""
-    if cache_dict["timestamp"] is None:
-        return False
-    return (datetime.utcnow() - cache_dict["timestamp"]).total_seconds() < ttl_seconds
 
 
 @asset(
@@ -46,7 +77,7 @@ def weather_data() -> Output[pl.DataFrame]:
     """Fetch current weather from OpenWeatherAPI with caching and retry logic."""
     
     # Check cache
-    if _is_cache_fresh(_weather_cache, OPENWEATHER_CACHE_TTL):
+    if is_cache_fresh(_weather_cache, OPENWEATHER_CACHE_TTL):
         logger.info("📦 Using cached weather data")
         return Output(_weather_cache["data"], metadata={"source": "cache"})
     
@@ -62,17 +93,7 @@ def weather_data() -> Output[pl.DataFrame]:
         response.raise_for_status()
         data = response.json()
         
-        # Create polars DataFrame
-        df = pl.DataFrame({
-            'timestamp': [datetime.utcnow()],
-            'temp': [data['main']['temp']],
-            'humidity': [data['main']['humidity']],
-            'cloud_cover': [data['clouds']['all']],
-            'wind_speed': [data['wind']['speed']],
-            'wind_direction': [data['wind'].get('deg', 0)],
-            'pressure': [data['main']['pressure']],
-            'description': [data['weather'][0]['description']],
-        })
+        df = build_weather_frame(data)
         
         # Cache it
         _weather_cache["data"] = df
@@ -82,30 +103,11 @@ def weather_data() -> Output[pl.DataFrame]:
         wind_val = df['wind_speed'].item(0)
         logger.info(f"✅ Weather: {temp_val:.1f}°C, wind {wind_val:.1f} m/s")
         
-        return Output(
-            df,
-            metadata={
-                "rows": len(df),
-                "temp_c": float(temp_val),
-                "wind_speed_ms": float(wind_val),
-                "source": "openweatherapi"
-            }
-        )
+        return build_weather_output(df)
         
     except Exception as e:
         logger.error(f"❌ Weather API error: {e}")
-        # Return defaults on error using polars
-        df = pl.DataFrame({
-            'timestamp': [datetime.utcnow()],
-            'temp': [15.0],
-            'humidity': [60.0],
-            'cloud_cover': [50.0],
-            'wind_speed': [5.0],
-            'wind_direction': [180.0],
-            'pressure': [1013.0],
-            'description': ['Unknown'],
-        })
-        return Output(df, metadata={"error": str(e)})
+        return build_weather_error_output(e)
 
 
 @asset(
@@ -118,7 +120,7 @@ def weather_forecast() -> Output[pl.DataFrame]:
     """Fetch 5-day forecast from OpenWeatherAPI with caching and retry logic."""
     
     # Check cache
-    if _is_cache_fresh(_forecast_cache, OPENWEATHER_CACHE_TTL):
+    if is_cache_fresh(_forecast_cache, OPENWEATHER_CACHE_TTL):
         logger.info("📦 Using cached forecast data")
         return Output(_forecast_cache["data"], metadata={"source": "cache"})
     
@@ -134,18 +136,7 @@ def weather_forecast() -> Output[pl.DataFrame]:
         response.raise_for_status()
         data = response.json()
         
-        records = []
-        for item in data.get('list', [])[:40]:  # 5 days
-            records.append({
-                'timestamp': [datetime.fromtimestamp(item['dt'])],
-                'temp': [item['main']['temp']],
-                'cloud_cover': [item['clouds']['all']],
-                'wind_speed': [item['wind']['speed']],
-                'precipitation': [item.get('rain', {}).get('3h', 0)],
-            })
-        
-        # Create polars DataFrame from records
-        df = pl.concat([pl.DataFrame(record) for record in records])
+        df = build_forecast_frame(data)
         
         # Cache it
         _forecast_cache["data"] = df
@@ -153,27 +144,11 @@ def weather_forecast() -> Output[pl.DataFrame]:
         
         logger.info(f"✅ Forecast: {len(df)} records (5 days)")
         
-        return Output(
-            df,
-            metadata={
-                "rows": len(df),
-                "days": len(df) / 8,  # 8 records per day
-                "source": "openweatherapi"
-            }
-        )
+        return build_forecast_output(df)
         
     except Exception as e:
         logger.error(f"❌ Forecast API error: {e}")
-        # Return empty dataframe on error using polars
-        timestamps = [datetime.utcnow() + timedelta(hours=3*i) for i in range(40)]
-        df = pl.DataFrame({
-            'timestamp': timestamps,
-            'temp': [15.0] * 40,
-            'cloud_cover': [50.0] * 40,
-            'wind_speed': [5.0] * 40,
-            'precipitation': [0.0] * 40,
-        })
-        return Output(df, metadata={"error": str(e)})
+        return build_forecast_error_output(e)
 
 
 @asset(
@@ -198,26 +173,9 @@ def solar_irradiance(weather_data: pl.DataFrame) -> Output[pl.DataFrame]:
         weather_data['pressure'].item(0)
     )
     
-    df = pl.DataFrame({
-        'timestamp': weather_data['timestamp'],
-        'ghi_w_per_m2': [irradiance['GHI']],
-        'dni_w_per_m2': [irradiance['DNI']],
-        'dhi_w_per_m2': [irradiance['DHI']],
-        'elevation_deg': [position['elevation']],
-        'azimuth_deg': [position['azimuth']],
-        'is_night': [position['is_night']],
-    })
-    
     logger.info(f"✅ Solar irradiance: {irradiance['GHI']} W/m² (elevation: {position['elevation']:.1f}°)")
-    
-    return Output(
-        df,
-        metadata={
-            "ghi_w_m2": irradiance['GHI'],
-            "elevation_deg": position['elevation'],
-            "is_night": position['is_night'],
-        }
-    )
+
+    return build_solar_output(weather_data, position, irradiance)
 
 
 @asset(
@@ -236,22 +194,9 @@ def wind_potential(weather_data: pl.DataFrame) -> Output[pl.DataFrame]:
     # Calculate power potential (for 5 kW rated turbine)
     power = wind_power_curve(wind_speed, rated_capacity=5.0)
     
-    df = pl.DataFrame({
-        'timestamp': weather_data['timestamp'],
-        'wind_speed_ms': [wind_speed],
-        'wind_direction_deg': [wind_direction],
-        'power_potential_kw': [power],
-    })
-    
     logger.info(f"✅ Wind potential: {power:.2f} kW (wind speed: {wind_speed:.1f} m/s)")
-    
-    return Output(
-        df,
-        metadata={
-            "wind_speed_ms": wind_speed,
-            "power_potential_kw": power,
-        }
-    )
+
+    return build_wind_output(weather_data, power)
 
 
 @asset(
@@ -264,25 +209,11 @@ def battery_state() -> Output[pl.DataFrame]:
     
     logger.info("🔋 Reading battery state...")
     
-    df = pl.DataFrame({
-        'timestamp': [datetime.utcnow()],
-        'soc_percent': [72.6],
-        'charge_rate_kw': [3.5],
-        'discharge_rate_kw': [4.2],
-        'capacity_kwh': [13.5],
-        'health_percent': [95.0],
-    })
-    
-    soc_val = df['soc_percent'].item(0)
+    output = build_battery_state_output()
+    soc_val = output.value['soc_percent'].item(0)
     logger.info(f"✅ Battery SOC: {soc_val}%")
-    
-    return Output(
-        df,
-        metadata={
-            "soc_percent": soc_val,
-            "health_percent": df['health_percent'].item(0),
-        }
-    )
+
+    return output
 
 
 @asset(
@@ -296,30 +227,16 @@ def price_data_current() -> Output[pl.DataFrame]:
     
     logger.info("💰 Fetching current price from OREE...")
     
-    # Placeholder - actual API integration depends on OREE structure
-    # For now, use realistic value
-    df = pl.DataFrame({
-        'timestamp': [datetime.utcnow()],
-        'price_uah_per_kwh': [14.26],
-        'currency': ['UAH'],
-        'market': ['OREE'],
-    })
-    
-    price_val = df['price_uah_per_kwh'].item(0)
+    output = build_price_output()
+    price_val = output.value['price_uah_per_kwh'].item(0)
     logger.info(f"✅ Current price: {price_val} ₴/kWh")
-    
-    return Output(
-        df,
-        metadata={
-            "price_uah_kwh": price_val,
-            "market": "OREE",
-        }
-    )
+
+    return output
 
 
 # Create Definitions object for Dagster
-defs = Definitions(
-    assets=[
+defs = build_definitions(
+    [
         weather_data,
         weather_forecast,
         solar_irradiance,
