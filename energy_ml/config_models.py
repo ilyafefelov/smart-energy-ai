@@ -4,9 +4,42 @@ This module defines user configuration models for battery types, load profiles,
 and business operation parameters that replace hard-coded values.
 """
 
-from typing import Dict, List, Literal, Optional
 from datetime import datetime
+import importlib.util
+import sys
+from pathlib import Path
+from typing import Dict, Literal, Optional
+
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+def _load_profiles_module():
+    try:
+        from energy_ml import config_model_profiles as profiles_module
+
+        return profiles_module
+    except Exception:
+        support_path = Path(__file__).with_name("config_model_profiles.py")
+        module_name = "energy_ml.config_model_profiles"
+        existing_module = sys.modules.get(module_name)
+        if existing_module is not None:
+            return existing_module
+
+        spec = importlib.util.spec_from_file_location(module_name, support_path)
+        module = importlib.util.module_from_spec(spec)
+        assert spec is not None and spec.loader is not None
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+
+
+_PROFILES_MODULE = _load_profiles_module()
+PROFILE_TEMPLATES = _PROFILES_MODULE.PROFILE_TEMPLATES
+build_continuous_profile_payload = _PROFILES_MODULE.build_continuous_profile_payload
+build_standard_work_profile_payload = _PROFILES_MODULE.build_standard_work_profile_payload
+build_two_shift_profile_payload = _PROFILES_MODULE.build_two_shift_profile_payload
+resolve_cycles_to_eol_default = _PROFILES_MODULE.resolve_cycles_to_eol_default
+resolve_degradation_cost_default = _PROFILES_MODULE.resolve_degradation_cost_default
 
 
 class BatteryConfig(BaseModel):
@@ -64,25 +97,13 @@ class BatteryConfig(BaseModel):
         """Set defaults based on battery type for degradation and cycles."""
         if isinstance(values, dict):
             battery_type = values.get('type')
-            
-            # Set degradation cost default
+
             if values.get('degradation_cost_per_cycle') is None:
-                defaults = {
-                    'LFP': 1.35,          # $1.35/cycle, 8000 cycles
-                    'Lead-Acid': 4.59,    # $4.59/cycle, 600 cycles  
-                    'VRFB': 0.1           # Minimal degradation
-                }
-                values['degradation_cost_per_cycle'] = defaults.get(battery_type, 1.0)
-            
-            # Set cycles to EOL default
+                values['degradation_cost_per_cycle'] = resolve_degradation_cost_default(battery_type)
+
             if values.get('cycles_to_eol') is None:
-                defaults = {
-                    'LFP': 8000,
-                    'Lead-Acid': 600,
-                    'VRFB': 20000
-                }
-                values['cycles_to_eol'] = defaults.get(battery_type, 5000)
-        
+                values['cycles_to_eol'] = resolve_cycles_to_eol_default(battery_type)
+
         return values
 
 
@@ -142,52 +163,17 @@ class LoadProfileConfig(BaseModel):
     @classmethod
     def create_standard_work_profile(cls, peak_load_kw: float) -> 'LoadProfileConfig':
         """Create standard 9-18 work hours profile."""
-        coefficients = {hour: 0.1 for hour in range(24)}  # Base load
-        for hour in range(9, 19):  # 9 AM to 6 PM
-            coefficients[hour] = 1.0  # Full load during work hours
-        
-        return cls(
-            profile_type='standard',
-            name='Standard Work Hours (9-18)',
-            description='Office hours with peak load 9 AM - 6 PM',
-            hourly_coefficients=coefficients,
-            peak_load_kw=peak_load_kw
-        )
+        return cls(**build_standard_work_profile_payload(peak_load_kw))
     
     @classmethod  
     def create_two_shift_profile(cls, peak_load_kw: float) -> 'LoadProfileConfig':
         """Create 2-shift operation profile."""
-        coefficients = {hour: 0.2 for hour in range(24)}  # Base load
-        # First shift: 6 AM - 2 PM
-        for hour in range(6, 15):
-            coefficients[hour] = 1.0
-        # Second shift: 10 PM - 6 AM  
-        for hour in list(range(22, 24)) + list(range(0, 7)):
-            coefficients[hour] = 1.0
-            
-        return cls(
-            profile_type='multi-shift',
-            name='Two Shift Operation',
-            description='6AM-2PM and 10PM-6AM shifts',
-            hourly_coefficients=coefficients,
-            peak_load_kw=peak_load_kw
-        )
+        return cls(**build_two_shift_profile_payload(peak_load_kw))
     
     @classmethod
     def create_24_7_profile(cls, peak_load_kw: float) -> 'LoadProfileConfig':
         """Create 24/7 continuous operation profile."""
-        coefficients = {hour: 0.8 for hour in range(24)}  # Steady load
-        # Slight variation for maintenance/shift changes
-        coefficients[2] = 0.6   # 2 AM maintenance
-        coefficients[14] = 0.6  # 2 PM shift change
-        
-        return cls(
-            profile_type='24_7',
-            name='Continuous Operation (24/7)',
-            description='Round-the-clock operation with minor variations',
-            hourly_coefficients=coefficients,
-            peak_load_kw=peak_load_kw
-        )
+        return cls(**build_continuous_profile_payload(peak_load_kw))
 
 
 class GenerationConfig(BaseModel):
@@ -286,47 +272,3 @@ class UserProfile(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
-
-
-# Profile templates for quick setup
-PROFILE_TEMPLATES = {
-    'small_office': {
-        'profile_name': 'Small Office',
-        'battery': {
-            'type': 'LFP',
-            'capacity_kwh': 20.0,
-            'max_charge_rate_kw': 5.0,
-            'max_discharge_rate_kw': 5.0
-        },
-        'generation': {
-            'solar_capacity_kw': 10.0,
-            'wind_capacity_kw': 0.0
-        }
-    },
-    'retail_store': {
-        'profile_name': 'Retail Store',
-        'battery': {
-            'type': 'LFP',
-            'capacity_kwh': 50.0,
-            'max_charge_rate_kw': 15.0,
-            'max_discharge_rate_kw': 15.0
-        },
-        'generation': {
-            'solar_capacity_kw': 25.0,
-            'wind_capacity_kw': 0.0
-        }
-    },
-    'manufacturing': {
-        'profile_name': 'Manufacturing Plant',
-        'battery': {
-            'type': 'LFP',
-            'capacity_kwh': 200.0,
-            'max_charge_rate_kw': 50.0,
-            'max_discharge_rate_kw': 50.0
-        },
-        'generation': {
-            'solar_capacity_kw': 100.0,
-            'wind_capacity_kw': 50.0
-        }
-    }
-}
