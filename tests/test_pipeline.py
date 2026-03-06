@@ -337,6 +337,36 @@ class TestPriceIngester:
 
         assert ingester.validate_price_data(df_invalid) is False
 
+    def test_parse_json_prices_returns_none_for_unsupported_payload(self):
+        """Unsupported JSON shapes should fail explicitly with None."""
+        ingester = PriceIngester()
+
+        assert ingester._parse_json_prices("not-a-price-payload") is None
+
+    def test_parse_json_prices_returns_none_without_usable_price_column(self):
+        """Missing normalized price data should return None explicitly."""
+        ingester = PriceIngester()
+        payload = {"prices": [{"hour": hour, "value": hour + 1} for hour in range(24)]}
+
+        assert ingester._parse_json_prices(payload) is None
+
+    def test_parse_json_prices_returns_dataframe_for_valid_price_list(self):
+        """Valid hourly JSON payloads should parse into a price frame."""
+        ingester = PriceIngester()
+        payload = {
+            "prices": [
+                {"hour": hour, "price": float(hour + 1)}
+                for hour in range(24)
+            ]
+        }
+
+        df = ingester._parse_json_prices(payload)
+
+        assert df is not None
+        assert len(df) == 24
+        assert "price_eur_mwh" in df.columns
+        assert "price_uah_mwh" in df.columns
+
 
 class TestValidationIntegration:
     """Test full validation integration"""

@@ -106,8 +106,12 @@ class PriceIngester:
             logger.debug(f"JSON extraction error: {e}")
             return None
 
-    def _parse_json_prices(self, data) -> Optional[pd.DataFrame]:
-        """Parse price data from JSON object"""
+    def _parse_json_prices(self, data: object) -> Optional[pd.DataFrame]:
+        """Parse price data from a JSON-like object.
+
+        Returns ``None`` when the payload shape is unsupported, contains fewer
+        than 24 hourly records, or does not expose a usable price column.
+        """
         try:
             # Try different possible JSON structures
             prices_data = None
@@ -123,19 +127,27 @@ class PriceIngester:
                     prices_data = data
             elif isinstance(data, list):
                 prices_data = data
+
+            if not isinstance(prices_data, list):
+                return None
+
+            if len(prices_data) < 24:
+                return None
             
-            if isinstance(prices_data, list) and len(prices_data) >= 24:
-                df = pd.DataFrame(prices_data)
-                
-                # Normalize column names
-                if 'price' in df.columns:
-                    df['price_eur_mwh'] = pd.to_numeric(df['price'], errors='coerce')
-                
-                if 'price_eur_mwh' in df.columns and df['price_eur_mwh'].notna().sum() >= 24:
-                    df['price_uah_mwh'] = df['price_eur_mwh'] * 35  # EUR to UAH
-                    return df
-            
-            return None
+            df = pd.DataFrame(prices_data)
+
+            # Normalize column names
+            if 'price' in df.columns:
+                df['price_eur_mwh'] = pd.to_numeric(df['price'], errors='coerce')
+
+            if 'price_eur_mwh' not in df.columns:
+                return None
+
+            if df['price_eur_mwh'].notna().sum() < 24:
+                return None
+
+            df['price_uah_mwh'] = df['price_eur_mwh'] * 35  # EUR to UAH
+            return df
         except Exception as e:
             logger.debug(f"JSON parsing error: {e}")
             return None

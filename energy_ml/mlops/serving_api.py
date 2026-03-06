@@ -385,6 +385,8 @@ class MLServingAPI:
         """Check if model registry is healthy"""
         try:
             models = self.model_registry.list_model_versions("energy_optimizer")
+            if models is None:
+                return False
             return len(models) > 0
         except Exception:
             return False
@@ -392,7 +394,10 @@ class MLServingAPI:
     def _check_feature_store(self) -> bool:
         """Check if feature store is healthy"""
         try:
-            return len(self.feature_store.feature_views) > 0
+            feature_views = getattr(self.feature_store, "feature_views", None)
+            if feature_views is None:
+                return False
+            return len(feature_views) > 0
         except Exception:
             return False
             
