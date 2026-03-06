@@ -1,0 +1,33 @@
+{
+  "version": 8,
+  "created": "2026-03-06T11:13:22+00:00",
+  "updated": "2026-03-06T11:13:22+00:00",
+  "queue_order": [],
+  "deferred": [],
+  "skipped": {},
+  "active_cluster": null,
+  "overrides": {},
+  "clusters": {},
+  "superseded": {},
+  "promoted_ids": [],
+  "plan_start_scores": {},
+  "execution_log": [
+    {
+      "timestamp": "2026-03-06T11:13:22+00:00",
+      "action": "done",
+      "issue_ids": [
+        "review::.::holistic::authorization_consistency::dagster_asset_results_missing_tenant_enforcement::78144a44",
+        "review::.::holistic::authorization_consistency::request_path_performs_admin_db_bootstrap::3e55bbbb",
+        "review::.::holistic::authorization_consistency::strategy_endpoints_bypass_tenant_scope::e4b0a2e0"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "I added first-class tenant_id storage and tenant-aware SQL filtering for Dagster asset_results, removed request-path database creation from optimization history initialization, and routed both dashboard optimization strategy APIs through tenant-scoped config resolution.",
+      "detail": {}
+    }
+  ],
+  "epic_triage_meta": {},
+  "commit_log": [],
+  "uncommitted_issues": [],
+  "commit_tracking_branch": null
+}
