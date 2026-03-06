@@ -5,14 +5,14 @@
   "scan_count": 31,
   "overall_score": 88.0,
   "objective_score": 93.2,
-  "strict_score": 87.5,
+  "strict_score": 87.6,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 110,
-    "open": 270,
+    "fixed": 111,
+    "open": 269,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 64,
-        "open": 233,
+        "fixed": 65,
+        "open": 232,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 87.4,
-      "strict": 87.4,
+      "score": 87.6,
+      "strict": 87.6,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 60,
+      "failing": 59,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.874125874125874,
-          "failing": 60,
-          "weighted_failures": 18.00000000000002
+          "pass_rate": 0.8762237762237761,
+          "failing": 59,
+          "weighted_failures": 17.70000000000002
         }
       }
     },
@@ -4261,17 +4261,23 @@
       "detail": {
         "loc": 324
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted battery default resolution plus load-profile preset and template helpers into config_model_profiles.py so config_models.py remains focused on schema definitions and validation.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T20:34:59+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Extracted battery default resolution plus load-profile preset and template helpers into config_model_profiles.py so config_models.py remains focused on schema definitions and validation. and I am not gaming the score.",
+        "attested_at": "2026-03-06T20:34:59+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/real_price_data.py": {
       "id": "structural::src/real_price_data.py",

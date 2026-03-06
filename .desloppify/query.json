@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/assets/ml_star_phase3.py"
+    "structural::energy_ml/config_models.py"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/assets/ml_star_phase3.py"
+    "structural::energy_ml/config_models.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
   "overall_score": 88.0,
   "objective_score": 93.2,
-  "strict_score": 87.5,
+  "strict_score": 87.6,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 87.9,
-  "prev_objective_score": 93.1,
+  "prev_overall_score": 88.0,
+  "prev_objective_score": 93.2,
   "prev_strict_score": 87.5,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually Moved standalone ML-STAR phase 3 training, predictor, and metrics packaging into ml_star_phase3_support.py so the Dagster asset module stays focused on asset orchestration. and I am not gaming the score.",
+  "attestation": "I have actually Extracted battery default resolution plus load-profile preset and template helpers into config_model_profiles.py so config_models.py remains focused on schema definitions and validation. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 87.4,
+          "strict": 87.6,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 63,
-        "description": "63 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 62,
+        "description": "62 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 270,
+        "total_count": 269,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -304,7 +304,7 @@
             10,
             11
           ],
-          "file_count": 85,
+          "file_count": 84,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -376,8 +376,8 @@
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 87.5,
-      "gap": 7.5,
+      "current": 87.6,
+      "gap": 7.4,
       "state": "below",
       "warning": null
     },

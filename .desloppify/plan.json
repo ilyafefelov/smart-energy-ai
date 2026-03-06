@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T20:32:43+00:00",
+  "updated": "2026-03-06T20:35:21+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -7770,6 +7770,45 @@
         "sha": "d6523bba1aad",
         "branch": "chore/desloppify-quality-pass"
       }
+    },
+    {
+      "timestamp": "2026-03-06T20:34:58+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/config_models.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted battery default resolution plus load-profile preset and template helpers into config_model_profiles.py so config_models.py remains focused on schema definitions and validation.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T20:34:59+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/config_models.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted battery default resolution plus load-profile preset and template helpers into config_model_profiles.py so config_models.py remains focused on schema definitions and validation.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted battery default resolution plus load-profile preset and template helpers into config_model_profiles.py so config_models.py remains focused on schema definitions and validation. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T20:35:21+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/config_models.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "ece54f2214a3",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -8282,6 +8321,16 @@
         "structural::energy_ml/assets/ml_star_phase3.py"
       ],
       "recorded_at": "2026-03-06T20:32:43+00:00",
+      "note": null,
+      "cluster_name": null
+    },
+    {
+      "sha": "ece54f2214a3",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/config_models.py"
+      ],
+      "recorded_at": "2026-03-06T20:35:21+00:00",
       "note": null,
       "cluster_name": null
     }
