@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "test_coverage::src/assets/core/weather.py::untested_module"
+    "test_coverage::src/comprehensive_energy_scraper.py::untested_critical"
   ],
   "status": "fixed",
   "resolved": [
-    "test_coverage::src/assets/core/weather.py::untested_module"
+    "test_coverage::src/comprehensive_energy_scraper.py::untested_critical"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 86.5,
-  "objective_score": 89.5,
-  "strict_score": 86.1,
+  "overall_score": 86.7,
+  "objective_score": 90.1,
+  "strict_score": 86.3,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 86.4,
-  "prev_objective_score": 89.3,
-  "prev_strict_score": 86.0,
+  "prev_overall_score": 86.6,
+  "prev_objective_score": 89.9,
+  "prev_strict_score": 86.2,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_core_forecast_and_weather_assets.py, and I am not gaming the score by resolving without fixing.",
+  "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_tenant_factory_baseline_and_scraper.py, and I am not gaming the score by resolving without fixing.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -210,8 +210,8 @@
       {
         "type": "refactor",
         "detector": "test_coverage",
-        "count": 34,
-        "description": "34 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "count": 31,
+        "description": "31 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
         "command": "desloppify show test_coverage --status open",
         "impact": 0.0,
         "dimension": "Test health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 298,
+        "total_count": 295,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -322,7 +322,7 @@
           "actions": [
             7
           ],
-          "file_count": 34,
+          "file_count": 31,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -376,8 +376,8 @@
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 86.1,
-      "gap": 8.9,
+      "current": 86.3,
+      "gap": 8.7,
       "state": "below",
       "warning": null
     },
