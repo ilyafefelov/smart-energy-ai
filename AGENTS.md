@@ -91,7 +91,7 @@ smart-energy-ai/
 
 3. **Run the dashboard**:
    ```bash
-   streamlit run app.py
+   streamlit run streamlit_dashboard/app.py
    ```
 
 4. **Run data pipeline**:

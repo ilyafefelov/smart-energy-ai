@@ -95,8 +95,8 @@ smart-energy-ai/
 
 ### Streamlit Dashboard (`streamlit_dashboard/`)
 
-- **Main App**: `app.py` - Real-time monitoring of energy usage, savings, and system performance
-- **Configuration**: `app_config.py` - Dashboard settings and constants
+- **Main App**: `streamlit_dashboard/app.py` - Real-time monitoring of energy usage, savings, and system performance
+- **Configuration**: `streamlit_dashboard/app_config.py` - Dashboard settings and constants
 - **Features**:
   - Scenario selection (Normal, Winter, Blackout)
   - Hour-by-hour energy strategy visualization
@@ -152,6 +152,12 @@ smart-energy-ai/
 ```bash
 cd streamlit_dashboard
 streamlit run app.py
+```
+
+Equivalent root-level invocation:
+
+```bash
+streamlit run streamlit_dashboard/app.py
 ```
 
 ### Nuxt Dashboard

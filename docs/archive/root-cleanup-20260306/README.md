@@ -6,4 +6,6 @@ This archive contains root-level one-off artifacts that were no longer part of t
 
 - `legacy-root-artifacts/` - ad hoc verification scripts, one-off comparison scripts, and the historical scorecard image moved out of the repository root.
 
+Additional legacy root Python files may be placed here when their canonical replacements live elsewhere in the repository, for example duplicated Streamlit entrypoints or one-off analysis helpers.
+
 The goal of this archive is to keep the repository root focused on current entry points and operational files while preserving old artifacts in case they are needed for reference.

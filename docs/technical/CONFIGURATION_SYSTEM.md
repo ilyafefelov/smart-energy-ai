@@ -36,7 +36,7 @@ from src.config import get_config
 config = get_config()  # Returns singleton instance
 ```
 
-### 2. Streamlit Frontend (`app_config.py`)
+### 2. Streamlit Frontend (`streamlit_dashboard/app_config.py`)
 
 **4-Page Dashboard:**
 1. **Current Configuration** - View all values
@@ -153,7 +153,7 @@ config.reset_to_defaults()
 ### Method 3: Streamlit Dashboard (Recommended!)
 
 ```bash
-streamlit run app_config.py
+streamlit run streamlit_dashboard/app_config.py
 ```
 
 Then:
@@ -278,7 +278,7 @@ config/system_config.json
 
 ### Step 1: View Current Config
 ```bash
-streamlit run app_config.py
+streamlit run streamlit_dashboard/app_config.py
 ```
 - Go to "Current Configuration"
 - See all values
@@ -431,7 +431,7 @@ print(config.get('battery.capacity_kwh'))  # Output: 150
 ## Next Steps
 
 **Recommended Actions:**
-1. ✅ Start Streamlit dashboard: `streamlit run app_config.py`
+1. ✅ Start Streamlit dashboard: `streamlit run streamlit_dashboard/app_config.py`
 2. ✅ View current config
 3. ✅ Edit battery capacity (try 200 kWh)
 4. ✅ Save configuration

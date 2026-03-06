@@ -413,7 +413,7 @@ WebDriverWait(driver, 30).until(...)  # 30 seconds instead of 10
 Ready to:
 - ✅ Set up Selenium and test OREE
 - ✅ Register for PXE API
-- ✅ Integrate real prices into app_config.py
+- ✅ Integrate real prices into streamlit_dashboard/app_config.py
 - ✅ Show live prices in Streamlit dashboard
 
 All components built and documented!

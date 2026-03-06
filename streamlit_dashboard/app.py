@@ -12,17 +12,18 @@ st.set_page_config(page_title="Smart Energy AI Enterprise", layout="wide")
 file_map = {"Normal": "opt_normal.csv", "Winter": "opt_winter.csv", "Blackout": "opt_blackout.csv"}
 scenario = st.sidebar.selectbox("Select Scenario", ["Normal", "Winter", "Blackout"])
 
-# Get correct paths based on where app.py is running from
+# Resolve data and imports from the repository root when running from streamlit_dashboard/
 import os
-current_dir = os.path.dirname(os.path.abspath(__file__))
-data_processed = os.path.join(current_dir, "data", "processed", file_map[scenario])
-data_raw = os.path.join(current_dir, "data", "raw", "weather_forecast.csv")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
+data_processed = os.path.join(project_root, "data", "processed", file_map[scenario])
+data_raw = os.path.join(project_root, "data", "raw", "weather_forecast.csv")
 
 df = pl.read_csv(data_processed)
 weather_df = pl.read_csv(data_raw)
 
 # --- IMPORT TRAINING ANALYZER ---
-sys.path.insert(0, current_dir)
+sys.path.insert(0, project_root)
 from src.training_analyzer import generate_training_data
 
 # --- TABS FOR NAVIGATION ---

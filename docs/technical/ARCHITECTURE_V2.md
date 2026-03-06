@@ -360,7 +360,7 @@ smart-energy-ai/
 - [ ] DAG monitoring in Airflow UI
 
 **Days 6-7: Dashboard Update**
-- [ ] Update `app.py` Streamlit:
+- [ ] Update `streamlit_dashboard/app.py` Streamlit:
   - Tab 1: Current day plan (RL recommendations)
   - Tab 2: Historical performance (RL vs baseline)
   - Tab 3: Cost savings graph (cumulative)
