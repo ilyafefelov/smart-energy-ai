@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/energy_ml/assets/features.py"
+    "structural::energy_ml/features.py"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/energy_ml/assets/features.py"
+    "structural::energy_ml/features.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 88.1,
-  "objective_score": 93.6,
+  "overall_score": 88.2,
+  "objective_score": 93.7,
   "strict_score": 87.7,
   "verified_strict_score": 78.6,
   "prev_overall_score": 88.1,
   "prev_objective_score": 93.6,
   "prev_strict_score": 87.7,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually extracted pure helper logic from energy_ml/energy_ml/assets/features.py into energy_ml/energy_ml/assets/feature_support.py, and I am not gaming the score by resolving without fixing.",
+  "attestation": "I have actually I split the top-level FeatureEngineer helpers into a sibling support module, preserved the public wrapper methods, and validated the change with .venv pytest on tests/unit/test_feature_engineering_and_load_utils.py. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 89.1,
+          "strict": 89.3,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 55,
-        "description": "55 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 54,
+        "description": "54 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 262,
+        "total_count": 261,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -304,7 +304,7 @@
             10,
             11
           ],
-          "file_count": 81,
+          "file_count": 80,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
