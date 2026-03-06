@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "test_coverage::src/assets/benchmarks/performance.py::untested_critical"
+    "test_coverage::src/assets/core/optimization_schedule_checks.py::untested_module"
   ],
   "status": "fixed",
   "resolved": [
-    "test_coverage::src/assets/benchmarks/performance.py::untested_critical"
+    "test_coverage::src/assets/core/optimization_schedule_checks.py::untested_module"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 86.1,
-  "objective_score": 88.6,
-  "strict_score": 85.7,
+  "overall_score": 86.3,
+  "objective_score": 89.1,
+  "strict_score": 85.9,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 86.0,
-  "prev_objective_score": 88.3,
-  "prev_strict_score": 85.6,
+  "prev_overall_score": 86.2,
+  "prev_objective_score": 88.9,
+  "prev_strict_score": 85.8,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually Added focused tests for benchmark helper metrics, scenario generation, MLflow tracking output, and benchmark smoke harness behavior. and I am not gaming the score.",
+  "attestation": "I have actually Added focused tests for completeness, numeric field, and action semantics evaluation plus generated asset check results. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -210,8 +210,8 @@
       {
         "type": "refactor",
         "detector": "test_coverage",
-        "count": 40,
-        "description": "40 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "count": 37,
+        "description": "37 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
         "command": "desloppify show test_coverage --status open",
         "impact": 0.0,
         "dimension": "Test health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 304,
+        "total_count": 301,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -322,7 +322,7 @@
           "actions": [
             7
           ],
-          "file_count": 40,
+          "file_count": 37,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -376,8 +376,8 @@
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 85.7,
-      "gap": 9.3,
+      "current": 85.9,
+      "gap": 9.1,
       "state": "below",
       "warning": null
     },

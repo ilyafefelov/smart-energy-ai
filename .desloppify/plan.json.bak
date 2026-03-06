@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T18:52:16+00:00",
+  "updated": "2026-03-06T18:55:21+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -556,8 +556,8 @@
     "test_coverage::src/assets/core/market.py::untested_module": {
       "issue_id": "test_coverage::src/assets/core/market.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T18:55:05+00:00"
     },
     "test_coverage::scripts/train_model.py::untested_module": {
       "issue_id": "test_coverage::scripts/train_model.py::untested_module",
@@ -910,8 +910,8 @@
     "test_coverage::src/assets/core/optimization_schedule.py::untested_module": {
       "issue_id": "test_coverage::src/assets/core/optimization_schedule.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T18:55:14+00:00"
     },
     "test_coverage::src/assets/core/optimization_schedule_milp.py::untested_module": {
       "issue_id": "test_coverage::src/assets/core/optimization_schedule_milp.py::untested_module",
@@ -2181,7 +2181,6 @@
         "test_coverage::src/generate_plots_mpl.py::untested_module",
         "test_coverage::src/dagster_api/cli.py::untested_module",
         "test_coverage::src/oree_real_prices.py::untested_critical",
-        "test_coverage::src/assets/core/market.py::untested_module",
         "test_coverage::src/dagster_api/database.py::untested_module",
         "test_coverage::src/physics/economics.py::untested_module",
         "test_coverage::src/dagster_api/store_results.py::untested_module",
@@ -2208,7 +2207,6 @@
         "test_coverage::src/engines/nvtabular_engine.py::untested_module",
         "test_coverage::src/db.py::untested_module",
         "test_coverage::src/real_price_data.py::untested_module",
-        "test_coverage::src/assets/core/optimization_schedule.py::untested_module",
         "test_coverage::src/assets/core/optimization_schedule_milp.py::untested_module",
         "test_coverage::src/engines/selection.py::untested_module",
         "test_coverage::src/assets/core/price_forecast.py::untested_module",
@@ -6692,6 +6690,83 @@
         "status": "fixed",
         "attestation": "I have actually Added focused tests for benchmark helper metrics, scenario generation, MLflow tracking output, and benchmark smoke harness behavior. and I am not gaming the score."
       }
+    },
+    {
+      "timestamp": "2026-03-06T18:52:35+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "test_coverage::scripts/validation_check.py::untested_module",
+        "test_coverage::src/assets/__init__.py::untested_module",
+        "test_coverage::src/assets/benchmarks/performance.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused coverage for validation_check, src/assets repository wiring, and benchmark performance helpers.",
+      "detail": {
+        "sha": "bcd1c1bb87f6",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T18:55:03+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/assets/core/market.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for OREE parsing helpers, data_view extraction, and market asset fallback flow.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T18:55:05+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/assets/core/market.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for OREE parsing helpers, data_view extraction, and market asset fallback flow.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused tests for OREE parsing helpers, data_view extraction, and market asset fallback flow. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T18:55:12+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/assets/core/optimization_schedule.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for schedule frame builders, customer capacity loading, and baseline optimization schedule asset output.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T18:55:14+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/assets/core/optimization_schedule.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for schedule frame builders, customer capacity loading, and baseline optimization schedule asset output.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused tests for schedule frame builders, customer capacity loading, and baseline optimization schedule asset output. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T18:55:21+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/assets/core/optimization_schedule_checks.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for completeness, numeric field, and action semantics evaluation plus generated asset check results.",
+      "detail": {}
     }
   ],
   "epic_triage_meta": {
@@ -7016,12 +7091,23 @@
       "recorded_at": "2026-03-06T18:39:20+00:00",
       "note": "Added focused coverage for train_model, validate_deployment, and validate_ppo_oree script surfaces.",
       "cluster_name": null
+    },
+    {
+      "sha": "bcd1c1bb87f6",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "test_coverage::scripts/validation_check.py::untested_module",
+        "test_coverage::src/assets/__init__.py::untested_module",
+        "test_coverage::src/assets/benchmarks/performance.py::untested_critical"
+      ],
+      "recorded_at": "2026-03-06T18:52:35+00:00",
+      "note": "Added focused coverage for validation_check, src/assets repository wiring, and benchmark performance helpers.",
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "test_coverage::scripts/validation_check.py::untested_module",
-    "test_coverage::src/assets/__init__.py::untested_module",
-    "test_coverage::src/assets/benchmarks/performance.py::untested_critical"
+    "test_coverage::src/assets/core/market.py::untested_module",
+    "test_coverage::src/assets/core/optimization_schedule.py::untested_module"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
