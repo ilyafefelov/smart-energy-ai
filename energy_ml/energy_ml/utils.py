@@ -1,7 +1,33 @@
 """Utility functions for solar and wind calculations."""
+import importlib.util
 import math
 from datetime import datetime
-from typing import Dict, Tuple
+from pathlib import Path
+import sys
+from typing import Dict
+
+try:
+    from energy_ml.energy_ml.utils_support import (
+        apply_cloud_cover,
+        build_solar_position,
+        clear_sky_ghi,
+        split_irradiance_components,
+    )
+except ImportError:
+    _SUPPORT_MODULE_NAME = "energy_ml.energy_ml.utils_support"
+    _SUPPORT_PATH = Path(__file__).with_name("utils_support.py")
+    _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
+    if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
+        raise ImportError(f"Unable to load utils support module from {_SUPPORT_PATH}")
+    _SUPPORT_MODULE = sys.modules.get(_SUPPORT_MODULE_NAME)
+    if _SUPPORT_MODULE is None:
+        _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
+        sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
+        _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
+    apply_cloud_cover = _SUPPORT_MODULE.apply_cloud_cover
+    build_solar_position = _SUPPORT_MODULE.build_solar_position
+    clear_sky_ghi = _SUPPORT_MODULE.clear_sky_ghi
+    split_irradiance_components = _SUPPORT_MODULE.split_irradiance_components
 
 def get_solar_position(lat: float, lon: float, dt: datetime) -> Dict[str, float]:
     """
@@ -16,43 +42,7 @@ def get_solar_position(lat: float, lon: float, dt: datetime) -> Dict[str, float]
     Returns:
         Dictionary with elevation and azimuth angles (degrees)
     """
-    # Day of year (1-366)
-    day_of_year = dt.timetuple().tm_yday
-    
-    # Solar declination (degrees)
-    B = (360 / 365) * (day_of_year - 81)
-    declination = 23.45 * math.sin(math.radians(B))
-    
-    # Hour angle (degrees, 15° per hour from solar noon)
-    hour = dt.hour + dt.minute / 60
-    hour_angle = 15 * (hour - 12)
-    
-    # Solar elevation (degrees)
-    lat_rad = math.radians(lat)
-    decl_rad = math.radians(declination)
-    ha_rad = math.radians(hour_angle)
-    
-    elev_sin = math.sin(lat_rad) * math.sin(decl_rad) + \
-               math.cos(lat_rad) * math.cos(decl_rad) * math.cos(ha_rad)
-    
-    elevation = math.degrees(math.asin(max(-1, min(1, elev_sin))))
-    
-    # Solar azimuth (degrees from north)
-    if elevation > -0.5:
-        cos_azimuth = (math.sin(decl_rad) * math.cos(lat_rad) - \
-                       math.cos(decl_rad) * math.sin(lat_rad) * math.cos(ha_rad)) / \
-                      (math.cos(math.radians(elevation)) + 0.0001)
-        azimuth = math.degrees(math.acos(max(-1, min(1, cos_azimuth))))
-        if hour_angle > 0:
-            azimuth = 360 - azimuth
-    else:
-        azimuth = 0
-    
-    return {
-        "elevation": max(0, elevation),
-        "azimuth": azimuth,
-        "is_night": elevation < 0,
-    }
+    return build_solar_position(lat, dt)
 
 
 def calculate_irradiance(position: Dict, cloud_cover: float, pressure: float = 1013) -> Dict[str, float]:
@@ -69,36 +59,10 @@ def calculate_irradiance(position: Dict, cloud_cover: float, pressure: float = 1
     """
     if position["is_night"]:
         return {"GHI": 0, "DNI": 0, "DHI": 0}
-    
-    # Clear-sky GHI model (simplified)
-    elevation_rad = math.radians(position["elevation"])
-    sin_elev = math.sin(elevation_rad)
-    
-    # Air mass
-    air_mass = 1 / (sin_elev + 0.50572 * math.pow(96.07995 - position["elevation"], -1.6364))
-    air_mass = max(1, air_mass)
-    
-    # Clear-sky irradiance
-    Io = 1361  # Solar constant (W/m²)
-    Kt = 0.7   # Clearness index
-    pressure_ratio = pressure / 1013
-    
-    ghi_clear = Io * Kt * math.pow(0.678, air_mass * pressure_ratio) * sin_elev
-    ghi_clear = max(0, ghi_clear)
-    
-    # Adjust for clouds (clouds reduce by max 75%)
-    cloud_factor = 1 - (cloud_cover / 100) * 0.75
-    ghi_actual = ghi_clear * cloud_factor
-    
-    # Split into direct and diffuse (simplified)
-    dni = ghi_clear / sin_elev * 0.8 if sin_elev > 0.1 else 0
-    dhi = ghi_actual * 0.15
-    
-    return {
-        "GHI": round(ghi_actual),
-        "DNI": round(max(0, dni)),
-        "DHI": round(dhi),
-    }
+
+    ghi_clear = clear_sky_ghi(position["elevation"], pressure)
+    ghi_actual = apply_cloud_cover(ghi_clear, cloud_cover)
+    return split_irradiance_components(ghi_clear, ghi_actual, position["elevation"])
 
 
 def wind_power_curve(wind_speed: float, rated_capacity: float = 5.0) -> float:
