@@ -2,12 +2,44 @@
 
 Integrates MLflow model for energy trading recommendations.
 """
+import importlib.util
 import logging
-from datetime import datetime
-from typing import Dict, Optional, Tuple, List, Any
-import json
+from pathlib import Path
+import sys
+from typing import Any, Dict, List, Optional, Tuple
 
 import polars as pl
+
+try:
+    from energy_ml.ml_integration_support import (
+        build_error_response,
+        build_mock_prediction,
+        build_model_info,
+        build_prediction_response,
+        generate_reasoning_text,
+        get_feature_importance_map,
+        parse_prediction_result,
+        validate_feature_frame,
+    )
+except ImportError:
+    _SUPPORT_MODULE_NAME = "energy_ml.ml_integration_support"
+    _SUPPORT_PATH = Path(__file__).with_name("ml_integration_support.py")
+    _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
+    if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
+        raise ImportError(f"Unable to load ml integration support module from {_SUPPORT_PATH}")
+    _SUPPORT_MODULE = sys.modules.get(_SUPPORT_MODULE_NAME)
+    if _SUPPORT_MODULE is None:
+        _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
+        sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
+        _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
+    build_error_response = _SUPPORT_MODULE.build_error_response
+    build_mock_prediction = _SUPPORT_MODULE.build_mock_prediction
+    build_model_info = _SUPPORT_MODULE.build_model_info
+    build_prediction_response = _SUPPORT_MODULE.build_prediction_response
+    generate_reasoning_text = _SUPPORT_MODULE.generate_reasoning_text
+    get_feature_importance_map = _SUPPORT_MODULE.get_feature_importance_map
+    parse_prediction_result = _SUPPORT_MODULE.parse_prediction_result
+    validate_feature_frame = _SUPPORT_MODULE.validate_feature_frame
 
 try:
     import mlflow
@@ -112,24 +144,17 @@ class PredictionService:
             return self._mock_predict(features)
         
         try:
-            # Prepare feature array for model
             feature_array = features[self.EXPECTED_FEATURES].to_numpy()
-            
-            # Get model prediction
             prediction = self.model.predict(feature_array)
-            
-            # Parse prediction
             action, confidence = self._parse_prediction(prediction)
             reasoning = self._generate_reasoning(action, features, confidence)
-            
-            return {
-                'action': action,
-                'confidence': confidence,
-                'reasoning': reasoning,
-                'model_version': self.model_version,
-                'timestamp': datetime.now().isoformat(),
-                'feature_importance': self._get_feature_importance(features),
-            }
+            return build_prediction_response(
+                action,
+                confidence,
+                reasoning,
+                self.model_version,
+                self._get_feature_importance(features),
+            )
         
         except Exception as e:
             logger.error(f"Prediction failed: {e}")
@@ -140,37 +165,7 @@ class PredictionService:
         
         Uses simple heuristic rules based on features.
         """
-        feature_dict = features.to_dicts()[0]
-        
-        soc = feature_dict.get('soc_percent', 0.5)
-        tariff = feature_dict.get('current_tariff_uah_mwh', 0.5)
-        is_peak = feature_dict.get('is_peak_hour', 0.0)
-        health = feature_dict.get('battery_health', 0.8)
-        
-        # Simple decision logic
-        if health < 0.2:
-            action = 'HOLD'
-            confidence = 0.95
-        elif is_peak > 0.5 and soc > 0.3:
-            action = 'SELL'
-            confidence = 0.75 + (soc - 0.3) * 0.2
-        elif is_peak < 0.5 and soc < 0.8 and tariff < 0.5:
-            action = 'BUY'
-            confidence = 0.70 + (0.8 - soc) * 0.15
-        else:
-            action = 'HOLD'
-            confidence = 0.65
-        
-        reasoning = f"Mock prediction: {action} (battery SOC: {soc:.0%}, tariff: {tariff:.0%})"
-        
-        return {
-            'action': action,
-            'confidence': min(1.0, max(0.0, confidence)),
-            'reasoning': reasoning,
-            'model_version': self.model_version,
-            'timestamp': datetime.now().isoformat(),
-            'feature_importance': self._get_feature_importance(features),
-        }
+        return build_mock_prediction(features, self.model_version)
     
     def _parse_prediction(self, prediction) -> Tuple[str, float]:
         """Parse model output into action and confidence.
@@ -181,23 +176,7 @@ class PredictionService:
         Returns:
             Tuple of (action, confidence)
         """
-        # Handle different prediction formats
-        if isinstance(prediction, (list, tuple)):
-            if len(prediction) > 0:
-                # Assume first element is action (0=BUY, 1=SELL, 2=HOLD)
-                action_idx = int(prediction[0])
-                confidence = prediction[1] if len(prediction) > 1 else 0.5
-            else:
-                return 'HOLD', 0.5
-        else:
-            # Single value - assume probabilities
-            action_idx = 1  # Default HOLD
-            confidence = 0.5
-        
-        action = self.VALID_ACTIONS[action_idx % len(self.VALID_ACTIONS)]
-        confidence = max(0.0, min(1.0, float(confidence)))
-        
-        return action, confidence
+        return parse_prediction_result(prediction, self.VALID_ACTIONS)
     
     def _generate_reasoning(self, 
                            action: str,
@@ -213,42 +192,7 @@ class PredictionService:
         Returns:
             Reasoning string
         """
-        feature_dict = features.to_dicts()[0]
-        
-        soc = feature_dict.get('soc_percent', 0.5)
-        tariff = feature_dict.get('current_tariff_uah_mwh', 0.5)
-        is_peak = feature_dict.get('is_peak_hour', 0.0)
-        load = feature_dict.get('current_load_kw', 0.5)
-        
-        confidence_pct = int(confidence * 100)
-        
-        if action == 'BUY':
-            reason = f"Charge battery at current tariff level ({tariff:.0%}). "
-            if is_peak < 0.5:
-                reason += "Off-peak pricing provides favorable charging conditions."
-            else:
-                reason += "Low tariff relative to peak hours justifies charging."
-            reason += f" Confidence: {confidence_pct}%."
-        
-        elif action == 'SELL':
-            reason = f"Discharge battery to supply current load ({load:.0%}). "
-            if is_peak > 0.5:
-                reason += "Peak hour pricing makes discharge most profitable."
-            else:
-                reason += "Discharge reduces grid consumption."
-            reason += f" Confidence: {confidence_pct}%."
-        
-        else:  # HOLD
-            reason = "Current market conditions do not justify charging or discharging. "
-            if soc < 0.3:
-                reason += "Battery SOC is low, preferring charge availability."
-            elif soc > 0.8:
-                reason += "Battery is well-charged. Avoid additional degradation."
-            else:
-                reason += "Balance between economic opportunity and battery longevity."
-            reason += f" Confidence: {confidence_pct}%."
-        
-        return reason
+        return generate_reasoning_text(action, features, confidence)
     
     def _get_feature_importance(self, features: pl.DataFrame) -> Dict[str, float]:
         """Get feature importance scores.
@@ -259,35 +203,7 @@ class PredictionService:
         Returns:
             Dict of feature importance scores
         """
-        # Heuristic importance based on variance in current instance
-        feature_dict = features.to_dicts()[0]
-        
-        importance = {}
-        
-        # Peak hour is always important
-        importance['is_peak_hour'] = 0.20
-        
-        # SOC importance depends on value
-        soc = feature_dict.get('soc_percent', 0.5)
-        importance['soc_percent'] = 0.15 if 0.2 < soc < 0.8 else 0.20
-        
-        # Tariff importance
-        importance['current_tariff_uah_mwh'] = 0.15
-        
-        # Load importance
-        load = feature_dict.get('current_load_kw', 0.5)
-        importance['current_load_kw'] = 0.12 if load > 0.2 else 0.08
-        
-        # Battery health
-        health = feature_dict.get('battery_health', 0.8)
-        importance['battery_health'] = 0.12 if health < 0.5 else 0.08
-        
-        # Remaining features
-        importance['price_trend'] = 0.08
-        importance['load_forecast_1h'] = 0.06
-        importance['day_of_week'] = 0.04
-        
-        return importance
+        return get_feature_importance_map(features)
     
     def validate_features(self, features: pl.DataFrame) -> Tuple[bool, List[str]]:
         """Validate feature DataFrame matches model schema.
@@ -298,29 +214,7 @@ class PredictionService:
         Returns:
             Tuple of (is_valid, error_messages)
         """
-        errors = []
-        
-        # Check shape
-        if features.shape[0] != 1:
-            errors.append(f"Expected 1 row, got {features.shape[0]}")
-        
-        # Check columns
-        feature_cols = set(features.columns)
-        expected_cols = set(self.EXPECTED_FEATURES)
-        
-        missing = expected_cols - feature_cols
-        if missing:
-            errors.append(f"Missing features: {missing}")
-        
-        # Check values in 0-1 range
-        for col in self.EXPECTED_FEATURES:
-            if col in feature_cols:
-                val = features[col][0]
-                if not (0.0 <= val <= 1.0):
-                    errors.append(f"Feature {col} out of bounds: {val}")
-        
-        is_valid = len(errors) == 0
-        return is_valid, errors
+        return validate_feature_frame(features, self.EXPECTED_FEATURES)
     
     def _error_response(self, error_msg: str) -> Dict[str, any]:
         """Generate error response.
@@ -332,15 +226,7 @@ class PredictionService:
             Error response dict (defaults to HOLD)
         """
         logger.error(f"Prediction error: {error_msg}")
-        return {
-            'action': 'HOLD',
-            'confidence': 0.0,
-            'reasoning': f"Prediction failed: {error_msg}",
-            'model_version': self.model_version,
-            'timestamp': datetime.now().isoformat(),
-            'feature_importance': {},
-            'error': error_msg,
-        }
+        return build_error_response(error_msg, self.model_version)
     
     def get_model_info(self) -> Dict[str, any]:
         """Return loaded model metadata.
@@ -348,14 +234,14 @@ class PredictionService:
         Returns:
             Dict with model information
         """
-        return {
-            'model_uri': self.model_uri,
-            'model_version': self.model_version,
-            'mock_mode': self._mock_mode,
-            'mlflow_available': MLFLOW_AVAILABLE,
-            'expected_features': self.EXPECTED_FEATURES,
-            'valid_actions': self.VALID_ACTIONS,
-        }
+        return build_model_info(
+            self.model_uri,
+            self.model_version,
+            self._mock_mode,
+            MLFLOW_AVAILABLE,
+            self.EXPECTED_FEATURES,
+            self.VALID_ACTIONS,
+        )
     
     def generate_prediction(self, features: pl.DataFrame, user_strategy: str = "balanced") -> Dict[str, Any]:
         """Generate ML prediction with user optimization strategy.
