@@ -397,12 +397,15 @@ def recommendation_metadata(
         logger.info(f"   Timestamp: {timestamp}")
         logger.info(f"   Data sources: 5")
         logger.info(f"   Features: 73")
+
+        components = list(metadata.keys())
+        details = [" | ".join(items) for items in metadata.values()]
         
         return Output(
             pd.DataFrame({
-                'component': list(metadata.keys()),
-                'details': [" | ".join(v) for v in metadata.values()],
-                'lineage_text': [metadata_str],
+                'component': components,
+                'details': details,
+                'lineage_text': [metadata_str] * len(components),
             }),
             metadata={
                 "timestamp": timestamp.isoformat(),
@@ -470,7 +473,7 @@ def dashboard_recommendation_api_response(
                 'data_provenance': 'Full lineage available',
             },
             'monitoring': {
-                'needs_retraining': retraining_triggers['triggered'].str.contains('YES').any(),
+                'needs_retraining': bool(retraining_triggers['triggered'].str.contains('YES').any()),
                 'triggered_checks': int(retraining_triggers['triggered'].str.contains('YES').sum()),
             }
         }
