@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T20:07:40+00:00",
+  "updated": "2026-03-06T20:11:43+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -7639,6 +7639,45 @@
         "status": "fixed",
         "attestation": "I have actually Split reusable schedule contract evaluators into src/assets/core/optimization_schedule_contract.py and kept the Dagster registration module focused on asset check wiring. and I am not gaming the score."
       }
+    },
+    {
+      "timestamp": "2026-03-06T20:08:11+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::src/assets/core/optimization_schedule_checks.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "c2ba2637a55b",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T20:11:42+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::src/optimization/milp_scheduler.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted SciPy fallback assembly and schedule result serialization into src/optimization/milp_scheduler_support.py so the main scheduler module keeps orchestration responsibilities only.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T20:11:43+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::src/optimization/milp_scheduler.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted SciPy fallback assembly and schedule result serialization into src/optimization/milp_scheduler_support.py so the main scheduler module keeps orchestration responsibilities only.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted SciPy fallback assembly and schedule result serialization into src/optimization/milp_scheduler_support.py so the main scheduler module keeps orchestration responsibilities only. and I am not gaming the score."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -8113,10 +8152,20 @@
       "recorded_at": "2026-03-06T20:00:27+00:00",
       "note": "Covered optimizer_real, oree_real_prices, and oree_selenium_scraper with focused pytest coverage in tests/unit/test_real_optimizer_and_oree_fetchers.py.",
       "cluster_name": null
+    },
+    {
+      "sha": "c2ba2637a55b",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::src/assets/core/optimization_schedule_checks.py"
+      ],
+      "recorded_at": "2026-03-06T20:08:11+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::src/assets/core/optimization_schedule_checks.py"
+    "structural::src/optimization/milp_scheduler.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
