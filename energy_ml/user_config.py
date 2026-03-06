@@ -304,11 +304,12 @@ class ConfigurationManager:
             warnings=warnings,
         )
     
-    def get_battery_specifications(self, battery_type: str) -> Dict[str, Any]:
+    def get_battery_specifications(self, battery_type: str, capacity_kwh: Optional[float] = None) -> Dict[str, Any]:
         """Get detailed battery specifications including degradation costs.
         
         Args:
             battery_type: One of 'LFP', 'Lead-Acid', 'VRFB'
+            capacity_kwh: Optional installed capacity used to materialize cycle cost
             
         Returns:
             Dict with battery specs, degradation info, cost analysis
@@ -326,7 +327,7 @@ class ConfigurationManager:
                 'dod_max': 0.9,
                 'temperature_range': (-20, 60),
                 'description': 'Best for daily cycling, long lifespan, safe chemistry',
-                'degradation_cost_uah_per_cycle': lambda capacity: capacity * 13000 / 8000,
+                'degradation_cost_uah_per_cycle_per_kwh': 13000 / 8000,
                 'arbitrage_suitability': 9  # out of 10
             },
             'Lead-Acid': {
@@ -341,7 +342,7 @@ class ConfigurationManager:
                 'dod_max': 0.5,  # Limited to preserve life
                 'temperature_range': (-10, 45),
                 'description': 'Lower upfront cost but frequent replacement needed',
-                'degradation_cost_uah_per_cycle': lambda capacity: capacity * 5500 / 600,
+                'degradation_cost_uah_per_cycle_per_kwh': 5500 / 600,
                 'arbitrage_suitability': 4  # out of 10
             },
             'VRFB': {
@@ -356,17 +357,17 @@ class ConfigurationManager:
                 'dod_max': 1.0,  # 100% DoD possible
                 'temperature_range': (5, 45),
                 'description': 'Best for long-duration storage, minimal degradation',
-                'degradation_cost_uah_per_cycle': lambda capacity: capacity * 22000 / 20000,
+                'degradation_cost_uah_per_cycle_per_kwh': 22000 / 20000,
                 'arbitrage_suitability': 7  # out of 10
             }
         }
         
         if battery_type in specs:
             spec = specs[battery_type].copy()
-            # Convert lambda to actual function result
-            if callable(spec['degradation_cost_uah_per_cycle']):
-                cost_func = spec['degradation_cost_uah_per_cycle']
-                spec['degradation_cost_uah_per_cycle'] = cost_func
+            normalized_capacity = 1.0 if capacity_kwh is None else max(capacity_kwh, 0.0)
+            spec['degradation_cost_uah_per_cycle'] = (
+                spec['degradation_cost_uah_per_cycle_per_kwh'] * normalized_capacity
+            )
             return spec
         else:
             return {}
@@ -453,7 +454,7 @@ class ConfigurationManager:
         Returns:
             Dict with arbitrage metrics
         """
-        battery_specs = self.get_battery_specifications(config.battery_type)
+        battery_specs = self.get_battery_specifications(config.battery_type, config.battery_capacity_kwh)
         
         # Daily energy arbitrage calculation
         max_charge_power = config.battery_capacity_kwh * config.battery_c_rate_charge
@@ -469,7 +470,7 @@ class ConfigurationManager:
         daily_arbitrage_gross = usable_capacity * price_spread * config.battery_efficiency
         
         # Degradation cost per cycle
-        degradation_cost = battery_specs['degradation_cost_uah_per_cycle'](config.battery_capacity_kwh) if battery_specs else 0
+        degradation_cost = battery_specs.get('degradation_cost_uah_per_cycle', 0) if battery_specs else 0
         
         # Net daily profit
         daily_profit_net = daily_arbitrage_gross - degradation_cost

@@ -47,6 +47,26 @@ class OptimizationEngine:
         self.current_strategy = 'balanced'
         self.custom_weights = None
         self.daily_cycle_count = 0
+
+    def _build_strategy_response(
+        self,
+        strategy: str,
+        strategy_config: Dict[str, Any],
+        *,
+        success: bool,
+        error: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Return a stable public envelope for strategy lookups."""
+        return {
+            'strategy': strategy,
+            'description': strategy_config['description'],
+            'weights': dict(strategy_config['weights']),
+            'constraints': dict(strategy_config['constraints']),
+            'custom_weights': self.custom_weights,
+            'timestamp': datetime.now().isoformat(),
+            'success': success,
+            'error': error,
+        }
         
     def get_user_strategy(self, user_config: UserConfigModel) -> Dict[str, Any]:
         """Load user optimization strategy from configuration.
@@ -67,6 +87,7 @@ class OptimizationEngine:
             
             self.current_strategy = strategy
             strategy_config = self.OPTIMIZATION_STRATEGIES[strategy].copy()
+            self.custom_weights = None
             
             # Allow user to override weights if they have custom preferences
             custom_weights = getattr(user_config, 'custom_optimization_weights', None)
@@ -75,19 +96,18 @@ class OptimizationEngine:
                 strategy_config['weights'].update(custom_weights)
             
             logger.info(f"Loaded optimization strategy: {strategy}")
-            
-            return {
-                'strategy': strategy,
-                'description': strategy_config['description'],
-                'weights': strategy_config['weights'],
-                'constraints': strategy_config['constraints'],
-                'custom_weights': self.custom_weights,
-                'timestamp': datetime.now().isoformat()
-            }
+            return self._build_strategy_response(strategy, strategy_config, success=True)
             
         except Exception as e:
             logger.error(f"Error loading user strategy: {e}")
-            return self.OPTIMIZATION_STRATEGIES['balanced']
+            self.current_strategy = 'balanced'
+            self.custom_weights = None
+            return self._build_strategy_response(
+                'balanced',
+                self.OPTIMIZATION_STRATEGIES['balanced'],
+                success=False,
+                error=str(e),
+            )
     
     def optimize_decision(self, 
                          base_prediction: Dict[str, Any],

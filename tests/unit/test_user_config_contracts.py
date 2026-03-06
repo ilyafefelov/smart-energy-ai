@@ -103,3 +103,32 @@ def test_load_profile_uses_single_canonical_machine_token() -> None:
     assert user_config.load_profile_type == "24_7"
     assert runtime_profile.profile_type == "24_7"
     assert legacy_profile.profile_type == "24_7"
+
+
+def test_battery_specifications_return_serializable_cost_values(tmp_path: Path) -> None:
+    manager = ConfigurationManager(config_dir=tmp_path)
+
+    default_specs = manager.get_battery_specifications("LFP")
+    sized_specs = manager.get_battery_specifications("LFP", capacity_kwh=12.0)
+
+    assert callable(default_specs["degradation_cost_uah_per_cycle"]) is False
+    assert callable(sized_specs["degradation_cost_uah_per_cycle"]) is False
+    assert default_specs["degradation_cost_uah_per_cycle"] == pytest.approx(13000 / 8000)
+    assert sized_specs["degradation_cost_uah_per_cycle"] == pytest.approx(12.0 * 13000 / 8000)
+    assert sized_specs["degradation_cost_uah_per_cycle_per_kwh"] == pytest.approx(13000 / 8000)
+
+
+def test_arbitrage_potential_uses_materialized_degradation_cost(tmp_path: Path) -> None:
+    manager = ConfigurationManager(config_dir=tmp_path)
+    config = UserConfigModel(
+        battery_type="LFP",
+        battery_capacity_kwh=10.0,
+        battery_efficiency=0.95,
+        tariff_peak_rate_uah_kwh=12.5,
+        tariff_off_peak_rate_uah_kwh=8.0,
+    )
+
+    arbitrage = manager.calculate_arbitrage_potential(config)
+
+    assert arbitrage["daily_degradation_cost"] == pytest.approx(round(10.0 * 13000 / 8000, 2))
+    assert arbitrage["daily_profit_net"] < arbitrage["daily_arbitrage_gross"]
