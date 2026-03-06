@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T20:47:36+00:00",
+  "updated": "2026-03-06T20:53:24+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -7887,6 +7887,45 @@
         "sha": "59bb26e94ab1",
         "branch": "chore/desloppify-quality-pass"
       }
+    },
+    {
+      "timestamp": "2026-03-06T20:52:50+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/control/inverter_controller.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted validation, status, scheduling, and completion-estimate helpers into inverter_controller_support while preserving VirtualInverterController APIs and behavior.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T20:52:52+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/control/inverter_controller.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted validation, status, scheduling, and completion-estimate helpers into inverter_controller_support while preserving VirtualInverterController APIs and behavior.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually extracted validation, status, schedule, and completion helper logic from energy_ml/control/inverter_controller.py into energy_ml/control/inverter_controller_support.py, and I am not gaming the score by resolving without fixing."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T20:53:24+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/control/inverter_controller.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "d6a18a5e3f64",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -8429,6 +8468,16 @@
         "structural::energy_ml/energy_ml/assets/data_sources.py"
       ],
       "recorded_at": "2026-03-06T20:47:36+00:00",
+      "note": null,
+      "cluster_name": null
+    },
+    {
+      "sha": "d6a18a5e3f64",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/control/inverter_controller.py"
+      ],
+      "recorded_at": "2026-03-06T20:53:24+00:00",
       "note": null,
       "cluster_name": null
     }
