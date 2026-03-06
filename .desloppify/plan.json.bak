@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T17:36:54+00:00",
+  "updated": "2026-03-06T17:36:55+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -718,8 +718,8 @@
     "test_coverage::ml_integration_api.py::untested_critical": {
       "issue_id": "test_coverage::ml_integration_api.py::untested_critical",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T17:36:55+00:00"
     },
     "test_coverage::scripts/parse_oree_indices.py::untested_module": {
       "issue_id": "test_coverage::scripts/parse_oree_indices.py::untested_module",
@@ -2205,7 +2205,6 @@
         "test_coverage::scripts/notion_sync.py::untested_module",
         "test_coverage::src/oree_playwright_scraper.py::untested_critical",
         "test_coverage::scripts/combine_datasets.py::untested_module",
-        "test_coverage::ml_integration_api.py::untested_critical",
         "test_coverage::scripts/parse_oree_indices.py::untested_module",
         "test_coverage::src/rl_training.py::untested_module",
         "test_coverage::src/oree_selenium_scraper.py::untested_critical",
@@ -6113,6 +6112,20 @@
       "actor": "user",
       "note": "Added direct root API surface tests for recommendation, forecast, status, strategy, renewable helpers, and CLI JSON output.",
       "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T17:36:55+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::ml_integration_api.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added direct root API surface tests for recommendation, forecast, status, strategy, renewable helpers, and CLI JSON output.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added direct root API surface tests for recommendation, forecast, status, strategy, renewable helpers, and CLI JSON output. and I am not gaming the score."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -6359,7 +6372,8 @@
   ],
   "uncommitted_issues": [
     "test_coverage::energy_ml/tariff_models.py::untested_module",
-    "test_coverage::energy_ml/user_config.py::untested_module"
+    "test_coverage::energy_ml/user_config.py::untested_module",
+    "test_coverage::ml_integration_api.py::untested_critical"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

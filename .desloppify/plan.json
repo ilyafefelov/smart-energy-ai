@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T17:36:55+00:00",
+  "updated": "2026-03-06T17:37:50+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -6126,6 +6126,22 @@
         "status": "fixed",
         "attestation": "I have actually Added direct root API surface tests for recommendation, forecast, status, strategy, renewable helpers, and CLI JSON output. and I am not gaming the score."
       }
+    },
+    {
+      "timestamp": "2026-03-06T17:37:50+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "test_coverage::energy_ml/tariff_models.py::untested_module",
+        "test_coverage::energy_ml/user_config.py::untested_module",
+        "test_coverage::ml_integration_api.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused coverage for tariff models, user config contracts, and the root ML integration API surfaces.",
+      "detail": {
+        "sha": "c0962c2190d2",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -6368,13 +6384,21 @@
       "recorded_at": "2026-03-06T17:12:51+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "c0962c2190d2",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "test_coverage::energy_ml/tariff_models.py::untested_module",
+        "test_coverage::energy_ml/user_config.py::untested_module",
+        "test_coverage::ml_integration_api.py::untested_critical"
+      ],
+      "recorded_at": "2026-03-06T17:37:50+00:00",
+      "note": "Added focused coverage for tariff models, user config contracts, and the root ML integration API surfaces.",
+      "cluster_name": null
     }
   ],
-  "uncommitted_issues": [
-    "test_coverage::energy_ml/tariff_models.py::untested_module",
-    "test_coverage::energy_ml/user_config.py::untested_module",
-    "test_coverage::ml_integration_api.py::untested_critical"
-  ],
+  "uncommitted_issues": [],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
 }
