@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 87.8,
-  "objective_score": 92.8,
-  "strict_score": 87.4,
+  "overall_score": 87.9,
+  "objective_score": 92.9,
+  "strict_score": 87.5,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 106,
-    "open": 274,
+    "fixed": 107,
+    "open": 273,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 60,
-        "open": 237,
+        "fixed": 61,
+        "open": 236,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 86.0,
-      "strict": 86.0,
+      "score": 86.5,
+      "strict": 86.5,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 64,
+      "failing": 63,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.86013986013986,
-          "failing": 64,
-          "weighted_failures": 20.00000000000002
+          "pass_rate": 0.8650349650349649,
+          "failing": 63,
+          "weighted_failures": 19.300000000000022
         }
       }
     },
@@ -23806,17 +23806,23 @@
       "detail": {
         "loc": 305
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Split reusable schedule contract evaluators into src/assets/core/optimization_schedule_contract.py and kept the Dagster registration module focused on asset check wiring.",
       "first_seen": "2026-03-06T10:38:38+00:00",
       "last_seen": "2026-03-06T10:38:38+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T20:07:40+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "production",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Split reusable schedule contract evaluators into src/assets/core/optimization_schedule_contract.py and kept the Dagster registration module focused on asset check wiring. and I am not gaming the score.",
+        "attested_at": "2026-03-06T20:07:40+00:00",
+        "scan_verified": false
+      }
     },
     "structural::scripts/reconcile_optimization_history.py": {
       "id": "structural::scripts/reconcile_optimization_history.py",

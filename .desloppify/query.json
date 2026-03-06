@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "test_coverage::src/oree_selenium_scraper.py::untested_critical"
+    "structural::src/assets/core/optimization_schedule_checks.py"
   ],
   "status": "fixed",
   "resolved": [
-    "test_coverage::src/oree_selenium_scraper.py::untested_critical"
+    "structural::src/assets/core/optimization_schedule_checks.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 87.8,
-  "objective_score": 92.8,
-  "strict_score": 87.4,
+  "overall_score": 87.9,
+  "objective_score": 92.9,
+  "strict_score": 87.5,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 87.7,
-  "prev_objective_score": 92.7,
-  "prev_strict_score": 87.3,
+  "prev_overall_score": 87.8,
+  "prev_objective_score": 92.8,
+  "prev_strict_score": 87.4,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_real_optimizer_and_oree_fetchers.py, and I am not gaming the score by resolving without fixing.",
+  "attestation": "I have actually Split reusable schedule contract evaluators into src/assets/core/optimization_schedule_contract.py and kept the Dagster registration module focused on asset check wiring. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 86.0,
+          "strict": 86.5,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 67,
-        "description": "67 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 66,
+        "description": "66 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 274,
+        "total_count": 273,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -304,7 +304,7 @@
             10,
             11
           ],
-          "file_count": 86,
+          "file_count": 85,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -351,7 +351,7 @@
       }
     },
     "debt": {
-      "overall_gap": 0.2,
+      "overall_gap": 0.1,
       "wontfix_count": 147,
       "worst_dimension": "Code quality",
       "worst_gap": 5.5,
@@ -371,13 +371,13 @@
       {
         "type": "wontfix_gap",
         "severity": "high",
-        "message": "Strict/lenient gap is 0.2 pts with 147 wontfix issues"
+        "message": "Strict/lenient gap is 0.1 pts with 147 wontfix issues"
       }
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 87.4,
-      "gap": 7.6,
+      "current": 87.5,
+      "gap": 7.5,
       "state": "below",
       "warning": null
     },
