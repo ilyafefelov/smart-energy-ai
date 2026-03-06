@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T21:41:01+00:00",
+  "updated": "2026-03-06T22:09:39+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -8168,6 +8168,45 @@
         "sha": "aa7936d8a241",
         "branch": "chore/desloppify-quality-pass"
       }
+    },
+    {
+      "timestamp": "2026-03-06T22:09:15+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/utils.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "I split the nested solar and irradiance calculation helpers into energy_ml/energy_ml/utils_support.py, preserved the public API in energy_ml/energy_ml/utils.py with a direct-file fallback loader, and validated with .venv pytest on tests/unit/test_energy_ml_utils.py and tests/unit/test_feature_engineering_and_load_utils.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T22:09:16+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/utils.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "I split the nested solar and irradiance calculation helpers into energy_ml/energy_ml/utils_support.py, preserved the public API in energy_ml/energy_ml/utils.py with a direct-file fallback loader, and validated with .venv pytest on tests/unit/test_energy_ml_utils.py and tests/unit/test_feature_engineering_and_load_utils.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually I split the nested solar and irradiance calculation helpers into energy_ml/energy_ml/utils_support.py, preserved the public API in energy_ml/energy_ml/utils.py with a direct-file fallback loader, and validated with .venv pytest on tests/unit/test_energy_ml_utils.py and tests/unit/test_feature_engineering_and_load_utils.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T22:09:39+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/utils.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "536f6dfbe659",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -8780,6 +8819,16 @@
         "structural::energy_ml/load_simulation.py"
       ],
       "recorded_at": "2026-03-06T21:41:01+00:00",
+      "note": null,
+      "cluster_name": null
+    },
+    {
+      "sha": "536f6dfbe659",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/utils.py"
+      ],
+      "recorded_at": "2026-03-06T22:09:39+00:00",
       "note": null,
       "cluster_name": null
     }
