@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/features.py"
+    "structural::energy_ml/load_simulation.py"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/features.py"
+    "structural::energy_ml/load_simulation.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
   "overall_score": 88.2,
   "objective_score": 93.7,
-  "strict_score": 87.7,
+  "strict_score": 87.8,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 88.1,
-  "prev_objective_score": 93.6,
+  "prev_overall_score": 88.2,
+  "prev_objective_score": 93.7,
   "prev_strict_score": 87.7,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually I split the top-level FeatureEngineer helpers into a sibling support module, preserved the public wrapper methods, and validated the change with .venv pytest on tests/unit/test_feature_engineering_and_load_utils.py. and I am not gaming the score.",
+  "attestation": "I have actually I split the load simulation math and yearly report helpers into energy_ml/load_simulation_support.py, preserved the public simulator API in energy_ml/load_simulation.py, and validated with .venv pytest on tests/unit/test_feature_engineering_and_load_utils.py. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 89.3,
+          "strict": 89.5,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 54,
-        "description": "54 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 53,
+        "description": "53 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 261,
+        "total_count": 260,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -304,7 +304,7 @@
             10,
             11
           ],
-          "file_count": 80,
+          "file_count": 79,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -376,8 +376,8 @@
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 87.7,
-      "gap": 7.3,
+      "current": 87.8,
+      "gap": 7.2,
       "state": "below",
       "warning": null
     },
