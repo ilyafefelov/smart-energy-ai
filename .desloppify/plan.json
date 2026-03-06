@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T18:25:54+00:00",
+  "updated": "2026-03-06T18:26:15+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -6252,6 +6252,22 @@
         "status": "fixed",
         "attestation": "I have actually Added focused tests for decimal parsing, OREE HTML table extraction, and CLI success and error JSON output. and I am not gaming the score."
       }
+    },
+    {
+      "timestamp": "2026-03-06T18:26:15+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "test_coverage::scripts/combine_datasets.py::untested_module",
+        "test_coverage::scripts/create_notion_docs.py::untested_module",
+        "test_coverage::scripts/fetch_oree_data_view.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused coverage for combine_datasets, fetch_oree_data_view, and create_notion_docs script surfaces.",
+      "detail": {
+        "sha": "5dce69e3b907",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -6516,13 +6532,21 @@
       "recorded_at": "2026-03-06T17:41:01+00:00",
       "note": "Added recalculate pipeline coverage for config loading, result persistence, and orchestration paths.",
       "cluster_name": null
+    },
+    {
+      "sha": "5dce69e3b907",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "test_coverage::scripts/combine_datasets.py::untested_module",
+        "test_coverage::scripts/create_notion_docs.py::untested_module",
+        "test_coverage::scripts/fetch_oree_data_view.py::untested_module"
+      ],
+      "recorded_at": "2026-03-06T18:26:15+00:00",
+      "note": "Added focused coverage for combine_datasets, fetch_oree_data_view, and create_notion_docs script surfaces.",
+      "cluster_name": null
     }
   ],
-  "uncommitted_issues": [
-    "test_coverage::scripts/combine_datasets.py::untested_module",
-    "test_coverage::scripts/create_notion_docs.py::untested_module",
-    "test_coverage::scripts/fetch_oree_data_view.py::untested_module"
-  ],
+  "uncommitted_issues": [],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
 }
