@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T18:31:38+00:00",
+  "updated": "2026-03-06T18:35:49+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -658,8 +658,8 @@
     "test_coverage::scripts/run_tests.py::untested_module": {
       "issue_id": "test_coverage::scripts/run_tests.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T18:35:49+00:00"
     },
     "test_coverage::src/comprehensive_energy_scraper.py::untested_critical": {
       "issue_id": "test_coverage::src/comprehensive_energy_scraper.py::untested_critical",
@@ -934,8 +934,8 @@
     "test_coverage::scripts/read_dagster_schedule.py::untested_module": {
       "issue_id": "test_coverage::scripts/read_dagster_schedule.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T18:35:30+00:00"
     },
     "test_coverage::energy_ml/assets/tariff_optimization.py::untested_module": {
       "issue_id": "test_coverage::energy_ml/assets/tariff_optimization.py::untested_module",
@@ -958,8 +958,8 @@
     "test_coverage::scripts/reconcile_optimization_history.py::untested_critical": {
       "issue_id": "test_coverage::scripts/reconcile_optimization_history.py::untested_critical",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T18:35:40+00:00"
     },
     "test_coverage::src/training_analyzer.py::untested_module": {
       "issue_id": "test_coverage::src/training_analyzer.py::untested_module",
@@ -2192,7 +2192,6 @@
         "test_coverage::src/physics/battery_lfp.py::untested_module",
         "test_coverage::src/optimizer_v2.py::untested_module",
         "test_coverage::src/generate_business_plot.py::untested_module",
-        "test_coverage::scripts/run_tests.py::untested_module",
         "test_coverage::src/comprehensive_energy_scraper.py::untested_critical",
         "test_coverage::src/dagster_api/models.py::untested_module",
         "test_coverage::src/data_fetcher.py::untested_critical",
@@ -2219,8 +2218,6 @@
         "test_coverage::src/assets/core/optimization_schedule_milp.py::untested_module",
         "test_coverage::src/engines/selection.py::untested_module",
         "test_coverage::src/assets/core/price_forecast.py::untested_module",
-        "test_coverage::scripts/read_dagster_schedule.py::untested_module",
-        "test_coverage::scripts/reconcile_optimization_history.py::untested_critical",
         "test_coverage::src/training_analyzer.py::untested_module",
         "test_coverage::src/hybrid_ml_controller.py::untested_module",
         "test_coverage::src/oree_effective_scraper.py::untested_module",
@@ -6444,6 +6441,81 @@
         "sha": "c297f0450b90",
         "branch": "chore/desloppify-quality-pass"
       }
+    },
+    {
+      "timestamp": "2026-03-06T18:35:29+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::scripts/read_dagster_schedule.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for schedule selection, normalization helpers, and main success and missing-asset JSON outputs.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T18:35:30+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::scripts/read_dagster_schedule.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for schedule selection, normalization helpers, and main success and missing-asset JSON outputs.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused tests for schedule selection, normalization helpers, and main success and missing-asset JSON outputs. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T18:35:39+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::scripts/reconcile_optimization_history.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for tariff windows, canonical cost computation, reconciliation stats, and CLI JSON output with a stubbed engine.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T18:35:40+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::scripts/reconcile_optimization_history.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for tariff windows, canonical cost computation, reconciliation stats, and CLI JSON output with a stubbed engine.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused tests for tariff windows, canonical cost computation, reconciliation stats, and CLI JSON output with a stubbed engine. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T18:35:47+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::scripts/run_tests.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for subprocess command handling, environment checks, dispatch, and summary exit behavior.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T18:35:49+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::scripts/run_tests.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused tests for subprocess command handling, environment checks, dispatch, and summary exit behavior.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused tests for subprocess command handling, environment checks, dispatch, and summary exit behavior. and I am not gaming the score."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -6746,7 +6818,11 @@
       "cluster_name": null
     }
   ],
-  "uncommitted_issues": [],
+  "uncommitted_issues": [
+    "test_coverage::scripts/read_dagster_schedule.py::untested_module",
+    "test_coverage::scripts/reconcile_optimization_history.py::untested_critical",
+    "test_coverage::scripts/run_tests.py::untested_module"
+  ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
 }
