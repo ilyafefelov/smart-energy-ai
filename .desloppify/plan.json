@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T19:27:58+00:00",
+  "updated": "2026-03-06T19:28:23+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -7132,6 +7132,22 @@
         "status": "fixed",
         "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_dagster_api_helper_modules.py, and I am not gaming the score by resolving without fixing."
       }
+    },
+    {
+      "timestamp": "2026-03-06T19:28:23+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "test_coverage::src/dagster_api/models.py::untested_module",
+        "test_coverage::src/dagster_api/store_results.py::untested_module",
+        "test_coverage::src/dagster_api/trigger.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Covered models, store_results, and trigger with focused pytest coverage in tests/unit/test_dagster_api_helper_modules.py.",
+      "detail": {
+        "sha": "35553ef893f8",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -7516,13 +7532,21 @@
       "recorded_at": "2026-03-06T19:16:12+00:00",
       "note": "Covered asset_service, cli, and database with focused pytest coverage in tests/unit/test_dagster_api_service_modules.py.",
       "cluster_name": null
+    },
+    {
+      "sha": "35553ef893f8",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "test_coverage::src/dagster_api/models.py::untested_module",
+        "test_coverage::src/dagster_api/store_results.py::untested_module",
+        "test_coverage::src/dagster_api/trigger.py::untested_module"
+      ],
+      "recorded_at": "2026-03-06T19:28:23+00:00",
+      "note": "Covered models, store_results, and trigger with focused pytest coverage in tests/unit/test_dagster_api_helper_modules.py.",
+      "cluster_name": null
     }
   ],
-  "uncommitted_issues": [
-    "test_coverage::src/dagster_api/models.py::untested_module",
-    "test_coverage::src/dagster_api/store_results.py::untested_module",
-    "test_coverage::src/dagster_api/trigger.py::untested_module"
-  ],
+  "uncommitted_issues": [],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
 }
