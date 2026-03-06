@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/mlops/feature_store.py"
+    "structural::energy_ml/mlops/model_registry.py"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/mlops/feature_store.py"
+    "structural::energy_ml/mlops/model_registry.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
   "overall_score": 88.3,
-  "objective_score": 93.9,
+  "objective_score": 94.0,
   "strict_score": 87.9,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 88.2,
+  "prev_overall_score": 88.3,
   "prev_objective_score": 93.9,
-  "prev_strict_score": 87.8,
+  "prev_strict_score": 87.9,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually I split feature-store schema, metadata, and synthetic feature-generation helpers into energy_ml/mlops/feature_store_support.py, preserved the public FeatureStore and ParquetSource APIs with a direct-file fallback loader in energy_ml/mlops/feature_store.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py -k feature_store. and I am not gaming the score.",
+  "attestation": "I have actually extracted version-id generation, model metadata serialization, health checks, staging and production validation, and registry JSON persistence into model_registry_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 90.3,
+          "strict": 90.6,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 49,
-        "description": "49 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 48,
+        "description": "48 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 256,
+        "total_count": 255,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -351,7 +351,7 @@
       }
     },
     "debt": {
-      "overall_gap": 0.1,
+      "overall_gap": 0.2,
       "wontfix_count": 147,
       "worst_dimension": "Code quality",
       "worst_gap": 5.5,
@@ -371,7 +371,7 @@
       {
         "type": "wontfix_gap",
         "severity": "high",
-        "message": "Strict/lenient gap is 0.1 pts with 147 wontfix issues"
+        "message": "Strict/lenient gap is 0.2 pts with 147 wontfix issues"
       }
     ],
     "strict_target": {

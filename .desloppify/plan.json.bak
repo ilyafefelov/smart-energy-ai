@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T22:34:13+00:00",
+  "updated": "2026-03-06T22:40:08+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -8310,6 +8310,45 @@
         "status": "fixed",
         "attestation": "I have actually I split feature-store schema, metadata, and synthetic feature-generation helpers into energy_ml/mlops/feature_store_support.py, preserved the public FeatureStore and ParquetSource APIs with a direct-file fallback loader in energy_ml/mlops/feature_store.py, and validated with .venv pytest on tests/unit/test_ml_integration_surface.py -k feature_store. and I am not gaming the score."
       }
+    },
+    {
+      "timestamp": "2026-03-06T22:34:28+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/mlops/feature_store.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "475addcf9d25",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T22:40:06+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/mlops/model_registry.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted version-id generation, metadata serialization, health evaluation, deployment validation, and registry JSON helpers into model_registry_support.py while keeping ModelRegistry and ModelVersion as the public API surface.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T22:40:08+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/mlops/model_registry.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted version-id generation, metadata serialization, health evaluation, deployment validation, and registry JSON helpers into model_registry_support.py while keeping ModelRegistry and ModelVersion as the public API surface.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually extracted version-id generation, model metadata serialization, health checks, staging and production validation, and registry JSON persistence into model_registry_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -8954,10 +8993,20 @@
       "recorded_at": "2026-03-06T22:29:46+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "475addcf9d25",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/mlops/feature_store.py"
+      ],
+      "recorded_at": "2026-03-06T22:34:28+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/mlops/feature_store.py"
+    "structural::energy_ml/mlops/model_registry.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
