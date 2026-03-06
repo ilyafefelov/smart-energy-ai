@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T22:53:57+00:00",
+  "updated": "2026-03-06T23:02:25+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -8466,6 +8466,45 @@
         "status": "fixed",
         "attestation": "I have actually extracted the serving API shaping and simulation helpers into serving_api_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing."
       }
+    },
+    {
+      "timestamp": "2026-03-06T22:54:16+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/mlops/serving_api.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "c6a06ab5ffd6",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T23:02:24+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/mlops/retraining_pipeline.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted drift-statistics math, retraining-trigger evaluation, training-data preparation, training metric construction, and A/B test configuration and analysis helpers into retraining_pipeline_support.py while preserving the public DriftDetector, ModelMonitor, RetrainingPipeline, and ABTestManager APIs.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T23:02:25+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/mlops/retraining_pipeline.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted drift-statistics math, retraining-trigger evaluation, training-data preparation, training metric construction, and A/B test configuration and analysis helpers into retraining_pipeline_support.py while preserving the public DriftDetector, ModelMonitor, RetrainingPipeline, and ABTestManager APIs.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually extracted the retraining, drift, and A/B helper logic into retraining_pipeline_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -9150,10 +9189,20 @@
       "recorded_at": "2026-03-06T22:48:25+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "c6a06ab5ffd6",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/mlops/serving_api.py"
+      ],
+      "recorded_at": "2026-03-06T22:54:16+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/mlops/serving_api.py"
+    "structural::energy_ml/mlops/retraining_pipeline.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
