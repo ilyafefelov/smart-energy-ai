@@ -2,12 +2,48 @@
 
 These assets generate real-time recommendations and monitor model performance.
 """
+import importlib.util
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, Any, List
-from dagster import asset, Output, Definitions
+from datetime import datetime
+from typing import Dict, Any
+from dagster import asset, Output
 import logging
+from pathlib import Path
+import sys
+
+
+def _load_support_module():
+    try:
+        from energy_ml.energy_ml.assets import recommendation_support as support_module
+
+        return support_module
+    except Exception:
+        support_path = Path(__file__).with_name("recommendation_support.py")
+        module_name = "energy_ml.energy_ml.assets.recommendation_support"
+        existing_module = sys.modules.get(module_name)
+        if existing_module is not None:
+            return existing_module
+
+        spec = importlib.util.spec_from_file_location(module_name, support_path)
+        module = importlib.util.module_from_spec(spec)
+        assert spec is not None and spec.loader is not None
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+
+
+_SUPPORT_MODULE = _load_support_module()
+build_dashboard_response = _SUPPORT_MODULE.build_dashboard_response
+build_definitions = _SUPPORT_MODULE.build_definitions
+build_fallback_recommendation = _SUPPORT_MODULE.build_fallback_recommendation
+build_fallback_schedule = _SUPPORT_MODULE.build_fallback_schedule
+build_lineage_output = _SUPPORT_MODULE.build_lineage_output
+build_monitoring_frame = _SUPPORT_MODULE.build_monitoring_frame
+build_retraining_frame = _SUPPORT_MODULE.build_retraining_frame
+predict_current_recommendation = _SUPPORT_MODULE.predict_current_recommendation
+predict_schedule = _SUPPORT_MODULE.predict_schedule
+utc_now = _SUPPORT_MODULE.utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -27,86 +63,42 @@ def current_recommendation(
     
     if 'error' in xgboost_trained_model:
         logger.error(f"❌ Model not available: {xgboost_trained_model['error']}")
+        fallback_frame, fallback_metadata = build_fallback_recommendation(
+            'Model not available, defaulting to HOLD',
+            'fallback',
+        )
         return Output(
-            pd.DataFrame({
-                'recommendation': ['HOLD'],
-                'confidence': [0.5],
-                'rationale': ['Model not available, defaulting to HOLD'],
-            }),
-            metadata={"status": "fallback"}
+            fallback_frame,
+            metadata=fallback_metadata,
         )
     
     try:
         model = xgboost_trained_model['model']
-        
-        # Get latest features (most recent row)
-        latest_features = feature_matrix.iloc[-1:].select_dtypes(include=[np.number])
-        
-        # Get prediction
-        action_code = model.predict(latest_features)[0]
-        action_names = ['BUY', 'SELL', 'HOLD', 'DISCHARGE']
-        action = action_names[action_code]
-        
-        # Get prediction probability (confidence)
-        try:
-            probabilities = model.predict_proba(latest_features)[0]
-            confidence = float(probabilities[action_code])
-        except:
-            confidence = 0.75  # Default if probabilities not available
-        
-        # Generate rationale
-        current_price = feature_matrix.iloc[-1].get('price_uah_kwh', 14.26)
-        current_soc = feature_matrix.iloc[-1].get('soc_percent', 75.0)
-        
-        rationale_factors = []
-        if action == 'BUY':
-            rationale_factors.append(f"Price {current_price:.2f} ₴/kWh is low")
-            if current_soc < 80:
-                rationale_factors.append(f"Battery SOC {current_soc:.0f}% has capacity")
-        elif action == 'SELL':
-            rationale_factors.append(f"Price {current_price:.2f} ₴/kWh is high")
-            rationale_factors.append("Good time to export")
-        elif action == 'DISCHARGE':
-            rationale_factors.append(f"Price {current_price:.2f} ₴/kWh is very high")
-            rationale_factors.append(f"Battery SOC {current_soc:.0f}% has excess charge")
-        else:  # HOLD
-            rationale_factors.append("Market conditions neutral")
-            rationale_factors.append("Continue current state")
-        
-        rationale = " • ".join(rationale_factors)
+        recommendation_frame, recommendation_metadata, log_data = predict_current_recommendation(
+            model,
+            feature_matrix,
+        )
         
         logger.info(f"✅ Recommendation generated:")
-        logger.info(f"   Action: {action}")
-        logger.info(f"   Confidence: {confidence:.2%}")
-        logger.info(f"   Rationale: {rationale}")
+        logger.info(f"   Action: {log_data['action']}")
+        logger.info(f"   Confidence: {log_data['confidence']:.2%}")
+        logger.info(f"   Rationale: {log_data['rationale']}")
         
         return Output(
-            pd.DataFrame({
-                'timestamp': [datetime.utcnow()],
-                'recommendation': [action],
-                'confidence': [confidence],
-                'confidence_percent': [round(confidence * 100)],
-                'rationale': [rationale],
-                'current_price_uah_kwh': [current_price],
-                'current_soc_percent': [current_soc],
-            }),
-            metadata={
-                "recommendation": action,
-                "confidence_percent": round(confidence * 100),
-                "current_price_uah_kwh": round(current_price, 2),
-                "current_soc_percent": round(current_soc, 1),
-            }
+            recommendation_frame,
+            metadata=recommendation_metadata,
         )
     
     except Exception as e:
         logger.error(f"❌ Recommendation generation failed: {e}")
+        fallback_frame, fallback_metadata = build_fallback_recommendation(
+            f'Error: {str(e)}',
+            'error',
+        )
+        fallback_metadata['error'] = str(e)
         return Output(
-            pd.DataFrame({
-                'recommendation': ['HOLD'],
-                'confidence': [0.5],
-                'rationale': [f'Error: {str(e)}'],
-            }),
-            metadata={"status": "error", "error": str(e)}
+            fallback_frame,
+            metadata=fallback_metadata,
         )
 
 
@@ -126,89 +118,33 @@ def schedule_24h(
     
     if 'error' in xgboost_trained_model:
         logger.warning("⚠️ Using fallback schedule")
-        schedule = pd.DataFrame({
-            'hour': range(24),
-            'recommended_action': ['HOLD'] * 24,
-            'expected_profit_uah': [0.0] * 24,
-        })
-        return Output(schedule, metadata={"status": "fallback"})
+        schedule, fallback_metadata = build_fallback_schedule('fallback')
+        return Output(schedule, metadata=fallback_metadata)
     
     try:
         model = xgboost_trained_model['model']
-        
-        # Use forecast data to predict actions for next 24 hours
-        action_names = ['BUY', 'SELL', 'HOLD', 'DISCHARGE']
-        
-        schedule_data = []
-        current_hour = datetime.now().hour
-        
-        for hour_offset in range(24):
-            hour = (current_hour + hour_offset) % 24
-            
-            # Get forecast features for this hour (if available)
-            if hour_offset < len(weather_forecast):
-                forecast_row = weather_forecast.iloc[hour_offset:hour_offset+1].select_dtypes(include=[np.number])
-                
-                # Combine with static features from current feature matrix
-                latest = feature_matrix.iloc[-1:].select_dtypes(include=[np.number])
-                
-                # Simple merge (in production, would properly combine)
-                try:
-                    combined = latest.copy()
-                    combined['hour'] = hour
-                    
-                    prediction = model.predict(combined)[0]
-                    action = action_names[prediction]
-                except:
-                    action = 'HOLD'
-            else:
-                action = 'HOLD'
-            
-            # Estimate profit for this hour
-            if action == 'BUY':
-                expected_profit = -14.0  # Cost
-            elif action == 'SELL':
-                expected_profit = 11.0  # Revenue
-            elif action == 'DISCHARGE':
-                expected_profit = 12.0  # Revenue
-            else:
-                expected_profit = 0.0
-            
-            schedule_data.append({
-                'hour': hour,
-                'time': f"{hour:02d}:00",
-                'recommended_action': action,
-                'expected_profit_uah': expected_profit,
-                'confidence': np.random.uniform(0.65, 0.85),  # Placeholder
-            })
-        
-        schedule = pd.DataFrame(schedule_data)
-        total_expected = schedule['expected_profit_uah'].sum()
+        schedule, schedule_metadata = predict_schedule(
+            model,
+            feature_matrix,
+            weather_forecast,
+            datetime.now().hour,
+        )
         
         logger.info(f"✅ 24-hour schedule generated:")
-        logger.info(f"   Total expected profit: {total_expected:.2f} ₴")
+        logger.info(f"   Total expected profit: {schedule_metadata['total_expected_profit']:.2f} ₴")
         logger.info(f"   Buy hours: {(schedule['recommended_action'] == 'BUY').sum()}")
         logger.info(f"   Sell hours: {(schedule['recommended_action'] == 'SELL').sum()}")
         logger.info(f"   Discharge hours: {(schedule['recommended_action'] == 'DISCHARGE').sum()}")
         
         return Output(
             schedule,
-            metadata={
-                "total_expected_profit": round(total_expected, 2),
-                "buy_hours": int((schedule['recommended_action'] == 'BUY').sum()),
-                "sell_hours": int((schedule['recommended_action'] == 'SELL').sum()),
-            }
+            metadata=schedule_metadata,
         )
     
     except Exception as e:
         logger.error(f"❌ Schedule generation failed: {e}")
-        schedule = pd.DataFrame({
-            'hour': range(24),
-            'time': [f"{h:02d}:00" for h in range(24)],
-            'recommended_action': ['HOLD'] * 24,
-            'expected_profit_uah': [0.0] * 24,
-        })
-        return Output(schedule, metadata={"status": "error"})
+        schedule, error_metadata = build_fallback_schedule('error')
+        return Output(schedule, metadata=error_metadata)
 
 
 @asset(
@@ -225,43 +161,15 @@ def performance_monitoring(
     logger.info("📊 Monitoring performance...")
     
     try:
-        # Get current metrics
-        test_acc_vals = model_evaluation[model_evaluation['metric'] == 'test_accuracy']['value'].values
-        current_accuracy = float(test_acc_vals[0]) if len(test_acc_vals) > 0 else 0
-        
-        # Set thresholds
-        accuracy_threshold = 0.60
-        drift_threshold = 0.10  # 10% drop from baseline
-        
-        monitoring = {
-            'metric': [
-                'Current Test Accuracy',
-                'Accuracy Threshold',
-                'Status',
-                'Drift Detection',
-                'Recommended Action',
-            ],
-            'value': [
-                f"{current_accuracy:.2%}",
-                f"{accuracy_threshold:.2%}",
-                '✅ PASS' if current_accuracy > accuracy_threshold else '❌ FAIL',
-                '⚠️ Monitor' if current_accuracy < (accuracy_threshold + drift_threshold) else '✅ OK',
-                'Continue monitoring' if current_accuracy > accuracy_threshold else 'Retrain model',
-            ]
-        }
-        
-        monitoring_df = pd.DataFrame(monitoring)
+        monitoring_df, monitoring_metadata, monitoring_summary = build_monitoring_frame(model_evaluation)
         
         logger.info(f"✅ Performance monitoring:")
-        logger.info(f"   Current accuracy: {current_accuracy:.2%}")
-        logger.info(f"   Status: {'PASS' if current_accuracy > accuracy_threshold else 'FAIL'}")
+        logger.info(f"   Current accuracy: {monitoring_summary['current_accuracy']:.2%}")
+        logger.info(f"   Status: {'PASS' if 'PASS' in monitoring_summary['status'] else 'FAIL'}")
         
         return Output(
             monitoring_df,
-            metadata={
-                "current_accuracy": round(current_accuracy, 4),
-                "status": "pass" if current_accuracy > accuracy_threshold else "fail",
-            }
+            metadata=monitoring_metadata,
         )
     
     except Exception as e:
@@ -288,46 +196,7 @@ def retraining_triggers(
     
     logger.info("🔄 Checking retraining triggers...")
     
-    triggers = {
-        'trigger_name': [],
-        'triggered': [],
-        'reason': [],
-    }
-    
-    # Check 1: Accuracy drop
-    perf_rows = performance_monitoring[performance_monitoring['metric'] == 'Status']
-    if len(perf_rows) > 0:
-        status = perf_rows.iloc[0]['value']
-        if '❌' in status:
-            triggers['trigger_name'].append('Low Accuracy')
-            triggers['triggered'].append('YES')
-            triggers['reason'].append('Test accuracy below threshold')
-    
-    # Check 2: Scheduled retraining (weekly)
-    now = datetime.now()
-    if now.weekday() == 0:  # Monday
-        triggers['trigger_name'].append('Weekly Scheduled')
-        triggers['triggered'].append('YES')
-        triggers['reason'].append('Weekly retraining schedule')
-    else:
-        triggers['trigger_name'].append('Weekly Scheduled')
-        triggers['triggered'].append('NO')
-        triggers['reason'].append('Next scheduled: Monday')
-    
-    # Check 3: Settings changed
-    triggers['trigger_name'].append('Settings Changed')
-    triggers['triggered'].append('NO')
-    triggers['reason'].append('No setting changes detected')
-    
-    # Check 4: Data drift
-    triggers['trigger_name'].append('Data Drift')
-    triggers['triggered'].append('NO')
-    triggers['reason'].append('No significant feature distribution changes')
-    
-    triggers_df = pd.DataFrame(triggers)
-    
-    # Overall decision
-    needs_retraining = triggers_df['triggered'].str.contains('YES').any()
+    triggers_df, trigger_metadata, needs_retraining = build_retraining_frame(performance_monitoring)
     
     logger.info(f"✅ Retraining check complete:")
     logger.info(f"   Needs retraining: {'YES' if needs_retraining else 'NO'}")
@@ -335,10 +204,7 @@ def retraining_triggers(
     
     return Output(
         triggers_df,
-        metadata={
-            "needs_retraining": "yes" if needs_retraining else "no",
-            "triggered_count": int(triggers_df['triggered'].str.contains('YES').sum()),
-        }
+        metadata=trigger_metadata,
     )
 
 
@@ -357,61 +223,16 @@ def recommendation_metadata(
     logger.info("📝 Generating recommendation metadata...")
     
     try:
-        timestamp = datetime.utcnow()
-        
-        metadata = {
-            'data_provenance': [
-                'Weather API (updated 14:30)',
-                'Price OREE (updated 14:25)',
-                'Battery BMS (updated 14:27)',
-                'Solar model (calculated 14:28)',
-                'Wind model (calculated 14:28)',
-            ],
-            'feature_matrix': [
-                f'73 features engineered',
-                'Last updated: 14:31',
-                'Features normalized (z-score)',
-            ],
-            'model_info': [
-                'XGBoost classifier',
-                'Trained: 2026-02-07 14:00',
-                'Accuracy: 72.5% (test set)',
-            ],
-            'recommendation_details': [
-                f'Generated: {timestamp.strftime("%Y-%m-%d %H:%M:%S")}',
-                f'Confidence: {current_recommendation["confidence"].values[0]:.2%}',
-                f'Action: {current_recommendation["recommendation"].values[0]}',
-            ]
-        }
-        
-        metadata_lines = []
-        for category, items in metadata.items():
-            metadata_lines.append(f"## {category.replace('_', ' ').title()}")
-            for item in items:
-                metadata_lines.append(f"- {item}")
-            metadata_lines.append("")
-        
-        metadata_str = "\n".join(metadata_lines)
+        lineage_frame, lineage_metadata, lineage_summary = build_lineage_output(current_recommendation)
         
         logger.info(f"✅ Metadata generated:")
-        logger.info(f"   Timestamp: {timestamp}")
-        logger.info(f"   Data sources: 5")
-        logger.info(f"   Features: 73")
-
-        components = list(metadata.keys())
-        details = [" | ".join(items) for items in metadata.values()]
+        logger.info(f"   Timestamp: {lineage_summary['timestamp']}")
+        logger.info(f"   Data sources: {lineage_summary['data_sources']}")
+        logger.info(f"   Features: {lineage_summary['features']}")
         
         return Output(
-            pd.DataFrame({
-                'component': components,
-                'details': details,
-                'lineage_text': [metadata_str] * len(components),
-            }),
-            metadata={
-                "timestamp": timestamp.isoformat(),
-                "data_sources": 5,
-                "total_features": 73,
-            }
+            lineage_frame,
+            metadata=lineage_metadata,
         )
     
     except Exception as e:
@@ -440,43 +261,11 @@ def dashboard_recommendation_api_response(
     logger.info("📡 Formatting API response...")
     
     try:
-        rec = current_recommendation.iloc[0]
-        
-        api_response = {
-            'status': 'success',
-            'timestamp': datetime.utcnow().isoformat(),
-            'recommendation': {
-                'action': rec['recommendation'],
-                'confidence': float(rec['confidence']),
-                'confidence_percent': int(rec['confidence_percent']),
-                'rationale': rec['rationale'],
-            },
-            'current_state': {
-                'price_uah_kwh': float(rec['current_price_uah_kwh']),
-                'battery_soc_percent': float(rec['current_soc_percent']),
-                'time': datetime.now().strftime('%H:%M:%S'),
-            },
-            'schedule_24h': {
-                'total_expected_profit': float(schedule_24h['expected_profit_uah'].sum()),
-                'buy_hours': int((schedule_24h['recommended_action'] == 'BUY').sum()),
-                'sell_hours': int((schedule_24h['recommended_action'] == 'SELL').sum()),
-                'discharge_hours': int((schedule_24h['recommended_action'] == 'DISCHARGE').sum()),
-            },
-            'model_info': {
-                'type': 'XGBoost',
-                'version': '1.0',
-                'last_trained': '2026-02-07T14:00:00Z',
-            },
-            'lineage': {
-                'data_sources': 5,
-                'total_features': 73,
-                'data_provenance': 'Full lineage available',
-            },
-            'monitoring': {
-                'needs_retraining': bool(retraining_triggers['triggered'].str.contains('YES').any()),
-                'triggered_checks': int(retraining_triggers['triggered'].str.contains('YES').sum()),
-            }
-        }
+        api_response, response_metadata = build_dashboard_response(
+            current_recommendation,
+            schedule_24h,
+            retraining_triggers,
+        )
         
         logger.info(f"✅ API response formatted:")
         logger.info(f"   Action: {api_response['recommendation']['action']}")
@@ -485,11 +274,7 @@ def dashboard_recommendation_api_response(
         
         return Output(
             api_response,
-            metadata={
-                "action": api_response['recommendation']['action'],
-                "confidence_percent": api_response['recommendation']['confidence_percent'],
-                "status": "success",
-            }
+            metadata=response_metadata,
         )
     
     except Exception as e:
@@ -504,8 +289,8 @@ def dashboard_recommendation_api_response(
 
 
 # Create Definitions object for Dagster
-defs = Definitions(
-    assets=[
+defs = build_definitions(
+    [
         current_recommendation,
         schedule_24h,
         performance_monitoring,
