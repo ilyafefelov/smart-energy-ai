@@ -12,6 +12,12 @@ import {
   normalizeLoadProfileType,
   normalizeOptimizationStrategy,
 } from '../../utils/auto-strategy'
+import {
+  buildStrictDagsterTenantPredicate,
+  dagsterAssetResultsHasTenantColumn,
+  dagsterAssetResultsTableExists,
+  resolveDagsterAssetResultsDbConfig,
+} from '../../utils/dagster-asset-results'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 const DAGSTER_API = process.env.DAGSTER_API_URL || 'http://localhost:3000'
@@ -234,16 +240,6 @@ function maybeTriggerHybridDagsterRefresh(params: {
   }
 }
 
-function resolveDagsterDbConfig() {
-  return {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    user: process.env.DB_USER || 'dagster',
-    password: process.env.DB_PASSWORD || 'dagster',
-    database: process.env.DB_NAME || 'dagster',
-  }
-}
-
 async function queryDagsterStatus() {
   try {
     const dagsterQuery = await $fetch<any>(`${DAGSTER_API}/graphql`, {
@@ -293,7 +289,19 @@ async function readDagsterRecommendationFromPostgres(tenantId: string): Promise<
 
   try {
     const { Pool } = await import('pg')
-    pool = new Pool(resolveDagsterDbConfig())
+    pool = new Pool(resolveDagsterAssetResultsDbConfig())
+
+    if (!(await dagsterAssetResultsTableExists(pool))) {
+      return null
+    }
+
+    const hasTenantColumn = await dagsterAssetResultsHasTenantColumn(pool)
+    if (!hasTenantColumn) {
+      console.warn('[recommendation] asset_results is missing required tenant_id enforcement')
+      return null
+    }
+
+    const tenantPredicate = buildStrictDagsterTenantPredicate()
 
     const result = await pool.query(
       `
@@ -301,7 +309,7 @@ async function readDagsterRecommendationFromPostgres(tenantId: string): Promise<
         FROM asset_results
         WHERE asset_name = ANY($1)
           AND status = 'success'
-          AND COALESCE(data->>'tenant_id', '') = $2
+          AND ${tenantPredicate}
         ORDER BY materialization_time DESC
         LIMIT 1
       `,

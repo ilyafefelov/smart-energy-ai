@@ -13,6 +13,7 @@ class AssetResult:
     """Represents the result of a materialized asset."""
     asset_name: str
     run_id: str
+    tenant_id: Optional[str]
     materialization_time: datetime
     data: Dict[str, Any]
     status: str = "success"

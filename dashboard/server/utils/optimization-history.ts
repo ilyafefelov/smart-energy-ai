@@ -70,6 +70,8 @@ type DbConfig = {
 
 let pool: any | null = null
 let initPromise: Promise<any | null> | null = null
+let schemaInitializationPromise: Promise<void> | null = null
+let schemaInitialized = false
 
 function normalizeNullableText(value: unknown): string | null {
   if (typeof value !== 'string') {
@@ -127,36 +129,6 @@ export function resolveOptimizationDbConfig(): DbConfig {
     password: process.env.APP_DB_PASSWORD || process.env.DB_PASSWORD || 'dagster',
     database: sanitizeDbIdentifier(database),
   }
-}
-
-async function ensureDatabaseExists(config: DbConfig): Promise<void> {
-  const adminDbs = ['postgres', 'dagster']
-
-  for (const adminDb of adminDbs) {
-    const adminPool = new Pool({
-      host: config.host,
-      port: config.port,
-      user: config.user,
-      password: config.password,
-      database: adminDb,
-    })
-
-    try {
-      const existsResult = await adminPool.query('SELECT 1 FROM pg_database WHERE datname = $1', [config.database])
-      if (existsResult.rowCount === 0) {
-        await adminPool.query(`CREATE DATABASE ${config.database}`)
-      }
-      return
-    } catch {
-      // Try the next admin DB target.
-    } finally {
-      await adminPool.end().catch(() => {})
-    }
-  }
-
-  // Do not hard-fail here. In some environments admin DB access is restricted,
-  // but the target application DB already exists and is reachable.
-  console.warn('[optimization-history] Admin DB checks unavailable; will try target DB connection directly')
 }
 
 async function ensureSchema(optimizationPool: any): Promise<void> {
@@ -277,7 +249,6 @@ async function getOptimizationPool(): Promise<any | null> {
   initPromise = (async () => {
     try {
       const config = resolveOptimizationDbConfig()
-      await ensureDatabaseExists(config)
 
       const poolConfig = {
         host: config.host,
@@ -288,7 +259,6 @@ async function getOptimizationPool(): Promise<any | null> {
       }
 
       const createdPool = new Pool(poolConfig)
-      await ensureSchema(createdPool)
       pool = createdPool
       return createdPool
     } catch (error) {
@@ -302,9 +272,45 @@ async function getOptimizationPool(): Promise<any | null> {
   return initPromise
 }
 
+export async function initializeOptimizationHistory(): Promise<void> {
+  if (schemaInitialized) {
+    return
+  }
+
+  if (schemaInitializationPromise) {
+    return schemaInitializationPromise
+  }
+
+  schemaInitializationPromise = (async () => {
+    const optimizationPool = await getOptimizationPool()
+    if (!optimizationPool) {
+      throw new Error('optimization pool unavailable')
+    }
+
+    await ensureSchema(optimizationPool)
+    schemaInitialized = true
+  })()
+
+  try {
+    await schemaInitializationPromise
+  } finally {
+    schemaInitializationPromise = null
+  }
+}
+
 export async function persistOptimizationHistory(
   entry: OptimizationHistoryInsert,
 ): Promise<PersistOptimizationHistoryResult> {
+  if (!schemaInitialized) {
+    return {
+      ok: false,
+      inserted: false,
+      updated: false,
+      executionKey: entry.execution_key,
+      error: 'optimization history schema not initialized',
+    }
+  }
+
   const optimizationPool = await getOptimizationPool()
   if (!optimizationPool) {
     return {

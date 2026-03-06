@@ -12,6 +12,7 @@ import { promisify } from 'util'
 import path from 'path'
 import { existsSync } from 'fs'
 import { eventHandler, readBody } from 'h3'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 const execAsync = promisify(exec)
 const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === 'win32' ? 'python' : 'python3')
@@ -52,6 +53,18 @@ function resolveProjectRoot(): string {
   return path.resolve(cwd, '..')
 }
 
+function resolveTenantConfig(projectRoot: string, tenantId: string, defaultTenantId: string) {
+  const tenantConfigDir = path.join(projectRoot, 'energy_ml', 'configs', 'tenants', tenantId)
+  const tenantConfigPath = path.join(tenantConfigDir, 'user_config.json')
+  const legacyConfigDir = path.join(projectRoot, 'energy_ml', 'configs')
+
+  if (existsSync(tenantConfigPath)) {
+    return tenantConfigDir
+  }
+
+  return tenantId === defaultTenantId ? legacyConfigDir : tenantConfigDir
+}
+
 function parseJsonFromPythonStdout(stdout: string): any {
   const trimmed = stdout.trim()
   if (!trimmed) {
@@ -74,15 +87,20 @@ function parseJsonFromPythonStdout(stdout: string): any {
   throw new Error('Unable to parse Python JSON response')
 }
 
-export default eventHandler(async (event): Promise<OptimizationStrategyResponse> => {
+export default eventHandler(async (event): Promise<OptimizationStrategyResponse & { tenant?: ReturnType<typeof getTenantResponseMetadata> }> => {
   try {
     const body = await readBody(event) as OptimizationStrategyRequest
+    const tenant = await resolveTenantContext(event, {
+      body: body as Record<string, any>,
+      requireTrustedOverride: true,
+    })
     
     if (!body.strategy) {
       throw new Error('Strategy is required')
     }
     
     const projectRoot = resolveProjectRoot()
+    const tenantConfigDir = resolveTenantConfig(projectRoot, tenant.id, tenant.defaultTenantId)
     const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
     if (!existsSync(pythonScript)) {
       throw new Error(`Python script not found at ${pythonScript}`)
@@ -104,6 +122,11 @@ export default eventHandler(async (event): Promise<OptimizationStrategyResponse>
       cwd: projectRoot,
       timeout: 15000, // 15 second timeout
       maxBuffer: 1024 * 1024,
+      env: {
+        ...process.env,
+        ENERGY_ML_CONFIG_DIR: tenantConfigDir,
+        ENERGY_ML_TENANT_ID: tenant.id,
+      },
     })
     
     if (stderr) {
@@ -132,10 +155,18 @@ export default eventHandler(async (event): Promise<OptimizationStrategyResponse>
     }
     
     console.log(`[Optimization API] Strategy set successfully: ${body.strategy}`)
-    return response
+    return {
+      ...response,
+      tenant: getTenantResponseMetadata(tenant),
+    }
     
   } catch (error) {
     console.error('[Optimization API] Error:', error)
+
+    const errorData = (error as { data?: { error?: { code?: string } } })?.data
+    if (errorData?.error?.code === 'INVALID_TENANT' || errorData?.error?.code === 'TENANT_AUTH_REQUIRED') {
+      return errorData
+    }
     
     return {
       success: false,

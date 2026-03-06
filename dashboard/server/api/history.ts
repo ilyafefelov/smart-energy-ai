@@ -1,6 +1,12 @@
 import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { eventHandler } from 'h3'
+import {
+  buildStrictDagsterTenantPredicate,
+  dagsterAssetResultsHasTenantColumn,
+  dagsterAssetResultsTableExists,
+  resolveDagsterAssetResultsDbConfig,
+} from '../utils/dagster-asset-results'
 import { resolveOptimizationDbConfig } from '../utils/optimization-history'
 import { getTenantResponseMetadata, resolveTenantContext } from '../utils/tenant-context'
 
@@ -157,20 +163,24 @@ function toCanonicalRowsFromDagsterData(data: any): Array<Partial<HistoryRow> & 
   return []
 }
 
-async function fetchDagsterAssetHistory(limitDays: number, tenantId: string): Promise<Array<Partial<HistoryRow> & { date: string }> | null> {
+async function fetchDagsterAssetHistory(
+  limitDays: number,
+  tenantId: string,
+): Promise<Array<Partial<HistoryRow> & { date: string }> | null> {
   try {
     const { Pool } = await import('pg')
-    const pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT || 5432),
-      user: process.env.DB_USER || 'dagster',
-      password: process.env.DB_PASSWORD || 'dagster',
-      database: process.env.DB_NAME || 'dagster',
-    })
+    const pool = new Pool(resolveDagsterAssetResultsDbConfig())
 
     try {
-      const tableCheck = await pool.query(`SELECT to_regclass('public.asset_results') AS table_name`)
-      if (!tableCheck.rows?.[0]?.table_name) return null
+      if (!(await dagsterAssetResultsTableExists(pool))) return null
+
+      const hasTenantColumn = await dagsterAssetResultsHasTenantColumn(pool)
+      if (!hasTenantColumn) {
+        console.warn('[history] asset_results is missing required tenant_id enforcement')
+        return null
+      }
+
+      const tenantPredicate = buildStrictDagsterTenantPredicate()
 
       const result = await pool.query(
         `
@@ -178,9 +188,11 @@ async function fetchDagsterAssetHistory(limitDays: number, tenantId: string): Pr
         FROM asset_results
         WHERE status = 'success'
           AND data IS NOT NULL
+          AND ${tenantPredicate}
         ORDER BY materialization_time DESC
         LIMIT 80
         `,
+        [tenantId],
       )
 
       if (!result.rows?.length) return null

@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   // STANDARDIZED RESPONSE FORMAT: { success: bool, settings: { general, battery, notifications, model } }
 
   try {
-    const tenant = await resolveTenantContext(event)
+    const tenant = await resolveTenantContext(event, { requireTrustedOverride: true })
     const dataDir = path.join(process.cwd(), 'data')
     const tenantDataDir = path.join(dataDir, 'tenants', tenant.id)
     const tenantSettingsFile = path.join(tenantDataDir, 'settings.json')
@@ -82,7 +82,7 @@ export default defineEventHandler(async (event) => {
     }
   } catch (error: any) {
     const errorData = error?.data
-    if (errorData?.error?.code === 'INVALID_TENANT') {
+    if (errorData?.error?.code === 'INVALID_TENANT' || errorData?.error?.code === 'TENANT_AUTH_REQUIRED') {
       return errorData
     }
 

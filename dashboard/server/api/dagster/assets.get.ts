@@ -1,49 +1,64 @@
 // API endpoint to get Dagster asset results from PostgreSQL
 // Returns stored asset results for dashboard display
 
+import {
+  buildStrictDagsterTenantPredicate,
+  dagsterAssetResultsHasTenantColumn,
+  dagsterAssetResultsTableExists,
+  resolveDagsterAssetResultsDbConfig,
+} from '../../utils/dagster-asset-results'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
+
 export default defineEventHandler(async (event) => {
   let pool: any = null
 
   try {
+    const tenant = await resolveTenantContext(event)
     const { Pool } = await import('pg')
 
     pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      user: process.env.DB_USER || 'dagster',
-      password: process.env.DB_PASSWORD || 'dagster',
-      database: process.env.DB_NAME || 'dagster',
+      ...resolveDagsterAssetResultsDbConfig(),
     })
 
-    // Keep schema creation aligned with src/dagster_api/database.py.
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS asset_results (
-        id SERIAL PRIMARY KEY,
-        asset_name VARCHAR(255) NOT NULL,
-        run_id VARCHAR(255),
-        materialization_time TIMESTAMP DEFAULT NOW(),
-        data JSONB,
-        status VARCHAR(50) DEFAULT 'success',
-        error_message TEXT,
-        execution_time_ms INTEGER,
-        UNIQUE(asset_name, run_id)
-      )
-    `)
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_asset_results_name ON asset_results(asset_name)')
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_asset_results_time ON asset_results(materialization_time DESC)')
+    if (!(await dagsterAssetResultsTableExists(pool))) {
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        tenant: getTenantResponseMetadata(tenant),
+        assets: [],
+        total_assets: 0,
+      }
+    }
+
+    const hasTenantColumn = await dagsterAssetResultsHasTenantColumn(pool)
+    if (!hasTenantColumn) {
+      console.warn('[dagster/assets] asset_results is missing required tenant_id enforcement')
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        tenant: getTenantResponseMetadata(tenant),
+        assets: [],
+        total_assets: 0,
+      }
+    }
+
+    const tenantPredicate = buildStrictDagsterTenantPredicate()
 
     const result = await pool.query(`
       SELECT 
         asset_name,
         run_id,
+        tenant_id,
+        data,
         materialization_time,
         status,
         execution_time_ms,
         error_message
       FROM asset_results
+      WHERE ${tenantPredicate}
       ORDER BY materialization_time DESC
       LIMIT 50
-    `)
+    `, [tenant.id])
 
     // Group by asset
     const assets: Record<string, {
@@ -76,6 +91,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       timestamp: new Date().toISOString(),
+      tenant: getTenantResponseMetadata(tenant),
       assets: Object.values(assets),
       total_assets: Object.keys(assets).length
     }

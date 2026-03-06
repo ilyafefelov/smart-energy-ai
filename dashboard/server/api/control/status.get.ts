@@ -12,7 +12,7 @@ function deriveCommandFromPower(powerKw: number): 'charge' | 'discharge' | 'hold
 
 export default defineEventHandler(async (event) => {
   try {
-    const tenant = await resolveTenantContext(event)
+    const tenant = await resolveTenantContext(event, { requireTrustedOverride: true })
     const pythonScript = 'get_control_status.py'
     let fallbackReasonCode: string | null = null
     // Import the Python control system
@@ -125,7 +125,7 @@ export default defineEventHandler(async (event) => {
     
   } catch (error) {
     const errorData = (error as any)?.data
-    if (errorData?.error?.code === 'INVALID_TENANT') {
+    if (errorData?.error?.code === 'INVALID_TENANT' || errorData?.error?.code === 'TENANT_AUTH_REQUIRED') {
       return errorData
     }
 

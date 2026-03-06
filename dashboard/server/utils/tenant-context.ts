@@ -32,6 +32,12 @@ export type TenantContext = {
 
 let tenantCache: TenantRegistryCache | null = null
 
+const TENANT_OVERRIDE_TOKEN_HEADERS = [
+  'x-smart-energy-tenant-token',
+  'x-tenant-override-token',
+  'x-internal-tenant-token',
+] as const
+
 function normalizeTenantId(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const normalized = value.trim().toLowerCase()
@@ -158,6 +164,28 @@ export function getDefaultTenantId(): string {
   return tenants[0]?.id || ''
 }
 
+function getTrustedTenantOverrideToken(): string | null {
+  const configuredToken = process.env.SMART_ENERGY_TENANT_OVERRIDE_TOKEN
+    ?? process.env.TENANT_OVERRIDE_TOKEN
+    ?? null
+
+  if (typeof configuredToken !== 'string') {
+    return null
+  }
+
+  const normalized = configuredToken.trim()
+  return normalized || null
+}
+
+export function hasTrustedTenantOverrideAccess(event: H3Event): boolean {
+  const configuredToken = getTrustedTenantOverrideToken()
+  if (!configuredToken) {
+    return false
+  }
+
+  return TENANT_OVERRIDE_TOKEN_HEADERS.some((headerName) => getHeader(event, headerName) === configuredToken)
+}
+
 function firstQueryStringValue(queryValue: unknown): string | null {
   if (typeof queryValue === 'string') return queryValue
   if (Array.isArray(queryValue)) {
@@ -215,6 +243,21 @@ export function buildTenantErrorResponse(tenantId: string | null, message: strin
   }
 }
 
+export function buildTenantAuthorizationErrorResponse(tenantId: string, defaultTenantId: string) {
+  return {
+    success: false,
+    error: {
+      code: 'TENANT_AUTH_REQUIRED',
+      message: `Tenant '${tenantId}' requires trusted server-side authorization. Public requests may only access the default tenant '${defaultTenantId}'.`,
+    },
+    tenant: {
+      id: tenantId,
+      validated: false,
+    },
+    default_tenant_id: defaultTenantId,
+  }
+}
+
 export function getTenantResponseMetadata(tenant: TenantContext) {
   return {
     id: tenant.id,
@@ -238,6 +281,7 @@ export async function resolveTenantContext(
   event: H3Event,
   options?: {
     body?: Record<string, any> | null
+    requireTrustedOverride?: boolean
   },
 ): Promise<TenantContext> {
   const tenants = loadTenantRegistry()
@@ -258,6 +302,14 @@ export async function resolveTenantContext(
         `Unknown tenant_id '${resolvedTenantId}'. Provide one of the configured tenant IDs.`,
         availableTenantIds,
       ),
+    })
+  }
+
+  if (options?.requireTrustedOverride && matchedTenant.id !== defaultTenant.id && !hasTrustedTenantOverrideAccess(event)) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: `Tenant '${matchedTenant.id}' requires trusted authorization`,
+      data: buildTenantAuthorizationErrorResponse(matchedTenant.id, defaultTenant.id),
     })
   }
 
