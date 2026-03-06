@@ -8,7 +8,7 @@ from dagster import asset, job, In, Out, op, graph
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, StackingClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, StackingClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 import xgboost as xgb
 from imblearn.over_sampling import SMOTE
