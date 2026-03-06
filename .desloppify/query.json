@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/mlops/model_registry.py"
+    "structural::energy_ml/mlops/renewable_forecasting.py"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/mlops/model_registry.py"
+    "structural::energy_ml/mlops/renewable_forecasting.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
   "overall_score": 88.3,
-  "objective_score": 94.0,
+  "objective_score": 94.1,
   "strict_score": 87.9,
   "verified_strict_score": 78.6,
   "prev_overall_score": 88.3,
-  "prev_objective_score": 93.9,
+  "prev_objective_score": 94.0,
   "prev_strict_score": 87.9,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually extracted version-id generation, model metadata serialization, health checks, staging and production validation, and registry JSON persistence into model_registry_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing.",
+  "attestation": "I have actually extracted the renewable weather shaping, forecast math, combination logic, and prediction integration into renewable_forecasting_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 90.6,
+          "strict": 90.8,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 48,
-        "description": "48 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 47,
+        "description": "47 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 255,
+        "total_count": 254,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"

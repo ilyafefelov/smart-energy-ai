@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T22:40:08+00:00",
+  "updated": "2026-03-06T22:44:52+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -8349,6 +8349,45 @@
         "status": "fixed",
         "attestation": "I have actually extracted version-id generation, model metadata serialization, health checks, staging and production validation, and registry JSON persistence into model_registry_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing."
       }
+    },
+    {
+      "timestamp": "2026-03-06T22:40:37+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/mlops/model_registry.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "2cb4c8ac1c94",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T22:44:50+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/mlops/renewable_forecasting.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted weather normalization, fallback weather construction, solar and wind forecast math, renewable forecast combination, capacity-factor calculation, and renewable prediction integration into renewable_forecasting_support.py while preserving the public forecaster and model classes.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T22:44:52+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/mlops/renewable_forecasting.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted weather normalization, fallback weather construction, solar and wind forecast math, renewable forecast combination, capacity-factor calculation, and renewable prediction integration into renewable_forecasting_support.py while preserving the public forecaster and model classes.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually extracted the renewable weather shaping, forecast math, combination logic, and prediction integration into renewable_forecasting_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -9003,10 +9042,20 @@
       "recorded_at": "2026-03-06T22:34:28+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "2cb4c8ac1c94",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/mlops/model_registry.py"
+      ],
+      "recorded_at": "2026-03-06T22:40:37+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/mlops/model_registry.py"
+    "structural::energy_ml/mlops/renewable_forecasting.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

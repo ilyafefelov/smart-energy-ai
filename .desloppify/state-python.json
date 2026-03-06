@@ -4,15 +4,15 @@
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
   "overall_score": 88.3,
-  "objective_score": 94.0,
+  "objective_score": 94.1,
   "strict_score": 87.9,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 125,
-    "open": 255,
+    "fixed": 126,
+    "open": 254,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 79,
-        "open": 218,
+        "fixed": 80,
+        "open": 217,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 90.6,
-      "strict": 90.6,
+      "score": 90.8,
+      "strict": 90.8,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 45,
+      "failing": 44,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.9055944055944056,
-          "failing": 45,
-          "weighted_failures": 13.50000000000001
+          "pass_rate": 0.9076923076923076,
+          "failing": 44,
+          "weighted_failures": 13.20000000000001
         }
       }
     },
@@ -3534,17 +3534,23 @@
       "detail": {
         "loc": 551
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted weather normalization, fallback weather construction, solar and wind forecast math, renewable forecast combination, capacity-factor calculation, and renewable prediction integration into renewable_forecasting_support.py while preserving the public forecaster and model classes.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T22:44:52+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually extracted the renewable weather shaping, forecast math, combination logic, and prediction integration into renewable_forecasting_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T22:44:52+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/comprehensive_energy_scraper.py": {
       "id": "structural::src/comprehensive_energy_scraper.py",
