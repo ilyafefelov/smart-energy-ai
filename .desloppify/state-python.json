@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 87.6,
-  "objective_score": 92.3,
-  "strict_score": 87.2,
+  "overall_score": 87.8,
+  "objective_score": 92.8,
+  "strict_score": 87.4,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 103,
-    "open": 277,
+    "fixed": 106,
+    "open": 274,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -25,8 +25,8 @@
       "2": {
         "auto_resolved": 36,
         "false_positive": 0,
-        "fixed": 23,
-        "open": 28,
+        "fixed": 26,
+        "open": 25,
         "wontfix": 75
       },
       "3": {
@@ -2455,18 +2455,18 @@
       }
     },
     "Test health": {
-      "score": 88.0,
-      "strict": 88.0,
+      "score": 90.7,
+      "strict": 90.7,
       "verified_strict_score": 19.1,
       "checks": 1788,
-      "failing": 13,
+      "failing": 10,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1782,
-          "pass_rate": 0.8800510585729878,
-          "failing": 13,
-          "weighted_failures": 213.74901362293565
+          "pass_rate": 0.9070307971337012,
+          "failing": 10,
+          "weighted_failures": 165.67111950774472
         },
         "subjective_review": {
           "potential": 6,
@@ -6895,17 +6895,23 @@
         "loc_weight": 14.491376746189438,
         "complexity_score": 83
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_real_optimizer_and_oree_fetchers.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:59:18+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_real_optimizer_and_oree_fetchers.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:59:18+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/optimizer/run_optimization.py::untested_critical": {
       "id": "test_coverage::energy_ml/optimizer/run_optimization.py::untested_critical",
@@ -8246,17 +8252,23 @@
         "loc_weight": 14.560219778561036,
         "complexity_score": 124
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_real_optimizer_and_oree_fetchers.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:59:28+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_real_optimizer_and_oree_fetchers.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:59:28+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/energy_ml/assets/features.py::untested_module": {
       "id": "test_coverage::energy_ml/energy_ml/assets/features.py::untested_module",
@@ -8416,17 +8428,23 @@
         "loc_weight": 19.026297590440446,
         "complexity_score": 48
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused pytest coverage in tests/unit/test_real_optimizer_and_oree_fetchers.py and validated with Python 3.13 pytest.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T19:59:10+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually added and run focused automated tests for this module in tests/unit/test_real_optimizer_and_oree_fetchers.py, and I am not gaming the score by resolving without fixing.",
+        "attested_at": "2026-03-06T19:59:10+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/dagster_api/asset_service.py::untested_module": {
       "id": "test_coverage::src/dagster_api/asset_service.py::untested_module",
