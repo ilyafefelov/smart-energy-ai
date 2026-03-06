@@ -209,10 +209,11 @@ class BaselineDPOptimizer:
         export_revenue_eur = grid_export_kwh * price_eur_kwh * self.config.export_price_factor
         degradation_penalty_eur = (charge_input_kwh + discharge_output_kwh) * self.config.degradation_cost_per_kwh
         net_cost_eur = purchase_cost_eur - export_revenue_eur + degradation_penalty_eur
+        realized_action_kw = (discharge_output_kwh - charge_input_kwh) / max(dt, 1e-9)
 
         return {
             "hour": float(hour),
-            "action_kw": action_kw,
+            "action_kw": realized_action_kw,
             "charge_kwh": charge_input_kwh,
             "discharge_kwh": discharge_output_kwh,
             "soc_before_kwh": soc_kwh,

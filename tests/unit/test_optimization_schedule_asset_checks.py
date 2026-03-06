@@ -72,4 +72,8 @@ def test_schedule_contract_checks_fail_for_duplicate_missing_and_inconsistent_ro
 def test_definitions_register_schedule_checks_and_job() -> None:
     assert len(optimization_schedule_contract_checks) == 6
     assert len(defs.asset_checks) == 6
-    assert defs.resolve_job_def("optimization_schedule_contract_checks") is not None
+    job_def = defs.resolve_job_def("optimization_schedule_contract_checks")
+
+    assert job_def is not None
+    assert "client_state_asset" in job_def.graph.node_dict
+    assert "price_forecast_asset" in job_def.graph.node_dict

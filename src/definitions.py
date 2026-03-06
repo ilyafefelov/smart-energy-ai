@@ -42,6 +42,7 @@ optimization_assets_selection = AssetSelection.assets(
     optimization_schedule_asset,
     optimization_schedule_milp_asset,
 )
+optimization_assets_with_upstream_selection = optimization_assets_selection.upstream(include_self=True)
 optimization_schedule_checks_selection = AssetSelection.checks_for_assets(
     optimization_schedule_asset,
     optimization_schedule_milp_asset,
@@ -64,7 +65,7 @@ daily_data_refresh_job = define_asset_job(
 
 optimization_schedule_contract_checks_job = define_asset_job(
     name="optimization_schedule_contract_checks",
-    selection=optimization_assets_selection | optimization_schedule_checks_selection,
+    selection=optimization_assets_with_upstream_selection | optimization_schedule_checks_selection,
     description="Run optimization schedule assets together with Dagster contract checks",
 )
 

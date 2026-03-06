@@ -1,5 +1,7 @@
 """Unit tests for baseline DP optimizer."""
 
+import math
+
 from src.optimization.baseline_dp import BaselineDPOptimizer, BaselineOptimizationConfig
 
 
@@ -65,3 +67,29 @@ def test_optimizer_objective_breakdown_matches_schedule_rows():
     assert abs(objective["export_revenue_eur"] - revenue) < 1e-9
     assert abs(objective["degradation_penalty_eur"] - degradation) < 1e-9
     assert abs(objective["net_cost_eur"] - net_cost) < 1e-9
+
+
+def test_optimizer_emits_realized_action_when_soc_limits_clip_discharge():
+    config = BaselineOptimizationConfig(
+        capacity_kwh=100.0,
+        min_soc_fraction=0.3,
+        max_soc_fraction=0.95,
+        initial_soc_fraction=0.31,
+        max_charge_kw=25.0,
+        max_discharge_kw=25.0,
+        throughput_limit_kwh=120.0,
+        degradation_cost_per_kwh=0.0,
+    )
+    optimizer = BaselineDPOptimizer(config)
+
+    result = optimizer.optimize(
+        price_eur_mwh=[200.0],
+        load_kw=[20.0],
+        solar_kw=[0.0],
+    )
+
+    row = result["schedule"][0]
+    realized_action_kw = row["discharge_kwh"] - row["charge_kwh"]
+
+    assert row["discharge_kwh"] < config.max_discharge_kw
+    assert math.isclose(row["action_kw"], realized_action_kw, rel_tol=0.0, abs_tol=1e-9)
