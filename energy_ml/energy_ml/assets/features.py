@@ -492,7 +492,10 @@ def feature_matrix(
     inf_count = np.isinf(combined.select_dtypes(include=[np.number])).sum().sum()
     if inf_count > 0:
         logger.warning(f"⚠️ Found {inf_count} infinite values, replacing with max finite values")
-        combined = combined.replace([np.inf, -np.inf], np.nan).fillna(combined.replace([np.inf, -np.inf], np.nan).max())
+        numeric_columns = combined.select_dtypes(include=[np.number]).columns
+        cleaned_numeric = combined[numeric_columns].replace([np.inf, -np.inf], np.nan)
+        fill_values = cleaned_numeric.max().fillna(0)
+        combined[numeric_columns] = cleaned_numeric.fillna(fill_values)
     
     return Output(
         combined,
