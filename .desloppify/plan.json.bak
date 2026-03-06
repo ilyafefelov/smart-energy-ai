@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T20:56:56+00:00",
+  "updated": "2026-03-06T21:07:59+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -7951,6 +7951,45 @@
         "status": "fixed",
         "attestation": "I have actually extracted pure helper logic from energy_ml/energy_ml/assets/training.py into energy_ml/energy_ml/assets/training_support.py, and I am not gaming the score by resolving without fixing."
       }
+    },
+    {
+      "timestamp": "2026-03-06T20:57:18+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/training.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "1059613ba462",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-03-06T21:07:58+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/recommendations.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted nested recommendation generation, scheduling, monitoring, lineage, and dashboard-response helpers into recommendation_support while preserving direct-file fallback loading and asset outputs.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T21:07:59+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/recommendations.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted nested recommendation generation, scheduling, monitoring, lineage, and dashboard-response helpers into recommendation_support while preserving direct-file fallback loading and asset outputs.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually extracted pure helper logic from energy_ml/energy_ml/assets/recommendations.py into energy_ml/energy_ml/assets/recommendation_support.py, and I am not gaming the score by resolving without fixing."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -8505,10 +8544,20 @@
       "recorded_at": "2026-03-06T20:53:24+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "1059613ba462",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/training.py"
+      ],
+      "recorded_at": "2026-03-06T20:57:18+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/energy_ml/assets/training.py"
+    "structural::energy_ml/energy_ml/assets/recommendations.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

@@ -1,11 +1,11 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/energy_ml/assets/training.py"
+    "structural::energy_ml/energy_ml/assets/recommendations.py"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/energy_ml/assets/training.py"
+    "structural::energy_ml/energy_ml/assets/recommendations.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
@@ -13,11 +13,11 @@
   "objective_score": 93.5,
   "strict_score": 87.7,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 88.0,
-  "prev_objective_score": 93.4,
-  "prev_strict_score": 87.6,
+  "prev_overall_score": 88.1,
+  "prev_objective_score": 93.5,
+  "prev_strict_score": 87.7,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually extracted pure helper logic from energy_ml/energy_ml/assets/training.py into energy_ml/energy_ml/assets/training_support.py, and I am not gaming the score by resolving without fixing.",
+  "attestation": "I have actually extracted pure helper logic from energy_ml/energy_ml/assets/recommendations.py into energy_ml/energy_ml/assets/recommendation_support.py, and I am not gaming the score by resolving without fixing.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 88.5,
+          "strict": 88.7,
           "stuck_scans": 5
         },
         {
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 58,
-        "description": "58 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 57,
+        "description": "57 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 265,
+        "total_count": 264,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -304,7 +304,7 @@
             10,
             11
           ],
-          "file_count": 83,
+          "file_count": 82,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
