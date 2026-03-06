@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T19:16:12+00:00",
+  "updated": "2026-03-06T19:27:58+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -610,8 +610,8 @@
     "test_coverage::src/dagster_api/store_results.py::untested_module": {
       "issue_id": "test_coverage::src/dagster_api/store_results.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T19:27:49+00:00"
     },
     "test_coverage::energy_ml/scripts/get_battery_physics.py::untested_critical": {
       "issue_id": "test_coverage::energy_ml/scripts/get_battery_physics.py::untested_critical",
@@ -670,8 +670,8 @@
     "test_coverage::src/dagster_api/models.py::untested_module": {
       "issue_id": "test_coverage::src/dagster_api/models.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T19:27:41+00:00"
     },
     "test_coverage::energy_ml/energy_ml/assets/models.py::untested_critical": {
       "issue_id": "test_coverage::energy_ml/energy_ml/assets/models.py::untested_critical",
@@ -826,8 +826,8 @@
     "test_coverage::src/dagster_api/trigger.py::untested_module": {
       "issue_id": "test_coverage::src/dagster_api/trigger.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-03-06T19:27:58+00:00"
     },
     "test_coverage::src/rl_environment.py::untested_module": {
       "issue_id": "test_coverage::src/rl_environment.py::untested_module",
@@ -2181,12 +2181,10 @@
         "test_coverage::src/generate_plots_mpl.py::untested_module",
         "test_coverage::src/oree_real_prices.py::untested_critical",
         "test_coverage::src/physics/economics.py::untested_module",
-        "test_coverage::src/dagster_api/store_results.py::untested_module",
         "test_coverage::src/generate_plots.py::untested_module",
         "test_coverage::src/physics/battery_lfp.py::untested_module",
         "test_coverage::src/optimizer_v2.py::untested_module",
         "test_coverage::src/generate_business_plot.py::untested_module",
-        "test_coverage::src/dagster_api/models.py::untested_module",
         "test_coverage::src/data_fetcher.py::untested_critical",
         "test_coverage::src/enhanced_price_ingester.py::untested_module",
         "test_coverage::src/oree_playwright_scraper.py::untested_critical",
@@ -2197,7 +2195,6 @@
         "test_coverage::src/improved_price_fetcher.py::untested_module",
         "test_coverage::src/optimizer_real.py::untested_critical",
         "test_coverage::src/train_baseline.py::untested_module",
-        "test_coverage::src/dagster_api/trigger.py::untested_module",
         "test_coverage::src/rl_environment.py::untested_module",
         "test_coverage::src/engines/nvtabular_engine.py::untested_module",
         "test_coverage::src/db.py::untested_module",
@@ -7060,6 +7057,81 @@
         "sha": "35ee0bc1e68e",
         "branch": "chore/desloppify-quality-pass"
       }
+    },
+    {
+      "timestamp": "2026-03-06T19:27:39+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/dagster_api/models.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_dagster_api_helper_modules.py and validated with Python 3.13 pytest.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T19:27:41+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/dagster_api/models.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_dagster_api_helper_modules.py and validated with Python 3.13 pytest.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_dagster_api_helper_modules.py, and I am not gaming the score by resolving without fixing."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T19:27:48+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/dagster_api/store_results.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_dagster_api_helper_modules.py and validated with Python 3.13 pytest.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T19:27:49+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/dagster_api/store_results.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_dagster_api_helper_modules.py and validated with Python 3.13 pytest.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_dagster_api_helper_modules.py, and I am not gaming the score by resolving without fixing."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T19:27:57+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/dagster_api/trigger.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_dagster_api_helper_modules.py and validated with Python 3.13 pytest.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T19:27:58+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/dagster_api/trigger.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused pytest coverage in tests/unit/test_dagster_api_helper_modules.py and validated with Python 3.13 pytest.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_dagster_api_helper_modules.py, and I am not gaming the score by resolving without fixing."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -7446,7 +7518,11 @@
       "cluster_name": null
     }
   ],
-  "uncommitted_issues": [],
+  "uncommitted_issues": [
+    "test_coverage::src/dagster_api/models.py::untested_module",
+    "test_coverage::src/dagster_api/store_results.py::untested_module",
+    "test_coverage::src/dagster_api/trigger.py::untested_module"
+  ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
 }

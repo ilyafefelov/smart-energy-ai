@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "test_coverage::src/dagster_api/database.py::untested_module"
+    "test_coverage::src/dagster_api/trigger.py::untested_module"
   ],
   "status": "fixed",
   "resolved": [
-    "test_coverage::src/dagster_api/database.py::untested_module"
+    "test_coverage::src/dagster_api/trigger.py::untested_module"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 86.9,
-  "objective_score": 90.5,
-  "strict_score": 86.5,
+  "overall_score": 87.0,
+  "objective_score": 90.8,
+  "strict_score": 86.6,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 86.8,
-  "prev_objective_score": 90.3,
-  "prev_strict_score": 86.4,
+  "prev_overall_score": 86.9,
+  "prev_objective_score": 90.6,
+  "prev_strict_score": 86.5,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_dagster_api_service_modules.py, and I am not gaming the score by resolving without fixing.",
+  "attestation": "I have actually added and run focused automated tests for this module in tests/unit/test_dagster_api_helper_modules.py, and I am not gaming the score by resolving without fixing.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -210,8 +210,8 @@
       {
         "type": "refactor",
         "detector": "test_coverage",
-        "count": 28,
-        "description": "28 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "count": 25,
+        "description": "25 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
         "command": "desloppify show test_coverage --status open",
         "impact": 0.0,
         "dimension": "Test health",
@@ -277,7 +277,7 @@
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 292,
+        "total_count": 289,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -322,7 +322,7 @@
           "actions": [
             7
           ],
-          "file_count": 28,
+          "file_count": 25,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -351,7 +351,7 @@
       }
     },
     "debt": {
-      "overall_gap": 0.2,
+      "overall_gap": 0.1,
       "wontfix_count": 147,
       "worst_dimension": "Code quality",
       "worst_gap": 5.5,
@@ -371,13 +371,13 @@
       {
         "type": "wontfix_gap",
         "severity": "high",
-        "message": "Strict/lenient gap is 0.2 pts with 147 wontfix issues"
+        "message": "Strict/lenient gap is 0.1 pts with 147 wontfix issues"
       }
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 86.5,
-      "gap": 8.5,
+      "current": 86.6,
+      "gap": 8.4,
       "state": "below",
       "warning": null
     },
