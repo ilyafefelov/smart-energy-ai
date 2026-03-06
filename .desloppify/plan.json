@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T20:53:24+00:00",
+  "updated": "2026-03-06T20:57:18+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -7926,6 +7926,45 @@
         "sha": "d6a18a5e3f64",
         "branch": "chore/desloppify-quality-pass"
       }
+    },
+    {
+      "timestamp": "2026-03-06T20:56:55+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/training.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted nested training asset data preparation, synthetic history, split, metrics, and status helpers into training_support with direct-file import fallback support preserved.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-03-06T20:56:56+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/training.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted nested training asset data preparation, synthetic history, split, metrics, and status helpers into training_support with direct-file import fallback support preserved.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually extracted pure helper logic from energy_ml/energy_ml/assets/training.py into energy_ml/energy_ml/assets/training_support.py, and I am not gaming the score by resolving without fixing."
+      }
+    },
+    {
+      "timestamp": "2026-03-06T20:57:18+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/training.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "1059613ba462",
+        "branch": "chore/desloppify-quality-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -8478,6 +8517,16 @@
         "structural::energy_ml/control/inverter_controller.py"
       ],
       "recorded_at": "2026-03-06T20:53:24+00:00",
+      "note": null,
+      "cluster_name": null
+    },
+    {
+      "sha": "1059613ba462",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/energy_ml/assets/training.py"
+      ],
+      "recorded_at": "2026-03-06T20:57:18+00:00",
       "note": null,
       "cluster_name": null
     }
