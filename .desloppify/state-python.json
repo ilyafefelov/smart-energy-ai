@@ -4,15 +4,15 @@
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
   "overall_score": 88.2,
-  "objective_score": 93.8,
+  "objective_score": 93.9,
   "strict_score": 87.8,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 122,
-    "open": 258,
+    "fixed": 123,
+    "open": 257,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 76,
-        "open": 221,
+        "fixed": 77,
+        "open": 220,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 89.9,
-      "strict": 89.9,
+      "score": 90.1,
+      "strict": 90.1,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 48,
+      "failing": 47,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.8993006993006992,
-          "failing": 48,
-          "weighted_failures": 14.400000000000013
+          "pass_rate": 0.9013986013986013,
+          "failing": 47,
+          "weighted_failures": 14.100000000000012
         }
       }
     },
@@ -3755,17 +3755,23 @@
           "long function (optimize_decision: 93 LOC)"
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "I split OptimizationEngine scoring, constraint, and response-building helpers into energy_ml/mlops/optimization_engine_support.py, preserved the public API and direct-file fallback loader in energy_ml/mlops/optimization_engine.py, kept current-hour and timestamp decisions in the public module for monkeypatched tests, and validated with .venv pytest on tests/unit/test_optimization_engine_contracts.py plus tests/unit/test_mlops_registry_dashboard_and_optimization.py.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-03-06T22:29:29+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually I split OptimizationEngine scoring, constraint, and response-building helpers into energy_ml/mlops/optimization_engine_support.py, preserved the public API and direct-file fallback loader in energy_ml/mlops/optimization_engine.py, kept current-hour and timestamp decisions in the public module for monkeypatched tests, and validated with .venv pytest on tests/unit/test_optimization_engine_contracts.py plus tests/unit/test_mlops_registry_dashboard_and_optimization.py. and I am not gaming the score.",
+        "attested_at": "2026-03-06T22:29:29+00:00",
+        "scan_verified": false
+      }
     },
     "structural::energy_ml/control/inverter_controller.py": {
       "id": "structural::energy_ml/control/inverter_controller.py",
