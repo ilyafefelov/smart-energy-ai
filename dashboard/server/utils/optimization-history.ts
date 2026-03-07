@@ -47,6 +47,13 @@ export type PersistOptimizationHistoryResult = {
   error?: string
 }
 
+export type OptimizationHistoryInitializationResult = {
+  available: boolean
+  initialized: boolean
+  degraded: boolean
+  reason?: string
+}
+
 type ExecutionKeyInput = {
   commandId: string | null
   scheduleId: string | null
@@ -70,8 +77,59 @@ type DbConfig = {
 
 let pool: any | null = null
 let initPromise: Promise<any | null> | null = null
-let schemaInitializationPromise: Promise<void> | null = null
+let schemaInitializationPromise: Promise<OptimizationHistoryInitializationResult> | null = null
 let schemaInitialized = false
+let unavailableReason: string | null = null
+let loggedUnavailableMode = false
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return String(error || '')
+}
+
+function isOptimizationDbUnavailable(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+
+  const candidate = error as { code?: unknown; errno?: unknown; message?: unknown }
+  const code = typeof candidate.code === 'string'
+    ? candidate.code
+    : typeof candidate.errno === 'string'
+      ? candidate.errno
+      : ''
+  const message = typeof candidate.message === 'string' ? candidate.message.toLowerCase() : ''
+  const connectionErrorCodes = new Set(['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', '3D000', '28P01'])
+
+  if (connectionErrorCodes.has(code)) {
+    return true
+  }
+
+  return message.includes('connect') || message.includes('database') || message.includes('connection terminated')
+}
+
+async function resetOptimizationPool(): Promise<void> {
+  const currentPool = pool
+  pool = null
+
+  if (currentPool) {
+    await currentPool.end().catch(() => {})
+  }
+}
+
+async function markOptimizationHistoryUnavailable(reason: string): Promise<void> {
+  unavailableReason = reason
+  schemaInitialized = false
+  await resetOptimizationPool()
+
+  if (!loggedUnavailableMode) {
+    console.warn('[optimization-history] Degraded mode enabled:', reason)
+    loggedUnavailableMode = true
+  }
+}
 
 function normalizeNullableText(value: unknown): string | null {
   if (typeof value !== 'string') {
@@ -262,7 +320,7 @@ async function getOptimizationPool(): Promise<any | null> {
       pool = createdPool
       return createdPool
     } catch (error) {
-      console.warn('[optimization-history] Failed to initialize database pool:', error)
+      await markOptimizationHistoryUnavailable(getErrorMessage(error) || 'failed to initialize optimization database pool')
       return null
     } finally {
       initPromise = null
@@ -272,9 +330,13 @@ async function getOptimizationPool(): Promise<any | null> {
   return initPromise
 }
 
-export async function initializeOptimizationHistory(): Promise<void> {
+export async function initializeOptimizationHistory(): Promise<OptimizationHistoryInitializationResult> {
   if (schemaInitialized) {
-    return
+    return {
+      available: true,
+      initialized: true,
+      degraded: false,
+    }
   }
 
   if (schemaInitializationPromise) {
@@ -284,11 +346,39 @@ export async function initializeOptimizationHistory(): Promise<void> {
   schemaInitializationPromise = (async () => {
     const optimizationPool = await getOptimizationPool()
     if (!optimizationPool) {
-      throw new Error('optimization pool unavailable')
+      return {
+        available: false,
+        initialized: false,
+        degraded: true,
+        reason: unavailableReason || 'optimization pool unavailable',
+      }
     }
 
-    await ensureSchema(optimizationPool)
-    schemaInitialized = true
+    try {
+      await ensureSchema(optimizationPool)
+      schemaInitialized = true
+      unavailableReason = null
+      loggedUnavailableMode = false
+
+      return {
+        available: true,
+        initialized: true,
+        degraded: false,
+      }
+    } catch (error) {
+      if (isOptimizationDbUnavailable(error)) {
+        const reason = getErrorMessage(error) || 'optimization history database unavailable'
+        await markOptimizationHistoryUnavailable(reason)
+        return {
+          available: false,
+          initialized: false,
+          degraded: true,
+          reason,
+        }
+      }
+
+      throw error
+    }
   })()
 
   try {
@@ -307,7 +397,7 @@ export async function persistOptimizationHistory(
       inserted: false,
       updated: false,
       executionKey: entry.execution_key,
-      error: 'optimization history schema not initialized',
+      error: unavailableReason || 'optimization history schema not initialized',
     }
   }
 
@@ -318,7 +408,7 @@ export async function persistOptimizationHistory(
       inserted: false,
       updated: false,
       executionKey: entry.execution_key,
-      error: 'optimization pool unavailable',
+      error: unavailableReason || 'optimization pool unavailable',
     }
   }
 
@@ -459,6 +549,10 @@ export async function persistOptimizationHistory(
       executionKey: entry.execution_key,
     }
   } catch (error) {
+    if (isOptimizationDbUnavailable(error)) {
+      await markOptimizationHistoryUnavailable(getErrorMessage(error) || 'optimization history database unavailable')
+    }
+
     console.warn('[optimization-history] Failed to persist row:', error)
     return {
       ok: false,

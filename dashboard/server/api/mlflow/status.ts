@@ -2,26 +2,43 @@
 // MLflow provides HTTP REST endpoints at /api/2.0/mlflow/*
 
 const MLFLOW_URI = process.env.MLFLOW_API_URL || 'http://localhost:5000'
+const MLFLOW_STATUS_TIMEOUT_MS = Number(process.env.MLFLOW_STATUS_TIMEOUT_MS || 3000)
+let loggedMlflowUnavailable = false
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return String(error || '')
+}
+
+function isMlflowUnavailable(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase()
+  return message.includes('fetch failed') || message.includes('econnrefused') || message.includes('enotfound') || message.includes('timed out')
+}
+
+async function fetchMlflow(path: string, body: Record<string, unknown>) {
+  return await $fetch(`${MLFLOW_URI}${path}`, {
+    method: 'POST',
+    body,
+    timeout: MLFLOW_STATUS_TIMEOUT_MS,
+  })
+}
 
 export default defineEventHandler(async (event) => {
   try {
     // Fetch experiments via MLflow REST API
-    const expResponse = await $fetch(`${MLFLOW_URI}/ajax-api/2.0/mlflow/experiments/search`, {
-      method: 'POST',
-      body: { max_results: 10 }
-    })
+    const expResponse = await fetchMlflow('/ajax-api/2.0/mlflow/experiments/search', { max_results: 10 })
     
     const experiments = (expResponse as any).experiments || []
     
     // Get runs from first experiment
     let runs = []
     if (experiments.length > 0) {
-      const runsResponse = await $fetch(`${MLFLOW_URI}/ajax-api/2.0/mlflow/runs/search`, {
-        method: 'POST',
-        body: {
-          experiment_ids: [experiments[0].experiment_id],
-          max_results: 5
-        }
+      const runsResponse = await fetchMlflow('/ajax-api/2.0/mlflow/runs/search', {
+        experiment_ids: [experiments[0].experiment_id],
+        max_results: 5,
       })
       runs = (runsResponse as any).runs || []
     }
@@ -73,12 +90,21 @@ export default defineEventHandler(async (event) => {
       }
     }
   } catch (error: any) {
-    console.error('[mlflow-status] Error:', error.message)
+    const message = getErrorMessage(error) || 'MLflow unavailable'
+    if (isMlflowUnavailable(error)) {
+      if (!loggedMlflowUnavailable) {
+        console.warn('[mlflow-status] Degraded mode enabled:', message)
+        loggedMlflowUnavailable = true
+      }
+    } else {
+      console.error('[mlflow-status] Error:', message)
+    }
+
     return {
       success: true,
       status: 'degraded',
       timestamp: new Date().toISOString(),
-      error: error.message,
+      error: message,
       mlflow_connected: false,
       mlflow_available: false,
       active_model: {
