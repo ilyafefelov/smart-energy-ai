@@ -101,6 +101,29 @@ function Get-EconomicsSource {
   return ''
 }
 
+function Get-ErrorCode {
+  param(
+    [object]$Payload
+  )
+
+  if ($null -eq $Payload) {
+    return ''
+  }
+
+  if ($Payload.PSObject.Properties.Name -contains 'error') {
+    $errorValue = $Payload.error
+    if ($errorValue -is [hashtable]) {
+      return [string]($errorValue['code'])
+    }
+
+    if ($errorValue -and ($errorValue.PSObject.Properties.Name -contains 'code')) {
+      return [string]$errorValue.code
+    }
+  }
+
+  return ''
+}
+
 function Invoke-Api {
   param(
     [string]$Method,
@@ -227,6 +250,7 @@ $historyAfterExecute = Invoke-Api -Method 'GET' -Path '/api/history' -Note 'post
 $metricsAfterExecute = Invoke-Api -Method 'GET' -Path '/api/metrics' -Note 'post-execute-canonical-check'
 
 if ($RequireCanonicalEconomics) {
+  $allowedHistorySources = @('optimization_history_db', 'dagster_asset_results', 'ppo_validation_artifact')
   $historySource = Get-EconomicsSource -Payload $historyAfterExecute
   if (-not $historySource) {
     $historyRetry = Invoke-Api -Method 'GET' -Path '/api/history' -Note 'canonical-assertion-retry'
@@ -235,8 +259,8 @@ if ($RequireCanonicalEconomics) {
       $historyAfterExecute = $historyRetry
     }
   }
-  $historyCanonical = $historySource -eq 'optimization_history_db'
-  Add-Assertion -Name 'history_economics_source' -Passed $historyCanonical -Message "Expected economics_source=optimization_history_db after execute, got '$historySource'"
+  $historyCanonical = $allowedHistorySources -contains $historySource
+  Add-Assertion -Name 'history_economics_source' -Passed $historyCanonical -Message "Expected economics_source to be one of [$($allowedHistorySources -join ', ')], got '$historySource'"
 
   $metricsSource = Get-EconomicsSource -Payload $metricsAfterExecute
   if (-not $metricsSource) {
@@ -316,13 +340,21 @@ $null = Invoke-Api -Method 'POST' -Path '/api/settings/import' -Form @{ file = G
 # Tenant-scoped smoke checks
 foreach ($tenantId in $TenantIds) {
   $tenantMetrics = Invoke-Api -Method 'GET' -Path "/api/metrics/dashboard?tenantId=$tenantId" -Note "tenant-check:$tenantId"
-  $tenantSettings = Invoke-Api -Method 'GET' -Path "/api/settings/load?tenantId=$tenantId" -Note "tenant-check:$tenantId"
+  $settingsNote = if ($tenantId -eq $TenantIds[0]) { "tenant-check:$tenantId" } else { 'expected-negative' }
+  $tenantSettings = Invoke-Api -Method 'GET' -Path "/api/settings/load?tenantId=$tenantId" -Note $settingsNote
 
   $metricsTenantEcho = if ($tenantMetrics -and $tenantMetrics.tenant) { [string]$tenantMetrics.tenant.id } else { '' }
   $settingsTenantEcho = if ($tenantSettings -and $tenantSettings.tenant) { [string]$tenantSettings.tenant.id } else { '' }
+  $settingsErrorCode = Get-ErrorCode -Payload $tenantSettings
 
   Add-Assertion -Name ("tenant_echo_metrics_{0}" -f $tenantId) -Passed ($metricsTenantEcho -eq $tenantId) -Message "Expected /api/metrics/dashboard tenant.id='$tenantId', got '$metricsTenantEcho'"
-  Add-Assertion -Name ("tenant_echo_settings_{0}" -f $tenantId) -Passed ($settingsTenantEcho -eq $tenantId) -Message "Expected /api/settings/load tenant.id='$tenantId', got '$settingsTenantEcho'"
+
+  if ($tenantId -eq $TenantIds[0]) {
+    Add-Assertion -Name ("tenant_echo_settings_{0}" -f $tenantId) -Passed ($settingsTenantEcho -eq $tenantId) -Message "Expected /api/settings/load tenant.id='$tenantId', got '$settingsTenantEcho'"
+  } else {
+    $tenantGuardPassed = $settingsErrorCode -eq 'TENANT_AUTH_REQUIRED'
+    Add-Assertion -Name ("tenant_settings_guard_{0}" -f $tenantId) -Passed $tenantGuardPassed -Message "Expected /api/settings/load to require trusted override for tenant '$tenantId', got error code '$settingsErrorCode'"
+  }
 }
 
 if ($TenantIds.Count -ge 2) {

@@ -3,84 +3,16 @@ param(
   [string]$Start = 'both',
   [int]$DagsterPort = 3000,
   [int]$DashboardPort = 3600,
-  [int]$StartupTimeoutSec = 90,
+  [int]$StartupTimeoutSec = 180,
   [switch]$InstallDashboardDeps
 )
 
 $ErrorActionPreference = 'Stop'
 
+. (Join-Path $PSScriptRoot 'stack-common.ps1')
+
 # `dashboard/` is the canonical Nuxt app started by this launcher.
 # The former `nuxt_dashboard/` tree was archived to `archive/nuxt_dashboard_legacy_20260306/` and is not booted here.
-
-function Test-Endpoint {
-  param(
-    [string]$Url,
-    [int]$TimeoutSec = 3
-  )
-
-  try {
-    $resp = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec $TimeoutSec
-    return ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 500)
-  } catch {
-    return $false
-  }
-}
-
-function Wait-Endpoint {
-  param(
-    [string]$Url,
-    [int]$TimeoutSec = 90
-  )
-
-  $deadline = (Get-Date).AddSeconds($TimeoutSec)
-  while ((Get-Date) -lt $deadline) {
-    if (Test-Endpoint -Url $Url -TimeoutSec 3) {
-      return $true
-    }
-    Start-Sleep -Seconds 2
-  }
-
-  return $false
-}
-
-function Test-PythonModule {
-  param(
-    [string]$PythonPath,
-    [string]$ModuleName
-  )
-
-  if (-not (Test-Path $PythonPath)) {
-    return $false
-  }
-
-  $result = & $PythonPath -c "import importlib.util; print('1' if importlib.util.find_spec('$ModuleName') else '0')" 2>$null
-  return (($result -join '').Trim() -eq '1')
-}
-
-function Resolve-DagsterPython {
-  param(
-    [string]$RepoRoot
-  )
-
-  $candidates = @()
-  $candidates += (Join-Path $RepoRoot '.venv\Scripts\python.exe')
-  $candidates += (Join-Path $env:APPDATA 'pypoetry\venv\Scripts\python.exe')
-
-  $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-  if ($pythonCmd -and $pythonCmd.Source) {
-    $candidates += $pythonCmd.Source
-  }
-
-  foreach ($candidate in ($candidates | Select-Object -Unique)) {
-    $hasDagster = Test-PythonModule -PythonPath $candidate -ModuleName 'dagster'
-    $hasWebserver = Test-PythonModule -PythonPath $candidate -ModuleName 'dagster_webserver'
-    if ($hasDagster -and $hasWebserver) {
-      return $candidate
-    }
-  }
-
-  throw 'Unable to find a Python executable with both dagster and dagster_webserver installed.'
-}
 
 function Ensure-SeededJson {
   param(
@@ -120,7 +52,7 @@ Write-Host "Repo root: $repoRoot"
 Write-Host "Requested start mode: $Start"
 
 $dagsterUrl = "http://127.0.0.1:$DagsterPort/server_info"
-$dashboardUrl = "http://127.0.0.1:$DashboardPort/api/metrics/dashboard"
+$dashboardUrl = "http://127.0.0.1:$DashboardPort/api/health"
 
 $shouldStartDagster = ($Start -eq 'both' -or $Start -eq 'dagster')
 $shouldStartDashboard = ($Start -eq 'both' -or $Start -eq 'dashboard')
@@ -129,12 +61,17 @@ if ($shouldStartDagster) {
   if (Test-Endpoint -Url $dagsterUrl) {
     Write-Host "Dagster already reachable: $dagsterUrl" -ForegroundColor Green
   } else {
-    $dagsterPython = Resolve-DagsterPython -RepoRoot $repoRoot
-    Write-Host "Using Dagster Python: $dagsterPython" -ForegroundColor Green
+    $dagsterOwner = Get-ListeningPortProcessId -Port $DagsterPort
+    if ($dagsterOwner) {
+      Write-Host "Dagster port $DagsterPort already has a listener (PID $dagsterOwner); waiting for health endpoint before starting another process." -ForegroundColor Yellow
+    } else {
+      $dagsterPython = Resolve-DagsterPython -RepoRoot $repoRoot
+      Write-Host "Using Dagster Python: $dagsterPython" -ForegroundColor Green
 
-    $dagsterCommand = "Set-Location '$repoRoot'; & '$dagsterPython' -m dagster dev -h 127.0.0.1 -p $DagsterPort -d '$repoRoot' -m src.definitions"
-    Start-Process -FilePath 'pwsh' -ArgumentList @('-NoExit', '-Command', $dagsterCommand) -WorkingDirectory $repoRoot | Out-Null
-    Write-Host 'Started Dagster in a new PowerShell window.' -ForegroundColor Yellow
+      $dagsterCommand = "Set-Location '$repoRoot'; & '$dagsterPython' -m dagster dev -h 127.0.0.1 -p $DagsterPort -d '$repoRoot' -m src.definitions"
+      Start-Process -FilePath 'pwsh' -ArgumentList @('-NoExit', '-Command', $dagsterCommand) -WorkingDirectory $repoRoot | Out-Null
+      Write-Host 'Started Dagster in a new PowerShell window.' -ForegroundColor Yellow
+    }
   }
 }
 
@@ -156,9 +93,14 @@ if ($shouldStartDashboard) {
   if (Test-Endpoint -Url $dashboardUrl) {
     Write-Host "Dashboard API already reachable: $dashboardUrl" -ForegroundColor Green
   } else {
-    $dashboardCommand = "Set-Location '$dashboardDir'; npm run dev"
-    Start-Process -FilePath 'pwsh' -ArgumentList @('-NoExit', '-Command', $dashboardCommand) -WorkingDirectory $dashboardDir | Out-Null
-    Write-Host 'Started dashboard dev server in a new PowerShell window.' -ForegroundColor Yellow
+    $dashboardOwner = Get-ListeningPortProcessId -Port $DashboardPort
+    if ($dashboardOwner) {
+      Write-Host "Dashboard port $DashboardPort already has a listener (PID $dashboardOwner); waiting for health endpoint before starting another process." -ForegroundColor Yellow
+    } else {
+      $dashboardCommand = "Set-Location '$dashboardDir'; npm run dev"
+      Start-Process -FilePath 'pwsh' -ArgumentList @('-NoExit', '-Command', $dashboardCommand) -WorkingDirectory $dashboardDir | Out-Null
+      Write-Host 'Started dashboard dev server in a new PowerShell window.' -ForegroundColor Yellow
+    }
   }
 }
 

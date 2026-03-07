@@ -59,6 +59,12 @@ Run the dedicated schedule contract-check job:
 dagster job execute -m src.definitions -j optimization_schedule_contract_checks
 ```
 
+Run the local MVP smoke path from the repository root:
+
+```powershell
+.\scripts\local\run-local-mvp-smoke.ps1
+```
+
 ## Notes
 
 - The active dashboard is the Nuxt application under `dashboard/`.
