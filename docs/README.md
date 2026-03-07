@@ -5,6 +5,7 @@ This directory now keeps only active reference and runbook material in the main 
 ## Active Docs
 
 - `technical/DAGSTER_PIPELINE_DEPENDENCY_MAP.md` - current Dagster asset graph, job boundaries, and Mermaid diagram
+- `technical/ML_TRADING_DECISION_FRAMEWORK.md` - current trading decision flow, data provenance, and history posture
 - `technical/ARCHITECTURE_V2.md` - architecture overview worth keeping as background context
 - `technical/DEPLOYMENT_GUIDE.md` - deployment guidance
 - `technical/TEST_PIPELINE_GUIDE.md` - test and validation guidance
