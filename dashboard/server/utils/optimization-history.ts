@@ -82,7 +82,27 @@ let schemaInitialized = false
 let unavailableReason: string | null = null
 let loggedUnavailableMode = false
 
+function getNestedErrors(error: unknown): unknown[] {
+  if (!error || typeof error !== 'object') {
+    return []
+  }
+
+  const candidate = error as { errors?: unknown }
+  return Array.isArray(candidate.errors) ? candidate.errors : []
+}
+
 function getErrorMessage(error: unknown): string {
+  const nestedErrors = getNestedErrors(error)
+  if (nestedErrors.length > 0) {
+    const nestedMessages = nestedErrors
+      .map((nestedError) => getErrorMessage(nestedError))
+      .filter(Boolean)
+
+    if (nestedMessages.length > 0) {
+      return nestedMessages.join('; ')
+    }
+  }
+
   if (error instanceof Error && error.message) {
     return error.message
   }
@@ -91,6 +111,11 @@ function getErrorMessage(error: unknown): string {
 }
 
 function isOptimizationDbUnavailable(error: unknown): boolean {
+  const nestedErrors = getNestedErrors(error)
+  if (nestedErrors.length > 0) {
+    return nestedErrors.some((nestedError) => isOptimizationDbUnavailable(nestedError))
+  }
+
   if (!error || typeof error !== 'object') {
     return false
   }
@@ -559,7 +584,7 @@ export async function persistOptimizationHistory(
       inserted: false,
       updated: false,
       executionKey: entry.execution_key,
-      error: error instanceof Error ? error.message : String(error),
+      error: getErrorMessage(error),
     }
   }
 }
