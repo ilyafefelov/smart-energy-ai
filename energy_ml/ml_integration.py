@@ -4,6 +4,7 @@ Integrates MLflow model for energy trading recommendations.
 """
 import importlib.util
 import logging
+import os
 from pathlib import Path
 import sys
 from typing import Any, Dict, List, Optional, Tuple
@@ -51,6 +52,43 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+LEARNED_POLICY_SERVING_MODE = "learned_policy"
+LEGACY_MOCK_SERVING_MODE = "legacy_mock"
+
+
+def _normalize_serving_mode(value: Optional[str]) -> str:
+    normalized = str(value or "").strip().lower()
+    if normalized == LEARNED_POLICY_SERVING_MODE:
+        return LEARNED_POLICY_SERVING_MODE
+    return LEGACY_MOCK_SERVING_MODE
+
+
+def _normalize_optional_text(value: Optional[str]) -> Optional[str]:
+    normalized = str(value or "").strip()
+    return normalized or None
+
+
+def _resolve_model_uri(
+    model_uri: Optional[str] = None,
+    model_name: Optional[str] = None,
+    model_alias: Optional[str] = None,
+    model_stage: Optional[str] = None,
+) -> Optional[str]:
+    explicit_uri = _normalize_optional_text(model_uri)
+    if explicit_uri:
+        return explicit_uri
+
+    normalized_name = _normalize_optional_text(model_name)
+    normalized_alias = _normalize_optional_text(model_alias)
+    normalized_stage = _normalize_optional_text(model_stage)
+
+    if normalized_name and normalized_alias:
+        return f"models:/{normalized_name}@{normalized_alias}"
+    if normalized_name and normalized_stage:
+        return f"models:/{normalized_name}/{normalized_stage}"
+
+    return None
+
 
 class PredictionService:
     """Load MLflow model and generate predictions.
@@ -75,50 +113,148 @@ class PredictionService:
     # Valid action classes
     VALID_ACTIONS = ['BUY', 'SELL', 'HOLD']
     
-    def __init__(self, model_uri: Optional[str] = None):
+    def __init__(
+        self,
+        model_uri: Optional[str] = None,
+        *,
+        model_name: Optional[str] = None,
+        model_alias: Optional[str] = None,
+        model_stage: Optional[str] = None,
+        tracking_uri: Optional[str] = None,
+        serving_mode: Optional[str] = None,
+        require_explicit_model: bool = False,
+        allow_mock_fallback: Optional[bool] = None,
+    ):
         """Initialize prediction service with MLflow model.
         
         Args:
             model_uri: MLflow model URI (e.g., 'models:/battery-optimizer/production')
                       If None, uses latest registered model.
         """
-        self.model_uri = model_uri
+        self.serving_mode = _normalize_serving_mode(serving_mode)
+        self.model_name = _normalize_optional_text(model_name)
+        self.model_alias = _normalize_optional_text(model_alias)
+        self.model_stage = _normalize_optional_text(model_stage)
+        self.requested_model_uri = _normalize_optional_text(model_uri)
+        self.model_uri = _resolve_model_uri(
+            model_uri=model_uri,
+            model_name=model_name,
+            model_alias=model_alias,
+            model_stage=model_stage,
+        )
+        self.tracking_uri = (
+            _normalize_optional_text(tracking_uri)
+            or _normalize_optional_text(os.getenv("ENERGY_ML_MLFLOW_TRACKING_URI"))
+            or _normalize_optional_text(os.getenv("MLFLOW_TRACKING_URI"))
+        )
         self.model = None
         self.model_info = None
         self.model_version = "mock-v1"
-        self._mock_mode = not MLFLOW_AVAILABLE
-        
-        if MLFLOW_AVAILABLE:
-            self._load_model()
+        self.require_explicit_model = bool(
+            require_explicit_model or self.serving_mode == LEARNED_POLICY_SERVING_MODE
+        )
+        self._mock_mode = bool(
+            allow_mock_fallback
+            if allow_mock_fallback is not None
+            else not self.require_explicit_model
+        )
+        self.availability_error: Optional[str] = None
+        self.availability_message: Optional[str] = None
+        self.fallback_reason_code = "none"
+
+        self._load_model()
+
+    @classmethod
+    def for_learned_policy(
+        cls,
+        *,
+        model_uri: Optional[str] = None,
+        model_name: Optional[str] = None,
+        model_alias: Optional[str] = None,
+        model_stage: Optional[str] = None,
+        tracking_uri: Optional[str] = None,
+    ) -> "PredictionService":
+        return cls(
+            model_uri=model_uri,
+            model_name=model_name,
+            model_alias=model_alias,
+            model_stage=model_stage,
+            tracking_uri=tracking_uri,
+            serving_mode=LEARNED_POLICY_SERVING_MODE,
+            require_explicit_model=True,
+            allow_mock_fallback=False,
+        )
+
+    def _mark_unavailable(self, reason_code: str, message: str) -> None:
+        self.availability_error = reason_code
+        self.availability_message = message
+        self.fallback_reason_code = reason_code
+        self.model_version = "unavailable"
     
     def _load_model(self):
         """Load MLflow model.
         
         Handles missing models gracefully by falling back to mock mode.
         """
-        try:
-            if self.model_uri is None:
-                # Load latest registered model
-                # For now, just use mock since real model may not exist
-                logger.info("No model URI provided. Using mock prediction service.")
-                self._mock_mode = True
+        self.model = None
+        self.model_info = None
+        self.availability_error = None
+        self.availability_message = None
+        self.fallback_reason_code = "none"
+
+        if self.model_uri is None:
+            if self.require_explicit_model:
+                self._mock_mode = False
+                self._mark_unavailable(
+                    "learned_policy_model_not_configured",
+                    "Learned-policy mode requires ENERGY_ML_MODEL_URI or ENERGY_ML_MODEL_NAME with ENERGY_ML_MODEL_ALIAS or ENERGY_ML_MODEL_STAGE.",
+                )
+                logger.warning(self.availability_message)
                 return
-            
+
+            logger.info("No model URI provided. Using mock prediction service.")
+            self._mock_mode = True
+            return
+
+        if not MLFLOW_AVAILABLE:
+            if self._mock_mode:
+                logger.warning("MLflow not available. PredictionService will operate in mock mode.")
+                return
+
+            self._mock_mode = False
+            self._mark_unavailable(
+                "mlflow_unavailable",
+                "MLflow is not installed or importable, so learned-policy serving cannot load the configured model.",
+            )
+            logger.warning(self.availability_message)
+            return
+
+        try:
+            if self.tracking_uri and hasattr(mlflow, "set_tracking_uri"):
+                mlflow.set_tracking_uri(self.tracking_uri)
+
             self.model = mlflow.pyfunc.load_model(self.model_uri)
             self._mock_mode = False
             logger.info(f"Loaded MLflow model: {self.model_uri}")
-            
-            # Try to get model metadata
+
             try:
                 self.model_info = mlflow.models.get_model(self.model_uri)
                 self.model_version = self.model_info.version if hasattr(self.model_info, 'version') else "unknown"
             except Exception as e:
                 logger.warning(f"Could not retrieve model metadata: {e}")
                 self.model_version = "unknown"
-        
+
         except Exception as e:
-            logger.warning(f"Failed to load MLflow model: {e}. Using mock prediction service.")
-            self._mock_mode = True
+            if self._mock_mode:
+                logger.warning(f"Failed to load MLflow model: {e}. Using mock prediction service.")
+                return
+
+            self._mock_mode = False
+            self._mark_unavailable(
+                "learned_policy_model_load_failed",
+                f"Failed to load learned-policy model from {self.model_uri}: {e}",
+            )
+            logger.warning(self.availability_message)
     
     def predict(self, features: pl.DataFrame) -> Dict[str, any]:
         """Generate ML prediction from features.
@@ -139,6 +275,9 @@ class PredictionService:
         is_valid, errors = self.validate_features(features)
         if not is_valid:
             return self._error_response(f"Feature validation failed: {errors}")
+
+        if self.require_explicit_model and self.model is None:
+            return self._service_unavailable_response()
         
         if self._mock_mode:
             return self._mock_predict(features)
@@ -148,13 +287,18 @@ class PredictionService:
             prediction = self.model.predict(feature_array)
             action, confidence = self._parse_prediction(prediction)
             reasoning = self._generate_reasoning(action, features, confidence)
-            return build_prediction_response(
+            response = build_prediction_response(
                 action,
                 confidence,
                 reasoning,
                 self.model_version,
                 self._get_feature_importance(features),
             )
+            response["decision_source"] = "ml_recommendation"
+            response["fallback_reason_code"] = "none"
+            response["serving_mode"] = self.serving_mode
+            response["resolved_model_uri"] = self.model_uri
+            return response
         
         except Exception as e:
             logger.error(f"Prediction failed: {e}")
@@ -165,7 +309,12 @@ class PredictionService:
         
         Uses simple heuristic rules based on features.
         """
-        return build_mock_prediction(features, self.model_version)
+        response = build_mock_prediction(features, self.model_version)
+        response["decision_source"] = "ml_recommendation"
+        response["fallback_reason_code"] = "none"
+        response["serving_mode"] = self.serving_mode
+        response["resolved_model_uri"] = self.model_uri
+        return response
     
     def _parse_prediction(self, prediction) -> Tuple[str, float]:
         """Parse model output into action and confidence.
@@ -226,7 +375,16 @@ class PredictionService:
             Error response dict (defaults to HOLD)
         """
         logger.error(f"Prediction error: {error_msg}")
-        return build_error_response(error_msg, self.model_version)
+        response = build_error_response(error_msg, self.model_version)
+        response["decision_source"] = "ml_recommendation"
+        response["fallback_reason_code"] = self.fallback_reason_code
+        response["serving_mode"] = self.serving_mode
+        response["resolved_model_uri"] = self.model_uri
+        return response
+
+    def _service_unavailable_response(self) -> Dict[str, Any]:
+        message = self.availability_message or "Learned-policy serving is unavailable"
+        return self._error_response(message)
     
     def get_model_info(self) -> Dict[str, any]:
         """Return loaded model metadata.
@@ -234,7 +392,7 @@ class PredictionService:
         Returns:
             Dict with model information
         """
-        return build_model_info(
+        info = build_model_info(
             self.model_uri,
             self.model_version,
             self._mock_mode,
@@ -242,6 +400,21 @@ class PredictionService:
             self.EXPECTED_FEATURES,
             self.VALID_ACTIONS,
         )
+        info.update({
+            "serving_mode": self.serving_mode,
+            "require_explicit_model": self.require_explicit_model,
+            "requested_model_uri": self.requested_model_uri,
+            "resolved_model_uri": self.model_uri,
+            "model_name": self.model_name,
+            "model_alias": self.model_alias,
+            "model_stage": self.model_stage,
+            "tracking_uri": self.tracking_uri,
+            "model_available": self.model is not None and not self._mock_mode,
+            "availability_error": self.availability_error,
+            "availability_message": self.availability_message,
+            "fallback_reason_code": self.fallback_reason_code,
+        })
+        return info
     
     def generate_prediction(self, features: pl.DataFrame, user_strategy: str = "balanced") -> Dict[str, Any]:
         """Generate ML prediction with user optimization strategy.

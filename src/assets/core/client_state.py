@@ -11,6 +11,7 @@ requiring physical IoT devices in development phase.
 import polars as pl
 from dagster import asset, MetadataValue
 from datetime import datetime, timedelta
+import json
 import logging
 from typing import Dict, List, Optional, Any
 import numpy as np
@@ -19,6 +20,10 @@ from pathlib import Path
 import re
 
 logger = logging.getLogger(__name__)
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+SIMULATOR_STATE_SOURCE = 'SIMULATOR_BACKED'
+CONFIG_STATE_SOURCE = 'CONFIG_FALLBACK'
 
 
 def _normalize_tenant_id(raw_tenant_id: str) -> str:
@@ -29,19 +34,24 @@ def _normalize_tenant_id(raw_tenant_id: str) -> str:
 
 @asset(
     group_name="client_data",
-    description="Synthetic client state data based on user energy configurations",
+    description="Client state data seeded from simulator-backed battery telemetry when available, with config fallback for missing operational state",
     deps=["weather_asset", "market_data_asset"],
     metadata={
-        "source": "User Configuration + Synthetic Generation",
+        "source": "Simulator-backed tenant battery state with config fallback",
         "update_frequency": "Hourly",
-        "stage": "Stage 1 - Synthetic Data"
+        "stage": "Stage 1 - Simulator-backed operational telemetry with config fallback"
     }
 )
 def client_state_asset(weather_asset: pl.DataFrame, market_data_asset: pl.DataFrame) -> pl.DataFrame:
     """
-    Generate synthetic client state data based on user energy configurations.
+    Generate client state data with simulator-backed battery state when available.
     
-    In Stage 1, we simulate battery and system states based on:
+    In Stage 1, we preserve the dashboard simulator-backed battery state when present and
+    only fall back to configuration defaults for missing operational state. Load and solar
+    remain derived from deterministic config, weather, and market signals.
+
+    Inputs used in the current path:
+    - Simulator-backed battery state persisted by the dashboard battery loop
     - User-defined energy capabilities (battery size, solar capacity, load profile)
     - Weather conditions (for solar generation simulation)
     - Market prices (for charging/discharging behavior simulation)
@@ -58,7 +68,8 @@ def client_state_asset(weather_asset: pl.DataFrame, market_data_asset: pl.DataFr
         - grid_power: Grid power flow (kW, positive = import)
         - inverter_status: Inverter status code
         - system_efficiency: Overall system efficiency (%)
-        - source: Data source identifier
+        - source: Battery-state source identifier
+        - state_source: Canonical battery-state source for downstream provenance
     """
     logger.info("Generating synthetic client state data")
     
@@ -202,6 +213,70 @@ def _get_default_client_configs() -> List[Dict]:
     ]
 
 
+def _safe_float(value: Any, default: float) -> float:
+    try:
+        numeric = float(value)
+        return numeric if np.isfinite(numeric) else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _candidate_battery_state_paths(tenant_id: str) -> List[Path]:
+    normalized_tenant_id = _normalize_tenant_id(tenant_id)
+    return [
+        REPO_ROOT / 'dashboard' / 'data' / 'tenants' / normalized_tenant_id / 'battery_state.json',
+        REPO_ROOT / 'dashboard' / 'data' / 'battery_state.json',
+        REPO_ROOT / 'data' / 'tenants' / normalized_tenant_id / 'battery_state.json',
+        REPO_ROOT / 'data' / 'battery_state.json',
+    ]
+
+
+def _load_operational_battery_state(config: Dict[str, Any]) -> Dict[str, Any]:
+    tenant_id = config.get('tenant_id') or config.get('id') or 'unknown_tenant'
+
+    for battery_state_path in _candidate_battery_state_paths(str(tenant_id)):
+        if not battery_state_path.exists():
+            continue
+
+        try:
+            with open(battery_state_path, 'r', encoding='utf-8') as handle:
+                payload = json.load(handle)
+
+            if not isinstance(payload, dict):
+                continue
+
+            relative_path = battery_state_path.relative_to(REPO_ROOT).as_posix()
+            return {
+                'soc': _safe_float(payload.get('soc'), 50.0),
+                'temperature': _safe_float(payload.get('temperature'), 25.0),
+                'voltage': _safe_float(payload.get('voltage'), 400.0),
+                'current': _safe_float(payload.get('current'), 0.0),
+                'health': _safe_float(payload.get('health'), 100.0),
+                'cycles': _safe_float(payload.get('cycles'), 0.0),
+                'last_update': str(payload.get('lastUpdate') or payload.get('last_update') or ''),
+                'source': SIMULATOR_STATE_SOURCE,
+                'state_source': 'simulator_backed_telemetry',
+                'state_source_detail': relative_path,
+                'telemetry_classification': 'simulated_operational_telemetry',
+            }
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            logger.warning("Failed to load simulator-backed battery state from %s: %s", battery_state_path, exc)
+
+    return {
+        'soc': 50.0,
+        'temperature': 25.0,
+        'voltage': 400.0,
+        'current': 0.0,
+        'health': 100.0,
+        'cycles': 0.0,
+        'last_update': None,
+        'source': CONFIG_STATE_SOURCE,
+        'state_source': 'config_fallback',
+        'state_source_detail': 'synthetic_config_defaults',
+        'telemetry_classification': 'fabricated_training_scaffolding',
+    }
+
+
 def _generate_client_state(config: Dict, weather_df: pl.DataFrame, market_df: pl.DataFrame) -> List[Dict]:
     """Generate synthetic state data for a specific client."""
     client_id = config.get('id', 'unknown_client')
@@ -213,10 +288,15 @@ def _generate_client_state(config: Dict, weather_df: pl.DataFrame, market_df: pl
     # Get weather data for client location (simplified - use first available)
     weather_data = weather_df.to_dicts()
     market_data = market_df.to_dicts()
+    battery_state = _load_operational_battery_state(config)
     
-    # Initialize battery state
-    current_soc = 50.0  # Start at 50% SoC
-    battery_temp = 25.0  # Start at optimal temperature
+    # Initialize battery state from persisted simulator telemetry when available.
+    current_soc = float(battery_state['soc'])
+    battery_temp = float(battery_state['temperature'])
+    battery_voltage = float(battery_state['voltage'])
+    battery_current = float(battery_state['current'])
+    battery_health = float(battery_state['health'])
+    battery_cycles = float(battery_state['cycles'])
     
     client_records = []
     
@@ -258,15 +338,22 @@ def _generate_client_state(config: Dict, weather_df: pl.DataFrame, market_df: pl
             'tenant_namespace': tenant_namespace,
             'storage_namespace': storage_namespace,
             'battery_soc': current_soc,
+            'battery_health': battery_health,
+            'battery_cycles': battery_cycles,
             'battery_temp': battery_temp,
-            'battery_voltage': _calculate_battery_voltage(current_soc, config.get('battery_type', 'LFP_280Ah')),
+            'battery_voltage': battery_voltage if i == 0 else _calculate_battery_voltage(current_soc, config.get('battery_type', 'LFP_280Ah')),
+            'battery_current': battery_current if i == 0 else power_flow,
             'solar_gen_actual': solar_gen,
             'load_actual': load_actual,
             'grid_power': grid_power,
             'battery_power': power_flow,
             'inverter_status': inverter_status,
             'system_efficiency': system_efficiency,
-            'source': 'SYNTHETIC'
+            'source': battery_state['source'],
+            'state_source': battery_state['state_source'],
+            'state_source_detail': battery_state['state_source_detail'],
+            'battery_state_updated_at': battery_state['last_update'],
+            'telemetry_classification': battery_state['telemetry_classification'],
         }
         
         client_records.append(record)
@@ -533,15 +620,22 @@ def _generate_fallback_client_data() -> List[Dict]:
             'timestamp': timestamp,
             'client_id': 'fallback_client',
             'battery_soc': 50.0,
+            'battery_health': 100.0,
+            'battery_cycles': 0.0,
             'battery_temp': 25.0,
             'battery_voltage': 800.0,
+            'battery_current': 0.0,
             'solar_gen_actual': 0.0,
             'load_actual': 100.0,
             'grid_power': 100.0,
             'battery_power': 0.0,
             'inverter_status': 'IDLE',
             'system_efficiency': 0.90,
-            'source': 'FALLBACK'
+            'source': CONFIG_STATE_SOURCE,
+            'state_source': 'config_fallback',
+            'state_source_detail': 'asset_generation_fallback',
+            'battery_state_updated_at': None,
+            'telemetry_classification': 'fabricated_training_scaffolding',
         })
         
     return fallback_data

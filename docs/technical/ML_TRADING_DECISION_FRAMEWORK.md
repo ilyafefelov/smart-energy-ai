@@ -141,6 +141,16 @@ The core reasons are:
 
 These assets can still be useful for experimentation or future cleanup, but they should be framed as prototype or legacy scope rather than the active production decision path.
 
+## MLflow Dashboard Surfaces
+
+The dashboard MLflow routes are diagnostic surfaces, not runtime-serving authority:
+
+- `/api/mlflow/status` reports experiment and registry reachability plus recent run metadata when available.
+- `/api/mlflow/log-metrics` captures local runtime diagnostics for operator visibility; it should not be described as guaranteed MLflow tracking unless a real backend logging path is wired.
+- Live recommendation provenance should come from the serving contract and Dagster snapshot metadata first.
+
+If learned-policy mode is activated with an explicit model URI, the authoritative runtime serving metadata lives in the Python `PredictionService` contract. MLflow remains a supporting registry or experiment surface rather than the public source of truth for action selection.
+
 ## Current Gaps And Terminology Fixes
 
 The current architecture is serviceable, but the docs need to describe it more honestly.

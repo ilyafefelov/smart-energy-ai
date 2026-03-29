@@ -156,6 +156,46 @@ def test_strategy_context_is_exposed_in_battery_and_recommendation_endpoints(ten
     assert recommendation.get("action_kw") is not None
     assert "strategy_adjusted" in recommendation
 
+    serving = recommendation_payload.get("serving") or {}
+    assert serving.get("adapter") == "PredictionService"
+    assert serving.get("requested_mode") is not None
+    assert serving.get("active_mode") is not None
+
+
+@pytest.mark.integration
+def test_ml_predict_delegates_to_shared_serving_contract(tenant_id: str) -> None:
+    try:
+        payload = _post_json(
+            "/api/ml/predict",
+            {
+                "strategy": "balanced",
+                "battery_soc": 50,
+                "price": 14.26,
+            },
+            tenant_id=tenant_id,
+        )
+    except (urllib.error.URLError, TimeoutError) as exc:
+        pytest.skip(f"Predict endpoint unavailable at {BASE_URL}: {exc}")
+
+    assert payload.get("status") == "success"
+
+    recommendation = payload.get("recommendation") or {}
+    contract = payload.get("contract") or {}
+    provenance = contract.get("provenance") or {}
+    normalized_action = contract.get("normalized_action") or {}
+    serving = payload.get("serving") or {}
+    model_info = payload.get("model_info") or {}
+
+    assert contract.get("version") == "learned_policy_migration_v1"
+    assert recommendation.get("action") is not None
+    assert recommendation.get("normalized_action") is not None
+    assert normalized_action.get("action") in {"BUY", "SELL", "HOLD"}
+    assert provenance.get("decision_source") is not None
+    assert serving.get("adapter") == "PredictionService"
+    assert serving.get("requested_mode") is not None
+    assert serving.get("active_mode") is not None
+    assert model_info.get("source") == "ml_integration_api.py"
+
 
 @pytest.mark.integration
 def test_control_history_exposes_decision_trace_fields(tenant_id: str) -> None:

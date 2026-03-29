@@ -21,12 +21,8 @@ this file only for desloppify-specific execution.
 
 ## Core Rules
 
-- Maximise the strict score honestly.
-- Follow `desloppify scan`, `desloppify next`, and review instructions instead
   of inventing a separate prioritization scheme when the tool already provides
   one.
-- Prefer bounded batches that can be validated and landed cleanly.
-- Do not rescan mid-queue unless blocked or the current queue is exhausted.
 
 ## Minimal Workflow
 
@@ -63,27 +59,20 @@ desloppify plan resolve <pat>
 
 ### 3. Execute and Land
 
-- Before starting a bounded cleanup task, create or claim a Beads task exactly
   as required by `AGENTS.md`.
-- Use a dedicated `desloppify/<description>` branch for multi-commit health
   passes. Do not commit health work directly to `main`.
-- If you are already on an active cleanup branch, continue there instead of
   creating unnecessary branch churn.
-- Once a cleanup branch is merged or superseded, delete or prune it instead of
   leaving stale health branches behind.
-- If a PR exists, link it:
 
 ```bash
 desloppify config set commit_pr 42
 ```
 
-- After each logical cleanup commit, record it:
 
 ```bash
 desloppify plan commit-log record
 ```
 
-- Keep Beads, git commits, and PR state synchronized. Before push or PR updates,
   run the landing flow from `AGENTS.md` so Beads status, branch history, and the
   PR all describe the same state.
 
@@ -103,10 +92,6 @@ desloppify plan commit-log pr
 
 ## Review and Scoring Notes
 
-- Overall score is `40%` mechanical and `60%` subjective.
-- Strict score is the operating target; wontfix items still count against it.
-- Review from evidence only. Do not anchor to prior scores or target thresholds.
-- Import first, then fix, so review state and tracked findings stay correlated.
 
 ## Copilot Review Agents
 
@@ -126,6 +111,14 @@ If desloppify itself appears wrong or inconsistent:
 
 `command -v desloppify >/dev/null 2>&1 && echo "desloppify: installed" || echo "NOT INSTALLED — run: pip install --upgrade git+https://github.com/peteromallet/desloppify.git"`
 
+
+## .copilot-tracking Workflow
+
+- Treat `.copilot-tracking/` as an authoritative working area when the user or a prompt explicitly references files there, even though the directory may be git-ignored.
+- If a task starts from `.copilot-tracking/prompts/*.prompt.md`, read the referenced plan, details, and research files before implementation instead of treating the prompt as self-contained.
+- When a `.copilot-tracking/changes/*.md` file is part of the task contract, create the parent `changes/` directory if needed and keep the change log updated as implementation progresses.
+- Prefer `read_file`, `list_dir`, or searches that include ignored files when locating `.copilot-tracking` artifacts; do not assume normal file search will surface them.
+- Do not promote `.copilot-tracking` artifacts into tracked docs by default. Only move or publish content from `.copilot-tracking/` into the main repository surface when the user explicitly asks for that promotion.
 <!-- desloppify-overlay: copilot -->
 <!-- desloppify-end -->
 

@@ -96,6 +96,7 @@ export default defineEventHandler(async (event: any) => {
     ])
 
     const mlflowDocker = inspectMlflowDocker(projectRoot)
+    const serving = recommendation?.serving || dagsterRecommendation?.serving || null
 
     const bridgeScriptExists = existsSync(bridgeScriptPath)
     const recommendationOk = recommendation?.success === true
@@ -152,6 +153,12 @@ export default defineEventHandler(async (event: any) => {
         connected_via_status_api: mlflowStatus?.mlflow_connected === true,
         reachable_over_http: mlflowReachability.reachable,
         reachability: mlflowReachability,
+        service_role: mlflowStatus?.service_role || 'registry_and_experiment_diagnostics',
+        authoritative_for_runtime_serving: false,
+        runtime_serving_source: mlflowStatus?.runtime_serving_source || 'python_serving_contract',
+        runtime_serving_adapter: serving?.adapter || null,
+        runtime_requested_mode: serving?.requested_mode || null,
+        runtime_active_mode: serving?.active_mode || null,
       },
       mlflow_docker: mlflowDocker,
       inference_drift: {
@@ -180,7 +187,7 @@ export default defineEventHandler(async (event: any) => {
       dagster_asset_checks: dagsterAssetChecks,
       recommendations: [
         mlflowDocker.status !== 'healthy' ? 'Check Docker MLflow service definitions in docker-compose.yml and Dockerfile.' : null,
-        components.mlflow.status !== 'healthy' ? `Start/recover MLflow at ${DEFAULT_MLFLOW_URI} or update MLFLOW_API_URL.` : null,
+        components.mlflow.status !== 'healthy' ? `Start/recover MLflow at ${DEFAULT_MLFLOW_URI} or update MLFLOW_API_URL if you need registry or experiment diagnostics.` : null,
         driftStatus === 'drifted' ? 'Trigger accelerated retraining due to inference drift.' : null,
         dagsterCheckStatus === 'degraded' ? 'Investigate Dagster optimization schedule asset-check failures before trusting live recommendations.' : null,
         dagsterCheckStatus === 'unknown' ? 'Run the optimization schedule contract checks job to populate Dagster asset-check history.' : null,

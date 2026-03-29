@@ -25,7 +25,7 @@ The active runtime uses Dagster for market, weather, forecasting, and scheduling
 ### Level 1: Ingestion (Sourcing)
 * **`market_data_asset`**: Pull market price history and recent price signals for optimization
 * **`weather_asset`**: Pull Open-Meteo weather inputs and solar-relevant forecast features
-* **`client_state_asset`**: Synthesize per-client battery, load, and solar state from config plus market and weather inputs
+* **`client_state_asset`**: Reuse simulator-backed tenant battery state when available, while keeping config plus market and weather inputs for load and solar estimation
 
 ### Parallel dashboard telemetry loop
 * **Battery state**: The dashboard persists tenant battery state and exposes it through the battery APIs
@@ -139,6 +139,7 @@ For thesis and experimentation work, the repo still includes benchmark and MLflo
 - **Tags:** `engine_type=polars` vs `engine_type=nvtabular`
 
 These paths are useful for benchmarking and experiments, but they are not the current end-to-end live decision engine. In particular, MLflow-backed inference remains optional and falls back to mock behavior unless a real model URI is provided.
+The dashboard `/api/mlflow/*` routes should be read as experiment and registry diagnostics, not as proof that the live BUY/SELL/HOLD path is currently served by a learned policy. Runtime serving authority remains the Dagster schedule path and the shared Python serving contract in `ml_integration_api.py`.
 
 **Defensive Logic:**
 Code automatically checks for GPU availability:
@@ -222,7 +223,7 @@ The current implementation focus is runtime hardening and architectural honesty 
 
 **Future priorities:**
 - 📡 Real telemetry ingestion if and when MQTT or SCADA sources become available
-- 🔁 Align Dagster client-state inputs with the richer simulator-backed tenant loop
+- 🔁 Keep Dagster client-state aligned with the simulator-backed tenant loop and avoid reintroducing duplicate synthetic battery truth
 - 🧪 Use backfilled market and weather history plus forward-collected simulator history for any future learned action model
 - 🌐 Continue deployment hardening for AWS and local operator workflows
 

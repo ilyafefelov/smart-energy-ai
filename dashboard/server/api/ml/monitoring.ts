@@ -6,7 +6,73 @@
 import { createError, eventHandler, getMethod } from 'h3'
 import { resolve } from 'path'
 import { readDagsterAssetChecks } from '../../utils/dagster-asset-checks'
+import { readMlflowDiagnosticEvents } from '../../utils/mlflow-diagnostics'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
+
+function toFiniteNumber(value: unknown): number | null {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function percentile(values: number[], quantile: number): number | null {
+  if (!values.length) {
+    return null
+  }
+
+  const sorted = [...values].sort((left, right) => left - right)
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil((quantile / 100) * sorted.length) - 1))
+  return sorted[index] ?? null
+}
+
+function buildFeatureImportanceMap(value: unknown): Record<string, number> {
+  if (!Array.isArray(value)) {
+    return {}
+  }
+
+  return value.reduce<Record<string, number>>((result, item) => {
+    if (!item || typeof item !== 'object') {
+      return result
+    }
+
+    const name = typeof (item as any).name === 'string' ? (item as any).name : null
+    const importance = toFiniteNumber((item as any).importance)
+    if (!name || importance == null) {
+      return result
+    }
+
+    result[name] = importance
+    return result
+  }, {})
+}
+
+function buildPerformanceHistory(events: Array<Record<string, any>>) {
+  const buckets = new Map<number, { count: number; latencies: number[] }>()
+
+  for (const event of events) {
+    const timestamp = typeof event.timestamp === 'string' ? new Date(event.timestamp) : null
+    const hour = timestamp && Number.isFinite(timestamp.getTime()) ? timestamp.getHours() : null
+    if (hour == null) {
+      continue
+    }
+
+    const current = buckets.get(hour) || { count: 0, latencies: [] }
+    current.count += 1
+    const latency = toFiniteNumber((event.metrics as any)?.latency_ms)
+    if (latency != null) {
+      current.latencies.push(latency)
+    }
+    buckets.set(hour, current)
+  }
+
+  return Array.from(buckets.entries())
+    .sort((left, right) => left[0] - right[0])
+    .map(([hour, bucket]) => ({
+      hour,
+      mape: null,
+      predictions: bucket.count,
+      latency_ms: percentile(bucket.latencies, 95),
+    }))
+}
 
 export default eventHandler(async (event: any) => {
   const method = getMethod(event)
@@ -20,7 +86,6 @@ export default eventHandler(async (event: any) => {
       }
       const timestamp = new Date().toISOString()
       const now = new Date()
-      const currentHour = now.getHours()
       const projectRoot = resolve(process.cwd(), '..')
 
       const [mlflowStatus, mlRecommendation, pricesPayload, batteryStatus, dagsterRecommendation, dagsterAssetChecks] = await Promise.all([
@@ -31,18 +96,15 @@ export default eventHandler(async (event: any) => {
         $fetch<any>('/api/dagster/recommendation', tenantRequest).catch(() => null),
         readDagsterAssetChecks(projectRoot),
       ])
+      const diagnostics = await readMlflowDiagnosticEvents(projectRoot, timestamp)
 
-      const confidence = Number(mlRecommendation?.data?.confidence || 0.75)
-      const mape = Number(Math.max(1.5, (1 - confidence) * 40).toFixed(2))
-      const rmse = Number((mape * 0.14).toFixed(3))
-      const mae = Number((mape * 0.09).toFixed(3))
-      const r2Score = Number(Math.max(0.7, 1 - mape / 40).toFixed(3))
-
-      const runs = mlflowStatus?.runs || []
-      const experiments = mlflowStatus?.experiments || []
-      const predictionCount = 1000 + runs.length * 50
-      const latencyP95 = Number((42 + (mape * 1.6)).toFixed(1))
-      const errorRate = Number((Math.max(0.2, mape / 8)).toFixed(2))
+      const latencySamples = diagnostics.events
+        .map((event) => toFiniteNumber((event.metrics as any)?.latency_ms))
+        .filter((value): value is number => value != null)
+      const predictionCount = diagnostics.events.length
+      const latencyP95 = percentile(latencySamples, 95)
+      const errorEvents = diagnostics.events.filter((event) => String((event.metrics as any)?.status || '').toLowerCase() === 'error').length
+      const errorRate = predictionCount > 0 ? Number(((errorEvents / predictionCount) * 100).toFixed(2)) : null
 
       const currentPrice = Number(pricesPayload?.prices?.current?.price || pricesPayload?.prices?.today?.avg || 0)
       const avgPrice = Number(pricesPayload?.prices?.today?.avg || currentPrice || 0)
@@ -63,18 +125,18 @@ export default eventHandler(async (event: any) => {
       }
 
       const alerts: Array<{ rule_name: string; message: string; severity: 'warning' | 'critical'; timestamp: string }> = []
-      if (mape > 12) {
+      if (latencyP95 != null && latencyP95 > 150) {
         alerts.push({
-          rule_name: 'high_mape',
-          message: `Model accuracy degraded: MAPE ${mape.toFixed(1)}% exceeds 12.0%`,
+          rule_name: 'high_runtime_latency',
+          message: `Runtime diagnostic latency is elevated: P95 ${latencyP95.toFixed(0)}ms exceeds 150ms.`,
           severity: 'warning',
           timestamp,
         })
       }
-      if (latencyP95 > 150) {
+      if (recommendationDriftStatus === 'drifted' || driftScore > 0.2) {
         alerts.push({
-          rule_name: 'high_latency',
-          message: `Model latency high: ${latencyP95.toFixed(0)}ms exceeds 150ms`,
+          rule_name: 'recommendation_drift',
+          message: 'Recommendation drift heuristics indicate the incumbent runtime path should be reviewed or retrained.',
           severity: 'warning',
           timestamp,
         })
@@ -109,18 +171,22 @@ export default eventHandler(async (event: any) => {
       }
 
       const activeModel = mlflowStatus?.active_model || null
+      const serving = mlRecommendation?.serving || dagsterRecommendation?.serving || null
       const modelCreatedAt = activeModel?.last_updated || timestamp
-      const modelVersion = activeModel?.version || 'Phase4F-v1.0'
-      const modelName = activeModel?.name || 'energy_optimizer'
+      const runtimeDecisionSource = dagsterRecommendation?.provenance?.decision_source
+        || mlRecommendation?.data?.provenance?.decision_source
+        || 'dagster_optimizer'
+      const runtimeLabel = serving?.active_mode === 'learned_policy'
+        ? serving?.model_info?.resolved_model_uri || serving?.model_info?.model_name || 'learned_policy_candidate'
+        : runtimeDecisionSource
 
-      const lastTrainingAgeHours = Number(
-        Math.max(0, (Date.now() - new Date(modelCreatedAt).getTime()) / (1000 * 60 * 60)).toFixed(1)
-      )
+      const lastTrainingAgeHours = activeModel?.last_updated
+        ? Number(Math.max(0, (Date.now() - new Date(modelCreatedAt).getTime()) / (1000 * 60 * 60)).toFixed(1))
+        : null
 
-      const shouldRetrain = driftScore > 0.2 || mape > 12 || batteryHealthPercent < 90 || recommendationDriftStatus === 'drifted'
+      const shouldRetrain = driftScore > 0.2 || recommendationDriftStatus === 'drifted'
       const retrainReasons = []
       if (driftScore > 0.2) retrainReasons.push('Data drift threshold exceeded')
-      if (mape > 12) retrainReasons.push('MAPE above allowed threshold')
       if (batteryHealthPercent < 90) retrainReasons.push('Battery operating profile changed materially')
 
       const scheduleContractStatus = dagsterCheckStatus === 'healthy'
@@ -131,44 +197,40 @@ export default eventHandler(async (event: any) => {
             ? 'degraded'
             : 'degraded'
 
-      const performanceHistory = Array.from({ length: 24 }, (_, i) => {
-        const hourOffset = (currentHour + i) % 24
-        const cyc = (i % 6) - 3
-        return {
-          hour: hourOffset,
-          mape: Number((mape + cyc * 0.18).toFixed(2)),
-          predictions: Math.max(5, Math.round(predictionCount / 24 + cyc * 2)),
-          latency_ms: Number((latencyP95 * 0.7 + cyc * 1.5).toFixed(1)),
-        }
-      })
+      const performanceHistory = buildPerformanceHistory(diagnostics.events)
 
       return {
         timestamp,
 
         model_status: {
           production: {
-            version: modelName,
+            version: runtimeLabel,
             created_at: modelCreatedAt,
-            health_status: 'healthy',
-            performance_mape: mape,
+            health_status: dagsterSnapshotFresh ? 'healthy' : 'degraded',
+            performance_mape: null,
+            authoritative_for_runtime_serving: true,
+            role: 'runtime_decision_path',
           },
-          staging: {
-            version: `${modelVersion}-staging`,
-            created_at: modelCreatedAt,
-            health_status: shouldRetrain ? 'degraded' : 'healthy',
-            performance_mape: Number((mape * 0.97).toFixed(2)),
-          }
+          staging: mlflowStatus?.mlflow_connected === true && activeModel?.name ? {
+            version: activeModel.name,
+            created_at: activeModel.last_updated || timestamp,
+            health_status: 'healthy',
+            performance_mape: null,
+            authoritative_for_runtime_serving: false,
+            role: 'registry_diagnostics',
+          } : null,
         },
 
         performance_metrics: {
-          mape,
-          rmse,
-          mae,
-          r2_score: r2Score,
+          mape: null,
+          rmse: null,
+          mae: null,
+          r2_score: null,
           prediction_count: predictionCount,
           latency_p95_ms: latencyP95,
           error_rate: errorRate,
           last_updated: timestamp,
+          source: predictionCount > 0 ? 'runtime_diagnostics' : 'not_measured',
         },
 
         drift_status: {
@@ -185,9 +247,10 @@ export default eventHandler(async (event: any) => {
         lineage: {
           training: mlRecommendation?.data?.inference_lineage?.training_reference || {
             mlflow_connected: Boolean(mlflowStatus?.mlflow_connected),
-            model_name: mlflowStatus?.active_model?.name || null,
-            model_version: mlflowStatus?.active_model?.version || null,
-            trained_at: mlflowStatus?.active_model?.last_updated || null,
+            model_name: null,
+            model_version: null,
+            trained_at: null,
+            source: 'runtime_incumbent_or_registry_diagnostics',
           },
           inference: {
             context_id: mlRecommendation?.data?.inference_lineage?.inference_context_id || null,
@@ -213,7 +276,7 @@ export default eventHandler(async (event: any) => {
           should_retrain: shouldRetrain,
           reasons: retrainReasons,
           last_training_age_hours: lastTrainingAgeHours,
-          performance_degraded: mape > 12,
+          performance_degraded: false,
           drift_detected: driftScore > 0.2,
           next_check: new Date(Date.now() + 3600000).toISOString(),
         },
@@ -222,9 +285,13 @@ export default eventHandler(async (event: any) => {
           overall_status: shouldRetrain || scheduleContractStatus !== 'healthy' || !dagsterSnapshotFresh ? 'degraded' : 'healthy',
           components: {
             model_registry: {
-              healthy: Boolean(activeModel),
-              message: activeModel ? 'Production model deployed' : 'No active model found',
-              details: { production_models: activeModel ? 1 : 0 }
+              healthy: Boolean(mlflowStatus?.mlflow_connected),
+              message: mlflowStatus?.mlflow_connected === true ? 'MLflow registry and experiment diagnostics reachable' : 'MLflow registry diagnostics unavailable',
+              details: {
+                service_role: mlflowStatus?.service_role || 'registry_and_experiment_diagnostics',
+                authoritative_for_runtime_serving: false,
+                recent_runs: mlflowStatus?.registry_summary?.recent_runs_count || 0,
+              }
             },
             feature_store: {
               healthy: true,
@@ -233,8 +300,11 @@ export default eventHandler(async (event: any) => {
             },
             monitoring: {
               healthy: true,
-              message: 'Monitoring active',
-              details: { recent_predictions: predictionCount }
+              message: predictionCount > 0 ? 'Runtime diagnostics captured from local event log' : 'No runtime diagnostics captured yet',
+              details: {
+                recent_predictions: predictionCount,
+                diagnostics_log_path: diagnostics.relativePath,
+              }
             },
             alerts: {
               healthy: alerts.filter(a => a.severity === 'critical').length === 0,
@@ -283,14 +353,7 @@ export default eventHandler(async (event: any) => {
 
         performance_history: performanceHistory,
 
-        feature_importance: {
-          grid_price_uah_kwh: 0.35,
-          battery_soc: 0.25,
-          load_demand_kw: 0.15,
-          solar_generation_kw: 0.12,
-          temperature_celsius: 0.08,
-          hour_of_day: 0.05,
-        },
+        feature_importance: buildFeatureImportanceMap(activeModel?.feature_importance),
 
         tenant: getTenantResponseMetadata(tenant),
       }

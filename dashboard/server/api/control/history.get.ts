@@ -181,6 +181,7 @@ function normalizeHistoryEntries(
       command_id: commandId,
       schedule_id: scheduleId,
       tenant_id: tenant.id,
+      execution_key: normalizeOptionalString(entry?.execution_key),
       timestamp,
       command,
       requested_command: normalizeOptionalString(entry?.requested_command) || command,
@@ -198,6 +199,12 @@ function normalizeHistoryEntries(
       event_type: normalizeOptionalString(entry?.event_type),
       mode_from: normalizeOptionalString(entry?.mode_from),
       mode_to: normalizeOptionalString(entry?.mode_to),
+      execution_status: normalizeOptionalString(entry?.execution_status) || (entry?.success === false ? 'failed' : 'executed'),
+      is_reconciled: Boolean(entry?.is_reconciled),
+      reconciliation_note: normalizeOptionalString(entry?.reconciliation_note),
+      reconciliation_status: entry?.is_reconciled ? 'reconciled' : 'not_reconciled',
+      decision_snapshot: entry?.decision_snapshot || null,
+      decision_snapshot_version: entry?.decision_snapshot?.version || null,
       success: entry?.success !== false,
       estimated_completion: entry?.result?.estimated_completion ?? entry?.estimated_completion ?? null,
     }
@@ -218,7 +225,7 @@ function buildHistoryCommandId(input: {
 
 async function persistHistoryRows(rows: any[], source: 'python_controller_history' | 'memory_history'): Promise<void> {
   for (const row of rows) {
-    const executionKey = buildOptimizationExecutionKey({
+    const executionKey = row.execution_key || buildOptimizationExecutionKey({
       commandId: row.command_id,
       scheduleId: row.schedule_id,
       tenantId: row.tenant_id,
@@ -257,13 +264,16 @@ async function persistHistoryRows(rows: any[], source: 'python_controller_histor
       solar_actual: null,
       load_actual: null,
       decision_source: row.decision_source || 'manual',
-      execution_status: row.success ? 'executed' : 'failed',
+      execution_status: row.execution_status || (row.success ? 'executed' : 'failed'),
       event_type: row.event_type || 'history_sync',
       mode_from: row.mode_from || null,
       mode_to: row.mode_to || null,
       realized_revenue_uah: null,
       realized_cost_uah: null,
       realized_net_uah: null,
+      decision_snapshot: row.decision_snapshot || null,
+      is_reconciled: Boolean(row.is_reconciled),
+      reconciliation_note: row.reconciliation_note || null,
     })
   }
 }

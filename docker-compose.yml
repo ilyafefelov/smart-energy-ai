@@ -7,6 +7,12 @@
 # Usage:
 #   docker compose up -d
 #   python -m dagster dev -h 0.0.0.0 -p 3000  # Run Dagster locally (see README)
+#
+# Local learned-policy serving validation:
+#   set MLFLOW_TRACKING_URI=http://127.0.0.1:5000
+#   set ENERGY_ML_SERVING_MODE=learned_policy
+#   set ENERGY_ML_MODEL_URI=models:/battery-optimizer@champion
+#   rem or use ENERGY_ML_MODEL_NAME=battery-optimizer with ENERGY_ML_MODEL_ALIAS=champion
 
 services:
   postgres:

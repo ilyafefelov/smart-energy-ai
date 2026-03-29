@@ -194,6 +194,48 @@ def test_prediction_service_mock_predict_returns_sell_path():
     assert result["model_version"] == "mock-v1"
 
 
+def test_prediction_service_learned_policy_requires_explicit_model_configuration():
+    service = ML_INTEGRATION.PredictionService.for_learned_policy()
+
+    info = service.get_model_info()
+    result = service.predict(_feature_frame())
+
+    assert info["serving_mode"] == "learned_policy"
+    assert info["model_available"] is False
+    assert info["availability_error"] == "learned_policy_model_not_configured"
+    assert result["fallback_reason_code"] == "learned_policy_model_not_configured"
+
+
+def test_prediction_service_learned_policy_loads_configured_model(monkeypatch):
+    class FakeModel:
+        def predict(self, feature_array):
+            assert feature_array.shape == (1, 14)
+            return [1, 0.93]
+
+    fake_mlflow = types.SimpleNamespace(
+        set_tracking_uri=lambda uri: uri,
+        pyfunc=types.SimpleNamespace(load_model=lambda uri: FakeModel()),
+        models=types.SimpleNamespace(get_model=lambda uri: types.SimpleNamespace(version="7")),
+    )
+
+    monkeypatch.setattr(ML_INTEGRATION, "mlflow", fake_mlflow, raising=False)
+    monkeypatch.setattr(ML_INTEGRATION, "MLFLOW_AVAILABLE", True, raising=False)
+
+    service = ML_INTEGRATION.PredictionService.for_learned_policy(
+        model_uri="models:/battery-optimizer@candidate",
+        tracking_uri="http://127.0.0.1:5000",
+    )
+
+    result = service.predict(_feature_frame(is_peak_hour=1.0, soc_percent=0.9, current_tariff_uah_mwh=0.7))
+    info = service.get_model_info()
+
+    assert result["action"] == "SELL"
+    assert result["fallback_reason_code"] == "none"
+    assert info["model_available"] is True
+    assert info["resolved_model_uri"] == "models:/battery-optimizer@candidate"
+    assert info["mock_mode"] is False
+
+
 def test_feature_store_generates_online_features_when_cache_missing(tmp_path):
     store = FEATURE_STORE.FeatureStore(store_path=str(tmp_path / "feature_store"))
 
@@ -220,6 +262,51 @@ def test_ml_integration_api_get_recommendation_builds_dashboard_payload():
     assert result["action"] == "SELL"
     assert result["daily_savings_estimate"] == 3.5
     assert result["battery_impact"]["current_soc"] == 72.0
+    assert result["contract"]["version"] == "learned_policy_migration_v1"
+    assert result["contract"]["normalized_action"]["action"] == "SELL"
+    assert result["contract"]["normalized_action"]["execution_command"] == "discharge"
+    assert result["contract"]["provenance"]["decision_source"] == "python_rule_engine"
+
+
+def test_ml_integration_api_contract_prefers_simulator_backed_state_source(monkeypatch):
+    monkeypatch.setenv(
+        "ENERGY_ML_LIVE_CONTEXT_JSON",
+        json.dumps(
+            {
+                "tenant_id": "tenant-alpha",
+                "captured_at": "2026-03-07T12:00:00Z",
+                "battery_signal": {
+                    "source": "simulator_backed_telemetry",
+                    "source_detail": "api/battery/status",
+                    "soc_percent": 64.0,
+                },
+            }
+        ),
+    )
+
+    result = ML_INTEGRATION_API.get_recommendation(enhanced=True)
+
+    assert result["contract"]["provenance"]["state_source"] == "simulator_backed_telemetry"
+    assert result["contract"]["provenance"]["state_source_detail"] == "api/battery/status"
+    assert result["contract"]["provenance"]["telemetry_classification"] == "simulated_operational_telemetry"
+
+
+def test_ml_integration_api_learned_policy_mode_falls_back_without_model(monkeypatch):
+    monkeypatch.setenv("ENERGY_ML_SERVING_MODE", "learned_policy")
+    monkeypatch.delenv("ENERGY_ML_MODEL_URI", raising=False)
+    monkeypatch.delenv("ENERGY_ML_MODEL_NAME", raising=False)
+    monkeypatch.delenv("ENERGY_ML_MODEL_ALIAS", raising=False)
+    monkeypatch.delenv("ENERGY_ML_MODEL_STAGE", raising=False)
+
+    result = ML_INTEGRATION_API.get_recommendation(enhanced=True)
+
+    assert result["success"] is True
+    assert result["serving"]["requested_mode"] == "learned_policy"
+    assert result["serving"]["active_mode"] == "incumbent"
+    assert result["serving"]["fallback_used"] is True
+    assert result["serving"]["fallback_reason_code"] == "learned_policy_model_not_configured"
+    assert result["serving"]["model_info"]["availability_error"] == "learned_policy_model_not_configured"
+    assert result["contract"]["provenance"]["decision_source"] == "python_rule_engine"
 
 
 def test_ml_integration_api_set_strategy_uses_shared_config_contract():

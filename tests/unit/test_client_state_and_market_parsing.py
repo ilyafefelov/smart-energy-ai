@@ -1,11 +1,19 @@
-"""Regression tests for client config normalization and OREE table parsing."""
+"""Regression tests for client-state provenance, config normalization, and OREE table parsing."""
 
 from datetime import date, datetime, timedelta
+import json
 
 from bs4 import BeautifulSoup
 import polars as pl
 
-from src.assets.core.client_state import _generate_client_state, _normalize_client_config
+from src.assets.core import client_state as client_state_module
+from src.assets.core.client_state import (
+    CONFIG_STATE_SOURCE,
+    SIMULATOR_STATE_SOURCE,
+    _generate_client_state,
+    _load_operational_battery_state,
+    _normalize_client_config,
+)
 from src.assets.core.market import (
     _extract_oree_price_rows,
     _extract_prices_from_data_view_content,
@@ -76,6 +84,74 @@ def test_generate_client_state_handles_normalized_nested_config():
     assert len(rows) == 2
     assert all(row["client_id"] == "client_nested" for row in rows)
     assert all(0 <= row["battery_soc"] <= 100 for row in rows)
+
+
+def test_load_operational_battery_state_prefers_simulator_backed_file(tmp_path, monkeypatch):
+    tenant_dir = tmp_path / "dashboard" / "data" / "tenants" / "client_nested"
+    tenant_dir.mkdir(parents=True)
+    (tenant_dir / "battery_state.json").write_text(
+        json.dumps(
+            {
+                "soc": 81.5,
+                "voltage": 412.4,
+                "current": 3.2,
+                "temperature": 26.1,
+                "cycles": 1111,
+                "health": 97.4,
+                "lastUpdate": "2026-03-07T10:15:00Z",
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(client_state_module, "REPO_ROOT", tmp_path)
+
+    state = _load_operational_battery_state({"tenant_id": "client_nested"})
+
+    assert state["source"] == SIMULATOR_STATE_SOURCE
+    assert state["state_source"] == "simulator_backed_telemetry"
+    assert state["state_source_detail"] == "dashboard/data/tenants/client_nested/battery_state.json"
+    assert state["telemetry_classification"] == "simulated_operational_telemetry"
+
+
+def test_generate_client_state_marks_config_fallback_when_simulator_state_missing(tmp_path, monkeypatch):
+    raw = {
+        "id": "client_nested",
+        "type": "office",
+        "energy_system": {
+            "battery_type": "NMC_LG_Chem",
+            "battery_capacity_kwh": 180.0,
+            "solar_capacity_kw": 90.0,
+            "peak_load_kw": 120.0,
+            "base_load_kw": 30.0,
+            "load_profile": "office",
+        },
+    }
+    config = _normalize_client_config(raw)
+    now = datetime(2026, 3, 3, 0, 0, 0)
+    weather = pl.DataFrame(
+        {
+            "timestamp": [now],
+            "solar_radiation": [0.0],
+            "cloudcover": [0.0],
+            "temperature": [12.0],
+        }
+    )
+    market = pl.DataFrame(
+        {
+            "timestamp": [now],
+            "price_eur_mwh": [55.0],
+        }
+    )
+
+    monkeypatch.setattr(client_state_module, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(client_state_module, "_simulate_battery_behavior", lambda *args, **kwargs: ("IDLE", 0.0))
+
+    rows = _generate_client_state(config, weather, market)
+
+    assert rows[0]["source"] == CONFIG_STATE_SOURCE
+    assert rows[0]["state_source"] == "config_fallback"
+    assert rows[0]["state_source_detail"] == "synthetic_config_defaults"
+    assert rows[0]["telemetry_classification"] == "fabricated_training_scaffolding"
 
 
 def test_extract_oree_price_rows_parses_table_without_price_table_class():

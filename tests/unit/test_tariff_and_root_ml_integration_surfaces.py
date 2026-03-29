@@ -240,6 +240,25 @@ def test_root_ml_api_recommendation_applies_live_price_signal(monkeypatch: pytes
     assert result["daily_savings_estimate"] == pytest.approx(24 * 1.25)
 
 
+def test_root_ml_api_learned_policy_mode_requires_explicit_model_and_falls_back(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ENERGY_ML_SERVING_MODE", "learned_policy")
+    monkeypatch.delenv("ENERGY_ML_MODEL_URI", raising=False)
+    monkeypatch.delenv("ENERGY_ML_MODEL_NAME", raising=False)
+    monkeypatch.delenv("ENERGY_ML_MODEL_ALIAS", raising=False)
+    monkeypatch.delenv("ENERGY_ML_MODEL_STAGE", raising=False)
+
+    result = ROOT_ML_API.get_recommendation(enhanced=True)
+
+    assert result["success"] is True
+    assert result["serving"]["requested_mode"] == "learned_policy"
+    assert result["serving"]["active_mode"] == "incumbent"
+    assert result["serving"]["fallback_used"] is True
+    assert result["serving"]["fallback_reason_code"] == "learned_policy_model_not_configured"
+    assert result["serving"]["model_info"]["availability_error"] == "learned_policy_model_not_configured"
+    assert result["contract"]["provenance"]["decision_source"] == "python_rule_engine"
+    assert result["contract"]["provenance"]["fallback_reason_code"] == "learned_policy_model_not_configured"
+
+
 def test_root_ml_api_supports_forecast_status_and_auxiliary_surfaces(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("ENERGY_ML_LIVE_CONTEXT_JSON", raising=False)
 
