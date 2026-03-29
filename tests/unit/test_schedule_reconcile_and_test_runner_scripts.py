@@ -45,9 +45,9 @@ def test_read_dagster_schedule_helpers_and_main(monkeypatch, capsys, tmp_path: P
     module = load_script_module("scripts.read_dagster_schedule_under_test", "scripts/read_dagster_schedule.py")
 
     rows = [
-        {"hour": 2, "action_kw": -1.25, "net_cost_eur": 3.0, "price_eur_mwh": 100.0, "solver": "milp", "client_id": "tenant-b"},
-        {"hour": 0, "action_kw": 1.5, "net_cost_eur": -4.0, "price_eur_mwh": 120.0, "solver": "milp", "client_id": "tenant-a"},
-        {"hour": 1, "action_kw": 0.0, "net_cost_eur": 0.5, "price_eur_mwh": 110.0, "solver": "milp", "client_id": "tenant-a"},
+        {"hour": 2, "action_kw": -1.25, "net_cost_eur": 3.0, "price_eur_mwh": 100.0, "solver": "milp", "client_id": "tenant-b", "soc_before_kwh": 80.0, "grid_export_kwh": 0.0},
+        {"hour": 0, "action_kw": 1.5, "net_cost_eur": -4.0, "price_eur_mwh": 120.0, "solver": "milp", "client_id": "tenant-a", "soc_before_kwh": 100.0, "grid_export_kwh": 0.4},
+        {"hour": 1, "action_kw": 0.0, "net_cost_eur": 0.5, "price_eur_mwh": 110.0, "solver": "milp", "client_id": "tenant-a", "soc_before_kwh": 99.0, "grid_export_kwh": 0.0},
     ]
 
     selected_rows, selected_client = module._select_client_rows(rows, "tenant-a")
@@ -58,6 +58,8 @@ def test_read_dagster_schedule_helpers_and_main(monkeypatch, capsys, tmp_path: P
     assert [row["hour"] for row in schedule] == [0, 1]
     assert schedule[0]["action"] == "SELL"
     assert schedule[1]["action"] == "HOLD"
+    assert schedule[0]["soc_before_kwh"] == 100.0
+    assert schedule[0]["grid_export_kwh"] == 0.4
     assert recommendation["action"] == "SELL"
     assert recommendation["confidence_percent"] == 90
     assert module._safe_float("bad", 1.5) == 1.5

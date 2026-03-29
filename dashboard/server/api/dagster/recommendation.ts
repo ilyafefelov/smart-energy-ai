@@ -18,6 +18,12 @@ import {
   dagsterAssetResultsTableExists,
   resolveDagsterAssetResultsDbConfig,
 } from '../../utils/dagster-asset-results'
+import {
+  assessDagsterScheduleRowPolicy,
+  formatClockHour,
+  normalizeClockHour,
+  normalizeScheduleAction,
+} from '../../utils/dagster-schedule-policy.ts'
 import { assessStage2MarketPolicy, inferReserveFloorPercent, inferSitePowerKw } from '../../utils/market-policy'
 import { buildDecisionProvenance, buildNormalizedAction, normalizeDecisionSource } from '../../utils/recommendation-contract'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
@@ -49,6 +55,18 @@ type DagsterMaterializedRecommendation = {
     expected_profit_uah: number
     price_eur_mwh: number
     price_uah_kwh: number
+    soc_before_kwh?: number | null
+    soc_after_kwh?: number | null
+    charge_kwh?: number | null
+    discharge_kwh?: number | null
+    throughput_total_kwh?: number | null
+    grid_import_kwh?: number | null
+    grid_export_kwh?: number | null
+    purchase_cost_eur?: number | null
+    export_revenue_eur?: number | null
+    degradation_penalty_eur?: number | null
+    load_kwh?: number | null
+    solar_kwh?: number | null
     solver?: string
   }>
   schedule_start_utc?: string
@@ -74,23 +92,6 @@ type ServingMetadata = {
 function toFiniteNumber(value: unknown): number | null {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : null
-}
-
-function normalizeClockHour(value: unknown, fallback = 0): number {
-  const parsed = Math.floor(toFiniteNumber(value) ?? fallback)
-  const safe = ((parsed % 24) + 24) % 24
-  return safe
-}
-
-function formatClockHour(hour: number): string {
-  return `${String(normalizeClockHour(hour)).padStart(2, '0')}:00`
-}
-
-function normalizeScheduleAction(action: unknown): 'BUY' | 'SELL' | 'HOLD' {
-  const normalized = String(action || 'HOLD').trim().toUpperCase()
-  if (normalized === 'DISCHARGE') return 'SELL'
-  if (normalized === 'BUY' || normalized === 'SELL') return normalized
-  return 'HOLD'
 }
 
 function normalizeServingMetadata(value: unknown): ServingMetadata {
@@ -542,6 +543,7 @@ export default defineEventHandler(async (event) => {
           materializedDagster.schedule || [],
           recommendation.confidence,
           materializedDagster.schedule_start_utc || materializedDagster.generated_at || null,
+          configPayload?.data || null,
         )
       : buildDeterministicSchedule(
           pricesPayload?.prices?.forecast?.next24h || [],
@@ -657,9 +659,29 @@ export default defineEventHandler(async (event) => {
 
 function buildScheduleFromDagsterAsset(
   forecast: Array<{ hour: number; timestamp: string; price: number }>,
-  dagsterSchedule: Array<{ hour: number; hour_offset?: number; action: string; action_kw: number; expected_profit_uah: number; price_uah_kwh: number }>,
+  dagsterSchedule: Array<{
+    hour: number
+    hour_offset?: number
+    action: string
+    action_kw: number
+    expected_profit_uah: number
+    price_uah_kwh: number
+    soc_before_kwh?: number | null
+    soc_after_kwh?: number | null
+    charge_kwh?: number | null
+    discharge_kwh?: number | null
+    throughput_total_kwh?: number | null
+    grid_import_kwh?: number | null
+    grid_export_kwh?: number | null
+    purchase_cost_eur?: number | null
+    export_revenue_eur?: number | null
+    degradation_penalty_eur?: number | null
+    load_kwh?: number | null
+    solar_kwh?: number | null
+  }>,
   baseConfidence: number,
   scheduleStartUtc?: string | null,
+  configData?: Record<string, any> | null,
 ) {
   const startDate = scheduleStartUtc ? new Date(scheduleStartUtc) : null
   const inferredStartHour = !startDate || Number.isNaN(startDate.getTime())
@@ -674,6 +696,18 @@ function buildScheduleFromDagsterAsset(
       action_kw: Number(row?.action_kw || 0),
       expected_profit_uah: Number(row?.expected_profit_uah || 0),
       price_uah_kwh: Number(row?.price_uah_kwh || 0),
+      soc_before_kwh: toFiniteNumber((row as any)?.soc_before_kwh),
+      soc_after_kwh: toFiniteNumber((row as any)?.soc_after_kwh),
+      charge_kwh: toFiniteNumber((row as any)?.charge_kwh),
+      discharge_kwh: toFiniteNumber((row as any)?.discharge_kwh),
+      throughput_total_kwh: toFiniteNumber((row as any)?.throughput_total_kwh),
+      grid_import_kwh: toFiniteNumber((row as any)?.grid_import_kwh),
+      grid_export_kwh: toFiniteNumber((row as any)?.grid_export_kwh),
+      purchase_cost_eur: toFiniteNumber((row as any)?.purchase_cost_eur),
+      export_revenue_eur: toFiniteNumber((row as any)?.export_revenue_eur),
+      degradation_penalty_eur: toFiniteNumber((row as any)?.degradation_penalty_eur),
+      load_kwh: toFiniteNumber((row as any)?.load_kwh),
+      solar_kwh: toFiniteNumber((row as any)?.solar_kwh),
     }))
     .sort((a, b) => a.offset - b.offset)
 
@@ -681,38 +715,84 @@ function buildScheduleFromDagsterAsset(
     ? forecast.slice(0, 24).map((row, index) => {
         const hour = normalizeClockHour(row.hour, inferredStartHour + index)
         const dagsterRow = normalizedDagster[index]
-        const action = normalizeScheduleAction(dagsterRow?.action)
-        const actionKw = Number(dagsterRow?.action_kw || 0)
-        const rationale = action === 'HOLD'
-          ? `Dagster schedule holds at ${hour}:00 (action_kw=${actionKw.toFixed(2)}).`
-          : `Dagster schedule recommends ${action} at ${hour}:00 (action_kw=${actionKw.toFixed(2)}).`
+        const assessment = assessDagsterScheduleRowPolicy(dagsterRow || { hour_offset: hour }, {
+          config: configData,
+          batteryCapacityKwh: configData?.battery_capacity_kwh,
+          scheduleStartUtc,
+        })
+        const requestedAction = assessment.requestedAction
+        const requestedActionKw = Number(assessment.requestedPowerKw || 0)
+        const action = assessment.policyCompliance.adjusted_action
+        const adjustedActionKw = Number(assessment.policyCompliance.adjusted_power_kw ?? requestedActionKw)
+        const requestedProfit = Number(dagsterRow?.expected_profit_uah || 0)
+        const adjustedProfit = action === requestedAction ? requestedProfit : 0
+        const rationale = action === requestedAction
+          ? (
+              action === 'HOLD'
+                ? `Dagster schedule holds at ${hour}:00 (action_kw=${requestedActionKw.toFixed(2)}).${assessment.policyCompliance.reasoning_suffix}`
+                : `Dagster schedule recommends ${action} at ${hour}:00 (action_kw=${requestedActionKw.toFixed(2)}).${assessment.policyCompliance.reasoning_suffix}`
+            )
+          : `Dagster schedule requested ${requestedAction} at ${hour}:00 (action_kw=${requestedActionKw.toFixed(2)}), adjusted to ${action}.${assessment.policyCompliance.reasoning_suffix}`
         return {
           hour,
           time: formatClockHour(hour),
           price_uah_kwh: Number(Number(row.price || dagsterRow?.price_uah_kwh || 0).toFixed(2)),
           recommended_action: action,
-          expected_profit_uah: Number(Number(dagsterRow?.expected_profit_uah || 0).toFixed(2)),
+          requested_action: requestedAction,
+          action_kw: Number(adjustedActionKw.toFixed(2)),
+          requested_action_kw: Number(requestedActionKw.toFixed(2)),
+          expected_profit_uah: Number(adjustedProfit.toFixed(2)),
+          requested_profit_uah: Number(requestedProfit.toFixed(2)),
           confidence: Number(baseConfidence.toFixed(2)),
           is_peak: (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 20),
           rationale,
+          market_regime: assessment.policyCompliance.market_regime,
+          policy_compliance: assessment.policyCompliance,
+          soc_before_kwh: dagsterRow?.soc_before_kwh ?? null,
+          soc_after_kwh: dagsterRow?.soc_after_kwh ?? null,
+          grid_export_kwh: dagsterRow?.grid_export_kwh ?? null,
+          grid_import_kwh: dagsterRow?.grid_import_kwh ?? null,
         }
       })
     : normalizedDagster.map((row, index) => {
         const hour = normalizeClockHour(inferredStartHour + index, inferredStartHour + index)
-        const action = normalizeScheduleAction(row.action)
-        const actionKw = Number(row.action_kw || 0)
-        const rationale = action === 'HOLD'
-          ? `Dagster schedule holds at ${hour}:00 (action_kw=${actionKw.toFixed(2)}).`
-          : `Dagster schedule recommends ${action} at ${hour}:00 (action_kw=${actionKw.toFixed(2)}).`
+        const assessment = assessDagsterScheduleRowPolicy(row, {
+          config: configData,
+          batteryCapacityKwh: configData?.battery_capacity_kwh,
+          scheduleStartUtc,
+        })
+        const requestedAction = assessment.requestedAction
+        const requestedActionKw = Number(assessment.requestedPowerKw || 0)
+        const action = assessment.policyCompliance.adjusted_action
+        const adjustedActionKw = Number(assessment.policyCompliance.adjusted_power_kw ?? requestedActionKw)
+        const requestedProfit = Number(row.expected_profit_uah || 0)
+        const adjustedProfit = action === requestedAction ? requestedProfit : 0
+        const rationale = action === requestedAction
+          ? (
+              action === 'HOLD'
+                ? `Dagster schedule holds at ${hour}:00 (action_kw=${requestedActionKw.toFixed(2)}).${assessment.policyCompliance.reasoning_suffix}`
+                : `Dagster schedule recommends ${action} at ${hour}:00 (action_kw=${requestedActionKw.toFixed(2)}).${assessment.policyCompliance.reasoning_suffix}`
+            )
+          : `Dagster schedule requested ${requestedAction} at ${hour}:00 (action_kw=${requestedActionKw.toFixed(2)}), adjusted to ${action}.${assessment.policyCompliance.reasoning_suffix}`
         return {
           hour,
           time: formatClockHour(hour),
           price_uah_kwh: Number(Number(row.price_uah_kwh || 0).toFixed(2)),
           recommended_action: action,
-          expected_profit_uah: Number(Number(row.expected_profit_uah || 0).toFixed(2)),
+          requested_action: requestedAction,
+          action_kw: Number(adjustedActionKw.toFixed(2)),
+          requested_action_kw: Number(requestedActionKw.toFixed(2)),
+          expected_profit_uah: Number(adjustedProfit.toFixed(2)),
+          requested_profit_uah: Number(requestedProfit.toFixed(2)),
           confidence: Number(baseConfidence.toFixed(2)),
           is_peak: (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 20),
           rationale,
+          market_regime: assessment.policyCompliance.market_regime,
+          policy_compliance: assessment.policyCompliance,
+          soc_before_kwh: row.soc_before_kwh ?? null,
+          soc_after_kwh: row.soc_after_kwh ?? null,
+          grid_export_kwh: row.grid_export_kwh ?? null,
+          grid_import_kwh: row.grid_import_kwh ?? null,
         }
       })
 

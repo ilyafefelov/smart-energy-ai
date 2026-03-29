@@ -28,6 +28,16 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def _optional_float(value: Any) -> Optional[float]:
+    try:
+        numeric = float(value)
+        if numeric != numeric:
+            return None
+        return numeric
+    except Exception:
+        return None
+
+
 def _find_latest_asset_file(project_root: Path, asset_name: str) -> Optional[Tuple[Path, Path]]:
     pattern = str(project_root / ".tmp_dagster_home_*")
     roots = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
@@ -114,6 +124,18 @@ def _normalize_schedule(rows: List[Dict[str, Any]], fx_rate: float) -> List[Dict
                 "expected_profit_uah": round(max(0.0, -net_cost_eur * fx_rate), 2),
                 "price_eur_mwh": round(price_eur_mwh, 6),
                 "price_uah_kwh": round((price_eur_mwh * fx_rate) / 1000.0, 3),
+                "charge_kwh": _optional_float(row.get("charge_kwh")),
+                "discharge_kwh": _optional_float(row.get("discharge_kwh")),
+                "soc_before_kwh": _optional_float(row.get("soc_before_kwh")),
+                "soc_after_kwh": _optional_float(row.get("soc_after_kwh")),
+                "throughput_total_kwh": _optional_float(row.get("throughput_total_kwh")),
+                "load_kwh": _optional_float(row.get("load_kwh")),
+                "solar_kwh": _optional_float(row.get("solar_kwh")),
+                "grid_import_kwh": _optional_float(row.get("grid_import_kwh")),
+                "grid_export_kwh": _optional_float(row.get("grid_export_kwh")),
+                "purchase_cost_eur": _optional_float(row.get("purchase_cost_eur")),
+                "export_revenue_eur": _optional_float(row.get("export_revenue_eur")),
+                "degradation_penalty_eur": _optional_float(row.get("degradation_penalty_eur")),
                 "solver": str(row.get("solver", "")),
             }
         )
