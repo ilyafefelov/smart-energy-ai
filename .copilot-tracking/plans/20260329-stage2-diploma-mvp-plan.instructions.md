@@ -12,8 +12,8 @@ Track the active Stage 2 diploma MVP workstream in one umbrella execution plan w
 
 ## Current Status
 
-- Completed: steps 1, 2, 3, 5, 6, and 8.
-- In progress: steps 4, 7, 9, 10, 11, and 13.
+- Completed: steps 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 11.
+- In progress: step 13.
 - Not started: step 12.
 
 ## Objectives
@@ -66,25 +66,25 @@ Track the active Stage 2 diploma MVP workstream in one umbrella execution plan w
 - [x] Task 1.4: Keep decision snapshot persistence and optimization-history contracts as landed baseline work (Step 8)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 19-38)
 
-### [ ] Phase 2: Finish the Remaining Regime-Aware Optimizer and Financial Work
+### [x] Phase 2: Finish the Remaining Regime-Aware Optimizer and Financial Work
 
-- [ ] Task 2.1: Extend the deterministic optimizer with regime-aware inputs and config-driven degradation economics (Step 4, in progress)
+- [x] Task 2.1: Extend the deterministic optimizer with regime-aware inputs and config-driven degradation economics (Step 4, completed)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 63-80)
 
-- [ ] Task 2.2: Finish the dual-regime financial analytics story across API, UI, and narrative docs (Step 7, in progress)
+- [x] Task 2.2: Finish the dual-regime financial analytics story across API, UI, and narrative docs (Step 7, completed)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 82-98)
 
-### [ ] Phase 3: Finish the Dashboard Reasoning Timeline and Operator Controls
+### [x] Phase 3: Finish the Dashboard Reasoning Timeline and Operator Controls
 
-- [ ] Task 3.1: Finish the Stage 2 reasoning timeline across schedule, execute, history, and UI surfaces (Step 9, in progress)
+- [x] Task 3.1: Finish the Stage 2 reasoning timeline across schedule, execute, history, and UI surfaces (Step 9, completed)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 102-120)
 
-- [ ] Task 3.2: Finish Stage 2 operator-input propagation through the config-backed settings flow (Step 10, in progress)
+- [x] Task 3.2: Finish Stage 2 operator-input propagation through the config-backed settings flow (Step 10, completed)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 122-140)
 
 ### [ ] Phase 4: Finish Validation, Demo Evidence, and Final Scope Framing
 
-- [ ] Task 4.1: Complete focused Stage 2 validation coverage for policy, history contracts, analytics, and schedule semantics (Step 11, in progress)
+- [x] Task 4.1: Complete focused Stage 2 validation coverage for policy, history contracts, analytics, and schedule semantics (Step 11, completed)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 144-162)
 
 - [ ] Task 4.2: Run the Stage 2 demo scenarios against the active runtime and capture evidence (Step 12, not started)

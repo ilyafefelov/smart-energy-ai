@@ -260,3 +260,21 @@ def test_dagster_schedule_contract_uses_clock_hour_and_freshness_sla(tenant_id: 
 
         action = str(row.get("recommended_action") or "")
         assert action in {"BUY", "SELL", "HOLD"}
+
+        requested_action = str(row.get("requested_action") or "")
+        assert requested_action in {"BUY", "SELL", "HOLD"}
+
+        policy = row.get("policy_compliance") or {}
+        assert policy.get("policy_version") == "stage2_market_policy_v1"
+        assert policy.get("adjusted_action") == action
+        assert isinstance(policy.get("rule_hits"), list)
+        assert isinstance(policy.get("explanations"), list)
+        assert row.get("market_regime") == policy.get("market_regime")
+
+        requested_profit = float(row.get("requested_profit_uah") or 0)
+        adjusted_profit = float(row.get("expected_profit_uah") or 0)
+        assert adjusted_profit <= requested_profit or requested_profit <= 0
+
+        if bool(policy.get("veto_applied")):
+            assert action == "HOLD"
+            assert adjusted_profit == 0

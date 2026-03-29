@@ -7,123 +7,133 @@
 ### File Analysis
 
 - docs/Stage 2/plan.md
-  - Active human-readable Stage 2 plan exists, but it does not reflect March 29 implementation progress and still reads as if steps 1-13 are entirely future work.
-- .copilot-tracking/plans/20260307-learned-policy-migration-backlog-plan.instructions.md
-  - Existing .copilot-tracking plan is a precursor learned-policy migration tracker, not the umbrella Stage 2 implementation tracker for the current workstream.
-- .copilot-tracking/changes/20260307-learned-policy-migration-backlog-changes.md
-  - Existing changes file covers March 7 migration work only and should not absorb March 29 Stage 2 MVP implementation slices.
-- dashboard/server/utils/market-policy.ts
-  - Stage 2 policy layer now exists with regime inference, silence-window export veto, reserve-floor veto, REMIT deliverable-energy checks, and market-regime override support.
-- dashboard/server/utils/optimization-history.ts
-  - Decision snapshot and optimization-history reconciliation are already implemented as the canonical audit/history contract.
-- dashboard/server/api/history.ts
-  - Stage 2 financial analytics now expose saved-versus-earned funds and a regime-aware `stage2_financials` summary.
-- dashboard/app/components/Preferences/OptimizationProfile.vue
-  - The active config-backed settings flow now exposes connected site power and market-regime override inputs for Stage 2 operator control.
-- tests/unit/stage2_market_policy_contract.test.mjs
-  - Focused policy tests now cover silence-window, REMIT, reserve inference, and comparative regime override behavior.
+  - The human-readable Stage 2 plan is now current enough to use as narrative status, with step 4 moved into progress and the `.copilot-tracking` umbrella tracker linked from the document.
+- .copilot-tracking/plans/20260329-stage2-diploma-mvp-plan.instructions.md
+  - The Stage 2 umbrella tracker now exists and correctly reflects the optimizer slice as in progress rather than not started.
+- src/assets/core/optimization_schedule.py
+  - The deterministic optimizer now resolves per-client Stage 2 inputs from `customers.yaml`, derives degradation cost from the shared economics model, infers market regime from site power plus override, and caps dispatch by site power.
+- tests/unit/test_core_market_and_schedule_assets.py
+  - Focused schedule-asset coverage now proves the Stage 2 optimizer inputs are passed into `BaselineDPOptimizer` instead of using the fixed degradation placeholder.
+- dashboard/server/api/dagster/recommendation.ts
+  - The live current-recommendation path and both 24-hour schedule builders now emit row-level Stage 2 semantics including `requested_action`, `policy_compliance`, `market_regime`, and adjusted profit handling.
+- dashboard/server/api/dagster/schedule-24h.ts
+  - The 24-hour schedule endpoint continues to relay and summarize `schedule_24h` rows from the recommendation endpoint, which now carry the Stage 2-adjusted semantics required by the UI.
+- scripts/read_dagster_schedule.py
+  - The Dagster asset reader now preserves richer schedule state so the dashboard-side policy layer can evaluate each future hour without duplicating legal logic in Python.
+- tests/unit/test_schedule_reconcile_and_test_runner_scripts.py
+  - Script coverage now locks the richer normalized schedule row contract used by the dashboard timeline.
+- tests/test_dashboard_battery_control_regression.py
+  - Integration coverage now proves the live `/api/dagster/recommendation` payload exposes row-level Stage 2 policy metadata in its `schedule_24h` contract.
 
 ### Code Search Results
 
-- stage2 tracking plan glob
-  - No Stage 2-specific files exist under `.copilot-tracking/plans/`.
-- stage2 tracking changes glob
-  - No Stage 2-specific files exist under `.copilot-tracking/changes/`.
-- market-policy|stage2_financials|decision_snapshot|market_regime_override|connected_power_kw
-  - Matches confirm completed Stage 2 slices in policy, decision snapshot/history, UI policy trace, financial analytics, and operator settings.
-- git log --oneline -5
-  - Recent landed progress is visible in `f31a87d` (operator inputs), `0193e76` (financial regime analytics), and `220f985` (policy trace UI), with earlier March 29 Stage 2 commits just below the backup commits.
+- assessStage2MarketPolicy|inferReserveFloorPercent|inferSitePowerKw in dashboard/server/api/dagster/recommendation.ts
+  - Matches confirm both the current recommendation and the schedule timeline are now Stage 2 policy-aware at the endpoint layer.
+- requested_action|policy_compliance|market_regime across tests/test_dashboard_battery_control_regression.py and tests/unit/stage2_dagster_schedule_policy_contract.test.mjs
+  - Matches confirm both focused unit coverage and live integration coverage now protect row-level Stage 2 schedule semantics.
+- read_dagster_schedule.py|soc_before_kwh|grid_export_kwh across tests
+  - Matches confirm richer Dagster row state is preserved through normalization and test-backed.
+- market_regime|adjusted_action|policy_compliance in dashboard/app/**
+  - Matches confirm the active battery/control timeline UI already knows how to render Stage 2 policy metadata when that contract is present.
 
 ### External Research
 
-- No new external web or GitHub research was required for this audit; plan-update decisions are fully supported by current repo state plus existing internal research at `.copilot-tracking/research/20260307-ml-pipeline-trading-logic-research.md`.
+- No new external web or GitHub research was required. The next-slice decision is fully determined by current repository code paths, existing Stage 2 docs, and the landed March 29 implementation state.
 
 ### Project Conventions
 
-- Standards referenced: `AGENTS.md`, `.github/copilot-instructions.md`, and the task-implementation tracking instructions for `.copilot-tracking/changes/*.md`.
-- Instructions followed: Beads-first workflow, preserve precursor trackers instead of repurposing them, and treat `.copilot-tracking/` as the authoritative implementation-tracking area when the workstream needs execution artifacts.
+- Standards referenced: `AGENTS.md`, `.github/copilot-instructions.md`, and the current `.copilot-tracking` execution tracker.
+- Instructions followed: keep research evidence repo-grounded, remove outdated status claims immediately, and prefer the active `dashboard/` runtime surfaces over creating parallel Stage 2 paths.
 
 ## Key Discoveries
 
 ### Project Structure
 
-The active Stage 2 MVP plan currently lives only in `docs/Stage 2/plan.md`, while the implementation work is already spanning runtime helpers, recommendation APIs, optimization-history persistence, analytics, and dashboard settings. There is no Stage 2-specific umbrella tracker under `.copilot-tracking/plans/`, `.copilot-tracking/details/`, or `.copilot-tracking/changes/`. The March 7 learned-policy migration plan remains useful as a precursor and dependency baseline, but it is no longer the correct place to track the current Stage 2 diploma MVP execution.
+The active Stage 2 MVP now has three aligned production layers: a regime-aware optimizer input layer in `src/assets/core/optimization_schedule.py`, a canonical policy/compliance layer in `dashboard/server/utils/market-policy.ts`, and a recommendation/timeline layer in `dashboard/server/api/dagster/recommendation.ts` plus `schedule-24h.ts`. The previous mismatch between the policy layer and the 24-hour schedule contract is now closed. The remaining gap is no longer runtime behavior; it is execution evidence and broader diploma-facing document cleanup.
 
 ### Implementation Patterns
 
-The implemented Stage 2 work follows one consistent pattern: reuse the active `dashboard/` runtime surfaces instead of creating parallel code paths. Policy and regime logic live in shared server utilities; recommendation APIs attach normalized contracts and compliance metadata; decision snapshots persist through optimization history; analytics consume the canonical `/api/history` surface; and the active config-backed preferences panel owns the new operator inputs. This means the plan update should track vertical Stage 2 slices on top of the existing runtime, not a separate architecture branch.
+The repo is already converging on one correct architectural pattern: keep the legal and market-rule vocabulary canonical in TypeScript on the dashboard server side, and treat Python schedule assets as deterministic physics/economics producers rather than a second source of legal policy logic. The newly landed optimizer work strengthened the physics/economics side, and the schedule-policy propagation slice now carries that contract through both Dagster-backed and deterministic fallback schedule payloads.
 
 ### Complete Examples
 
-```ts
-const sitePowerKw = inferSitePowerKw(configPayload?.data || null)
-const marketRegime = inferMarketRegime(sitePowerKw, configPayload?.data?.market_regime_override)
-const financialMode = buildFinancialModeSummary(marketRegime)
+```python
+def _normalize_action(action_kw: float) -> str:
+    if action_kw > 0.05:
+        return "SELL"
+    if action_kw < -0.05:
+        return "BUY"
+    return "HOLD"
 ```
 
 ```ts
-const response = await $fetch<any>('/api/config/save', {
-  method: 'POST',
-  query: { tenantId },
-  headers: { 'x-tenant-id': tenantId },
-  body: {
-    tenantId,
-    optimization_strategy: toApiStrategy(selectedStrategy.value),
-    battery_soc_min: batterySocMin.value,
-    battery_c_rate_discharge: batteryCRateDischarge.value,
-    ml_forecast_horizon_hours: forecastHorizonHours.value,
-    connected_power_kw: connectedPowerKw.value,
-    market_regime_override: marketRegimeOverride.value,
-  },
+const policyCompliance = assessStage2MarketPolicy({
+  action: strategyAdjustedRecommendation.action,
+  powerKw: strategyAdjustedRecommendation.action_kw,
+  batterySocPercent: Number.isFinite(batterySoc) ? batterySoc : null,
+  batteryCapacityKwh: configPayload?.data?.battery_capacity_kwh ?? batteryPayload?.battery?.capacity,
+  reserveFloorPercent: inferReserveFloorPercent(configPayload?.data || null),
+  sitePowerKw: inferSitePowerKw(configPayload?.data || null),
+  marketRegimeOverride: configPayload?.data?.market_regime_override,
+  timestamp: new Date().toISOString(),
+  timezone: String(configPayload?.data?.timezone || 'Europe/Kiev'),
 })
+```
+
+```ts
+return {
+  hour,
+  time: formatClockHour(hour),
+  price_uah_kwh: Number(Number(row.price || dagsterRow?.price_uah_kwh || 0).toFixed(2)),
+  recommended_action: action,
+  expected_profit_uah: Number(Number(dagsterRow?.expected_profit_uah || 0).toFixed(2)),
+  confidence: Number(baseConfidence.toFixed(2)),
+  is_peak: (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 20),
+  rationale,
+}
 ```
 
 ### API and Schema Documentation
 
-- Stage 2 policy contract:
-  - `dashboard/server/utils/market-policy.ts`
-  - Regime inference now accepts raw power plus optional `marketRegimeOverride`.
-- Stage 2 analytics contract:
-  - `dashboard/server/api/history.ts`
-  - Adds `saved_funds_uah`, `earned_funds_uah`, and top-level `stage2_financials` with `market_regime`, `site_power_kw`, `financial_mode_label`, `financial_mode_summary`, and aggregate totals.
-- Stage 2 audit/history contract:
-  - `dashboard/server/utils/optimization-history.ts`
-  - Canonical `decision_snapshot_v1` exists and is already wired into scheduled and executed control flows.
-- Stage 2 operator input contract:
-  - `dashboard/server/api/config/current.get.ts` and `dashboard/server/api/config/save.post.ts`
-  - Adds `connected_power_kw` and `market_regime_override` to the saved tenant config.
+- Optimizer schedule asset contract:
+  - `src/assets/core/optimization_schedule.py`
+  - Still emits rich schedule state including `soc_before_kwh`, `soc_after_kwh`, `grid_export_kwh`, `purchase_cost_eur`, `export_revenue_eur`, and `net_cost_eur`; those fields are available for future Stage 2 schedule-policy propagation even though the current Dagster reader drops most of them.
+- Current recommendation policy contract:
+  - `dashboard/server/api/dagster/recommendation.ts`
+  - Already returns top-level `recommendation.policy_compliance`, `contract.compliance`, and source metadata containing `market_regime`, `policy_rule_hits`, and `policy_veto_applied`.
+- Schedule timeline contract:
+  - `dashboard/server/api/dagster/recommendation.ts` -> `buildScheduleFromDagsterAsset(...)` and `buildDeterministicSchedule(...)`
+  - Now returns `recommended_action`, `requested_action`, `requested_profit_uah`, `market_regime`, and `policy_compliance` per row so the timeline and current recommendation share one Stage 2 vocabulary.
+- Dagster materialization reader contract:
+  - `scripts/read_dagster_schedule.py`
+  - Now serializes richer row state including SoC, import/export energy, and economics fields in addition to action and price data.
 
 ### Configuration Examples
 
 ```json
 {
-  "battery_soc_min": 0.1,
-  "battery_c_rate_discharge": 1.0,
-  "ml_forecast_horizon_hours": 24,
-  "connected_power_kw": 75,
-  "market_regime_override": "auto"
+  "battery_capacity_kwh": 150,
+  "battery_efficiency": 0.88,
+  "battery_dod_max": 0.85,
+  "battery_soc_min": 0.2,
+  "connected_power_kw": 20,
+  "market_regime_override": "market_premium"
 }
 ```
 
 ### Technical Requirements
 
-- Update `docs/Stage 2/plan.md` with a concise execution-status snapshot instead of leaving all steps implied as not started.
-- Create one new Stage 2 umbrella tracker set under `.copilot-tracking/` rather than repurposing the March 7 learned-policy migration tracker.
-- Backfill the already-landed Stage 2 slices into a dedicated Stage 2 changes log so future work is tracked from the real current baseline.
-- Limit any new research to one narrow status-audit refresh only if the new plan needs explicit March 29 file-level evidence for remaining optimizer-core gaps.
+- Keep the Stage 2 tracker and narrative docs aligned now that the optimizer and schedule-policy slices are landed.
+- Capture repeatable Stage 2 demo evidence from the active runtime for the required silence-window, evening discharge, low-SoC block, and comparative-regime scenarios.
+- Reframe the broader diploma-facing Stage 2 docs that still describe PPO, Modulus, PatchTST, or VPP paths as active MVP behavior instead of deferred scope.
 
 ## Recommended Approach
 
-Do not start with a broad new research cycle. The correct next move is to create a new Stage 2 umbrella tracker set under `.copilot-tracking/` and treat `docs/Stage 2/plan.md` as the human-readable narrative plan. Keep the March 7 learned-policy migration artifacts as completed precursor work. The new tracker should pre-mark current status as follows: steps 1-3 completed, step 4 not started, step 5 completed, step 6 completed, step 7 in progress, step 8 completed, step 9 in progress, step 10 in progress, step 11 in progress, step 12 not started, and step 13 in progress. The recommended filenames are:
-
-- `20260329-stage2-diploma-mvp-plan.instructions.md`
-- `20260329-stage2-diploma-mvp-details.md`
-- `20260329-stage2-diploma-mvp-changes.md`
-- Companion prompt: `implement-stage2-diploma-mvp.prompt.md`
+The next implementation slice should shift away from runtime contract work and into evidence and truthfulness work. The code path is already aligned around one policy vocabulary and one deterministic optimizer. The highest-value next step is to run the required Stage 2 demo scenarios against the active runtime, capture evidence from the canonical APIs, and then update the broader diploma-facing docs so they describe the deterministic compliance-aware MVP that now exists while clearly deferring PPO, Modulus, PatchTST, real hardware control, and VPP aggregation.
 
 ## Implementation Guidance
 
-- **Objectives**: Separate the active Stage 2 diploma MVP tracker from the older learned-policy migration backlog, preserve accurate progress visibility, and make future implementation work target the correct remaining slices.
-- **Key Tasks**: Create a new Stage 2 plan/details/changes set, backfill completed March 29 slices, update `docs/Stage 2/plan.md` with a short tracker pointer and step-status summary, and leave the March 7 migration artifacts as prerequisite history rather than active execution docs.
-- **Dependencies**: Existing internal research at `.copilot-tracking/research/20260307-ml-pipeline-trading-logic-research.md`, the March 7 learned-policy migration plan as precursor context, and the landed Stage 2 runtime files under `dashboard/server/**` and `dashboard/app/**`.
-- **Success Criteria**: One authoritative Stage 2 tracker exists under `.copilot-tracking/`, `docs/Stage 2/plan.md` no longer implies zero progress, completed March 29 slices are backfilled into a Stage 2 changes log, and future implementation prompts can target remaining Stage 2 work without overloading the learned-policy backlog.
+- **Objectives**: Finish the remaining non-runtime Stage 2 work by capturing scenario evidence and cleaning up broader diploma-facing documentation.
+- **Key Tasks**: Run the required Stage 2 scenarios against the active runtime; record evidence against the canonical recommendation and history contracts; update tracker artifacts; and reframe supporting Stage 2 docs so future-scope RL, Modulus, and VPP content is clearly marked as deferred.
+- **Dependencies**: The landed optimizer, analytics, policy, and schedule-timeline slices in the active `dashboard/` and `src/assets/core/` surfaces.
+- **Success Criteria**: Repeatable Stage 2 demo evidence exists for the required scenarios, the tracker stays aligned with the live code, and the remaining Stage 2 docs no longer overstate future-scope capabilities as implemented MVP behavior.

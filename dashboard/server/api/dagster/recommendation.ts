@@ -549,6 +549,7 @@ export default defineEventHandler(async (event) => {
           pricesPayload?.prices?.forecast?.next24h || [],
           mlData?.daily_forecast || [],
           recommendation.confidence,
+          configPayload?.data || null,
         )
 
     const activeModel = mlflowStatus?.active_model || null
@@ -809,7 +810,8 @@ function buildScheduleFromDagsterAsset(
 function buildDeterministicSchedule(
   forecast: Array<{ hour: number; timestamp: string; price: number }>,
   mlForecast: Array<{ hour: number; action?: string; reasoning?: string }>,
-  baseConfidence: number
+  baseConfidence: number,
+  configData?: Record<string, any> | null,
 ) {
   const actionByHour = new Map<number, { action: string; reasoning: string }>()
   for (const item of mlForecast) {
@@ -847,17 +849,39 @@ function buildDeterministicSchedule(
           ? price * 0.85
           : 0
 
+    const requestedAction = action
+    const policyCompliance = assessStage2MarketPolicy({
+      action: requestedAction,
+      batteryCapacityKwh: configData?.battery_capacity_kwh,
+      reserveFloorPercent: inferReserveFloorPercent(configData || null),
+      sitePowerKw: inferSitePowerKw(configData || null),
+      marketRegimeOverride: configData?.market_regime_override,
+      timestamp: row.timestamp,
+      timezone: String(configData?.timezone || 'Europe/Kiev'),
+    })
+
+    const adjustedAction = policyCompliance.adjusted_action
+    const adjustedProfit = adjustedAction === requestedAction ? expectedProfit : 0
+
     const isPeak = hour >= 7 && hour <= 9 || hour >= 17 && hour <= 20
 
     return {
       hour,
       time: formatClockHour(hour),
       price_uah_kwh: Number(price.toFixed(2)),
-      recommended_action: action,
-      expected_profit_uah: Number(expectedProfit.toFixed(2)),
+      recommended_action: adjustedAction,
+      requested_action: requestedAction,
+      action_kw: Number(policyCompliance.adjusted_power_kw || 0),
+      requested_action_kw: Number(policyCompliance.adjusted_power_kw || 0),
+      expected_profit_uah: Number(adjustedProfit.toFixed(2)),
+      requested_profit_uah: Number(expectedProfit.toFixed(2)),
       confidence: Number(baseConfidence.toFixed(2)),
       is_peak: isPeak,
-      rationale: ml?.reasoning || '',
+      rationale: policyCompliance.veto_applied
+        ? `${ml?.reasoning || ''}${ml?.reasoning ? ' ' : ''}${policyCompliance.reasoning_suffix}`.trim()
+        : (ml?.reasoning || ''),
+      market_regime: policyCompliance.market_regime,
+      policy_compliance: policyCompliance,
     }
   })
 

@@ -6,9 +6,11 @@ Build Stage 2 as a deterministic, compliance-aware arbitrage MVP on top of the a
 
 This document remains the human-readable Stage 2 narrative plan. The active execution tracker for the current workstream now lives in [.copilot-tracking/plans/20260329-stage2-diploma-mvp-plan.instructions.md](../../.copilot-tracking/plans/20260329-stage2-diploma-mvp-plan.instructions.md), with supporting [details](../../.copilot-tracking/details/20260329-stage2-diploma-mvp-details.md) and [changes](../../.copilot-tracking/changes/20260329-stage2-diploma-mvp-changes.md). The March 7 learned-policy migration tracker remains precursor work, not the umbrella tracker for this Stage 2 MVP slice.
 
-- Completed: steps 1, 2, 3, 5, 6, and 8
-- In progress: steps 4, 7, 9, 10, 11, and 13
+- Completed: steps 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 11
+- In progress: step 13
 - Not started: step 12
+
+As of March 29, the active runtime already includes the regime-aware deterministic optimizer inputs, Stage 2 financial analytics, schedule and history reasoning surfaces, config-backed operator inputs, and focused validation around policy, history, schedule semantics, and the live Dagster recommendation payload. The remaining open work is to capture repeatable demo evidence for the required Stage 2 scenarios and to finish reframing the broader diploma-facing Stage 2 research notes that still discuss PPO, Modulus, or VPP paths as future-facing rather than implemented MVP behavior.
 
 **Steps**
 1. Phase 1: Freeze architecture boundaries and map the proposed research architecture onto the current repo. Reuse existing runtime surfaces instead of creating parallel trees. Map Forecaster to current Dagster market/weather/price assets, Physics Guard to LCOS and battery constraints, and Dispatch Commander to the normalized recommendation + compliance gate. This blocks all later steps.
