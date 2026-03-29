@@ -6,11 +6,18 @@ Build Stage 2 as a deterministic, compliance-aware arbitrage MVP on top of the a
 
 This document remains the human-readable Stage 2 narrative plan. The active execution tracker for the current workstream now lives in [.copilot-tracking/plans/20260329-stage2-diploma-mvp-plan.instructions.md](../../.copilot-tracking/plans/20260329-stage2-diploma-mvp-plan.instructions.md), with supporting [details](../../.copilot-tracking/details/20260329-stage2-diploma-mvp-details.md) and [changes](../../.copilot-tracking/changes/20260329-stage2-diploma-mvp-changes.md). The March 7 learned-policy migration tracker remains precursor work, not the umbrella tracker for this Stage 2 MVP slice.
 
-- Completed: steps 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 11
-- In progress: step 13
-- Not started: step 12
+- Completed: steps 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, and 13
+- In progress: none
+- Not started: none
 
-As of March 29, the active runtime already includes the regime-aware deterministic optimizer inputs, Stage 2 financial analytics, schedule and history reasoning surfaces, config-backed operator inputs, and focused validation around policy, history, schedule semantics, and the live Dagster recommendation payload. The remaining open work is to capture repeatable demo evidence for the required Stage 2 scenarios and to finish reframing the broader diploma-facing Stage 2 research notes that still discuss PPO, Modulus, or VPP paths as future-facing rather than implemented MVP behavior.
+As of March 29, the active runtime includes the regime-aware deterministic optimizer inputs, Stage 2 financial analytics, schedule and history reasoning surfaces, config-backed operator inputs, focused validation, repeatable demo evidence capture, and broader Stage 2 doc framing that now treats PPO, Modulus, PatchTST, and VPP content as deferred scope rather than implemented MVP behavior.
+
+## Demo Evidence Snapshot
+
+- Silence-window export veto: the repeatable evidence script captures a requested `SELL` at 10:00 with a live schedule price of `11.38` UAH/kWh and confirms a Stage 2-adjusted `HOLD` with `window_of_silence_export_veto`.
+- Evening discharge allowance: the same script captures an 18:00 market-premium scenario with a live schedule price of `13.58` UAH/kWh and confirms the Stage 2 policy layer allows `SELL` when reserve and REMIT checks pass.
+- Low-SoC REMIT block: the script captures an 18:00 requested `SELL` at `8%` SoC and confirms a Stage 2-adjusted `HOLD` with both `reserve_floor_veto` and `remit_insufficient_deliverable_energy`.
+- Comparative regime analytics: the canonical `/api/history` surface was sampled at `20` kW and `75` kW and returned `net_billing` and `market_premium` `stage2_financials` labels respectively.
 
 **Steps**
 1. Phase 1: Freeze architecture boundaries and map the proposed research architecture onto the current repo. Reuse existing runtime surfaces instead of creating parallel trees. Map Forecaster to current Dagster market/weather/price assets, Physics Guard to LCOS and battery constraints, and Dispatch Commander to the normalized recommendation + compliance gate. This blocks all later steps.

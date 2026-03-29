@@ -1,5 +1,7 @@
 # **Исследование передовых подходов EPRI и технологий NVIDIA в области энергоарбитража, управления DER и автономного управления на основе Physics-ML (2026)**
 
+> Status note, 2026-03-29: This document is a research note for post-MVP options. The implemented Stage 2 MVP in this repo does not currently ship NVIDIA Modulus, Physics-ML degradation models, or autonomous RL control; those references remain deferred scope beyond the deterministic compliance-aware runtime described in [plan.md](plan.md).
+
 Современная энергетика переходит к децентрализованной модели, где распределенные энергетические ресурсы (DER) и системы накопления (BESS) становятся основой гибкости сети. Исследовательский институт электроэнергетики (EPRI) в партнерстве с NVIDIA формирует стандарты «Ultra-Modern 2.0», объединяя физические законы с ИИ для создания автономных торговых систем.
 
 ## **1\. Стратегическая трансформация и модель "Энергия как сервис" (EaaS)**

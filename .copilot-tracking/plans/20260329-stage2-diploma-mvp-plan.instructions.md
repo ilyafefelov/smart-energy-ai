@@ -12,9 +12,9 @@ Track the active Stage 2 diploma MVP workstream in one umbrella execution plan w
 
 ## Current Status
 
-- Completed: steps 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, and 11.
-- In progress: step 13.
-- Not started: step 12.
+- Completed: steps 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, and 13.
+- In progress: none.
+- Not started: none.
 
 ## Objectives
 
@@ -82,15 +82,15 @@ Track the active Stage 2 diploma MVP workstream in one umbrella execution plan w
 - [x] Task 3.2: Finish Stage 2 operator-input propagation through the config-backed settings flow (Step 10, completed)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 122-140)
 
-### [ ] Phase 4: Finish Validation, Demo Evidence, and Final Scope Framing
+### [x] Phase 4: Finish Validation, Demo Evidence, and Final Scope Framing
 
 - [x] Task 4.1: Complete focused Stage 2 validation coverage for policy, history contracts, analytics, and schedule semantics (Step 11, completed)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 144-162)
 
-- [ ] Task 4.2: Run the Stage 2 demo scenarios against the active runtime and capture evidence (Step 12, not started)
+- [x] Task 4.2: Run the Stage 2 demo scenarios against the active runtime and capture evidence (Step 12, completed)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 164-180)
 
-- [ ] Task 4.3: Keep Stage 2 docs truthful about the implemented MVP and deferred scope (Step 13, in progress)
+- [x] Task 4.3: Keep Stage 2 docs truthful about the implemented MVP and deferred scope (Step 13, completed)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 184-200)
 
 ## Dependencies

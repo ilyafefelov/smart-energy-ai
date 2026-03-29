@@ -11,6 +11,8 @@ Backfill the March 29 Stage 2 diploma MVP baseline into its own release-style tr
 
 Later March 29 slices completed the remaining regime-aware optimizer work in the active schedule asset, propagated Stage 2 policy semantics into the Dagster-backed and deterministic 24-hour schedule timeline contract, and added focused regression coverage for the live `/api/dagster/recommendation` payload.
 
+The final March 29 slices added a repeatable Stage 2 demo evidence script, captured the required scenario outputs, and added explicit future-scope notes to the broader Stage 2 research docs so the umbrella plan can close without overstating RL, Modulus, PatchTST, or VPP capabilities as current MVP behavior.
+
 ## Changes
 
 ### Added
@@ -18,6 +20,7 @@ Later March 29 slices completed the remaining regime-aware optimizer work in the
 - .copilot-tracking/changes/20260329-stage2-diploma-mvp-changes.md - Established a Stage 2-specific release tracker for the active diploma MVP baseline.
 - dashboard/server/utils/dagster-schedule-policy.ts - Added a pure helper that applies the canonical Stage 2 policy layer to individual Dagster schedule rows.
 - tests/unit/stage2_dagster_schedule_policy_contract.test.mjs - Added focused regression coverage for Stage 2 row-level Dagster schedule policy veto behavior.
+- dashboard/scripts/stage2_demo_evidence.mjs - Added a repeatable evidence-capture script that reuses canonical APIs and runtime policy utilities for the four required Stage 2 demo scenarios.
 
 ### Modified
 
@@ -42,6 +45,10 @@ Later March 29 slices completed the remaining regime-aware optimizer work in the
 - .copilot-tracking/plans/20260329-stage2-diploma-mvp-plan.instructions.md - Marked the landed optimizer, analytics, reasoning-timeline, operator-input, and focused validation tasks complete.
 - .copilot-tracking/research/20260329-stage2-diploma-mvp-status-audit-research.md - Updated the status audit so the next work is demo evidence and broader doc cleanup rather than schedule-policy propagation.
 - docs/Stage 2/plan.md - Synced the narrative execution snapshot to the landed Stage 2 runtime status and remaining open work.
+- docs/Stage 2/ШІ-арбітраж_ стратегія для МСБ.md - Added an explicit status note that the repo MVP is deterministic and compliance-aware, while RL and VPP content in the document remains future-scope research.
+- docs/Stage 2/Финансовая статистика и аукционы для клиентов (1).md - Added an explicit status note that the repo MVP implements deterministic Stage 2 analytics and treats PPO-oriented content as future-scope research.
+- docs/Stage 2/EPRI_ ИИ в энергетике и арбитраже з Modulus.md - Added an explicit status note that NVIDIA Modulus and Physics-ML content is research context, not an implemented MVP surface in this repo.
+- docs/Stage 2/Аналіз ринку енергетичного арбітражу ШІ 1.md - Added an explicit status note that RL and VPP references are market research, not current runtime capability.
 - tests/unit/stage2_market_policy_contract.test.mjs - Locked in silence-window, reserve-floor, REMIT, and comparative regime-override behavior for the Stage 2 policy layer.
 - tests/unit/decision_snapshot_history_contract.test.mjs - Locked in the decision snapshot and optimization-history reconciliation contract used by the Stage 2 audit trail.
 - tests/test_dashboard_battery_control_regression.py - Preserved regression coverage for control-history decision-trace fields in the active dashboard runtime.
@@ -62,17 +69,26 @@ Later March 29 slices completed the remaining regime-aware optimizer work in the
 - tests/unit/test_schedule_reconcile_and_test_runner_scripts.py - Focused script coverage proves richer Dagster schedule state survives normalization into the dashboard-facing JSON contract.
 - tests/test_dashboard_battery_control_regression.py - Live integration coverage now proves `/api/dagster/recommendation` schedule rows carry `requested_action`, `policy_compliance`, and regime metadata.
 
+## Demo Evidence Snapshot
+
+- `node dashboard/scripts/stage2_demo_evidence.mjs` - Captured a 10:00 requested `SELL` at `11.38` UAH/kWh that was adjusted to `HOLD` with `window_of_silence_export_veto`.
+- `node dashboard/scripts/stage2_demo_evidence.mjs` - Captured an 18:00 requested `SELL` at `13.58` UAH/kWh that remained `SELL` when reserve and REMIT constraints passed.
+- `node dashboard/scripts/stage2_demo_evidence.mjs` - Captured an 18:00 requested `SELL` at `8%` SoC that was adjusted to `HOLD` with `reserve_floor_veto` and `remit_insufficient_deliverable_energy`.
+- `node dashboard/scripts/stage2_demo_evidence.mjs` - Captured comparative `stage2_financials` outputs for `20` kW (`net_billing`) and `75` kW (`market_premium`) from the live `/api/history` contract.
+- Divergence from prompt cleanup step: `.copilot-tracking/prompts/implement-stage2-diploma-mvp.prompt.md` was intentionally retained because it has a separate local user modification in the working tree.
+
 ## Release Summary
 
-**Total Files Affected**: 28
+**Total Files Affected**: 33
 
-### Files Created (3)
+### Files Created (4)
 
 - .copilot-tracking/changes/20260329-stage2-diploma-mvp-changes.md - Created the Stage 2-specific release tracker that backfills the current diploma MVP baseline.
 - dashboard/server/utils/dagster-schedule-policy.ts - Added the shared row-level Stage 2 schedule-policy helper used by the Dagster timeline.
 - tests/unit/stage2_dagster_schedule_policy_contract.test.mjs - Added focused contract coverage for Dagster schedule policy adjustments.
+- dashboard/scripts/stage2_demo_evidence.mjs - Added the repeatable Stage 2 scenario evidence script for the final demo phase.
 
-### Files Modified (25)
+### Files Modified (29)
 
 - dashboard/server/utils/market-policy.ts - Added the Stage 2 market-policy contract and compliance utility.
 - dashboard/server/utils/recommendation-contract.ts - Kept Stage 2 action and provenance vocabulary normalized across recommendation and control surfaces.
@@ -95,6 +111,10 @@ Later March 29 slices completed the remaining regime-aware optimizer work in the
 - .copilot-tracking/plans/20260329-stage2-diploma-mvp-plan.instructions.md - Updated tracker status and marked landed tasks complete.
 - .copilot-tracking/research/20260329-stage2-diploma-mvp-status-audit-research.md - Updated the Stage 2 status audit to reflect the landed schedule-policy slice and the remaining work.
 - docs/Stage 2/plan.md - Updated the narrative execution snapshot to match the landed runtime and open work.
+- docs/Stage 2/ШІ-арбітраж_ стратегія для МСБ.md - Added a top-level future-scope note so RL and VPP references are not read as implemented MVP behavior.
+- docs/Stage 2/Финансовая статистика и аукционы для клиентов (1).md - Added a top-level future-scope note so PPO-centric sections are framed as research rather than current implementation.
+- docs/Stage 2/EPRI_ ИИ в энергетике и арбитраже з Modulus.md - Added a top-level future-scope note so Modulus and Physics-ML references stay aligned with the implemented MVP.
+- docs/Stage 2/Аналіз ринку енергетичного арбітражу ШІ 1.md - Added a top-level future-scope note so RL and VPP references stay aligned with the implemented MVP.
 - tests/unit/stage2_market_policy_contract.test.mjs - Protected Stage 2 hard-rule behavior from regression.
 - tests/unit/decision_snapshot_history_contract.test.mjs - Protected the Stage 2 audit-history contract from regression.
 - tests/test_dashboard_battery_control_regression.py - Protected the control-history timeline trace fields from regression.
@@ -113,4 +133,4 @@ Later March 29 slices completed the remaining regime-aware optimizer work in the
 
 ### Deployment Notes
 
-The active Stage 2 code path is now aligned through optimizer inputs, schedule-policy propagation, and focused validation. Remaining work is limited to capturing repeatable Stage 2 demo evidence from the active runtime and finishing the broader diploma-facing document cleanup for future-scope RL, Modulus, PatchTST, and VPP references.
+The full Stage 2 diploma MVP workstream is now closed on the active runtime. The repo now has deterministic optimizer inputs, policy-aware recommendation and timeline contracts, focused validation, repeatable demo evidence capture, and broader Stage 2 docs that explicitly defer RL, Modulus, PatchTST, and VPP work beyond the MVP.

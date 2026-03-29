@@ -45,6 +45,13 @@
 - Standards referenced: `AGENTS.md`, `.github/copilot-instructions.md`, and the current `.copilot-tracking` execution tracker.
 - Instructions followed: keep research evidence repo-grounded, remove outdated status claims immediately, and prefer the active `dashboard/` runtime surfaces over creating parallel Stage 2 paths.
 
+### Status Update
+
+- `dashboard/scripts/stage2_demo_evidence.mjs` now captures the four required Stage 2 scenarios using canonical APIs and the landed runtime policy utilities.
+- The broader Stage 2 research docs now carry explicit future-scope notes so PPO, Modulus, and VPP content is not misread as implemented MVP behavior.
+- The Stage 2 umbrella plan can now be treated as completed.
+- The prompt artifact was intentionally retained because it has a separate local user modification in the working tree.
+
 ## Key Discoveries
 
 ### Project Structure
@@ -129,11 +136,11 @@ return {
 
 ## Recommended Approach
 
-The next implementation slice should shift away from runtime contract work and into evidence and truthfulness work. The code path is already aligned around one policy vocabulary and one deterministic optimizer. The highest-value next step is to run the required Stage 2 demo scenarios against the active runtime, capture evidence from the canonical APIs, and then update the broader diploma-facing docs so they describe the deterministic compliance-aware MVP that now exists while clearly deferring PPO, Modulus, PatchTST, real hardware control, and VPP aggregation.
+The runtime workstream is now complete. Future work should be treated as post-MVP follow-on scope rather than unresolved Stage 2 implementation. The highest-value next step after this point is no longer code alignment; it is optional thesis polish, report packaging, or later-stage post-MVP experimentation.
 
 ## Implementation Guidance
 
-- **Objectives**: Finish the remaining non-runtime Stage 2 work by capturing scenario evidence and cleaning up broader diploma-facing documentation.
-- **Key Tasks**: Run the required Stage 2 scenarios against the active runtime; record evidence against the canonical recommendation and history contracts; update tracker artifacts; and reframe supporting Stage 2 docs so future-scope RL, Modulus, and VPP content is clearly marked as deferred.
-- **Dependencies**: The landed optimizer, analytics, policy, and schedule-timeline slices in the active `dashboard/` and `src/assets/core/` surfaces.
-- **Success Criteria**: Repeatable Stage 2 demo evidence exists for the required scenarios, the tracker stays aligned with the live code, and the remaining Stage 2 docs no longer overstate future-scope capabilities as implemented MVP behavior.
+- **Objectives**: Preserve the repo-grounded completion state for the Stage 2 MVP and make sure any future work starts from the completed deterministic baseline rather than reopening the same runtime slices.
+- **Key Tasks**: Keep using the scenario evidence script for demonstrations, and treat RL, Modulus, PatchTST, real hardware control, and VPP aggregation as explicit post-MVP extensions.
+- **Dependencies**: The landed optimizer, analytics, policy, schedule-timeline, and evidence-capture surfaces in the active `dashboard/` and `src/assets/core/` paths.
+- **Success Criteria**: The completed Stage 2 MVP remains truthful, demonstrable, and distinct from its post-MVP research backlog.
