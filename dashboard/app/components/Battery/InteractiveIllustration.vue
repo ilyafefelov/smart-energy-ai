@@ -203,8 +203,24 @@
                   {{ traceSourceLabel(entry.decision_source) }}
                 </span>
               </div>
+              <div v-if="traceMetaChips(entry).length > 0" class="mt-1 flex flex-wrap gap-1">
+                <span
+                  v-for="chip in traceMetaChips(entry)"
+                  :key="chip.label"
+                  class="rounded-full border px-1.5 py-0.5 text-[10px] font-semibold"
+                  :class="chip.tone"
+                >
+                  {{ chip.label }}
+                </span>
+              </div>
               <p class="mt-1 text-xs text-slate-200">{{ traceCommandSummary(entry) }}</p>
               <p class="mt-1 text-[11px] text-slate-400">{{ traceDetailSummary(entry) }}</p>
+              <p v-if="tracePolicyExplanation(entry)" class="mt-1 text-[11px] text-amber-200/90">
+                {{ tracePolicyExplanation(entry) }}
+              </p>
+              <p v-if="traceNormalizedActionSummary(entry)" class="mt-1 text-[11px] text-cyan-100/80">
+                {{ traceNormalizedActionSummary(entry) }}
+              </p>
             </div>
           </div>
           <p v-else class="mt-2 text-xs text-slate-400">No control decisions recorded in the last 24 hours.</p>
@@ -252,6 +268,31 @@ interface FeedbackState {
   type: 'success' | 'error'
 }
 
+interface DecisionTraceNormalizedAction {
+  action?: string | null
+  base_action?: string | null
+  execution_command?: string | null
+  power_kw?: number | null
+  power_source?: string | null
+}
+
+interface DecisionTracePolicyCompliance {
+  market_regime?: string | null
+  veto_applied?: boolean | null
+  adjusted_action?: string | null
+  rule_hits?: string[] | null
+  explanations?: string[] | null
+}
+
+interface DecisionTraceSnapshot {
+  version?: string | null
+  contract?: {
+    version?: string | null
+    normalized_action?: DecisionTraceNormalizedAction | null
+    policy_compliance?: DecisionTracePolicyCompliance | null
+  } | null
+}
+
 interface DecisionTraceEntry {
   command_id?: string | null
   timestamp?: string | null
@@ -263,6 +304,12 @@ interface DecisionTraceEntry {
   soc_before?: number | null
   soc_after?: number | null
   reason?: string | null
+  decision_snapshot?: DecisionTraceSnapshot | null
+}
+
+interface TraceMetaChip {
+  label: string
+  tone: string
 }
 
 const props = withDefaults(
@@ -591,6 +638,50 @@ const traceCommandSummary = (entry: DecisionTraceEntry): string => {
   return requested === resolved ? resolved : `${requested} -> ${resolved}`
 }
 
+const traceMetaChips = (entry: DecisionTraceEntry): TraceMetaChip[] => {
+  const chips: TraceMetaChip[] = []
+  const contractVersion = String(entry.decision_snapshot?.contract?.version || '').trim()
+  const marketRegime = String(entry.decision_snapshot?.contract?.policy_compliance?.market_regime || '').trim()
+  const vetoApplied = entry.decision_snapshot?.contract?.policy_compliance?.veto_applied === true
+  const normalizedAction = String(entry.decision_snapshot?.contract?.normalized_action?.action || '').trim().toUpperCase()
+  const adjustedAction = String(entry.decision_snapshot?.contract?.policy_compliance?.adjusted_action || '').trim().toUpperCase()
+
+  if (marketRegime === 'market_premium') {
+    chips.push({
+      label: 'MARKET PREMIUM',
+      tone: 'border-fuchsia-500/70 bg-fuchsia-500/15 text-fuchsia-200',
+    })
+  } else if (marketRegime === 'net_billing') {
+    chips.push({
+      label: 'NET BILLING',
+      tone: 'border-sky-500/70 bg-sky-500/15 text-sky-200',
+    })
+  }
+
+  if (vetoApplied) {
+    chips.push({
+      label: 'POLICY VETO',
+      tone: 'border-amber-500/70 bg-amber-500/15 text-amber-200',
+    })
+  }
+
+  if (normalizedAction && adjustedAction && normalizedAction !== adjustedAction) {
+    chips.push({
+      label: `${normalizedAction} -> ${adjustedAction}`,
+      tone: 'border-cyan-500/70 bg-cyan-500/15 text-cyan-200',
+    })
+  }
+
+  if (contractVersion) {
+    chips.push({
+      label: contractVersion,
+      tone: 'border-slate-500/70 bg-slate-500/15 text-slate-200',
+    })
+  }
+
+  return chips
+}
+
 const traceDetailSummary = (entry: DecisionTraceEntry): string => {
   const power = Number(entry.power_kw || 0)
   const before = Number(entry.soc_before)
@@ -607,6 +698,50 @@ const traceDetailSummary = (entry: DecisionTraceEntry): string => {
   const reasonText = reason ? `Reason: ${reason}` : 'Reason: n/a'
 
   return `${powerText} | ${socText} | ${reasonText}`
+}
+
+const tracePolicyExplanation = (entry: DecisionTraceEntry): string => {
+  const explanations = entry.decision_snapshot?.contract?.policy_compliance?.explanations
+  if (!Array.isArray(explanations) || explanations.length === 0) {
+    return ''
+  }
+
+  return explanations
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .join(' ')
+}
+
+const traceNormalizedActionSummary = (entry: DecisionTraceEntry): string => {
+  const normalizedAction = entry.decision_snapshot?.contract?.normalized_action
+  if (!normalizedAction) {
+    return ''
+  }
+
+  const action = String(normalizedAction.action || '').trim().toUpperCase()
+  const executionCommand = String(normalizedAction.execution_command || '').trim().toLowerCase()
+  const power = Number(normalizedAction.power_kw)
+  const powerSource = String(normalizedAction.power_source || '').trim().replace(/[_-]/g, ' ')
+
+  if (!action && !executionCommand && !Number.isFinite(power) && !powerSource) {
+    return ''
+  }
+
+  const parts: string[] = []
+  if (action) {
+    parts.push(`Normalized action ${action}`)
+  }
+  if (executionCommand) {
+    parts.push(`command ${executionCommand}`)
+  }
+  if (Number.isFinite(power)) {
+    parts.push(`power ${power.toFixed(2)} kW`)
+  }
+  if (powerSource) {
+    parts.push(`source ${powerSource}`)
+  }
+
+  return parts.join(' | ')
 }
 
 const toggleMode = async () => {
