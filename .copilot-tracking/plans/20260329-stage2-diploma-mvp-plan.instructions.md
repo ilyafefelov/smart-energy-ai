@@ -13,8 +13,8 @@ Track the active Stage 2 diploma MVP workstream in one umbrella execution plan w
 ## Current Status
 
 - Completed: steps 1, 2, 3, 5, 6, and 8.
-- In progress: steps 7, 9, 10, 11, and 13.
-- Not started: steps 4 and 12.
+- In progress: steps 4, 7, 9, 10, 11, and 13.
+- Not started: step 12.
 
 ## Objectives
 
@@ -68,7 +68,7 @@ Track the active Stage 2 diploma MVP workstream in one umbrella execution plan w
 
 ### [ ] Phase 2: Finish the Remaining Regime-Aware Optimizer and Financial Work
 
-- [ ] Task 2.1: Extend the deterministic optimizer with regime-aware inputs and config-driven degradation economics (Step 4, not started)
+- [ ] Task 2.1: Extend the deterministic optimizer with regime-aware inputs and config-driven degradation economics (Step 4, in progress)
   - Details: .copilot-tracking/details/20260329-stage2-diploma-mvp-details.md (Lines 63-80)
 
 - [ ] Task 2.2: Finish the dual-regime financial analytics story across API, UI, and narrative docs (Step 7, in progress)

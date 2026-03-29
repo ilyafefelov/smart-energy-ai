@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 import polars as pl
 import yaml
 from dagster import AssetIn, asset
 
+from ...physics.economics import BatteryTechnology, EconomicModel
 from ...optimization import BaselineDPOptimizer, BaselineOptimizationConfig
 
 
@@ -37,6 +38,9 @@ OPTIMIZATION_SCHEDULE_SCHEMA: Dict[str, pl.DataType] = {
     "solver": pl.Utf8,
 }
 
+DEFAULT_RESERVE_FLOOR_FRACTION = 0.15
+DEFAULT_EXPORT_PRICE_FACTOR = 0.9
+
 
 def build_empty_optimization_schedule() -> pl.DataFrame:
     """Return the canonical empty optimization schedule frame."""
@@ -55,7 +59,36 @@ def build_optimization_schedule_frame(rows: List[Dict[str, Any]]) -> pl.DataFram
     return pl.DataFrame(normalized_rows, schema=OPTIMIZATION_SCHEDULE_SCHEMA)
 
 
-def _load_client_capacities() -> Dict[str, float]:
+def _coerce_float(value: Any) -> Optional[float]:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    return numeric
+
+
+def _clamp(value: float, minimum: float, maximum: float) -> float:
+    return min(maximum, max(minimum, value))
+
+
+def _normalize_fraction_candidate(value: Any, fallback: Optional[float], maximum: float = 1.0) -> Optional[float]:
+    numeric = _coerce_float(value)
+    if numeric is None:
+        return fallback
+    if numeric > 1.0:
+        numeric /= 100.0
+    return _clamp(numeric, 0.0, maximum)
+
+
+def _first_positive_number(*values: Any) -> Optional[float]:
+    for value in values:
+        numeric = _coerce_float(value)
+        if numeric is not None and numeric > 0:
+            return numeric
+    return None
+
+
+def _load_client_profiles() -> Dict[str, Dict[str, Any]]:
     config_path = Path("customers.yaml")
     if not config_path.exists():
         return {}
@@ -65,11 +98,60 @@ def _load_client_capacities() -> Dict[str, float]:
     except Exception:
         return {}
 
-    capacities: Dict[str, float] = {}
+    profiles: Dict[str, Dict[str, Any]] = {}
     for entry in config_data.get("customers", []):
         client_id = entry.get("id")
-        battery_kwh = entry.get("battery_capacity_kwh")
-        if client_id and battery_kwh is not None:
+        if not client_id:
+            continue
+
+        energy_system = entry.get("energy_system") or {}
+        profiles[str(client_id)] = {
+            "battery_capacity_kwh": _coerce_float(
+                entry.get("battery_capacity_kwh", energy_system.get("battery_capacity_kwh"))
+            ),
+            "battery_type": entry.get("battery_type") or energy_system.get("battery_type") or "LFP",
+            "battery_efficiency": _coerce_float(
+                entry.get("battery_efficiency", energy_system.get("battery_efficiency"))
+            ),
+            "battery_dod_max": _coerce_float(
+                entry.get("battery_dod_max", energy_system.get("battery_dod_max"))
+            ),
+            "battery_soc_min": entry.get("battery_soc_min", energy_system.get("battery_soc_min")),
+            "market_regime_override": (
+                entry.get("market_regime_override")
+                or energy_system.get("market_regime_override")
+                or "auto"
+            ),
+            "site_power_kw": _first_positive_number(
+                entry.get("system_power_kw"),
+                energy_system.get("system_power_kw"),
+                entry.get("site_power_kw"),
+                energy_system.get("site_power_kw"),
+                entry.get("connected_power_kw"),
+                energy_system.get("connected_power_kw"),
+                entry.get("contracted_power_kw"),
+                energy_system.get("contracted_power_kw"),
+                entry.get("solar_capacity_kw"),
+                energy_system.get("solar_capacity_kw"),
+                entry.get("pv_capacity_kw"),
+                energy_system.get("pv_capacity_kw"),
+                entry.get("renewable_capacity_kw"),
+                energy_system.get("renewable_capacity_kw"),
+                entry.get("load_peak_kw"),
+                energy_system.get("load_peak_kw"),
+                entry.get("peak_load_kw"),
+                energy_system.get("peak_load_kw"),
+            ),
+        }
+
+    return profiles
+
+
+def _load_client_capacities() -> Dict[str, float]:
+    capacities: Dict[str, float] = {}
+    for client_id, profile in _load_client_profiles().items():
+        battery_kwh = _coerce_float(profile.get("battery_capacity_kwh"))
+        if battery_kwh is not None:
             capacities[str(client_id)] = float(battery_kwh)
     return capacities
 
@@ -96,6 +178,81 @@ def _get_client_series(client_df: pl.DataFrame, column: str, horizon: int, fallb
     return tail
 
 
+def _resolve_battery_technology(battery_type: Any) -> Optional[BatteryTechnology]:
+    normalized = str(battery_type or "").strip().lower().replace("-", "_")
+    if "lfp" in normalized:
+        return BatteryTechnology.LFP
+    if "nmc" in normalized:
+        return BatteryTechnology.NMC
+    if "lead" in normalized:
+        return BatteryTechnology.LEAD_ACID
+    if "sodium" in normalized:
+        return BatteryTechnology.SODIUM_ION
+    return None
+
+
+def _normalize_market_regime_override(value: Any) -> str:
+    normalized = str(value or "").strip().lower().replace("-", "_")
+    if normalized in {"net_billing", "market_premium"}:
+        return normalized
+    return "auto"
+
+
+def _infer_market_regime(site_power_kw: Optional[float], override: Any = "auto") -> str:
+    normalized_override = _normalize_market_regime_override(override)
+    if normalized_override != "auto":
+        return normalized_override
+    if site_power_kw is None or site_power_kw <= 0:
+        return "unclassified"
+    return "market_premium" if site_power_kw > 50.0 else "net_billing"
+
+
+def _resolve_client_optimization_inputs(client_profile: Mapping[str, Any], capacity_kwh: float) -> Dict[str, float | str]:
+    technology = _resolve_battery_technology(client_profile.get("battery_type"))
+    economics = EconomicModel(technology, capacity_kwh) if technology is not None else None
+
+    roundtrip_efficiency = _normalize_fraction_candidate(
+        client_profile.get("battery_efficiency"),
+        economics.params.roundtrip_efficiency if economics is not None else 0.92,
+    )
+    usable_fraction = _normalize_fraction_candidate(
+        client_profile.get("battery_dod_max"),
+        economics.params.dod_limit if economics is not None else 0.9,
+    )
+    reserve_floor_fraction = _normalize_fraction_candidate(
+        client_profile.get("battery_soc_min"),
+        DEFAULT_RESERVE_FLOOR_FRACTION,
+        maximum=0.95,
+    )
+    min_soc_fraction = max(float(reserve_floor_fraction or DEFAULT_RESERVE_FLOOR_FRACTION), 1.0 - float(usable_fraction or 0.9))
+
+    site_power_kw = _coerce_float(client_profile.get("site_power_kw"))
+    market_regime = _infer_market_regime(site_power_kw, client_profile.get("market_regime_override"))
+
+    max_power_kw = max(25.0, 0.25 * capacity_kwh)
+    if site_power_kw is not None and site_power_kw > 0:
+        max_power_kw = min(max_power_kw, site_power_kw)
+
+    degradation_cost_per_kwh = 0.01
+    if economics is not None:
+        degradation_cost_per_kwh = max(
+            (economics.params.capex_per_kwh * economics.params.replacement_cost_ratio)
+            / max(economics.params.cycle_life * float(usable_fraction or 0.9), 1.0),
+            0.001,
+        )
+
+    export_price_factor = 1.0 if market_regime == "market_premium" else DEFAULT_EXPORT_PRICE_FACTOR
+
+    return {
+        "market_regime": market_regime,
+        "min_soc_fraction": min_soc_fraction,
+        "roundtrip_efficiency": float(roundtrip_efficiency or 0.92),
+        "max_power_kw": float(max_power_kw),
+        "degradation_cost_per_kwh": float(degradation_cost_per_kwh),
+        "export_price_factor": float(export_price_factor),
+    }
+
+
 @asset(
     group_name="optimization",
     description="Baseline DP optimizer schedule from forecast prices and client state",
@@ -115,7 +272,7 @@ def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_st
         return build_empty_optimization_schedule()
 
     horizon = min(24, len(prices))
-    capacity_by_client = _load_client_capacities()
+    client_profiles = _load_client_profiles()
 
     output_frames: List[pl.DataFrame] = []
     client_ids = (
@@ -134,21 +291,25 @@ def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_st
         if len(client_df) == 0:
             continue
 
-        capacity_kwh = float(capacity_by_client.get(str(client_id), 200.0))
+        client_profile = client_profiles.get(str(client_id), {})
+        capacity_kwh = float(client_profile.get("battery_capacity_kwh") or 200.0)
         soc_percent = float(client_df.select("battery_soc").to_series().to_list()[-1]) if "battery_soc" in client_df.columns else 50.0
         load_forecast = _get_client_series(client_df, "load_actual", horizon, fallback=40.0)
         solar_forecast = _get_client_series(client_df, "solar_gen_actual", horizon, fallback=0.0)
+        optimization_inputs = _resolve_client_optimization_inputs(client_profile, capacity_kwh)
 
         optimizer = BaselineDPOptimizer(
             BaselineOptimizationConfig(
                 capacity_kwh=capacity_kwh,
-                min_soc_fraction=0.15,
+                min_soc_fraction=float(optimization_inputs["min_soc_fraction"]),
                 max_soc_fraction=0.95,
                 initial_soc_fraction=max(0.0, min(1.0, soc_percent / 100.0)),
-                max_charge_kw=max(25.0, 0.25 * capacity_kwh),
-                max_discharge_kw=max(25.0, 0.25 * capacity_kwh),
+                roundtrip_efficiency=float(optimization_inputs["roundtrip_efficiency"]),
+                max_charge_kw=float(optimization_inputs["max_power_kw"]),
+                max_discharge_kw=float(optimization_inputs["max_power_kw"]),
                 throughput_limit_kwh=capacity_kwh * 1.2,
-                degradation_cost_per_kwh=0.01,
+                degradation_cost_per_kwh=float(optimization_inputs["degradation_cost_per_kwh"]),
+                export_price_factor=float(optimization_inputs["export_price_factor"]),
             )
         )
 

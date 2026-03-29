@@ -278,6 +278,89 @@ def test_optimization_schedule_helpers_and_asset(monkeypatch, tmp_path: Path) ->
     assert output.rows[0]["algorithm"] == "baseline_dp"
 
 
+def test_optimization_schedule_asset_uses_stage2_client_inputs(monkeypatch, tmp_path: Path) -> None:
+    injected = build_schedule_injected_modules()
+    module = load_module(
+        "src.assets.core.optimization_schedule",
+        "src/assets/core/optimization_schedule.py",
+        injected_modules=injected,
+    )
+
+    captured = {}
+
+    class CapturingOptimizer:
+        def __init__(self, config):
+            captured["config"] = config
+
+        def optimize(self, price_eur_mwh, load_kw, solar_kw):
+            schedule = []
+            for hour, price in enumerate(price_eur_mwh):
+                schedule.append(
+                    {
+                        "hour": hour,
+                        "action_kw": 0.0,
+                        "charge_kwh": 0.0,
+                        "discharge_kwh": 0.0,
+                        "soc_before_kwh": 100.0,
+                        "soc_after_kwh": 100.0,
+                        "throughput_total_kwh": 0.0,
+                        "price_eur_mwh": float(price),
+                        "load_kwh": float(load_kw[hour]),
+                        "solar_kwh": float(solar_kw[hour]),
+                        "grid_import_kwh": float(load_kw[hour]),
+                        "grid_export_kwh": 0.0,
+                        "purchase_cost_eur": 0.0,
+                        "export_revenue_eur": 0.0,
+                        "degradation_penalty_eur": 0.0,
+                        "net_cost_eur": 0.0,
+                    }
+                )
+
+            return {
+                "schedule": schedule,
+                "objective": {"net_cost_eur": 0.0},
+                "constraints": {"final_soc_kwh": 100.0, "throughput_limit_kwh": captured["config"].throughput_limit_kwh},
+                "metadata": {"algorithm": "baseline_dp"},
+            }
+
+    module.BaselineDPOptimizer = CapturingOptimizer
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "customers.yaml").write_text(
+        "customers:\n"
+        "  - id: tenant-a\n"
+        "    market_regime_override: market_premium\n"
+        "    energy_system:\n"
+        "      battery_type: LFP\n"
+        "      battery_capacity_kwh: 150\n"
+        "      battery_efficiency: 0.88\n"
+        "      battery_dod_max: 0.85\n"
+        "      battery_soc_min: 0.2\n"
+        "      connected_power_kw: 20\n",
+        encoding="utf-8",
+    )
+
+    price_forecast = FakePolarsFrame([
+        {"predicted_price_eur_mwh": 50.0},
+        {"predicted_price_eur_mwh": 55.0},
+    ])
+    client_state = FakePolarsFrame([
+        {"client_id": "tenant-a", "timestamp": 1, "battery_soc": 60.0, "load_actual": 40.0, "solar_gen_actual": 5.0},
+        {"client_id": "tenant-a", "timestamp": 2, "battery_soc": 62.0, "load_actual": 42.0, "solar_gen_actual": 6.0},
+    ])
+    context = types.SimpleNamespace(log=types.SimpleNamespace(info=lambda *args, **kwargs: None, warning=lambda *args, **kwargs: None))
+
+    module.optimization_schedule_asset(context, price_forecast, client_state)
+
+    config = captured["config"]
+    assert config.min_soc_fraction == 0.2
+    assert config.roundtrip_efficiency == 0.88
+    assert config.max_charge_kw == 20.0
+    assert config.max_discharge_kw == 20.0
+    assert config.export_price_factor == 1.0
+    assert config.degradation_cost_per_kwh > 0.01
+
+
 def test_optimization_schedule_checks_evaluate_contracts() -> None:
     injected = build_schedule_injected_modules()
     optimization_module = load_module(
