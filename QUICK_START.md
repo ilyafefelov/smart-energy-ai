@@ -65,6 +65,14 @@ Run the local MVP smoke path from the repository root:
 .\scripts\local\run-local-mvp-smoke.ps1
 ```
 
+Run the focused Stage 2 evidence smoke command directly against a running dashboard:
+
+```powershell
+node dashboard/scripts/stage2_demo_evidence.mjs
+```
+
+`run-local-mvp-smoke.ps1` now includes both the dashboard API smoke checks and the Stage 2 evidence smoke step. Use the direct Node command when the local stack is already up and you only want the Stage 2 scenario gate. The dashboard package also exposes the same runner as `npm -C dashboard run smoke:stage2-evidence` when you prefer the npm alias.
+
 ## Notes
 
 - The active dashboard is the Nuxt application under `dashboard/`.

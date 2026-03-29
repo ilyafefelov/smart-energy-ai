@@ -86,6 +86,7 @@ export default eventHandler(async (event: any) => {
       }
       const timestamp = new Date().toISOString()
       const now = new Date()
+      const currentHour = now.getHours()
       const projectRoot = resolve(process.cwd(), '..')
 
       const [mlflowStatus, mlRecommendation, pricesPayload, batteryStatus, dagsterRecommendation, dagsterAssetChecks] = await Promise.all([

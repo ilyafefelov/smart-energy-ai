@@ -16,8 +16,10 @@ $ProgressPreference = 'SilentlyContinue'
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $startScript = Join-Path $PSScriptRoot 'start-local-stack.ps1'
 $dashboardSmokeScript = Join-Path $repoRoot 'dashboard\scripts\api_smoke_test.ps1'
+$stage2SmokeScript = Join-Path $repoRoot 'dashboard\scripts\stage2_demo_evidence.mjs'
 $reportDir = Join-Path $repoRoot 'artifacts\local-smoke'
 $reportPath = Join-Path $reportDir 'local_mvp_smoke_report.json'
+$stage2EvidenceReportPath = Join-Path $reportDir 'stage2_demo_evidence_report.json'
 
 if (-not (Test-Path $reportDir)) {
   New-Item -Path $reportDir -ItemType Directory -Force | Out-Null
@@ -139,8 +141,44 @@ try {
     }
 
     Add-Step -Name 'dashboard_api_smoke' -Passed $true -Detail 'Dashboard API smoke test completed successfully.' -Extra $dashboardSmokeSummary
+
+    Push-Location $repoRoot
+    try {
+      $env:STAGE2_EVIDENCE_REPORT_PATH = $stage2EvidenceReportPath
+      $stage2SmokeRaw = & node $stage2SmokeScript 2>&1
+    } finally {
+      if (Test-Path Env:STAGE2_EVIDENCE_REPORT_PATH) {
+        Remove-Item Env:STAGE2_EVIDENCE_REPORT_PATH -ErrorAction SilentlyContinue
+      }
+      Pop-Location
+    }
+    if ($LASTEXITCODE -ne 0) {
+      throw "Stage 2 evidence smoke test failed.`n$($stage2SmokeRaw -join [Environment]::NewLine)"
+    }
+
+    $stage2SmokeText = ($stage2SmokeRaw -join [Environment]::NewLine).Trim()
+    $stage2SmokeSummary = $null
+    if ($stage2SmokeText) {
+      try {
+        $stage2SmokeSummary = $stage2SmokeText | ConvertFrom-Json -Depth 20
+      } catch {
+        $stage2SmokeSummary = $null
+      }
+    }
+
+    if ($null -eq $stage2SmokeSummary) {
+      throw 'Stage 2 evidence smoke test did not return a parseable JSON summary.'
+    }
+
+    $stage2SmokePassed = ($stage2SmokeSummary.validation.passed -eq $true)
+    if (-not $stage2SmokePassed) {
+      throw "Stage 2 evidence smoke test reported validation failures."
+    }
+
+    Add-Step -Name 'stage2_evidence_smoke' -Passed $true -Detail 'Stage 2 evidence smoke test completed successfully.' -Extra $stage2SmokeSummary.validation
   } else {
     Add-Step -Name 'dashboard_api_smoke' -Passed $true -Detail 'Skipped by request.'
+    Add-Step -Name 'stage2_evidence_smoke' -Passed $true -Detail 'Skipped by request.'
   }
 
   $summary.success = $true

@@ -140,23 +140,9 @@ function Invoke-Api {
 
   try {
     if ($null -ne $Form) {
-      $tempBodyFile = [System.IO.Path]::GetTempFileName()
-      $curlArgs = @('-s', '-o', $tempBodyFile, '-w', '%{http_code}', '-X', $Method)
-      foreach ($k in $Form.Keys) {
-        $v = $Form[$k]
-        if ($v -is [System.IO.FileInfo]) {
-          $curlArgs += @('-F', "${k}=@$($v.FullName);type=application/json")
-        } else {
-          $curlArgs += @('-F', "${k}=$v")
-        }
-      }
-      $curlArgs += $url
-      $statusText = ((& curl.exe @curlArgs) -join '').Trim()
-      $raw = if (Test-Path $tempBodyFile) { Get-Content -Path $tempBodyFile -Raw -ErrorAction SilentlyContinue } else { '' }
-      $status = if ($statusText -match '^\d{3}$') { [int]$statusText } else { 0 }
-      if (Test-Path $tempBodyFile) {
-        Remove-Item -Path $tempBodyFile -Force -ErrorAction SilentlyContinue
-      }
+      $resp = Invoke-WebRequest -Uri $url -Method $Method -Form $Form -TimeoutSec 120 -UseBasicParsing -ErrorAction Stop
+      $status = [int]$resp.StatusCode
+      $raw = [string]$resp.Content
     } elseif ($null -ne $Body) {
       $json = $Body | ConvertTo-Json -Depth 20
       $resp = Invoke-WebRequest -Uri $url -Method $Method -Body $json -ContentType 'application/json' -TimeoutSec 120 -UseBasicParsing -ErrorAction Stop
@@ -182,8 +168,17 @@ function Invoke-Api {
       $raw = $ex.Message
     }
   } catch {
-    $status = 0
-    $raw = $_.Exception.Message
+    if ($_.Exception.Response) {
+      $status = [int]$_.Exception.Response.StatusCode
+      if ($_.ErrorDetails.Message) {
+        $raw = $_.ErrorDetails.Message
+      } else {
+        $raw = $_.Exception.Message
+      }
+    } else {
+      $status = 0
+      $raw = $_.Exception.Message
+    }
   }
 
   try {
@@ -199,6 +194,72 @@ function Invoke-Api {
   }
 
   Add-Result -Method $Method -Path $Path -Status $status -Parsed $parsed -Raw $raw -Note $Note
+  return $parsed
+}
+
+function Invoke-ApiJsonImport {
+  param(
+    [string]$Path,
+    [string]$FilePath,
+    [string]$Note = ''
+  )
+
+  $url = "$BaseUrl$Path"
+  $status = 0
+  $raw = ''
+  $parsed = $null
+
+  try {
+    $env:SMOKE_IMPORT_URL = $url
+    $env:SMOKE_IMPORT_FILE_PATH = $FilePath
+    $nodeResult = @'
+import { readFile } from 'node:fs/promises'
+
+const url = process.env.SMOKE_IMPORT_URL
+const filePath = process.env.SMOKE_IMPORT_FILE_PATH
+const fileContent = await readFile(filePath, 'utf8')
+const form = new FormData()
+form.append('file', new Blob([fileContent], { type: 'application/json' }), 'settings-smoke-import.json')
+
+const response = await fetch(url, {
+  method: 'POST',
+  body: form,
+})
+
+console.log(JSON.stringify({
+  status: response.status,
+  raw: await response.text(),
+}))
+'@ | node --input-type=module
+
+    $nodePayload = (($nodeResult -join [Environment]::NewLine) | ConvertFrom-Json)
+    $status = [int]$nodePayload.status
+    $raw = [string]$nodePayload.raw
+  } catch {
+    $status = 0
+    $raw = $_.Exception.Message
+  } finally {
+    if (Test-Path Env:SMOKE_IMPORT_URL) {
+      Remove-Item Env:SMOKE_IMPORT_URL -ErrorAction SilentlyContinue
+    }
+    if (Test-Path Env:SMOKE_IMPORT_FILE_PATH) {
+      Remove-Item Env:SMOKE_IMPORT_FILE_PATH -ErrorAction SilentlyContinue
+    }
+  }
+
+  try {
+    if ($raw) {
+      try {
+        $parsed = $raw | ConvertFrom-Json -Depth 50
+      } catch {
+        $parsed = $raw | ConvertFrom-Json
+      }
+    }
+  } catch {
+    $parsed = $null
+  }
+
+  Add-Result -Method 'POST' -Path $Path -Status $status -Parsed $parsed -Raw $raw -Note $Note
   return $parsed
 }
 
@@ -323,20 +384,6 @@ $null = Invoke-Api -Method 'POST' -Path '/api/settings/save' -Body @{
   model = @{ learningRate = 0.0003; batchSize = 64; epochs = 20 }
 }
 
-# Multipart import endpoint
-$tmpImport = Join-Path $env:TEMP 'settings-smoke-import.json'
-$importPayload = @{
-  metadata = @{ exported = (Get-Date).ToString('o'); version = '1.0'; siteName = 'Smoke Import' }
-  settings = @{
-    general = @{ siteName = 'Smoke Import'; timezone = 'Europe/Kiev (GMT+2)'; currency = 'UAH'; notificationsEnabled = $true }
-    battery = @{ capacity = 155; minSOC = 15; maxChargeRate = 50; maxDischargeRate = 50 }
-    notifications = @{ highPrice = $true; highPriceThreshold = 13.0; lowPrice = $true; lowPriceThreshold = 7.0; modelComplete = $true; systemAlerts = $true }
-    model = @{ learningRate = 0.0003; batchSize = 64; epochs = 20 }
-  }
-}
-$importPayload | ConvertTo-Json -Depth 20 | Set-Content -Path $tmpImport -Encoding UTF8
-$null = Invoke-Api -Method 'POST' -Path '/api/settings/import' -Form @{ file = Get-Item $tmpImport }
-
 # Tenant-scoped smoke checks
 foreach ($tenantId in $TenantIds) {
   $tenantMetrics = Invoke-Api -Method 'GET' -Path "/api/metrics/dashboard?tenantId=$tenantId" -Note "tenant-check:$tenantId"
@@ -376,6 +423,26 @@ if ($TenantIds.Count -ge 2) {
   Add-Assertion -Name 'tenant_history_no_cross_A' -Passed ($crossInA -eq 0) -Message "Expected no tenant '$tenantB' rows in tenant '$tenantA' history, found $crossInA"
   Add-Assertion -Name 'tenant_history_no_cross_B' -Passed ($crossInB -eq 0) -Message "Expected no tenant '$tenantA' rows in tenant '$tenantB' history, found $crossInB"
 }
+
+# Multipart import endpoint. Keep this near the end because it mutates tenant-local
+# settings files that can trigger a transient dev-server restart under Nuxt watch mode.
+$smokeArtifactDir = Join-Path (Join-Path $PSScriptRoot '..') '..\artifacts\local-smoke'
+if (-not (Test-Path $smokeArtifactDir)) {
+  New-Item -Path $smokeArtifactDir -ItemType Directory -Force | Out-Null
+}
+
+$tmpImport = Join-Path $smokeArtifactDir 'settings-smoke-import.json'
+$importPayload = @{
+  metadata = @{ exported = (Get-Date).ToString('o'); version = '1.0'; siteName = 'Smoke Import' }
+  settings = @{
+    general = @{ siteName = 'Smoke Import'; timezone = 'Europe/Kiev (GMT+2)'; currency = 'UAH'; notificationsEnabled = $true }
+    battery = @{ capacity = 155; minSOC = 15; maxChargeRate = 50; maxDischargeRate = 50 }
+    notifications = @{ highPrice = $true; highPriceThreshold = 13.0; lowPrice = $true; lowPriceThreshold = 7.0; modelComplete = $true; systemAlerts = $true }
+    model = @{ learningRate = 0.0003; batchSize = 64; epochs = 20 }
+  }
+}
+$importPayload | ConvertTo-Json -Depth 20 | Set-Content -Path $tmpImport -Encoding UTF8
+$null = Invoke-ApiJsonImport -Path '/api/settings/import' -FilePath $tmpImport
 
 $reportDir = Join-Path (Join-Path $PSScriptRoot '..') 'data'
 if (-not (Test-Path $reportDir)) {
