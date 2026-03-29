@@ -1,6 +1,7 @@
 import { normalizeRecommendationAction } from './recommendation-contract.ts'
 
 export type Stage2MarketRegime = 'net_billing' | 'market_premium' | 'unclassified'
+export type Stage2MarketRegimeOverride = 'auto' | 'net_billing' | 'market_premium'
 
 export type Stage2PolicyRuleHit =
   | 'window_of_silence_export_veto'
@@ -36,6 +37,7 @@ type Stage2MarketPolicyInput = {
   batteryCapacityKwh?: unknown
   reserveFloorPercent?: unknown
   sitePowerKw?: unknown
+  marketRegimeOverride?: unknown
   timestamp?: string | Date | null
   timezone?: string | null
   dispatchDurationHours?: unknown
@@ -136,7 +138,19 @@ export function inferSitePowerKw(config: Record<string, any> | null | undefined)
   return null
 }
 
-export function inferMarketRegime(sitePowerKw: unknown): Stage2MarketRegime {
+export function normalizeMarketRegimeOverride(value: unknown): Stage2MarketRegimeOverride {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (normalized === 'net_billing' || normalized === 'net-billing') return 'net_billing'
+  if (normalized === 'market_premium' || normalized === 'market-premium') return 'market_premium'
+  return 'auto'
+}
+
+export function inferMarketRegime(sitePowerKw: unknown, override: unknown = 'auto'): Stage2MarketRegime {
+  const normalizedOverride = normalizeMarketRegimeOverride(override)
+  if (normalizedOverride !== 'auto') {
+    return normalizedOverride
+  }
+
   const numeric = toFiniteNumber(sitePowerKw)
   if (numeric == null || numeric <= 0) return 'unclassified'
   return numeric > 50 ? 'market_premium' : 'net_billing'
@@ -157,7 +171,7 @@ export function assessStage2MarketPolicy(input: Stage2MarketPolicyInput): Stage2
   const localHour = Number.isInteger(toFiniteNumber(input.localHourOverride))
     ? Number(toFiniteNumber(input.localHourOverride))
     : resolveLocalHour(input.timestamp, input.timezone)
-  const marketRegime = inferMarketRegime(input.sitePowerKw)
+  const marketRegime = inferMarketRegime(input.sitePowerKw, input.marketRegimeOverride)
 
   const availableEnergyAboveReserveKwh = batterySocPercent != null && batteryCapacityKwh != null
     ? Math.max(0, batteryCapacityKwh * ((batterySocPercent - reserveFloorPercent) / 100))

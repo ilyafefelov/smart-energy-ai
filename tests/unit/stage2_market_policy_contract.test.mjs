@@ -56,3 +56,15 @@ test('config helpers infer reserve floor and site power from common dashboard fi
   assert.equal(reserveFloorPercent, 20)
   assert.equal(sitePowerKw, 48)
 })
+
+test('market regime override forces comparative scenario independently of connected power', () => {
+  const result = assessStage2MarketPolicy({
+    action: 'HOLD',
+    sitePowerKw: 20,
+    marketRegimeOverride: 'market_premium',
+    localHourOverride: 9,
+  })
+
+  assert.equal(result.market_regime, 'market_premium')
+  assert.equal(result.veto_applied, false)
+})

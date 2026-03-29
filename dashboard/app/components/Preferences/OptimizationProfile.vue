@@ -85,9 +85,41 @@
       </label>
     </div>
 
+    <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4 space-y-4">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="text-sm text-slate-300">Stage 2 operator inputs</p>
+          <p class="text-xs text-slate-400">These values drive the effective market regime used by policy guards and financial analytics.</p>
+        </div>
+        <span class="rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-wide" :class="effectiveMarketRegimeBadgeClass">
+          {{ effectiveMarketRegimeLabel }}
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <label class="block">
+          <span class="text-sm text-slate-300">Connected site power (kW)</span>
+          <input v-model.number="connectedPowerKw" type="number" min="1" max="10000" step="1" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2" />
+          <p class="mt-1 text-xs text-slate-400">Auto mode treats values above 50 kW as Market Premium and lower values as Net Billing.</p>
+        </label>
+
+        <label class="block">
+          <span class="text-sm text-slate-300">Market regime override</span>
+          <select v-model="marketRegimeOverride" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded px-3 py-2">
+            <option value="auto">Auto by 50 kW threshold</option>
+            <option value="net_billing">Force Net Billing scenario</option>
+            <option value="market_premium">Force Market Premium scenario</option>
+          </select>
+          <p class="mt-1 text-xs text-slate-400">Use forced mode for diploma comparisons without changing the rest of the tenant model.</p>
+        </label>
+      </div>
+
+      <p class="text-xs text-slate-300">{{ effectiveMarketRegimeSummary }}</p>
+    </div>
+
     <div class="rounded-lg border border-slate-700 bg-slate-900/60 p-4">
       <p class="text-sm text-slate-300">Controller preview</p>
-      <div class="mt-3 grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+      <div class="mt-3 grid grid-cols-1 gap-3 text-sm md:grid-cols-4">
         <div>
           <p class="text-slate-400">SOC reserve floor</p>
           <p class="font-semibold text-white">{{ Math.round(batterySocMin * 100) }}%</p>
@@ -99,6 +131,10 @@
         <div>
           <p class="text-slate-400">Forecast horizon</p>
           <p class="font-semibold text-emerald-300">{{ forecastHorizonHours }}h</p>
+        </div>
+        <div>
+          <p class="text-slate-400">Connected site power</p>
+          <p class="font-semibold text-white">{{ connectedPowerKw.toFixed(0) }} kW</p>
         </div>
       </div>
     </div>
@@ -117,6 +153,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useTenantContext } from '../../composables/useTenantContext'
 
 type StrategyId = 'max-earn' | 'balanced' | 'max-health' | 'max-charge' | 'custom'
+type Stage2MarketRegimeChoice = 'auto' | 'net_billing' | 'market_premium'
 
 const tenantContext = useTenantContext()
 
@@ -179,6 +216,8 @@ const customWeights = ref({ profit: 33, health: 33, reliability: 34 })
 const batterySocMin = ref(0.1)
 const batteryCRateDischarge = ref(1)
 const forecastHorizonHours = ref(24)
+const connectedPowerKw = ref(10)
+const marketRegimeOverride = ref<Stage2MarketRegimeChoice>('auto')
 
 const isLoading = ref(false)
 const isSaving = ref(false)
@@ -187,6 +226,33 @@ const messageType = ref<'success' | 'error'>('success')
 
 const customWeightSum = computed(() => customWeights.value.profit + customWeights.value.health + customWeights.value.reliability)
 const messageClass = computed(() => (messageType.value === 'success' ? 'text-green-300' : 'text-red-300'))
+const effectiveMarketRegime = computed(() => {
+  if (marketRegimeOverride.value !== 'auto') {
+    return marketRegimeOverride.value
+  }
+
+  return connectedPowerKw.value > 50 ? 'market_premium' : 'net_billing'
+})
+const effectiveMarketRegimeLabel = computed(() => {
+  return effectiveMarketRegime.value === 'market_premium' ? 'MARKET PREMIUM' : 'NET BILLING'
+})
+const effectiveMarketRegimeBadgeClass = computed(() => {
+  if (effectiveMarketRegime.value === 'market_premium') {
+    return 'border-fuchsia-500/70 bg-fuchsia-500/15 text-fuchsia-200'
+  }
+  return 'border-sky-500/70 bg-sky-500/15 text-sky-200'
+})
+const effectiveMarketRegimeSummary = computed(() => {
+  if (marketRegimeOverride.value === 'market_premium') {
+    return 'Forced Market Premium keeps policy and analytics in the >50 kW comparative scenario.'
+  }
+  if (marketRegimeOverride.value === 'net_billing') {
+    return 'Forced Net Billing keeps policy and analytics in the <=50 kW comparative scenario.'
+  }
+  return connectedPowerKw.value > 50
+    ? 'Auto mode currently resolves to Market Premium because connected site power is above 50 kW.'
+    : 'Auto mode currently resolves to Net Billing because connected site power is at or below 50 kW.'
+})
 
 const showMessage = (text: string, type: 'success' | 'error') => {
   message.value = text
@@ -211,6 +277,13 @@ const toApiStrategy = (value: StrategyId): 'max_earn' | 'balanced' | 'max_batter
   return 'balanced'
 }
 
+const normalizeMarketRegimeOverride = (value: unknown): Stage2MarketRegimeChoice => {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (normalized === 'net_billing' || normalized === 'net-billing') return 'net_billing'
+  if (normalized === 'market_premium' || normalized === 'market-premium') return 'market_premium'
+  return 'auto'
+}
+
 const loadConfig = async () => {
   isLoading.value = true
   try {
@@ -225,6 +298,8 @@ const loadConfig = async () => {
       batterySocMin.value = Number(response.data.battery_soc_min ?? 0.1)
       batteryCRateDischarge.value = Number(response.data.battery_c_rate_discharge ?? 1)
       forecastHorizonHours.value = Number(response.data.ml_forecast_horizon_hours ?? 24)
+      connectedPowerKw.value = Number(response.data.connected_power_kw ?? response.data.load_peak_kw ?? 10)
+      marketRegimeOverride.value = normalizeMarketRegimeOverride(response.data.market_regime_override)
 
       const weights = response.data.custom_optimization_weights
       if (weights && typeof weights === 'object') {
@@ -265,6 +340,8 @@ const save = async () => {
         battery_soc_min: batterySocMin.value,
         battery_c_rate_discharge: batteryCRateDischarge.value,
         ml_forecast_horizon_hours: forecastHorizonHours.value,
+        connected_power_kw: connectedPowerKw.value,
+        market_regime_override: marketRegimeOverride.value,
       },
     })
 

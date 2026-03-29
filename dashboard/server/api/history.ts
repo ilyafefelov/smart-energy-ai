@@ -333,7 +333,7 @@ export default eventHandler(async (event) => {
     const todayMinPriceKwh = asNumber(pricesPayload?.prices?.today?.min, 0)
     const todayMaxPriceKwh = asNumber(pricesPayload?.prices?.today?.max, todayMinPriceKwh)
     const sitePowerKw = inferSitePowerKw(configPayload?.data || null)
-    const marketRegime = inferMarketRegime(sitePowerKw)
+    const marketRegime = inferMarketRegime(sitePowerKw, configPayload?.data?.market_regime_override)
     const financialMode = buildFinancialModeSummary(marketRegime)
 
     const actionBuckets = new Map<string, number>()

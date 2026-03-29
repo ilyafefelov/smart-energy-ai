@@ -501,6 +501,7 @@ export default defineEventHandler(async (event) => {
       batteryCapacityKwh: configPayload?.data?.battery_capacity_kwh ?? batteryPayload?.battery?.capacity,
       reserveFloorPercent: inferReserveFloorPercent(configPayload?.data || null),
       sitePowerKw: inferSitePowerKw(configPayload?.data || null),
+      marketRegimeOverride: configPayload?.data?.market_regime_override,
       timestamp: new Date().toISOString(),
       timezone: String(configPayload?.data?.timezone || 'Europe/Kiev'),
     })

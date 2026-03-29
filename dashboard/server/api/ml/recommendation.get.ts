@@ -446,6 +446,7 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
       batteryCapacityKwh: liveContext.config.battery_capacity_kwh ?? batteryPayload?.battery?.capacity,
       reserveFloorPercent,
       sitePowerKw,
+      marketRegimeOverride: liveContext.config.market_regime_override,
       timestamp: liveContext.captured_at,
       timezone,
     })
