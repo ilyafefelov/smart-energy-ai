@@ -7,6 +7,7 @@ import {
   dagsterAssetResultsTableExists,
   resolveDagsterAssetResultsDbConfig,
 } from '../utils/dagster-asset-results'
+import { inferMarketRegime, inferSitePowerKw } from '../utils/market-policy'
 import { resolveOptimizationDbConfig } from '../utils/optimization-history'
 import { getTenantResponseMetadata, resolveTenantContext } from '../utils/tenant-context'
 
@@ -39,6 +40,8 @@ type HistoryRow = {
   cost_baseline: number
   cost_optimized: number
   savings: number
+  saved_funds_uah?: number
+  earned_funds_uah?: number
   realized_revenue_uah?: number
   realized_cost_uah?: number
   realized_net_uah?: number
@@ -46,9 +49,44 @@ type HistoryRow = {
   battery_actions: number
   price_min: number
   price_max: number
+  market_regime?: string
   tenant_id?: string | null
   reconciled_rows?: number
   heuristic_rows?: number
+}
+
+type Stage2FinancialSummary = {
+  market_regime: string
+  site_power_kw: number | null
+  financial_mode_label: string
+  financial_mode_summary: string
+  totals: {
+    saved_funds_uah: number
+    earned_funds_uah: number
+    realized_net_uah: number
+    total_benefit_uah: number
+  }
+}
+
+function buildFinancialModeSummary(marketRegime: string): { label: string; summary: string } {
+  if (marketRegime === 'market_premium') {
+    return {
+      label: 'Market Premium Export Optimization',
+      summary: 'Economics emphasize export revenue and premium-aligned arbitrage for sites above the 50 kW threshold.',
+    }
+  }
+
+  if (marketRegime === 'net_billing') {
+    return {
+      label: 'Net Billing Self-Consumption',
+      summary: 'Economics emphasize avoided import cost and self-consumption value for sites at or below the 50 kW threshold.',
+    }
+  }
+
+  return {
+    label: 'Unclassified Regime',
+    summary: 'Site power is unavailable, so the Stage 2 financial mode could not be inferred from the current tenant config.',
+  }
 }
 
 async function fetchAppDbHistory(limitDays: number, tenantId: string): Promise<Array<Partial<HistoryRow> & { date: string }> | null> {
@@ -276,7 +314,7 @@ export default eventHandler(async (event) => {
       },
     }
 
-    const [controlHistoryPayload, pricesPayload] = await Promise.all([
+    const [controlHistoryPayload, pricesPayload, configPayload] = await Promise.all([
       $fetch<any>('/api/control/history', {
         ...tenantRequest,
         query: {
@@ -285,6 +323,7 @@ export default eventHandler(async (event) => {
         },
       }).catch(() => null),
       $fetch<any>('/api/prices/current', tenantRequest).catch(() => null),
+      $fetch<any>('/api/config/current', tenantRequest).catch(() => null),
     ])
 
     const analytics = readJsonIfExists(analyticsPath)
@@ -293,6 +332,9 @@ export default eventHandler(async (event) => {
 
     const todayMinPriceKwh = asNumber(pricesPayload?.prices?.today?.min, 0)
     const todayMaxPriceKwh = asNumber(pricesPayload?.prices?.today?.max, todayMinPriceKwh)
+    const sitePowerKw = inferSitePowerKw(configPayload?.data || null)
+    const marketRegime = inferMarketRegime(sitePowerKw)
+    const financialMode = buildFinancialModeSummary(marketRegime)
 
     const actionBuckets = new Map<string, number>()
 
@@ -396,6 +438,8 @@ export default eventHandler(async (event) => {
       const realizedRevenueUah = asNumber(sourceRow?.realized_revenue_uah, 0)
       const realizedCostUah = asNumber(sourceRow?.realized_cost_uah, 0)
       const realizedNetUah = asNumber(sourceRow?.realized_net_uah, realizedRevenueUah - realizedCostUah)
+      const savedFundsUah = Math.max(0, baselineCost - optimizedCost)
+      const earnedFundsUah = Math.max(0, realizedRevenueUah)
       const autoTransitions = asNumber(sourceRow?.auto_transitions, 0)
 
       rows.push({
@@ -403,6 +447,8 @@ export default eventHandler(async (event) => {
         cost_baseline: round(baselineCost),
         cost_optimized: round(optimizedCost),
         savings: round(savings),
+        saved_funds_uah: round(savedFundsUah),
+        earned_funds_uah: round(earnedFundsUah),
         realized_revenue_uah: round(realizedRevenueUah),
         realized_cost_uah: round(realizedCostUah),
         realized_net_uah: round(realizedNetUah),
@@ -410,7 +456,24 @@ export default eventHandler(async (event) => {
         battery_actions: Math.round(actionCount),
         price_min: round(todayMinPriceKwh * 1000),
         price_max: round(todayMaxPriceKwh * 1000),
+        market_regime: marketRegime,
       })
+    }
+
+    const stage2Financials: Stage2FinancialSummary = {
+      market_regime: marketRegime,
+      site_power_kw: sitePowerKw,
+      financial_mode_label: financialMode.label,
+      financial_mode_summary: financialMode.summary,
+      totals: {
+        saved_funds_uah: round(rows.reduce((sum, row) => sum + asNumber(row.saved_funds_uah, 0), 0)),
+        earned_funds_uah: round(rows.reduce((sum, row) => sum + asNumber(row.earned_funds_uah, 0), 0)),
+        realized_net_uah: round(rows.reduce((sum, row) => sum + asNumber(row.realized_net_uah, 0), 0)),
+        total_benefit_uah: round(rows.reduce(
+          (sum, row) => sum + asNumber(row.saved_funds_uah, 0) + asNumber(row.earned_funds_uah, 0),
+          0,
+        )),
+      },
     }
 
     return {
@@ -418,6 +481,7 @@ export default eventHandler(async (event) => {
       tenant: getTenantResponseMetadata(tenant),
       timestamp: new Date().toISOString(),
       data: rows,
+      stage2_financials: stage2Financials,
       source: {
         backend_priority: [
           'optimization_history_db',
@@ -436,6 +500,10 @@ export default eventHandler(async (event) => {
           realized_cost_uah: round(totalRealizedCostUah),
           realized_net_uah: round(totalRealizedNetUah),
           auto_transitions: Math.round(totalAutoTransitions),
+        },
+        stage2_financials: {
+          market_regime: marketRegime,
+          site_power_kw: sitePowerKw,
         },
         tenant_filter_applied: true,
       },
