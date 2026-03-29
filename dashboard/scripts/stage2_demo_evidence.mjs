@@ -1,7 +1,18 @@
 import { assessDagsterScheduleRowPolicy } from '../server/utils/dagster-schedule-policy.ts'
+import { mkdir, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const baseUrl = process.env.DASHBOARD_BASE_URL || 'http://127.0.0.1:3600'
 const tenantId = process.env.STAGE2_TENANT_ID || 'client_001_kyiv_mall'
+const scriptDir = path.dirname(fileURLToPath(import.meta.url))
+const reportPath = process.env.STAGE2_EVIDENCE_REPORT_PATH || path.resolve(scriptDir, '../data/stage2_demo_evidence_report.json')
+const requiredScenarioNames = [
+  'silence_window_export_veto',
+  'evening_high_price_discharge',
+  'low_soc_remit_block',
+  'comparative_regime_analytics',
+]
 
 function buildUrl(path) {
   const url = new URL(path, baseUrl)
@@ -89,6 +100,29 @@ async function saveConfig(partialConfig) {
   })
 }
 
+function buildValidationSummary(scenarios) {
+  const failedScenarios = requiredScenarioNames
+    .filter((name) => scenarios?.[name]?.passed !== true)
+    .map((name) => ({
+      name,
+      evidence_source: scenarios?.[name]?.evidence_source || null,
+      rule_hits: scenarios?.[name]?.rule_hits || [],
+      adjusted_action: scenarios?.[name]?.adjusted_action || null,
+      market_regime: scenarios?.[name]?.market_regime || null,
+    }))
+
+  return {
+    passed: failedScenarios.length === 0,
+    required_scenarios: requiredScenarioNames,
+    failed_scenarios: failedScenarios,
+  }
+}
+
+async function writeReport(payload) {
+  await mkdir(path.dirname(reportPath), { recursive: true })
+  await writeFile(reportPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8')
+}
+
 const currentConfigPayload = await requestJson('/api/config/current')
 const originalConfig = currentConfigPayload?.data || {}
 const originalPowerKw = toNumber(originalConfig.connected_power_kw, 10)
@@ -165,6 +199,13 @@ try {
       },
     },
   }
+
+  result.validation = {
+    ...buildValidationSummary(result.scenarios),
+    report_path: reportPath,
+  }
+
+  await writeReport(result)
 } finally {
   try {
     await saveConfig({
@@ -177,3 +218,9 @@ try {
 }
 
 console.log(JSON.stringify(result, null, 2))
+
+if (result?.validation?.passed !== true) {
+  const failedNames = result?.validation?.failed_scenarios?.map((scenario) => scenario.name).join(', ') || 'unknown'
+  console.error(`Stage 2 evidence validation failed for: ${failedNames}. Report: ${reportPath}`)
+  process.exitCode = 1
+}
