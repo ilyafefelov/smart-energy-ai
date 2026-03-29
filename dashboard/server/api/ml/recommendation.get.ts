@@ -6,6 +6,8 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
+import { assessStage2MarketPolicy, inferReserveFloorPercent, inferSitePowerKw } from '../../utils/market-policy'
+import { buildDecisionProvenance, buildNormalizedAction } from '../../utils/recommendation-contract'
 import { resolveTenantContext } from '../../utils/tenant-context'
 
 const execAsync = promisify(exec)
@@ -65,6 +67,15 @@ interface DriftDiagnostics {
   recommendation: string
 }
 
+interface ServingContract {
+  requested_mode: string
+  active_mode: string
+  adapter: string
+  fallback_used: boolean
+  fallback_reason_code: string
+  model_info: Record<string, any> | null
+}
+
 function toFiniteNumber(value: unknown): number | null {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : null
@@ -95,10 +106,15 @@ function buildHourlyPriceMap(pricesPayload: PricesCurrentResponse | null | undef
 // Types for API response
 interface MLRecommendationResponse {
   success: boolean
+  contract?: Record<string, any>
+  serving?: ServingContract
   data?: {
     action: "BUY" | "SELL" | "HOLD"
     confidence: number // 0-1
     reasoning: string
+    normalized_action?: Record<string, any>
+    provenance?: Record<string, any>
+    strategy_context?: Record<string, any>
     daily_forecast: Array<{
       hour: number
       action: string
@@ -124,8 +140,25 @@ interface MLRecommendationResponse {
     model_inputs?: Record<string, any>
     inference_lineage?: Record<string, any>
     drift_diagnostics?: DriftDiagnostics
+    policy_compliance?: Record<string, any>
   }
   error?: string
+}
+
+function normalizeServingMetadata(value: unknown): ServingContract {
+  const serving = value && typeof value === 'object' ? value as Record<string, any> : {}
+  const modelInfo = serving.model_info && typeof serving.model_info === 'object'
+    ? serving.model_info as Record<string, any>
+    : null
+
+  return {
+    requested_mode: typeof serving.requested_mode === 'string' ? serving.requested_mode : 'incumbent',
+    active_mode: typeof serving.active_mode === 'string' ? serving.active_mode : 'incumbent',
+    adapter: typeof serving.adapter === 'string' ? serving.adapter : 'PredictionService',
+    fallback_used: Boolean(serving.fallback_used),
+    fallback_reason_code: typeof serving.fallback_reason_code === 'string' ? serving.fallback_reason_code : 'none',
+    model_info: modelInfo,
+  }
 }
 
 function average(values: number[]): number {
@@ -325,7 +358,8 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
         forecast_next24h: pricesPayload?.prices?.forecast?.next24h || [],
       },
       battery_signal: {
-        source: 'api/battery/status',
+        source: 'simulator_backed_telemetry',
+        source_detail: 'api/battery/status',
         soc_percent: toFiniteNumber(batteryPayload?.battery?.soc),
         health_percent: toFiniteNumber(batteryPayload?.battery?.health),
         cycles_remaining: toFiniteNumber(configPayload?.data?.battery_cycles_max)
@@ -388,14 +422,70 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
       weatherCurrent: weatherPayload?.current || null,
       batterySocPercent: toFiniteNumber(liveContext.battery_signal.soc_percent),
     })
+    const serving = normalizeServingMetadata(mlResponse?.serving)
+    const responseContract = mlResponse?.contract || {}
+    const responseProvenance = responseContract?.provenance || mlResponse?.provenance || {}
+    const provenance = buildDecisionProvenance({
+      decisionSource: responseProvenance?.decision_source || 'python_rule_engine',
+      fallbackReasonCode: responseProvenance?.fallback_reason_code || serving.fallback_reason_code || 'none',
+      stateSource: responseProvenance?.state_source || liveContext.battery_signal.source,
+      stateSourceDetail: responseProvenance?.state_source_detail || liveContext.battery_signal.source_detail,
+    })
+    const responseStrategyContext = responseContract?.strategy_context || {}
+    const strategyContext = {
+      optimization_strategy: String(responseStrategyContext?.optimization_strategy || liveContext.config.optimization_strategy || 'balanced'),
+      load_profile_type: String(responseStrategyContext?.load_profile_type || liveContext.config.load_profile_type || 'standard'),
+      strategy_source: String(responseStrategyContext?.strategy_source || 'tenant_config'),
+    }
+    const reserveFloorPercent = inferReserveFloorPercent(liveContext.config)
+    const sitePowerKw = inferSitePowerKw(liveContext.config)
+    const policyCompliance = assessStage2MarketPolicy({
+      action: responseContract?.normalized_action?.action || mlResponse.action,
+      powerKw: responseContract?.normalized_action?.power_kw ?? mlResponse.action_kw,
+      batterySocPercent: liveContext.battery_signal.soc_percent,
+      batteryCapacityKwh: liveContext.config.battery_capacity_kwh ?? batteryPayload?.battery?.capacity,
+      reserveFloorPercent,
+      sitePowerKw,
+      marketRegimeOverride: liveContext.config.market_regime_override,
+      timestamp: liveContext.captured_at,
+      timezone,
+    })
+    const normalizedAction = buildNormalizedAction({
+      action: policyCompliance.adjusted_action,
+      confidence: mlResponse.confidence,
+      powerKw: policyCompliance.adjusted_power_kw ?? responseContract?.normalized_action?.power_kw ?? mlResponse.action_kw,
+      baseAction: responseContract?.normalized_action?.base_action || mlResponse.base_action || mlResponse.action,
+      strategyAdjusted: Boolean(responseContract?.normalized_action?.strategy_adjusted) || policyCompliance.veto_applied,
+      strategyAdjustmentNotes: [
+        ...(Array.isArray(responseContract?.normalized_action?.strategy_adjustment_notes)
+          ? responseContract.normalized_action.strategy_adjustment_notes.map((note: unknown) => String(note))
+          : []),
+        ...policyCompliance.explanations,
+      ],
+      powerSource: policyCompliance.veto_applied
+        ? 'stage2_market_policy'
+        : mlResponse.action_kw == null
+          ? 'not_provided'
+          : 'python_bridge',
+    })
+    const contract = {
+      version: responseContract?.version || 'learned_policy_migration_v1',
+      normalized_action: normalizedAction,
+      provenance,
+      strategy_context: strategyContext,
+      compliance: policyCompliance,
+    }
+    const effectiveReasoning = `${String(mlResponse.reasoning || '')}${policyCompliance.reasoning_suffix}`.trim()
 
     // Transform the response to match our interface
     const response: MLRecommendationResponse = {
       success: true,
+      contract,
+      serving,
       data: {
-        action: mlResponse.action,
+        action: normalizedAction.action,
         confidence: mlResponse.confidence,
-        reasoning: mlResponse.reasoning,
+        reasoning: effectiveReasoning,
         daily_forecast: mlResponse.hourly_forecast?.map((item: any) => {
           const itemHour = toFiniteNumber(item?.hour)
           const hour = itemHour != null ? Math.max(0, Math.min(23, Math.floor(itemHour))) : 0
@@ -427,14 +517,27 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
         },
         timestamp: new Date().toISOString(),
         model_info: {
-          version: "Phase4F-v1.0",
+          version: String(serving.model_info?.model_version || mlResponse?.model_version || 'Phase4F-v1.0'),
           confidence_level: mlResponse.confidence > 0.8 ? "High" : 
-                           mlResponse.confidence > 0.6 ? "Medium" : "Low"
+                           mlResponse.confidence > 0.6 ? "Medium" : "Low",
+          serving_mode: serving.active_mode,
+          requested_serving_mode: serving.requested_mode,
+          serving_adapter: serving.adapter,
+          resolved_model_uri: typeof serving.model_info?.resolved_model_uri === 'string'
+            ? serving.model_info.resolved_model_uri
+            : null,
         },
+        normalized_action: normalizedAction,
+        provenance,
+        strategy_context: strategyContext,
+        policy_compliance: policyCompliance,
         feature_provenance: mlResponse.feature_provenance || {
           config_source: 'tenant_config',
           price_source: liveContext.price_signal.source,
           weather_source: weatherPayload?.source || 'weather_unavailable',
+          battery_source: provenance.state_source,
+          battery_source_detail: provenance.state_source_detail,
+          telemetry_classification: provenance.telemetry_classification,
           captured_at: liveContext.captured_at,
           tenant_id: tenant.id,
         },
@@ -450,16 +553,28 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
           captured_at: liveContext.captured_at,
           training_reference: {
             mlflow_connected: mlflowStatus?.mlflow_connected === true,
-            model_name: mlflowStatus?.active_model?.name || null,
-            model_version: mlflowStatus?.active_model?.version || null,
-            model_stage: mlflowStatus?.active_model?.stage || null,
-            trained_at: mlflowStatus?.active_model?.last_updated || null,
+            model_name: serving.active_mode === 'learned_policy' ? serving.model_info?.model_name || null : null,
+            model_version: serving.active_mode === 'learned_policy' ? serving.model_info?.model_version || null : null,
+            model_stage: serving.active_mode === 'learned_policy' ? serving.model_info?.model_stage || null : null,
+            trained_at: serving.active_mode === 'learned_policy' ? mlflowStatus?.active_model?.last_updated || null : null,
+            source: serving.active_mode === 'learned_policy' ? 'serving_adapter' : 'runtime_incumbent_or_registry_diagnostics',
+          },
+          serving_reference: {
+            requested_mode: serving.requested_mode,
+            active_mode: serving.active_mode,
+            adapter: serving.adapter,
+            fallback_used: serving.fallback_used,
+            fallback_reason_code: serving.fallback_reason_code,
+            model_available: serving.model_info?.model_available ?? null,
+            resolved_model_uri: typeof serving.model_info?.resolved_model_uri === 'string'
+              ? serving.model_info.resolved_model_uri
+              : null,
           },
           inference_sources: {
             profile: 'tenant_config',
             prices: liveContext.price_signal.source,
             weather: weatherPayload?.source || 'weather_unavailable',
-            battery: liveContext.battery_signal.source,
+            battery: provenance.state_source,
           },
           feature_vector_signature: {
             strategy: String(liveContext.config.optimization_strategy || 'balanced'),

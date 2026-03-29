@@ -2,13 +2,44 @@
 
 These assets handle model training, backtesting, and performance evaluation.
 """
+import importlib.util
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, Any, Tuple
-from dagster import asset, Output, Definitions
+from typing import Dict, Any
+from dagster import asset, Output
 import logging
-import pickle
+from pathlib import Path
+import sys
+
+
+def _load_support_module():
+    try:
+        from energy_ml.energy_ml.assets import training_support as support_module
+
+        return support_module
+    except Exception:
+        support_path = Path(__file__).with_name("training_support.py")
+        module_name = "energy_ml.energy_ml.assets.training_support"
+        existing_module = sys.modules.get(module_name)
+        if existing_module is not None:
+            return existing_module
+
+        spec = importlib.util.spec_from_file_location(module_name, support_path)
+        module = importlib.util.module_from_spec(spec)
+        assert spec is not None and spec.loader is not None
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+
+
+_SUPPORT_MODULE = _load_support_module()
+build_baseline_metrics = _SUPPORT_MODULE.build_baseline_metrics
+build_definitions = _SUPPORT_MODULE.build_definitions
+build_synthetic_historical_data = _SUPPORT_MODULE.build_synthetic_historical_data
+build_training_status = _SUPPORT_MODULE.build_training_status
+build_xgboost_metadata = _SUPPORT_MODULE.build_xgboost_metadata
+prepare_training_data = _SUPPORT_MODULE.prepare_training_data
+split_backtest_dataset = _SUPPORT_MODULE.split_backtest_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -26,54 +57,19 @@ def training_data_prepared(feature_matrix: pd.DataFrame) -> Output[pd.DataFrame]
     
     logger.info("📋 Preparing training data...")
     
-    # Make a copy to avoid modifying original
-    df = feature_matrix.copy()
-    
-    # Remove timestamp for training (keep it separate)
-    if 'timestamp' in df.columns:
-        timestamps = df['timestamp']
-        df = df.drop('timestamp', axis=1)
-    
-    # Data quality checks
-    missing_before = df.isnull().sum().sum()
-    inf_before = np.isinf(df.select_dtypes(include=[np.number])).sum().sum()
-    
-    # Fill missing values with column means
-    numeric_cols = df.select_dtypes(include=[np.number]).columns
-    for col in numeric_cols:
-        if df[col].isnull().any():
-            df[col] = df[col].fillna(df[col].mean())
-    
-    # Handle infinite values
-    df = df.replace([np.inf, -np.inf], np.nan)
-    for col in numeric_cols:
-        if df[col].isnull().any():
-            df[col] = df[col].fillna(df[col].max())
-    
-    # Normalize features (z-score)
-    df_normalized = df.copy()
-    for col in numeric_cols:
-        mean = df[col].mean()
-        std = df[col].std()
-        if std > 0:
-            df_normalized[col] = (df[col] - mean) / std
-        else:
-            df_normalized[col] = 0
-    
-    missing_after = df_normalized.isnull().sum().sum()
-    inf_after = np.isinf(df_normalized.select_dtypes(include=[np.number])).sum().sum()
+    df_normalized, data_stats = prepare_training_data(feature_matrix)
     
     logger.info(f"✅ Data prepared: {df_normalized.shape}")
-    logger.info(f"   Missing values: {missing_before} → {missing_after}")
-    logger.info(f"   Infinite values: {inf_before} → {inf_after}")
+    logger.info(f"   Missing values: {data_stats['missing_before']} → {data_stats['missing_after']}")
+    logger.info(f"   Infinite values: {data_stats['inf_before']} → {data_stats['inf_after']}")
     logger.info(f"   Normalized: Mean=0, Std=1")
     
     return Output(
         df_normalized,
         metadata={
-            "rows": df_normalized.shape[0],
-            "features": df_normalized.shape[1],
-            "missing_after": int(missing_after),
+            "rows": data_stats['rows'],
+            "features": data_stats['features'],
+            "missing_after": data_stats['missing_after'],
             "normalized": True,
         }
     )
@@ -93,57 +89,14 @@ def synthetic_historical_data(feature_matrix: pd.DataFrame) -> Output[pd.DataFra
     
     logger.info("📊 Generating synthetic historical data...")
     
-    # Use current features as baseline
-    current_row = feature_matrix.iloc[0]
-    
-    # Generate 730 days (2 years) of hourly data
-    dates = pd.date_range(start='2024-02-07', end='2026-02-07', freq='H')
-    historical = pd.DataFrame(index=range(len(dates)))
-    
-    # Copy current features but add temporal variation
-    for col in feature_matrix.columns:
-        if col != 'timestamp':
-            base_value = current_row[col]
-            
-            if isinstance(base_value, (int, float)) and not np.isnan(base_value):
-                # Add realistic variation (±10% random walk)
-                noise = np.random.normal(0, 0.1, size=len(dates))
-                trend = np.linspace(0, 0.02, len(dates))  # Slight upward trend
-                historical[col] = base_value * (1 + noise + trend)
-                
-                # Add periodic patterns for certain features
-                if 'hour' in col or 'hour_' in col:
-                    historical[col] = (current_row[col] + np.sin(np.arange(len(dates)) * 2 * np.pi / 24) * 3) % 24
-                elif 'price' in col and 'ma' not in col:
-                    # Price has daily and seasonal patterns
-                    daily_pattern = 2 * np.sin(np.arange(len(dates)) * 2 * np.pi / 24)
-                    seasonal_pattern = 0.5 * np.sin(np.arange(len(dates)) * 2 * np.pi / 365)
-                    historical[col] = base_value + daily_pattern + seasonal_pattern
-                elif 'solar' in col:
-                    # Solar has strong seasonal and daily patterns
-                    daily_pattern = 5 * np.maximum(0, np.sin(np.arange(len(dates)) * 2 * np.pi / 24 - np.pi/2))
-                    seasonal_pattern = 3 * np.sin(np.arange(len(dates)) * 2 * np.pi / 365)
-                    historical[col] = np.maximum(0, base_value + daily_pattern + seasonal_pattern)
-                elif 'soc' in col:
-                    # SOC varies between 20% and 100%
-                    daily_pattern = 30 * np.sin(np.arange(len(dates)) * 2 * np.pi / 24)
-                    historical[col] = np.clip(base_value + daily_pattern, 20, 100)
-            else:
-                # Non-numeric columns: repeat
-                historical[col] = base_value
-    
-    historical['timestamp'] = dates
+    historical, history_stats = build_synthetic_historical_data(feature_matrix)
     
     logger.info(f"✅ Generated {len(historical)} historical records (2 years daily)")
-    logger.info(f"   Date range: {dates[0]} to {dates[-1]}")
+    logger.info(f"   Date range: {history_stats['date_range']}")
     
     return Output(
         historical,
-        metadata={
-            "rows": len(historical),
-            "date_range": f"{dates[0]} to {dates[-1]}",
-            "synthetic": True,
-        }
+        metadata=history_stats,
     )
 
 
@@ -157,33 +110,18 @@ def backtest_dataset(training_data_prepared: pd.DataFrame, synthetic_historical_
     
     logger.info("🔄 Preparing train/test split...")
     
-    # Use synthetic historical data if available, otherwise current prepared data
-    if len(synthetic_historical_data) > 1:
-        all_data = synthetic_historical_data.copy()
-    else:
-        all_data = training_data_prepared.copy()
-    
-    # 80/20 split (time-based, not random, to respect temporal order)
-    split_idx = int(len(all_data) * 0.8)
-    
-    train_data = all_data.iloc[:split_idx].reset_index(drop=True)
-    test_data = all_data.iloc[split_idx:].reset_index(drop=True)
+    dataset, split_stats = split_backtest_dataset(training_data_prepared, synthetic_historical_data)
+    train_data = dataset['train']
+    test_data = dataset['test']
+    all_data = dataset['combined']
     
     logger.info(f"✅ Train/Test split:")
     logger.info(f"   Train: {len(train_data)} records ({100*len(train_data)/len(all_data):.1f}%)")
     logger.info(f"   Test: {len(test_data)} records ({100*len(test_data)/len(all_data):.1f}%)")
     
     return Output(
-        {
-            'train': train_data,
-            'test': test_data,
-            'combined': all_data,
-        },
-        metadata={
-            "train_size": len(train_data),
-            "test_size": len(test_data),
-            "split_ratio": "80/20",
-        }
+        dataset,
+        metadata=split_stats,
     )
 
 
@@ -200,48 +138,17 @@ def baseline_model_metrics(backtest_dataset: Dict[str, pd.DataFrame]) -> Output[
     
     logger.info("📈 Calculating baseline metrics...")
     
-    test_data = backtest_dataset['test']
-    
-    # Simple heuristic: if price < median price AND soc < 80%, signal=BUY; if price > median, signal=SELL
-    if 'price_uah_kwh' in test_data.columns:
-        median_price = test_data['price_uah_kwh'].median()
-        baseline_buy_signals = (test_data['price_uah_kwh'] < median_price * 0.9).sum()
-        baseline_sell_signals = (test_data['price_uah_kwh'] > median_price * 1.1).sum()
-    else:
-        baseline_buy_signals = 0
-        baseline_sell_signals = 0
-    
-    # Simulate profit: buy when cheap, sell when expensive
-    profits = []
-    for idx, row in test_data.iterrows():
-        price = row.get('price_uah_kwh', 14.0)
-        if price < 12:
-            profits.append(price * -1)  # Cost to charge
-        elif price > 16:
-            profits.append(price * 0.7)  # Revenue from discharge
-        else:
-            profits.append(0)
-    
-    total_profit = sum(profits)
-    avg_profit = np.mean(profits) if profits else 0
-    
-    metrics_df = pd.DataFrame({
-        'metric': ['baseline_buy_signals', 'baseline_sell_signals', 'total_simulated_profit_uah', 'avg_profit_per_hour'],
-        'value': [baseline_buy_signals, baseline_sell_signals, round(total_profit, 2), round(avg_profit, 2)]
-    })
+    metrics_df, metrics_metadata = build_baseline_metrics(backtest_dataset)
+    metrics_map = dict(zip(metrics_df['metric'], metrics_df['value']))
     
     logger.info(f"✅ Baseline metrics calculated:")
-    logger.info(f"   Buy signals: {baseline_buy_signals}")
-    logger.info(f"   Sell signals: {baseline_sell_signals}")
-    logger.info(f"   Simulated profit: {total_profit:.2f} ₴")
+    logger.info(f"   Buy signals: {metrics_map['baseline_buy_signals']}")
+    logger.info(f"   Sell signals: {metrics_map['baseline_sell_signals']}")
+    logger.info(f"   Simulated profit: {metrics_map['total_simulated_profit_uah']:.2f} ₴")
     
     return Output(
         metrics_df,
-        metadata={
-            "baseline_buy_signals": int(baseline_buy_signals),
-            "baseline_sell_signals": int(baseline_sell_signals),
-            "simulated_profit_uah": float(total_profit),
-        }
+        metadata=metrics_metadata,
     )
 
 
@@ -259,52 +166,18 @@ def xgboost_model_metadata(backtest_dataset: Dict[str, pd.DataFrame]) -> Output[
     
     logger.info("🎯 Preparing XGBoost model configuration...")
     
-    train_data = backtest_dataset['train']
-    test_data = backtest_dataset['test']
-    
-    # XGBoost configuration
-    model_config = {
-        'objective': 'multi:softprob',  # For classification: BUY, SELL, HOLD, DISCHARGE
-        'num_class': 4,
-        'n_estimators': 100,
-        'max_depth': 6,
-        'learning_rate': 0.1,
-        'subsample': 0.8,
-        'colsample_bytree': 0.8,
-        'random_state': 42,
-    }
-    
-    metadata = {
-        'model_name': 'XGBoost_Action_Classifier',
-        'model_type': 'classifier',
-        'target_variable': 'action',  # BUY, SELL, HOLD, DISCHARGE
-        'num_features': train_data.shape[1],
-        'num_classes': 4,
-        'training_samples': len(train_data),
-        'test_samples': len(test_data),
-        'config_n_estimators': model_config['n_estimators'],
-        'config_max_depth': model_config['max_depth'],
-        'config_learning_rate': model_config['learning_rate'],
-        'feature_engineering': 'yes',
-        'scaling': 'standard',
-        'expected_accuracy': '75-85%',  # Estimated based on feature quality
-    }
-    
-    metadata_df = pd.DataFrame(list(metadata.items()), columns=['parameter', 'value'])
+    metadata_df, output_metadata = build_xgboost_metadata(backtest_dataset)
+    metadata_map = dict(zip(metadata_df['parameter'], metadata_df['value']))
     
     logger.info(f"✅ XGBoost configuration ready:")
-    logger.info(f"   Features: {metadata['num_features']}")
-    logger.info(f"   Training samples: {metadata['training_samples']}")
-    logger.info(f"   Classes: {metadata['num_classes']}")
-    logger.info(f"   Estimators: {metadata['config_n_estimators']}")
+    logger.info(f"   Features: {metadata_map['num_features']}")
+    logger.info(f"   Training samples: {metadata_map['training_samples']}")
+    logger.info(f"   Classes: {metadata_map['num_classes']}")
+    logger.info(f"   Estimators: {metadata_map['config_n_estimators']}")
     
     return Output(
         metadata_df,
-        metadata={
-            "model_type": "xgboost_classifier",
-            "num_features": train_data.shape[1],
-            "training_samples": len(train_data),
-        }
+        metadata=output_metadata,
     )
 
 
@@ -323,18 +196,11 @@ def model_training_status(
     
     logger.info("📊 Summarizing training status...")
     
-    status_items = {
-        '✅ Data Preparation': 'COMPLETE',
-        '✅ Feature Engineering': f"{training_data_prepared.shape[1]} features ready",
-        '✅ Historical Data': f"{len(synthetic_historical_data)} records (2-year synthetic)",
-        '✅ Train/Test Split': f"Train: {len(backtest_dataset['train'])}, Test: {len(backtest_dataset['test'])}",
-        '✅ Baseline Metrics': 'Calculated',
-        '⏳ XGBoost Training': 'READY (Phase 3B)',
-        '⏳ Hyperparameter Tuning': 'READY (Phase 3B with Optuna)',
-        '⏳ Model Evaluation': 'READY (Phase 3B)',
-    }
-    
-    status_df = pd.DataFrame(list(status_items.items()), columns=['step', 'status'])
+    status_df, status_metadata, status_items = build_training_status(
+        training_data_prepared,
+        synthetic_historical_data,
+        backtest_dataset,
+    )
     
     logger.info(f"✅ Training pipeline status:")
     for step, status in status_items.items():
@@ -342,16 +208,13 @@ def model_training_status(
     
     return Output(
         status_df,
-        metadata={
-            "pipeline_stage": "Phase 3A Complete - Ready for Phase 3B",
-            "blocked_tasks": 0,
-        }
+        metadata=status_metadata,
     )
 
 
 # Create Definitions object for Dagster
-defs = Definitions(
-    assets=[
+defs = build_definitions(
+    [
         training_data_prepared,
         synthetic_historical_data,
         backtest_dataset,

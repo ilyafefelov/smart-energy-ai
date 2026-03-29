@@ -204,6 +204,46 @@
         </div>
       </div>
 
+      <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold text-white">⚖️ Stage 2 Financial Model</h2>
+            <p class="mt-1 text-xs text-slate-400">Dual-regime breakdown for saved funds, earned funds, and the inferred market model.</p>
+          </div>
+          <span class="rounded-full border px-3 py-1 text-xs font-semibold" :class="marketRegimeBadgeClass">
+            {{ marketRegimeLabel }}
+          </span>
+        </div>
+
+        <p class="mt-3 text-sm text-slate-300">{{ financialModeSummary }}</p>
+
+        <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div class="bg-slate-900 rounded-lg p-4">
+            <p class="text-sm text-slate-400 mb-2">Saved Funds (7d)</p>
+            <p class="text-2xl font-bold text-emerald-400">{{ Math.round(savedFundsTotal).toLocaleString() }} ₴</p>
+            <p class="text-xs text-slate-400 mt-2">Avoided baseline import and operating cost.</p>
+          </div>
+
+          <div class="bg-slate-900 rounded-lg p-4">
+            <p class="text-sm text-slate-400 mb-2">Earned Funds (7d)</p>
+            <p class="text-2xl font-bold text-cyan-400">{{ Math.round(earnedFundsTotal).toLocaleString() }} ₴</p>
+            <p class="text-xs text-slate-400 mt-2">Export and arbitrage revenue captured by the site.</p>
+          </div>
+
+          <div class="bg-slate-900 rounded-lg p-4">
+            <p class="text-sm text-slate-400 mb-2">Total Benefit (7d)</p>
+            <p class="text-2xl font-bold text-energy-400">{{ Math.round(totalBenefitFunds).toLocaleString() }} ₴</p>
+            <p class="text-xs text-slate-400 mt-2">Saved funds plus earned funds under the current regime.</p>
+          </div>
+
+          <div class="bg-slate-900 rounded-lg p-4">
+            <p class="text-sm text-slate-400 mb-2">Connected Site Power</p>
+            <p class="text-2xl font-bold text-fuchsia-300">{{ sitePowerDisplay }}</p>
+            <p class="text-xs text-slate-400 mt-2">Threshold driver for Net Billing vs Market Premium.</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Price Trend Chart -->
       <div class="bg-slate-800 bg-opacity-40 border border-slate-700 rounded-lg p-6">
         <h2 class="text-lg font-bold text-white mb-4">📉 Price Trend (24h Forecast)</h2>
@@ -301,12 +341,35 @@ import { usePricesStore } from '~/stores/pricesStore'
 import { useMetricsStore } from '~/stores/metricsStore'
 import { useTenantContext } from '~/composables/useTenantContext'
 
+interface AnalyticsHistoryRow {
+  date: string
+  savings?: number
+  saved_funds_uah?: number
+  earned_funds_uah?: number
+  realized_net_uah?: number
+  auto_transitions?: number
+}
+
+interface Stage2Financials {
+  market_regime?: string
+  site_power_kw?: number | null
+  financial_mode_label?: string
+  financial_mode_summary?: string
+  totals?: {
+    saved_funds_uah?: number
+    earned_funds_uah?: number
+    realized_net_uah?: number
+    total_benefit_uah?: number
+  }
+}
+
 const pricesStore = usePricesStore()
 const metricsStore = useMetricsStore()
 const tenantContext = useTenantContext()
-const analyticsHistoryRows = ref<any[]>([])
+const analyticsHistoryRows = ref<AnalyticsHistoryRow[]>([])
 const controlStatus = ref<any>(null)
 const canonicalHistorySource = ref<string>('unknown')
+const stage2Financials = ref<Stage2Financials | null>(null)
 
 const tenantOptions = computed(() => tenantContext.tenants.value)
 const selectedTenantId = computed({
@@ -342,6 +405,7 @@ const fetchCanonicalAnalyticsData = async () => {
 
   analyticsHistoryRows.value = Array.isArray(historyResponse?.data) ? historyResponse.data : []
   canonicalHistorySource.value = String(historyResponse?.source?.economics_source || 'unknown')
+  stage2Financials.value = historyResponse?.stage2_financials || null
   controlStatus.value = controlResponse || null
 }
 
@@ -362,6 +426,39 @@ const historyAverageSavings = computed(() => {
     return 0
   }
   return historyTotalSavings.value / historyNetValues.value.length
+})
+
+const savedFundsTotal = computed(() => {
+  const explicitTotal = Number(stage2Financials.value?.totals?.saved_funds_uah)
+  if (Number.isFinite(explicitTotal)) {
+    return explicitTotal
+  }
+
+  return analyticsHistoryRows.value.reduce((sum, row) => {
+    const value = Number(row.saved_funds_uah ?? row.savings ?? 0)
+    return sum + (Number.isFinite(value) ? value : 0)
+  }, 0)
+})
+
+const earnedFundsTotal = computed(() => {
+  const explicitTotal = Number(stage2Financials.value?.totals?.earned_funds_uah)
+  if (Number.isFinite(explicitTotal)) {
+    return explicitTotal
+  }
+
+  return analyticsHistoryRows.value.reduce((sum, row) => {
+    const value = Number(row.earned_funds_uah ?? 0)
+    return sum + (Number.isFinite(value) ? value : 0)
+  }, 0)
+})
+
+const totalBenefitFunds = computed(() => {
+  const explicitTotal = Number(stage2Financials.value?.totals?.total_benefit_uah)
+  if (Number.isFinite(explicitTotal)) {
+    return explicitTotal
+  }
+
+  return savedFundsTotal.value + earnedFundsTotal.value
 })
 
 const historySuccessRate = computed(() => {
@@ -392,6 +489,35 @@ const latestHistoryRow = computed(() => {
 })
 
 const latestAutoTransitions = computed(() => Number(latestHistoryRow.value?.auto_transitions || 0))
+
+const marketRegimeLabel = computed(() => {
+  const regime = String(stage2Financials.value?.market_regime || '').toLowerCase()
+  if (regime === 'market_premium') {
+    return 'MARKET PREMIUM'
+  }
+  if (regime === 'net_billing') {
+    return 'NET BILLING'
+  }
+  return 'UNCLASSIFIED'
+})
+
+const marketRegimeBadgeClass = computed(() => {
+  const regime = String(stage2Financials.value?.market_regime || '').toLowerCase()
+  if (regime === 'market_premium') return 'border-fuchsia-500/70 bg-fuchsia-500/15 text-fuchsia-200'
+  if (regime === 'net_billing') return 'border-sky-500/70 bg-sky-500/15 text-sky-200'
+  return 'border-slate-500/70 bg-slate-500/15 text-slate-200'
+})
+
+const financialModeSummary = computed(() => {
+  return String(stage2Financials.value?.financial_mode_summary || 'Stage 2 financial regime data is unavailable for the selected tenant.')
+})
+
+const sitePowerDisplay = computed(() => {
+  const sitePowerKw = Number(stage2Financials.value?.site_power_kw)
+  return Number.isFinite(sitePowerKw) && sitePowerKw > 0
+    ? `${sitePowerKw.toFixed(0)} kW`
+    : 'n/a'
+})
 
 const canonicalHistorySourceLabel = computed(() => {
   if (!canonicalHistorySource.value || canonicalHistorySource.value === 'unknown') {

@@ -1,12 +1,23 @@
-import { getDefaultTenantId, listConfiguredTenants } from '../utils/tenant-context'
+import {
+  getDefaultTenantId,
+  hasTrustedTenantOverrideAccess,
+  listConfiguredTenants,
+} from '../utils/tenant-context'
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (event) => {
   try {
-    const tenants = listConfiguredTenants()
+    const defaultTenantId = getDefaultTenantId()
+    const configuredTenants = listConfiguredTenants()
+    const trustedOverride = hasTrustedTenantOverrideAccess(event)
+    const tenants = trustedOverride
+      ? configuredTenants
+      : configuredTenants.filter((tenant) => tenant.id === defaultTenantId)
+
     return {
       success: true,
       tenants,
-      default_tenant_id: getDefaultTenantId(),
+      default_tenant_id: defaultTenantId,
+      tenant_override_requires_auth: true,
     }
   } catch (error: any) {
     return {

@@ -9,13 +9,42 @@ using LoadProfileConfig from config_models.py. Includes:
 - Self-consumption estimation
 - Generation correlation with solar daylight pattern
 """
-from typing import Dict, Tuple, Any, List
-import math
-import random
-from datetime import datetime, timedelta
-import json
+import importlib.util
+from datetime import datetime
+from pathlib import Path
+import sys
+from typing import Any, Dict, List
 
 from energy_ml.config_models import LoadProfileConfig, UserProfile
+
+try:
+    from energy_ml.load_simulation_support import (
+        apply_daily_noise as apply_daily_noise_value,
+        apply_seasonal_factor as apply_seasonal_factor_value,
+        apply_weekend_reduction as apply_weekend_reduction_value,
+        build_yearly_load_report,
+        estimate_self_consumption_metrics,
+        simple_generation_series,
+        simulate_year_hours,
+    )
+except ImportError:
+    _SUPPORT_MODULE_NAME = "energy_ml.load_simulation_support"
+    _SUPPORT_PATH = Path(__file__).with_name("load_simulation_support.py")
+    _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
+    if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
+        raise ImportError(f"Unable to load load simulation support module from {_SUPPORT_PATH}")
+    _SUPPORT_MODULE = sys.modules.get(_SUPPORT_MODULE_NAME)
+    if _SUPPORT_MODULE is None:
+        _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
+        sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
+        _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
+    apply_daily_noise_value = _SUPPORT_MODULE.apply_daily_noise
+    apply_seasonal_factor_value = _SUPPORT_MODULE.apply_seasonal_factor
+    apply_weekend_reduction_value = _SUPPORT_MODULE.apply_weekend_reduction
+    build_yearly_load_report = _SUPPORT_MODULE.build_yearly_load_report
+    estimate_self_consumption_metrics = _SUPPORT_MODULE.estimate_self_consumption_metrics
+    simple_generation_series = _SUPPORT_MODULE.simple_generation_series
+    simulate_year_hours = _SUPPORT_MODULE.simulate_year_hours
 
 
 class BaseLoadSimulator:
@@ -50,8 +79,7 @@ class BaseLoadSimulator:
         
         Uses sine curve: peak mid-year (day 182), valley at start/end.
         """
-        angle = 2 * math.pi * ((day - 91) / 365.0)
-        return 1.0 + factor * math.sin(angle)
+        return apply_seasonal_factor_value(day, factor)
     
     def apply_weekend_reduction(self, dow: int, coefficient: float, 
                                reduction: float = 0.6) -> float:
@@ -62,9 +90,7 @@ class BaseLoadSimulator:
             coefficient: Current hourly coefficient
             reduction: Multiplier for weekend loads (default 60% = -40%)
         """
-        if dow >= 5:  # Saturday=5, Sunday=6
-            return coefficient * reduction
-        return coefficient
+        return apply_weekend_reduction_value(dow, coefficient, reduction)
     
     def apply_daily_noise(self, base_value: float, noise_pct: float = 0.05, 
                          seed: int = None) -> float:
@@ -75,10 +101,7 @@ class BaseLoadSimulator:
             noise_pct: Noise as percentage of base (default ±5%)
             seed: Optional random seed for reproducibility
         """
-        if seed is not None:
-            random.seed(seed)
-        noise = random.uniform(-noise_pct, noise_pct) * base_value
-        return base_value + noise
+        return apply_daily_noise_value(base_value, noise_pct, seed)
     
     def simulate_year(self, seasonal_factor: float = 0.2, 
                      weekend_reduction: float = 0.6,
@@ -88,35 +111,14 @@ class BaseLoadSimulator:
         Returns:
             List of 8760 hourly load values in kWh
         """
-        random.seed(random_seed)
-        hours = []
-        start_date = datetime(datetime.now().year, 1, 1)
-        current = start_date
-        
-        for day in range(365):
-            day_multiplier = self.apply_seasonal_factor(day, seasonal_factor)
-            dow = current.weekday()
-            
-            for hour in range(24):
-                coeff = self.get_hourly_coefficient(hour, day)
-                coeff = self.apply_weekend_reduction(dow, coeff, weekend_reduction)
-                
-                # Operational component
-                operational = coeff * self.peak_load_kw * day_multiplier
-                
-                # Total load = base + operational + noise
-                load = self.base_load_kw + operational
-                load = self.apply_daily_noise(load, 0.05, random_seed + day * 24 + hour)
-                
-                # Constraints
-                load = max(0.01, load)  # Always positive
-                load = min(load, 1.05 * self.peak_load_kw)  # Cap at 1.05x peak
-                
-                hours.append(round(load, 3))
-            
-            current += timedelta(days=1)
-        
-        return hours
+        return simulate_year_hours(
+            self.get_hourly_coefficient,
+            self.peak_load_kw,
+            self.base_load_kw,
+            seasonal_factor,
+            weekend_reduction,
+            random_seed,
+        )
 
 
 class StandardWorkSimulator(BaseLoadSimulator):
@@ -179,7 +181,7 @@ def create_simulator(profile: LoadProfileConfig) -> BaseLoadSimulator:
         return StandardWorkSimulator(profile)
     elif profile.profile_type == 'multi-shift':
         return MultiShiftSimulator(profile)
-    elif profile.profile_type == '24/7':
+    elif profile.profile_type == '24_7':
         return ContinuousSimulator(profile)
     elif profile.profile_type == 'custom':
         return CustomSimulator(profile)
@@ -209,51 +211,9 @@ def generate_yearly_load(profile: LoadProfileConfig,
     Returns:
         Dict with keys: hourly, daily_stats, overall
     """
-    # Create appropriate simulator
     simulator = create_simulator(profile)
-    
-    # Generate hourly loads
     hours = simulator.simulate_year(seasonal_factor, weekend_reduction, random_seed)
-    
-    # Calculate daily statistics
-    daily_stats = []
-    if start_date is None:
-        start_date = datetime(datetime.now().year, 1, 1)
-    
-    current = start_date
-    for day in range(365):
-        day_start = day * 24
-        day_end = day_start + 24
-        day_vals = hours[day_start:day_end]
-        
-        daily_avg = sum(day_vals) / 24.0
-        daily_peak = max(day_vals)
-        daily_min = min(day_vals)
-        
-        daily_stats.append({
-            "date": current.date().isoformat(),
-            "average_kW": round(daily_avg, 3),
-            "peak_kW": round(daily_peak, 3),
-            "min_kW": round(daily_min, 3)
-        })
-        
-        current += timedelta(days=1)
-    
-    # Calculate overall statistics
-    overall = {
-        "annual_energy_kwh": round(sum(hours), 3),
-        "annual_peak_kW": round(max(hours), 3),
-        "annual_min_kW": round(min(hours), 3),
-        "daily_average_kwh": round(sum(hours) / 365.0, 3),
-        "peak_load_configured_kw": round(profile.peak_load_kw, 3),
-        "base_load_estimated_kw": round(min(hours), 3)
-    }
-    
-    return {
-        "hourly": hours,
-        "daily_stats": daily_stats,
-        "overall": overall
-    }
+    return build_yearly_load_report(hours, profile.peak_load_kw, start_date)
 
 
 def estimate_self_consumption(load_hours: list, generation_hours: list) -> Dict[str, float]:
@@ -274,37 +234,7 @@ def estimate_self_consumption(load_hours: list, generation_hours: list) -> Dict[
     Raises:
         ValueError: If input lists have different lengths
     """
-    if len(load_hours) != len(generation_hours):
-        raise ValueError("load_hours and generation_hours must be same length")
-
-    total_load = sum(load_hours)
-    used_generation = 0.0
-    
-    # Calculate actual self-consumption
-    for l, g in zip(load_hours, generation_hours):
-        used_generation += min(l, g)
-
-    pct = 0.0
-    if total_load > 0:
-        pct = used_generation / total_load * 100.0
-
-    # Estimate peak shaving potential
-    # Calculate deficit hours (when load > generation)
-    paired = [(l, g) for l, g in zip(load_hours, generation_hours)]
-    deficits = [l - g for l, g in paired if l > g]
-    
-    if deficits:
-        # Peak shaving estimate: average of top 5% deficit hours
-        deficits_sorted = sorted(deficits, reverse=True)
-        top_n = max(1, int(0.05 * len(deficits_sorted)))
-        peak_shave = sum(deficits_sorted[:top_n]) / top_n
-    else:
-        peak_shave = 0.0
-
-    return {
-        "self_consumption_pct": round(pct, 2),
-        "estimated_peak_shave_kW": round(peak_shave, 3)
-    }
+    return estimate_self_consumption_metrics(load_hours, generation_hours)
 
 
 def simple_generation_hourly(profile: UserProfile, seed: int = 42) -> list:
@@ -323,23 +253,5 @@ def simple_generation_hourly(profile: UserProfile, seed: int = 42) -> list:
     Returns:
         List of 8760 hourly generation values (kWh)
     """
-    random.seed(seed)
-    hours = []
-    solar_cap = profile.generation.solar_capacity_kw
-    eff = profile.generation.solar_efficiency
-
-    for day in range(365):
-        for hour in range(24):
-            if 6 <= hour <= 18 and solar_cap > 0:
-                # Gaussian curve centered at 12 (noon)
-                dist = (hour - 12) / 4.0
-                value = solar_cap * eff * max(0.0, math.exp(-dist * dist))
-                # Daily variability to model weather (clouds, etc.)
-                value *= random.uniform(0.8, 1.1)
-            else:
-                value = 0.0
-            
-            hours.append(round(value, 3))
-    
-    return hours
+    return simple_generation_series(profile, seed)
 

@@ -1,0 +1,74 @@
+{
+  "high_mape": {
+    "name": "high_mape",
+    "metric": "mape",
+    "threshold": 15.0,
+    "comparison": ">",
+    "window_hours": 2,
+    "severity": "warning",
+    "enabled": true
+  },
+  "critical_mape": {
+    "name": "critical_mape",
+    "metric": "mape",
+    "threshold": 25.0,
+    "comparison": ">",
+    "window_hours": 1,
+    "severity": "critical",
+    "enabled": true
+  },
+  "high_latency": {
+    "name": "high_latency",
+    "metric": "latency_p95_ms",
+    "threshold": 200.0,
+    "comparison": ">",
+    "window_hours": 1,
+    "severity": "warning",
+    "enabled": true
+  },
+  "critical_latency": {
+    "name": "critical_latency",
+    "metric": "latency_p95_ms",
+    "threshold": 500.0,
+    "comparison": ">",
+    "window_hours": 1,
+    "severity": "critical",
+    "enabled": true
+  },
+  "high_error_rate": {
+    "name": "high_error_rate",
+    "metric": "error_rate",
+    "threshold": 5.0,
+    "comparison": ">",
+    "window_hours": 2,
+    "severity": "warning",
+    "enabled": true
+  },
+  "critical_error_rate": {
+    "name": "critical_error_rate",
+    "metric": "error_rate",
+    "threshold": 10.0,
+    "comparison": ">",
+    "window_hours": 1,
+    "severity": "critical",
+    "enabled": true
+  },
+  "data_drift": {
+    "name": "data_drift",
+    "metric": "drift_score",
+    "threshold": 0.9,
+    "comparison": ">",
+    "window_hours": 6,
+    "severity": "warning",
+    "enabled": true
+  },
+  "severe_drift": {
+    "name": "severe_drift",
+    "metric": "drift_score",
+    "threshold": 0.95,
+    "comparison": ">",
+    "window_hours": 2,
+    "severity": "critical",
+    "enabled": true
+  }
+}

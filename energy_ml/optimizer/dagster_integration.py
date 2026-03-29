@@ -13,6 +13,7 @@ import json
 
 import pandas as pd
 import numpy as np
+from dagster import op
 
 logger = logging.getLogger(__name__)
 

@@ -29,7 +29,10 @@ class PriceIngester:
     def fetch_oree_prices(self) -> Optional[pd.DataFrame]:
         """
         Fetch REAL OREE DAM prices from official website
-        Tries multiple methods: JSON extraction, HTML scraping, data portal
+
+        Tries multiple methods: JSON extraction, HTML scraping, data portal.
+        Recoverable network, parsing, and source-shape failures are logged and
+        return ``None`` so callers can fall back or abort explicitly.
         """
         try:
             logger.info("🌐 Fetching REAL OREE DAM prices from website...")
@@ -47,7 +50,9 @@ class PriceIngester:
             # Method 1: Try to extract JSON from page
             logger.info("  → Trying JSON extraction from page...")
             df = self._extract_json_from_page(response.text)
-            if df is not None and not df.empty and len(df) >= 24:
+            if df is None or df.empty or len(df) < 24:
+                logger.debug("  JSON extraction did not yield a complete 24-hour price set")
+            else:
                 logger.info(f"  ✅ Got REAL data from JSON: {len(df)} prices")
                 return df
             
@@ -55,14 +60,18 @@ class PriceIngester:
             logger.info("  → Trying HTML table scraping...")
             soup = BeautifulSoup(response.content, 'html.parser')
             df = self._scrape_price_tables(soup)
-            if df is not None and not df.empty and len(df) >= 24:
+            if df is None or df.empty or len(df) < 24:
+                logger.debug("  HTML scraping did not yield a complete 24-hour price set")
+            else:
                 logger.info(f"  ✅ Got REAL data from HTML: {len(df)} prices")
                 return df
             
             # Method 3: Try data portal pages
             logger.info("  → Trying OREE data portal...")
             df = self._fetch_from_data_portal()
-            if df is not None and not df.empty:
+            if df is None or df.empty:
+                logger.debug("  OREE data portal did not return price data")
+            else:
                 logger.info(f"  ✅ Got REAL data from portal: {len(df)} prices")
                 return df
             
@@ -106,8 +115,12 @@ class PriceIngester:
             logger.debug(f"JSON extraction error: {e}")
             return None
 
-    def _parse_json_prices(self, data) -> Optional[pd.DataFrame]:
-        """Parse price data from JSON object"""
+    def _parse_json_prices(self, data: object) -> Optional[pd.DataFrame]:
+        """Parse price data from a JSON-like object.
+
+        Returns ``None`` when the payload shape is unsupported, contains fewer
+        than 24 hourly records, or does not expose a usable price column.
+        """
         try:
             # Try different possible JSON structures
             prices_data = None
@@ -123,19 +136,27 @@ class PriceIngester:
                     prices_data = data
             elif isinstance(data, list):
                 prices_data = data
+
+            if not isinstance(prices_data, list):
+                return None
+
+            if len(prices_data) < 24:
+                return None
             
-            if isinstance(prices_data, list) and len(prices_data) >= 24:
-                df = pd.DataFrame(prices_data)
-                
-                # Normalize column names
-                if 'price' in df.columns:
-                    df['price_eur_mwh'] = pd.to_numeric(df['price'], errors='coerce')
-                
-                if 'price_eur_mwh' in df.columns and df['price_eur_mwh'].notna().sum() >= 24:
-                    df['price_uah_mwh'] = df['price_eur_mwh'] * 35  # EUR to UAH
-                    return df
-            
-            return None
+            df = pd.DataFrame(prices_data)
+
+            # Normalize column names
+            if 'price' in df.columns:
+                df['price_eur_mwh'] = pd.to_numeric(df['price'], errors='coerce')
+
+            if 'price_eur_mwh' not in df.columns:
+                return None
+
+            if df['price_eur_mwh'].notna().sum() < 24:
+                return None
+
+            df['price_uah_mwh'] = df['price_eur_mwh'] * 35  # EUR to UAH
+            return df
         except Exception as e:
             logger.debug(f"JSON parsing error: {e}")
             return None
@@ -237,8 +258,10 @@ class PriceIngester:
                     soup = BeautifulSoup(response.content, 'html.parser')
                     df = self._scrape_price_tables(soup)
                     
-                    if df is not None and len(df) >= 24:
-                        return df
+                    if df is None or len(df) < 24:
+                        continue
+
+                    return df
                 except Exception as e:
                     logger.debug(f"Portal fetch failed: {e}")
                     continue

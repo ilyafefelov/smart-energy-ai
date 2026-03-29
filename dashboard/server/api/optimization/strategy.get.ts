@@ -6,6 +6,7 @@ import { promisify } from 'util'
 import path from 'path'
 import { existsSync, readFileSync } from 'fs'
 import { eventHandler } from 'h3'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 const execAsync = promisify(exec)
 const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === 'win32' ? 'python' : 'python3')
@@ -61,8 +62,25 @@ function parseJsonFromPythonStdout(stdout: string): any {
   throw new Error('Unable to parse Python JSON response')
 }
 
-function fallbackStrategyFromConfig(projectRoot: string): OptimizationStrategyResponse['data'] | null {
-  const configPath = path.join(projectRoot, 'energy_ml', 'configs', 'user_config.json')
+function resolveTenantConfig(projectRoot: string, tenantId: string, defaultTenantId: string) {
+  const tenantConfigDir = path.join(projectRoot, 'energy_ml', 'configs', 'tenants', tenantId)
+  const tenantConfigPath = path.join(tenantConfigDir, 'user_config.json')
+  const legacyConfigDir = path.join(projectRoot, 'energy_ml', 'configs')
+  const legacyConfigPath = path.join(legacyConfigDir, 'user_config.json')
+
+  if (existsSync(tenantConfigPath)) {
+    return { configDir: tenantConfigDir, configPath: tenantConfigPath }
+  }
+
+  if (tenantId === defaultTenantId) {
+    return { configDir: legacyConfigDir, configPath: legacyConfigPath }
+  }
+
+  return { configDir: tenantConfigDir, configPath: tenantConfigPath }
+}
+
+function fallbackStrategyFromConfig(projectRoot: string, tenantId: string, defaultTenantId: string): OptimizationStrategyResponse['data'] | null {
+  const { configPath } = resolveTenantConfig(projectRoot, tenantId, defaultTenantId)
   if (!existsSync(configPath)) return null
 
   try {
@@ -92,10 +110,12 @@ function fallbackStrategyFromConfig(projectRoot: string): OptimizationStrategyRe
   }
 }
 
-export default eventHandler(async (): Promise<OptimizationStrategyResponse> => {
+export default eventHandler(async (event): Promise<OptimizationStrategyResponse & { tenant?: ReturnType<typeof getTenantResponseMetadata> }> => {
   const projectRoot = resolveProjectRoot()
 
   try {
+    const tenant = await resolveTenantContext(event, { requireTrustedOverride: true })
+    const tenantConfig = resolveTenantConfig(projectRoot, tenant.id, tenant.defaultTenantId)
     const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
     if (!existsSync(pythonScript)) {
       throw new Error(`Python script not found at ${pythonScript}`)
@@ -110,6 +130,11 @@ export default eventHandler(async (): Promise<OptimizationStrategyResponse> => {
         cwd: projectRoot,
         timeout: 15000, // 15 second timeout
         maxBuffer: 1024 * 1024,
+        env: {
+          ...process.env,
+          ENERGY_ML_CONFIG_DIR: tenantConfig.configDir,
+          ENERGY_ML_TENANT_ID: tenant.id,
+        },
       }
     )
     
@@ -141,16 +166,26 @@ export default eventHandler(async (): Promise<OptimizationStrategyResponse> => {
     }
     
     console.log(`[Optimization API] Current strategy: ${response.data?.strategy}`)
-    return response
+    return {
+      ...response,
+      tenant: getTenantResponseMetadata(tenant),
+    }
     
   } catch (error) {
     console.error('[Optimization API] Error:', error)
 
-    const fallback = fallbackStrategyFromConfig(projectRoot)
+    const errorData = (error as { data?: { error?: { code?: string } } })?.data
+    if (errorData?.error?.code === 'INVALID_TENANT' || errorData?.error?.code === 'TENANT_AUTH_REQUIRED') {
+      return errorData
+    }
+
+    const tenant = await resolveTenantContext(event).catch(() => null)
+    const fallback = tenant ? fallbackStrategyFromConfig(projectRoot, tenant.id, tenant.defaultTenantId) : null
     if (fallback) {
       return {
         success: true,
         data: fallback,
+        tenant: tenant ? getTenantResponseMetadata(tenant) : undefined,
       }
     }
     

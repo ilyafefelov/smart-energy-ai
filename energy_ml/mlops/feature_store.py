@@ -3,16 +3,51 @@ Phase 1: Feature Store Implementation
 Real-time feature serving and batch feature computation for energy optimization
 """
 
+import importlib.util
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass, asdict
 from pathlib import Path
 import json
+import sys
 
 import polars as pl
 import numpy as np
 from pydantic import BaseModel, Field
+
+try:
+    from energy_ml.mlops.feature_store_support import (
+        build_batch_feature_row,
+        build_empty_energy_frame,
+        build_load_demand,
+        build_real_time_feature_row,
+        build_realistic_price,
+        build_solar_power,
+        generate_hourly_timestamps,
+        read_feature_view_metadata,
+        write_feature_view_metadata,
+    )
+except ImportError:
+    _SUPPORT_MODULE_NAME = "energy_ml.mlops.feature_store_support"
+    _SUPPORT_PATH = Path(__file__).with_name("feature_store_support.py")
+    _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
+    if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
+        raise ImportError(f"Unable to load feature store support module from {_SUPPORT_PATH}")
+    _SUPPORT_MODULE = sys.modules.get(_SUPPORT_MODULE_NAME)
+    if _SUPPORT_MODULE is None:
+        _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
+        sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
+        _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
+    build_batch_feature_row = _SUPPORT_MODULE.build_batch_feature_row
+    build_empty_energy_frame = _SUPPORT_MODULE.build_empty_energy_frame
+    build_load_demand = _SUPPORT_MODULE.build_load_demand
+    build_real_time_feature_row = _SUPPORT_MODULE.build_real_time_feature_row
+    build_realistic_price = _SUPPORT_MODULE.build_realistic_price
+    build_solar_power = _SUPPORT_MODULE.build_solar_power
+    generate_hourly_timestamps = _SUPPORT_MODULE.generate_hourly_timestamps
+    read_feature_view_metadata = _SUPPORT_MODULE.read_feature_view_metadata
+    write_feature_view_metadata = _SUPPORT_MODULE.write_feature_view_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -69,20 +104,7 @@ class ParquetSource:
     def read(self) -> pl.DataFrame:
         """Read data from parquet file"""
         if not self.file_path.exists():
-            # Create empty DataFrame with expected schema for energy features
-            return pl.DataFrame({
-                'user_id': pl.Series([], dtype=pl.Utf8),
-                'timestamp': pl.Series([], dtype=pl.Datetime),
-                'battery_soc': pl.Series([], dtype=pl.Float64),
-                'grid_price_uah_kwh': pl.Series([], dtype=pl.Float64),
-                'solar_generation_kw': pl.Series([], dtype=pl.Float64),
-                'wind_generation_kw': pl.Series([], dtype=pl.Float64),
-                'load_demand_kw': pl.Series([], dtype=pl.Float64),
-                'temperature_celsius': pl.Series([], dtype=pl.Float64),
-                'is_peak_hour': pl.Series([], dtype=pl.Boolean),
-                'day_of_week': pl.Series([], dtype=pl.Int32),
-                'hour_of_day': pl.Series([], dtype=pl.Int32)
-            })
+            return build_empty_energy_frame()
             
         return pl.read_parquet(self.file_path)
         
@@ -121,15 +143,14 @@ class FeatureStore:
         
         # Save metadata
         metadata_file = self.metadata_path / f"{feature_view.name}.json"
-        with open(metadata_file, 'w') as f:
-            json.dump(feature_view.to_dict(), f, indent=2)
+        write_feature_view_metadata(metadata_file, feature_view)
             
         logger.info(f"Registered feature view: {feature_view.name}")
         
-    def get_online_features(self, 
+    def load_online_features(self, 
                            feature_view_name: str,
                            entity_keys: Dict[str, Any]) -> Dict[str, Any]:
-        """Get online features for real-time prediction
+        """Load online features for real-time prediction.
         
         Args:
             feature_view_name: Name of feature view
@@ -181,12 +202,12 @@ class FeatureStore:
         # Generate fresh features if cache miss or expired
         return self._generate_real_time_features(feature_view, entity_keys)
         
-    def get_batch_features(self, 
+    def load_batch_features(self, 
                           feature_view_name: str,
                           start_time: datetime,
                           end_time: datetime,
                           entity_filter: Optional[Dict[str, Any]] = None) -> pl.DataFrame:
-        """Get batch features for training
+        """Load batch features for training.
         
         Args:
             feature_view_name: Name of feature view
@@ -319,140 +340,36 @@ class FeatureStore:
                                    feature_view: FeatureView,
                                    entity_keys: Dict[str, Any]) -> Dict[str, Any]:
         """Generate real-time features for immediate use"""
-        
-        current_time = datetime.now()
-        
-        # Base real-time features (simulated with realistic values)
-        features = {
-            'user_id': entity_keys.get('user_id', 'default_user'),
-            'timestamp': current_time,
-            'battery_soc': 0.6 + 0.3 * np.random.random(),  # 60-90%
-            'grid_price_uah_kwh': 8.0 + 4.0 * np.random.random(),  # 8-12 UAH/kWh
-            'solar_generation_kw': max(0, 3.0 * np.sin(np.pi * (current_time.hour - 6) / 12)),  # Solar curve
-            'wind_generation_kw': 1.0 + 2.0 * np.random.random(),  # 1-3 kW wind
-            'load_demand_kw': 2.0 + 3.0 * np.random.random(),  # 2-5 kW load
-            'temperature_celsius': 15.0 + 10.0 * np.random.random(),  # 15-25°C
-            'is_peak_hour': 6 <= current_time.hour < 23,
-            'day_of_week': current_time.weekday(),
-            'hour_of_day': current_time.hour,
-        }
-        
-        # Add computed features
-        features['price_ma_24h'] = features['grid_price_uah_kwh'] * (0.9 + 0.2 * np.random.random())
-        features['load_ma_7d'] = features['load_demand_kw'] * (0.8 + 0.4 * np.random.random())
-        features['generation_forecast_1h'] = (features['solar_generation_kw'] + features['wind_generation_kw']) * 1.1
-        
-        return features
+        return build_real_time_feature_row(datetime.now(), entity_keys)
         
     def _generate_batch_features(self, 
                                feature_view: FeatureView,
                                start_time: datetime,
                                end_time: datetime) -> pl.DataFrame:
         """Generate batch features for time range"""
-        
-        # Generate hourly features for the time range
-        timestamps = []
-        current_time = start_time.replace(minute=0, second=0, microsecond=0)
-        
-        while current_time <= end_time:
-            timestamps.append(current_time)
-            current_time += timedelta(hours=1)
+        timestamps = generate_hourly_timestamps(start_time, end_time)
             
         if not timestamps:
             return pl.DataFrame()
-            
-        # Generate realistic energy data for each timestamp
-        data_rows = []
-        for ts in timestamps:
-            row = {
-                'user_id': 'default_user',
-                'timestamp': ts,
-                'battery_soc': 0.3 + 0.6 * np.random.random(),  # 30-90%
-                'grid_price_uah_kwh': self._generate_realistic_price(ts),
-                'solar_generation_kw': self._generate_solar_power(ts),
-                'wind_generation_kw': 0.5 + 2.5 * np.random.random(),
-                'load_demand_kw': self._generate_load_demand(ts),
-                'temperature_celsius': 10 + 20 * np.random.random(),
-                'is_peak_hour': 6 <= ts.hour < 23,
-                'day_of_week': ts.weekday(),
-                'hour_of_day': ts.hour,
-            }
-            
-            # Add computed features
-            row['price_ma_24h'] = row['grid_price_uah_kwh'] * (0.9 + 0.2 * np.random.random())
-            row['load_ma_7d'] = row['load_demand_kw'] * (0.8 + 0.4 * np.random.random())
-            row['generation_forecast_1h'] = (row['solar_generation_kw'] + row['wind_generation_kw']) * 1.05
-            
-            data_rows.append(row)
-            
-        return pl.DataFrame(data_rows)
+        return pl.DataFrame([build_batch_feature_row(timestamp) for timestamp in timestamps])
         
     def _generate_realistic_price(self, timestamp: datetime) -> float:
         """Generate realistic electricity price based on time"""
-        base_price = 8.0
-        
-        # Peak hour premium
-        if 6 <= timestamp.hour < 23:
-            base_price *= 1.3
-            
-        # Day of week effect (higher on weekdays)
-        if timestamp.weekday() < 5:  # Monday-Friday
-            base_price *= 1.1
-            
-        # Seasonal variation (higher in winter)
-        if timestamp.month in [12, 1, 2]:
-            base_price *= 1.2
-        elif timestamp.month in [6, 7, 8]:
-            base_price *= 0.9
-            
-        # Add random variation
-        base_price *= (0.8 + 0.4 * np.random.random())
-        
-        return round(base_price, 2)
+        return build_realistic_price(timestamp)
         
     def _generate_solar_power(self, timestamp: datetime) -> float:
         """Generate realistic solar power based on time and season"""
-        if timestamp.hour < 6 or timestamp.hour > 18:
-            return 0.0
-            
-        # Solar curve (sine wave from sunrise to sunset)
-        hour_angle = np.pi * (timestamp.hour - 6) / 12
-        solar_factor = np.sin(hour_angle)
-        
-        # Seasonal variation
-        month_factor = 0.5 + 0.5 * np.cos(2 * np.pi * (timestamp.month - 6) / 12)
-        
-        # Random weather effect
-        weather_factor = 0.3 + 0.7 * np.random.random()
-        
-        max_power = 5.0  # 5kW peak solar
-        return max(0, max_power * solar_factor * month_factor * weather_factor)
+        return build_solar_power(timestamp)
         
     def _generate_load_demand(self, timestamp: datetime) -> float:
         """Generate realistic load demand based on time and day"""
-        base_load = 2.0
-        
-        # Daily pattern (higher during day, lower at night)
-        if 6 <= timestamp.hour <= 22:
-            time_factor = 1.5 + 0.5 * np.sin(2 * np.pi * (timestamp.hour - 6) / 16)
-        else:
-            time_factor = 0.5 + 0.3 * np.random.random()
-            
-        # Weekday vs weekend
-        if timestamp.weekday() >= 5:  # Weekend
-            time_factor *= 0.8
-            
-        # Random variation
-        random_factor = 0.7 + 0.6 * np.random.random()
-        
-        return base_load * time_factor * random_factor
+        return build_load_demand(timestamp)
         
     def _load_feature_views(self):
         """Load feature views from metadata"""
         for metadata_file in self.metadata_path.glob("*.json"):
             try:
-                with open(metadata_file) as f:
-                    view_data = json.load(f)
+                view_data = read_feature_view_metadata(metadata_file)
                     
                 features = [Feature(**f) for f in view_data['features']]
                 

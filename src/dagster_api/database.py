@@ -11,6 +11,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+LEGACY_UNSCOPED_TENANT_ID = "__legacy_unscoped__"
+
 
 class Database:
     """PostgreSQL database connection manager."""
@@ -52,6 +54,7 @@ class Database:
                         id SERIAL PRIMARY KEY,
                         asset_name VARCHAR(255) NOT NULL,
                         run_id VARCHAR(255),
+                        tenant_id VARCHAR(128) NOT NULL,
                         materialization_time TIMESTAMP DEFAULT NOW(),
                         data JSONB,
                         status VARCHAR(50) DEFAULT 'success',
@@ -59,6 +62,26 @@ class Database:
                         execution_time_ms INTEGER,
                         UNIQUE(asset_name, run_id)
                     )
+                """)
+                cur.execute("""
+                    ALTER TABLE asset_results
+                    ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(128)
+                """)
+                cur.execute("""
+                    UPDATE asset_results
+                    SET tenant_id = LOWER(BTRIM(data->>'tenant_id'))
+                    WHERE (tenant_id IS NULL OR BTRIM(tenant_id) = '')
+                      AND data IS NOT NULL
+                      AND NULLIF(BTRIM(data->>'tenant_id'), '') IS NOT NULL
+                """)
+                cur.execute("""
+                    UPDATE asset_results
+                    SET tenant_id = %s
+                    WHERE tenant_id IS NULL OR BTRIM(tenant_id) = ''
+                """, (LEGACY_UNSCOPED_TENANT_ID,))
+                cur.execute("""
+                    ALTER TABLE asset_results
+                    ALTER COLUMN tenant_id SET NOT NULL
                 """)
                 
                 # Index for fast lookups
@@ -69,6 +92,14 @@ class Database:
                 cur.execute("""
                     CREATE INDEX IF NOT EXISTS idx_asset_results_time 
                     ON asset_results(materialization_time DESC)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_asset_results_tenant_id
+                    ON asset_results(tenant_id)
+                """)
+                cur.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_asset_results_tenant_asset_time
+                    ON asset_results(tenant_id, asset_name, materialization_time DESC)
                 """)
                 
                 conn.commit()

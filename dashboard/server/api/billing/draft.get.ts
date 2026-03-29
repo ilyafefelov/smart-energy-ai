@@ -38,7 +38,7 @@ function asBoolean(value: unknown): boolean {
 
 export default defineEventHandler(async (event: any) => {
   try {
-    const tenant = await resolveTenantContext(event)
+    const tenant = await resolveTenantContext(event, { requireTrustedOverride: true })
     const query = getQuery(event)
 
     const from = resolvePeriodStart(query.from)
@@ -67,7 +67,7 @@ export default defineEventHandler(async (event: any) => {
     }
   } catch (error: any) {
     const errorData = error?.data
-    if (errorData?.error?.code === 'INVALID_TENANT') {
+    if (errorData?.error?.code === 'INVALID_TENANT' || errorData?.error?.code === 'TENANT_AUTH_REQUIRED') {
       return errorData
     }
 

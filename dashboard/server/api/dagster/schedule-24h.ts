@@ -27,12 +27,13 @@ export default eventHandler(async (event) => {
       status: 'success',
       timestamp: new Date().toISOString(),
       tenant: getTenantResponseMetadata(tenant),
-      mlflow_connected: mlflowStatus?.mlflow_connected === true,
-      experiments: (mlflowStatus?.experiments || []).map((exp: any) => ({
-        id: exp.id,
-        name: exp.name,
-        last_update: exp.last_update_time || new Date().toISOString(),
-      })),
+      registry_diagnostics: {
+        available: mlflowStatus?.mlflow_connected === true,
+        service_role: mlflowStatus?.service_role || 'registry_and_experiment_diagnostics',
+        latest_run_name: mlflowStatus?.registry_summary?.latest_run_name || null,
+        recent_runs_count: mlflowStatus?.registry_summary?.recent_runs_count || 0,
+        authoritative_for_runtime_serving: false,
+      },
       schedule,
       summary: {
         total_expected_profit: Number(totalProfit.toFixed(2)),
@@ -44,6 +45,7 @@ export default eventHandler(async (event) => {
       },
       source_metadata: {
         tenant_filter_applied: true,
+        mlflow_registry_diagnostics_available: mlflowStatus?.mlflow_connected === true,
       },
     }
   } catch (error: any) {

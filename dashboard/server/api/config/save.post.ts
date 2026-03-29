@@ -58,6 +58,8 @@ const DEFAULT_CONFIG = {
   latitude: 50.45,
   longitude: 30.52,
   timezone: 'Europe/Kiev',
+  connected_power_kw: 10.0,
+  market_regime_override: 'auto',
 }
 
 function normalizeLoadProfileType(value: unknown) {
@@ -66,6 +68,13 @@ function normalizeLoadProfileType(value: unknown) {
   if (normalized === '24_7' || normalized === '24/7') return '24/7'
   if (normalized === 'custom') return 'custom'
   return 'standard'
+}
+
+function normalizeMarketRegimeOverride(value: unknown) {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (normalized === 'net_billing' || normalized === 'net-billing') return 'net_billing'
+  if (normalized === 'market_premium' || normalized === 'market-premium') return 'market_premium'
+  return 'auto'
 }
 
 function normalizeOptimizationStrategy(value: unknown) {
@@ -126,6 +135,7 @@ export default defineEventHandler(async (event: any) => {
     }
 
     mergedConfig.load_profile_type = normalizeLoadProfileType(mergedConfig.load_profile_type)
+    mergedConfig.market_regime_override = normalizeMarketRegimeOverride(mergedConfig.market_regime_override)
     mergedConfig.optimization_strategy = normalizeOptimizationStrategy(mergedConfig.optimization_strategy)
     mergedConfig.has_solar = normalizeBoolean(
       mergedConfig.has_solar,
@@ -244,6 +254,14 @@ function validateConfiguration(config: any) {
     errors.push('Longitude must be between -180 and 180')
   }
 
+  if (Number(config.connected_power_kw) <= 0 || Number(config.connected_power_kw) > 10000) {
+    errors.push('Connected site power must be between 0.1 and 10000 kW')
+  }
+
+  if (!['auto', 'net_billing', 'market_premium'].includes(String(config.market_regime_override))) {
+    errors.push('Market regime override must be auto, net_billing, or market_premium')
+  }
+
   if (typeof config.has_solar !== 'boolean') {
     errors.push('Solar capability flag must be boolean')
   }
@@ -332,6 +350,8 @@ function detectSignificantChanges(oldConfig: any, newConfig: any) {
     'has_wind',
     'latitude',
     'longitude',
+    'connected_power_kw',
+    'market_regime_override',
     'solar_capacity_kw',
     'wind_capacity_kw',
     'solar_efficiency',

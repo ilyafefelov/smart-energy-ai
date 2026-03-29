@@ -3,10 +3,10 @@
 Handles battery, load profile, and tariff settings persistence with complete ML integration.
 """
 from pathlib import Path
-from typing import Dict, Optional, Literal, List
+from typing import Any, Dict, Optional, Literal, List, TypedDict
 import json
 import os
-from pydantic import BaseModel, ValidationError, Field
+from pydantic import BaseModel, ValidationError, Field, field_validator
 
 
 class UserConfigModel(BaseModel):
@@ -25,7 +25,7 @@ class UserConfigModel(BaseModel):
     battery_degradation_per_cycle: float = Field(default=0.00001, ge=0.000005, le=0.001)
     
     # Phase 4C Load Profile Configuration - Extended
-    load_profile_type: Literal["standard", "multi-shift", "24/7", "custom"] = "standard"
+    load_profile_type: Literal["standard", "multi-shift", "24_7", "custom"] = "standard"
     load_peak_kw: float = Field(default=10.0, ge=1.0, le=100.0)
     load_base_kw: float = Field(default=2.0, ge=0.5, le=20.0)
     load_custom_hourly: Optional[List[float]] = Field(default=None, min_items=24, max_items=24)
@@ -76,10 +76,125 @@ class UserConfigModel(BaseModel):
     enable_physics_simulation: bool = True
     battery_temperature_c: float = Field(default=25.0, ge=-20.0, le=60.0)
     battery_aging_model: Literal["calendar", "cycle", "combined"] = "combined"
+
+    @field_validator("load_profile_type", mode="before")
+    @classmethod
+    def normalize_load_profile_type(cls, value: str) -> str:
+        """Normalize legacy public tokens to one canonical machine token."""
+        if value == "24/7":
+            return "24_7"
+        return value
     
     class Config:
         """Pydantic config."""
         extra = 'allow'
+
+
+class UserConfigPayload(TypedDict, total=False):
+    """Typed payload accepted when config is provided as a plain mapping."""
+
+    battery_type: Literal["LFP", "Lead-Acid", "VRFB"]
+    battery_capacity_kwh: float
+    battery_efficiency: float
+    battery_c_rate_charge: float
+    battery_c_rate_discharge: float
+    battery_dod_max: float
+    battery_soc_min: float
+    battery_soc_max: float
+    battery_cycles_max: int
+    battery_degradation_per_cycle: float
+    load_profile_type: Literal["standard", "multi-shift", "24_7", "custom"]
+    load_peak_kw: float
+    load_base_kw: float
+    load_custom_hourly: List[float]
+    load_seasonal_variation: float
+    load_weekend_factor: float
+    load_night_factor: float
+    tariff_region: Literal["ukraine"]
+    tariff_peak_hours_start: int
+    tariff_peak_hours_end: int
+    tariff_peak_rate_uah_kwh: float
+    tariff_off_peak_rate_uah_kwh: float
+    ml_retrain_frequency_days: int
+    ml_confidence_threshold: float
+    ml_model_type: Literal["xgboost", "lightgbm", "catboost", "ensemble"]
+    ml_lookback_hours: int
+    ml_forecast_horizon_hours: int
+    dashboard_refresh_seconds: int
+    dashboard_show_degradation_cost: bool
+    dashboard_show_arbitrage_opportunities: bool
+    dashboard_currency_symbol: str
+    dashboard_language: Literal["en", "uk"]
+    optimization_strategy: Literal["max_earn", "max_battery_health", "max_charge", "balanced"]
+    custom_optimization_weights: Dict[str, float]
+    has_solar: bool
+    has_wind: bool
+    solar_capacity_kw: float
+    wind_capacity_kw: float
+    solar_efficiency: float
+    wind_efficiency: float
+    solar_tilt_deg: float
+    wind_cut_in_speed_mps: float
+    wind_rated_speed_mps: float
+    latitude: float
+    longitude: float
+    timezone: str
+    enable_physics_simulation: bool
+    battery_temperature_c: float
+    battery_aging_model: Literal["calendar", "cycle", "combined"]
+
+
+class ConfigurationManagerError(RuntimeError):
+    """Raised when configuration persistence or loading cannot complete."""
+
+
+class ConfigurationOperationResult(BaseModel):
+    """Shared result envelope for configuration operations."""
+
+    success: bool = True
+    errors: List[str] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+
+    @property
+    def valid(self) -> bool:
+        return self.success and not self.errors
+
+    @property
+    def status(self) -> str:
+        return "success" if self.success else "error"
+
+    def __getitem__(self, key: str) -> Any:
+        return getattr(self, key)
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return getattr(self, key, default)
+
+
+class ConfigLoadResult(ConfigurationOperationResult):
+    """Result returned when loading persisted user configuration."""
+
+    config: Optional[UserConfigModel] = None
+    source: Literal["file", "defaults", "invalid", "input"] = "defaults"
+
+
+class ConfigSaveResult(ConfigurationOperationResult):
+    """Result returned when saving user configuration."""
+
+    config: Optional[UserConfigModel] = None
+    data: Optional[Dict[str, Any]] = None
+
+
+class ConfigValidationResult(ConfigurationOperationResult):
+    """Result returned when validating configuration inputs."""
+
+    config: Optional[UserConfigModel] = None
+
+
+class ConfigTriggerResult(ConfigurationOperationResult):
+    """Result returned when triggering recalculation."""
+
+    trigger_id: Optional[str] = None
+    trigger_state: Literal["triggered", "failed"] = "failed"
 
 
 class ConfigurationManager:
@@ -100,30 +215,93 @@ class ConfigurationManager:
         self.config_file = self.config_dir / "user_config.json"
         self.config_history_file = self.config_dir / "config_history.jsonl"
     
-    def load_config(self) -> UserConfigModel:
+    def load_config(self) -> ConfigLoadResult:
         """Load user configuration from disk.
         
         Returns:
-            UserConfigModel with loaded settings or defaults if not found
+            ConfigLoadResult describing the source and parsed config
         """
-        if self.config_file.exists():
-            try:
-                with open(self.config_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                return UserConfigModel(**data)
-            except (json.JSONDecodeError, ValidationError):
-                # Return defaults on error
-                return UserConfigModel()
-        return UserConfigModel()
+        if not self.config_file.exists():
+            return ConfigLoadResult(
+                success=True,
+                config=UserConfigModel(),
+                source='defaults',
+                warnings=["Configuration file not found; using defaults."],
+            )
+
+        try:
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return ConfigLoadResult(
+                success=True,
+                config=UserConfigModel(**data),
+                source='file',
+            )
+        except json.JSONDecodeError as exc:
+            return ConfigLoadResult(
+                success=False,
+                config=None,
+                source='invalid',
+                errors=[f"Configuration file contains invalid JSON: {exc}"],
+            )
+        except ValidationError as exc:
+            return ConfigLoadResult(
+                success=False,
+                config=None,
+                source='invalid',
+                errors=[f"Configuration file failed validation: {exc}"],
+            )
+        except OSError as exc:
+            return ConfigLoadResult(
+                success=False,
+                config=None,
+                source='invalid',
+                errors=[f"Configuration file could not be read: {exc}"],
+            )
+
+    def load_config_or_raise(self) -> UserConfigModel:
+        """Return the resolved config or raise a typed error on failure."""
+        result = self.load_config()
+        if result.success and result.config is not None:
+            return result.config
+
+        error_text = "; ".join(result.errors) if result.errors else "Configuration could not be loaded"
+        raise ConfigurationManagerError(error_text)
+
+    def resolve_config(self, config_data: Optional[UserConfigPayload] = None) -> ConfigLoadResult:
+        """Resolve config from an explicit payload or persisted storage without raising.
+
+        Args:
+            config_data: Optional mapping of user config values supplied by a caller.
+
+        Returns:
+            ConfigLoadResult containing either a parsed config or validation errors.
+        """
+        if config_data is None:
+            return self.load_config()
+
+        try:
+            return ConfigLoadResult(
+                success=True,
+                config=UserConfigModel(**config_data),
+                source='input',
+            )
+        except ValidationError as exc:
+            return ConfigLoadResult(
+                success=False,
+                config=None,
+                source='invalid',
+                errors=[f"Provided configuration failed validation: {exc}"],
+            )
     
-    def save_config(self, config: UserConfigModel) -> Dict[str, any]:
+    def save_config(self, config: UserConfigModel) -> ConfigSaveResult:
         """Save user configuration to disk with history tracking.
         
         Args:
             config: UserConfigModel to save
             
         Returns:
-            Dict with 'success': bool, 'data': config_dict, 'errors': list
+            ConfigSaveResult with the shared operation envelope
         """
         try:
             config_dict = config.dict()
@@ -141,26 +319,27 @@ class ConfigurationManager:
             with open(self.config_history_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(history_entry) + '\n')
             
-            return {
-                'success': True,
-                'data': config_dict,
-                'errors': []
-            }
-        except Exception as e:
-            return {
-                'success': False,
-                'data': None,
-                'errors': [str(e)]
-            }
+            return ConfigSaveResult(
+                success=True,
+                config=config,
+                data=config_dict,
+            )
+        except Exception as exc:
+            return ConfigSaveResult(
+                success=False,
+                config=None,
+                data=None,
+                errors=[str(exc)],
+            )
     
-    def validate_complete_config(self, config: UserConfigModel) -> Dict[str, any]:
+    def validate_complete_config(self, config: UserConfigModel) -> ConfigValidationResult:
         """Comprehensive validation of all configuration parameters.
         
         Args:
             config: UserConfigModel to validate
             
         Returns:
-            Dict with 'valid': bool, 'errors': list of error messages, 'warnings': list
+            ConfigValidationResult with shared success, error, and warning fields
         """
         errors = []
         warnings = []
@@ -171,14 +350,16 @@ class ConfigurationManager:
             config.battery_capacity_kwh, 
             config.battery_efficiency
         )
-        errors.extend(battery_validation['errors'])
+        errors.extend(battery_validation.errors)
+        warnings.extend(battery_validation.warnings)
         
         # Load profile validation
         load_validation = self.validate_load_profile(
             config.load_profile_type,
             config.load_peak_kw
         )
-        errors.extend(load_validation['errors'])
+        errors.extend(load_validation.errors)
+        warnings.extend(load_validation.warnings)
         
         # Tariff validation
         if config.tariff_peak_hours_start >= config.tariff_peak_hours_end:
@@ -196,17 +377,19 @@ class ConfigurationManager:
         if config.ml_lookback_hours < config.ml_forecast_horizon_hours:
             warnings.append("ML lookback hours should be much larger than forecast horizon")
         
-        return {
-            'valid': len(errors) == 0,
-            'errors': errors,
-            'warnings': warnings
-        }
+        return ConfigValidationResult(
+            success=len(errors) == 0,
+            config=config,
+            errors=errors,
+            warnings=warnings,
+        )
     
-    def get_battery_specifications(self, battery_type: str) -> Dict[str, any]:
+    def get_battery_specifications(self, battery_type: str, capacity_kwh: Optional[float] = None) -> Dict[str, Any]:
         """Get detailed battery specifications including degradation costs.
         
         Args:
             battery_type: One of 'LFP', 'Lead-Acid', 'VRFB'
+            capacity_kwh: Optional installed capacity used to materialize cycle cost
             
         Returns:
             Dict with battery specs, degradation info, cost analysis
@@ -224,7 +407,7 @@ class ConfigurationManager:
                 'dod_max': 0.9,
                 'temperature_range': (-20, 60),
                 'description': 'Best for daily cycling, long lifespan, safe chemistry',
-                'degradation_cost_uah_per_cycle': lambda capacity: capacity * 13000 / 8000,
+                'degradation_cost_uah_per_cycle_per_kwh': 13000 / 8000,
                 'arbitrage_suitability': 9  # out of 10
             },
             'Lead-Acid': {
@@ -239,7 +422,7 @@ class ConfigurationManager:
                 'dod_max': 0.5,  # Limited to preserve life
                 'temperature_range': (-10, 45),
                 'description': 'Lower upfront cost but frequent replacement needed',
-                'degradation_cost_uah_per_cycle': lambda capacity: capacity * 5500 / 600,
+                'degradation_cost_uah_per_cycle_per_kwh': 5500 / 600,
                 'arbitrage_suitability': 4  # out of 10
             },
             'VRFB': {
@@ -254,17 +437,17 @@ class ConfigurationManager:
                 'dod_max': 1.0,  # 100% DoD possible
                 'temperature_range': (5, 45),
                 'description': 'Best for long-duration storage, minimal degradation',
-                'degradation_cost_uah_per_cycle': lambda capacity: capacity * 22000 / 20000,
+                'degradation_cost_uah_per_cycle_per_kwh': 22000 / 20000,
                 'arbitrage_suitability': 7  # out of 10
             }
         }
         
         if battery_type in specs:
             spec = specs[battery_type].copy()
-            # Convert lambda to actual function result
-            if callable(spec['degradation_cost_uah_per_cycle']):
-                cost_func = spec['degradation_cost_uah_per_cycle']
-                spec['degradation_cost_uah_per_cycle'] = cost_func
+            normalized_capacity = 1.0 if capacity_kwh is None else max(capacity_kwh, 0.0)
+            spec['degradation_cost_uah_per_cycle'] = (
+                spec['degradation_cost_uah_per_cycle_per_kwh'] * normalized_capacity
+            )
             return spec
         else:
             return {}
@@ -351,7 +534,7 @@ class ConfigurationManager:
         Returns:
             Dict with arbitrage metrics
         """
-        battery_specs = self.get_battery_specifications(config.battery_type)
+        battery_specs = self.get_battery_specifications(config.battery_type, config.battery_capacity_kwh)
         
         # Daily energy arbitrage calculation
         max_charge_power = config.battery_capacity_kwh * config.battery_c_rate_charge
@@ -367,7 +550,7 @@ class ConfigurationManager:
         daily_arbitrage_gross = usable_capacity * price_spread * config.battery_efficiency
         
         # Degradation cost per cycle
-        degradation_cost = battery_specs['degradation_cost_uah_per_cycle'](config.battery_capacity_kwh) if battery_specs else 0
+        degradation_cost = battery_specs.get('degradation_cost_uah_per_cycle', 0) if battery_specs else 0
         
         # Net daily profit
         daily_profit_net = daily_arbitrage_gross - degradation_cost
@@ -396,7 +579,7 @@ class ConfigurationManager:
     def validate_battery_config(self, 
                                battery_type: str,
                                capacity_kwh: float,
-                               efficiency: float = 0.95) -> Dict[str, any]:
+                               efficiency: float = 0.95) -> ConfigValidationResult:
         """Validate battery configuration with enhanced checks.
         
         Args:
@@ -405,7 +588,7 @@ class ConfigurationManager:
             efficiency: Round-trip efficiency (0.7-1.0)
             
         Returns:
-            Dict with 'valid': bool and 'errors': list of error messages
+            ConfigValidationResult with shared success, error, and warning fields
         """
         errors = []
         warnings = []
@@ -431,28 +614,31 @@ class ConfigurationManager:
         elif battery_type == 'VRFB' and capacity_kwh < 50:
             warnings.append("VRFB systems are typically more cost-effective at >50kWh")
         
-        return {
-            'valid': len(errors) == 0,
-            'errors': errors,
-            'warnings': warnings
-        }
+        return ConfigValidationResult(
+            success=len(errors) == 0,
+            errors=errors,
+            warnings=warnings,
+        )
     
     def validate_load_profile(self,
                              profile_type: str,
-                             peak_load_kw: float) -> Dict[str, any]:
+                             peak_load_kw: float) -> ConfigValidationResult:
         """Validate load profile configuration with enhanced checks.
         
         Args:
-            profile_type: One of 'standard', 'multi-shift', '24/7', 'custom'
+            profile_type: One of 'standard', 'multi-shift', '24_7', 'custom'
             peak_load_kw: Peak load in kW (> 0)
             
         Returns:
-            Dict with 'valid': bool and 'errors': list of error messages
+            ConfigValidationResult with shared success, error, and warning fields
         """
         errors = []
         warnings = []
         
-        if profile_type not in ['standard', 'multi-shift', '24/7', 'custom']:
+        if profile_type == '24/7':
+            profile_type = '24_7'
+
+        if profile_type not in ['standard', 'multi-shift', '24_7', 'custom']:
             errors.append(f"Invalid profile type: {profile_type}")
         
         if peak_load_kw <= 0:
@@ -462,11 +648,11 @@ class ConfigurationManager:
         elif peak_load_kw < 2:
             warnings.append("Very low peak load may not justify battery investment")
         
-        return {
-            'valid': len(errors) == 0,
-            'errors': errors,
-            'warnings': warnings
-        }
+        return ConfigValidationResult(
+            success=len(errors) == 0,
+            errors=errors,
+            warnings=warnings,
+        )
     
     def get_battery_templates(self) -> Dict[str, Dict]:
         """Get battery configuration templates (deprecated - use get_battery_specifications).
@@ -524,14 +710,14 @@ class ConfigurationManager:
             }
         }
     
-    def trigger_ml_recalculation(self, config: UserConfigModel) -> Dict[str, any]:
+    def trigger_ml_recalculation(self, config: UserConfigModel) -> ConfigTriggerResult:
         """Trigger ML pipeline recalculation after config changes.
         
         Args:
             config: New configuration
             
         Returns:
-            Dict with recalculation status
+            ConfigTriggerResult with shared success, error, and warning fields
         """
         try:
             # Save recalculation trigger file
@@ -546,15 +732,15 @@ class ConfigurationManager:
             with open(trigger_file, 'w', encoding='utf-8') as f:
                 json.dump(trigger_data, f, indent=2)
             
-            return {
-                'success': True,
-                'trigger_id': trigger_data['config_hash'],
-                'status': 'triggered'
-            }
+            return ConfigTriggerResult(
+                success=True,
+                trigger_id=trigger_data['config_hash'],
+                trigger_state='triggered',
+            )
             
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e),
-                'status': 'failed'
-            }
+        except Exception as exc:
+            return ConfigTriggerResult(
+                success=False,
+                errors=[str(exc)],
+                trigger_state='failed',
+            )

@@ -16,7 +16,7 @@ from dagster import asset, AssetIn, MetadataValue
 import polars as pl
 from datetime import datetime, timedelta
 import logging
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, TypedDict
 import time
 import tracemalloc
 import numpy as np
@@ -63,6 +63,19 @@ def _ensure_src_in_path():
 
 
 logger = logging.getLogger(__name__)
+
+
+class BenchmarkMetrics(TypedDict):
+    engine_name: str
+    data_size: int
+    processing_time_seconds: float
+    memory_peak_mb: float
+    memory_current_mb: float
+    throughput_records_per_second: float
+    success: bool
+    error_message: str | None
+    output_rows: int
+    benchmark_timestamp: datetime
 
 
 @asset(
@@ -154,7 +167,7 @@ def engine_benchmark_asset(
 
 def _benchmark_engine(
     engine, data: pl.DataFrame, engine_name: str, data_size: int
-) -> Dict:
+) -> BenchmarkMetrics:
     """Run performance benchmark on a specific engine."""
 
     # Start memory tracking

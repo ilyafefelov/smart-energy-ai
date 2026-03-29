@@ -1,6 +1,7 @@
 // Control API - System Status Endpoint
 // GET /api/control/status
 
+import { buildDecisionProvenance, normalizeDecisionSource } from '../../utils/recommendation-contract'
 import { getTenantResponseMetadata, isRecordVisibleForTenant, resolveTenantContext } from '../../utils/tenant-context'
 import { getBatteryControlState } from '../../utils/battery-control-state'
 
@@ -12,7 +13,7 @@ function deriveCommandFromPower(powerKw: number): 'charge' | 'discharge' | 'hold
 
 export default defineEventHandler(async (event) => {
   try {
-    const tenant = await resolveTenantContext(event)
+    const tenant = await resolveTenantContext(event, { requireTrustedOverride: true })
     const pythonScript = 'get_control_status.py'
     let fallbackReasonCode: string | null = null
     // Import the Python control system
@@ -28,7 +29,7 @@ export default defineEventHandler(async (event) => {
           mode: persistedControl.manualMode ? 'manual' : 'automatic',
           active_command: deriveCommandFromPower(Number(persistedControl.powerCommand || 0)),
           requested_command: persistedControl.manualMode ? deriveCommandFromPower(Number(persistedControl.powerCommand || 0)) : 'auto',
-          decision_source: persistedControl.manualMode ? 'manual' : 'dagster',
+          decision_source: normalizeDecisionSource(persistedControl.manualMode ? 'manual_override' : 'dagster_optimizer'),
           reason: 'Persisted control state fallback',
           updated_at: persistedControl.updatedAt,
         }
@@ -40,6 +41,16 @@ export default defineEventHandler(async (event) => {
       try {
         const result = await execPython(pythonScript)
         const pythonStatus = JSON.parse(result)
+        const decisionSource = normalizeDecisionSource(
+          effectiveModeState?.decision_source || pythonStatus?.decision_source || 'python_rule_engine',
+          'python_rule_engine',
+        )
+        const provenance = buildDecisionProvenance({
+          decisionSource,
+          fallbackReasonCode: 'none',
+          stateSource: 'simulator_backed_telemetry',
+          stateSourceDetail: 'battery_control_state',
+        })
         
         return {
           success: true,
@@ -48,14 +59,18 @@ export default defineEventHandler(async (event) => {
           mode: effectiveModeState?.mode || pythonStatus?.mode || 'automatic',
           active_command: effectiveModeState?.active_command || pythonStatus?.active_command || null,
           requested_command: effectiveModeState?.requested_command || pythonStatus?.requested_command || pythonStatus?.active_command || null,
-          decision_source: effectiveModeState?.decision_source || pythonStatus?.decision_source || null,
+          decision_source: decisionSource,
           command_reason: effectiveModeState?.reason || pythonStatus?.command_reason || null,
           last_update: effectiveModeState?.updated_at || pythonStatus?.last_update || new Date().toISOString(),
+          provenance,
           source_metadata: {
             tenant_filter_applied: true,
             python_script: pythonScript,
             python_script_available: true,
-            fallback_reason_code: 'none',
+            fallback_reason_code: provenance.fallback_reason_code,
+            decision_source: provenance.decision_source,
+            state_source: provenance.state_source,
+            telemetry_classification: provenance.telemetry_classification,
             mode_state_overlay_applied: Boolean(effectiveModeState),
           },
           source: 'python_controller'
@@ -97,7 +112,16 @@ export default defineEventHandler(async (event) => {
     const activeCommand = effectiveModeState?.active_command || (isRecentCommand ? (lastCommand.command || null) : null)
     const requestedCommand = effectiveModeState?.requested_command || (isRecentCommand ? (lastCommand.requested_command || lastCommand.command || null) : null)
     const mode = effectiveModeState?.mode || (activeCommand ? 'manual' : 'automatic')
-    const decisionSource = effectiveModeState?.decision_source || (isRecentCommand ? (lastCommand.decision_source || null) : null)
+    const decisionSource = normalizeDecisionSource(
+      effectiveModeState?.decision_source || (isRecentCommand ? (lastCommand.decision_source || null) : null),
+      'heuristic_fallback',
+    )
+    const provenance = buildDecisionProvenance({
+      decisionSource,
+      fallbackReasonCode: fallbackReasonCode || 'python_unavailable',
+      stateSource: 'simulator_backed_telemetry',
+      stateSourceDetail: 'battery_status_fallback',
+    })
 
     return {
       success: true,
@@ -107,25 +131,29 @@ export default defineEventHandler(async (event) => {
       mode,
       active_command: activeCommand,
       requested_command: requestedCommand,
-      decision_source: decisionSource,
+      decision_source: provenance.decision_source,
       command_reason: effectiveModeState?.reason || (isRecentCommand ? (lastCommand.reason || null) : null),
       battery_capacity_kwh: Number(battery.capacity ?? 150),
       max_power_kw: 5.0,
       last_update: effectiveModeState?.updated_at || battery.lastUpdated || new Date().toISOString(),
       estimated_completion: isRecentCommand ? (lastCommand.result?.estimated_completion || null) : null,
       scheduled_commands_count: pendingSchedules.length,
+      provenance,
       source_metadata: {
         tenant_filter_applied: true,
         python_script: pythonScript,
         python_script_available: pythonScriptAvailable,
-        fallback_reason_code: fallbackReasonCode || 'python_unavailable',
+        fallback_reason_code: provenance.fallback_reason_code,
+        decision_source: provenance.decision_source,
+        state_source: provenance.state_source,
+        telemetry_classification: provenance.telemetry_classification,
       },
       source: 'battery_status_fallback'
     }
     
   } catch (error) {
     const errorData = (error as any)?.data
-    if (errorData?.error?.code === 'INVALID_TENANT') {
+    if (errorData?.error?.code === 'INVALID_TENANT' || errorData?.error?.code === 'TENANT_AUTH_REQUIRED') {
       return errorData
     }
 

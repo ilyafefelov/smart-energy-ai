@@ -63,32 +63,37 @@ class RealPriceDataFetcher:
             url = "https://www.epexspot.com/api/chart"
             
             response = self.session.get(url, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                
-                if 'results' in data:
-                    prices_list = []
-                    for item in data['results']:
-                        try:
-                            prices_list.append({
-                                'hour': int(item.get('hour', 0)),
-                                'price': float(item.get('price', 0))
-                            })
-                        except:
-                            pass
-                    
-                    if len(prices_list) >= 20:
-                        now = datetime.now()
-                        df = pd.DataFrame([
-                            {
-                                'timestamp': now.replace(hour=p['hour'], minute=0, second=0, microsecond=0),
-                                'price_eur_mwh': p['price'],
-                                'price_uah_mwh': p['price'] * 35,
-                                'source': 'epex_spot'
-                            }
-                            for p in sorted(prices_list, key=lambda x: x['hour'])[:24]
-                        ])
-                        return df
+            if response.status_code != 200:
+                return None
+
+            data = response.json()
+            if 'results' not in data:
+                return None
+
+            prices_list = []
+            for item in data['results']:
+                try:
+                    prices_list.append({
+                        'hour': int(item.get('hour', 0)),
+                        'price': float(item.get('price', 0))
+                    })
+                except:
+                    pass
+
+            if len(prices_list) < 20:
+                return None
+
+            now = datetime.now()
+            df = pd.DataFrame([
+                {
+                    'timestamp': now.replace(hour=p['hour'], minute=0, second=0, microsecond=0),
+                    'price_eur_mwh': p['price'],
+                    'price_uah_mwh': p['price'] * 35,
+                    'source': 'epex_spot'
+                }
+                for p in sorted(prices_list, key=lambda x: x['hour'])[:24]
+            ])
+            return df
         
         except Exception as e:
             logger.debug(f"EPEX error: {str(e)[:50]}")
@@ -112,42 +117,46 @@ class RealPriceDataFetcher:
             }
             
             response = self.session.get(url, params=params, timeout=10)
-            if response.status_code == 200:
-                # Parse XML response
-                from xml.etree import ElementTree as ET
-                root = ET.fromstring(response.content)
-                
-                prices_list = []
-                # Extract price points from XML
-                for point in root.findall('.//{*}Point'):
-                    try:
-                        position = point.find('{*}position')
-                        price = point.find('{*}price')
-                        
-                        if position is not None and price is not None:
-                            hour = int(position.text) - 1
-                            price_val = float(price.text)
-                            
-                            if 0.1 < price_val < 500:
-                                prices_list.append({
-                                    'hour': hour,
-                                    'price': price_val
-                                })
-                    except:
-                        pass
-                
-                if len(prices_list) >= 20:
-                    now = datetime.now()
-                    df = pd.DataFrame([
-                        {
-                            'timestamp': now.replace(hour=p['hour'], minute=0, second=0, microsecond=0),
-                            'price_eur_mwh': p['price'],
-                            'price_uah_mwh': p['price'] * 35,
-                            'source': 'entso_e'
-                        }
-                        for p in sorted(prices_list, key=lambda x: x['hour'])[:24]
-                    ])
-                    return df
+            if response.status_code != 200:
+                return None
+
+            # Parse XML response
+            from xml.etree import ElementTree as ET
+            root = ET.fromstring(response.content)
+
+            prices_list = []
+            # Extract price points from XML
+            for point in root.findall('.//{*}Point'):
+                try:
+                    position = point.find('{*}position')
+                    price = point.find('{*}price')
+
+                    if position is not None and price is not None:
+                        hour = int(position.text) - 1
+                        price_val = float(price.text)
+
+                        if 0.1 < price_val < 500:
+                            prices_list.append({
+                                'hour': hour,
+                                'price': price_val
+                            })
+                except:
+                    pass
+
+            if len(prices_list) < 20:
+                return None
+
+            now = datetime.now()
+            df = pd.DataFrame([
+                {
+                    'timestamp': now.replace(hour=p['hour'], minute=0, second=0, microsecond=0),
+                    'price_eur_mwh': p['price'],
+                    'price_uah_mwh': p['price'] * 35,
+                    'source': 'entso_e'
+                }
+                for p in sorted(prices_list, key=lambda x: x['hour'])[:24]
+            ])
+            return df
         
         except Exception as e:
             logger.debug(f"ENTSO-E error: {str(e)[:50]}")

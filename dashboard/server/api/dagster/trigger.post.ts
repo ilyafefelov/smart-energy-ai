@@ -2,6 +2,11 @@
 
 import { existsSync, readFileSync } from 'fs'
 import { join, resolve } from 'path'
+import {
+  ensureDagsterAssetResultsSchema,
+  normalizeDagsterTenantId,
+  resolveDagsterAssetResultsDbConfig,
+} from '../../utils/dagster-asset-results'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 const AVAILABLE_ASSETS = [
@@ -29,16 +34,6 @@ function normalizeAssetName(value: unknown): string {
 
 function resolveAssetSelection(assetName: string, includeUpstream: boolean): string {
   return includeUpstream ? `*${assetName}` : assetName
-}
-
-function resolveDagsterDbConfig() {
-  return {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    user: process.env.DB_USER || 'dagster',
-    password: process.env.DB_PASSWORD || 'dagster',
-    database: process.env.DB_NAME || 'dagster',
-  }
 }
 
 type DagsterScheduleSnapshot = {
@@ -71,38 +66,32 @@ async function persistDagsterSnapshot(snapshot: DagsterScheduleSnapshot, executi
 
   try {
     const { Pool } = await import('pg')
-    pool = new Pool(resolveDagsterDbConfig())
-
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS asset_results (
-        id SERIAL PRIMARY KEY,
-        asset_name VARCHAR(255) NOT NULL,
-        run_id VARCHAR(255),
-        materialization_time TIMESTAMP DEFAULT NOW(),
-        data JSONB,
-        status VARCHAR(50) DEFAULT 'success',
-        error_message TEXT,
-        execution_time_ms INTEGER,
-        UNIQUE(asset_name, run_id)
-      )
-    `)
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_asset_results_name ON asset_results(asset_name)')
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_asset_results_time ON asset_results(materialization_time DESC)')
+    pool = new Pool(resolveDagsterAssetResultsDbConfig())
+    await ensureDagsterAssetResultsSchema(pool)
 
     const assetName = String(snapshot.asset || 'optimization_schedule_milp_asset')
     const runId = `snapshot_${assetName}_${Date.now()}`
+    const tenantId = normalizeDagsterTenantId(snapshot.tenant_id)
+
+    if (!tenantId) {
+      return {
+        stored: false,
+        error: 'Tenant-scoped Dagster snapshots require tenant_id before persistence',
+      }
+    }
 
     await pool.query(
       `
-        INSERT INTO asset_results (asset_name, run_id, materialization_time, data, status, execution_time_ms)
-        VALUES ($1, $2, NOW(), $3::jsonb, 'success', $4)
+        INSERT INTO asset_results (asset_name, run_id, tenant_id, materialization_time, data, status, execution_time_ms)
+        VALUES ($1, $2, $3, NOW(), $4::jsonb, 'success', $5)
         ON CONFLICT (asset_name, run_id)
         DO UPDATE SET
+          tenant_id = EXCLUDED.tenant_id,
           data = EXCLUDED.data,
           status = EXCLUDED.status,
           execution_time_ms = EXCLUDED.execution_time_ms
       `,
-      [assetName, runId, JSON.stringify(snapshot), executionTimeMs],
+      [assetName, runId, tenantId, JSON.stringify(snapshot), executionTimeMs],
     )
 
     return {

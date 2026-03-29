@@ -14,6 +14,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 import json
+from typing import Any, Dict
 import pandas as pd
 import numpy as np
 
@@ -107,6 +108,11 @@ def generate_sample_data(n_samples: int = 10000, n_features: int = 73) -> tuple:
         'peak_hours_remaining', 'off_peak_hours_remaining', 'seasonal_factor',
         'renewable_penetration', 'grid_carbon_intensity', 'demand_forecast_error',
     ]
+
+    if n_features > len(feature_names):
+        feature_names.extend(
+            [f'engineered_feature_{index}' for index in range(len(feature_names), n_features)]
+        )
     
     feature_names = feature_names[:n_features]
     

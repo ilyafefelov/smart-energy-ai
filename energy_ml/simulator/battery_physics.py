@@ -30,7 +30,7 @@ Each model includes:
 
 import numpy as np
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional
 from abc import ABC, abstractmethod
 import logging
 
@@ -127,7 +127,7 @@ class BatteryModel(ABC):
         
         return new_soc
         
-    def get_status(self) -> Dict[str, any]:
+    def get_status(self) -> Dict[str, Any]:
         """Get comprehensive battery status"""
         return {
             'battery_type': self.__class__.__name__.replace('BatteryModel', ''),

@@ -4,17 +4,47 @@ Phase 3 (Final) Deployment - 82-85%+ Accuracy Model
 Generated: 2026-02-28 22:51 UTC+2
 """
 
+import importlib.util
+import sys
+from pathlib import Path
+
 from dagster import asset, job, In, Out, op, graph
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, StackingClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, StackingClassifier, VotingClassifier
 from sklearn.linear_model import LogisticRegression
 import xgboost as xgb
 from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import StratifiedKFold
-import pickle
 import logging
+import pickle
+
+
+def _load_support_module():
+    try:
+        from energy_ml.assets import ml_star_pipeline_support as support_module
+
+        return support_module
+    except Exception:
+        support_path = Path(__file__).with_name("ml_star_pipeline_support.py")
+        module_name = "energy_ml.assets.ml_star_pipeline_support"
+        existing_module = sys.modules.get(module_name)
+        if existing_module is not None:
+            return existing_module
+
+        spec = importlib.util.spec_from_file_location(module_name, support_path)
+        module = importlib.util.module_from_spec(spec)
+        assert spec is not None and spec.loader is not None
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+
+
+_SUPPORT_MODULE = _load_support_module()
+DEPLOYMENT_INSTRUCTIONS = _SUPPORT_MODULE.DEPLOYMENT_INSTRUCTIONS
+SmartEnergyAIPredictor = _SUPPORT_MODULE.SmartEnergyAIPredictor
+evaluate_classifier_metrics = _SUPPORT_MODULE.evaluate_classifier_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -74,25 +104,14 @@ def create_phase1_voting_ensemble(context, X_train, y_train):
 @op
 def evaluate_phase1_model(context, model, X_test, y_test):
     """Evaluate Phase 1 model"""
-    from sklearn.metrics import accuracy_score, f1_score, recall_score
-    
-    y_pred = model.predict(X_test)
-    
-    accuracy = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred, average='weighted')
-    recall = recall_score(y_test, y_pred, average='weighted')
-    
-    metrics = {
-        'phase': 1,
-        'model_type': 'Soft Voting Ensemble',
-        'accuracy': accuracy,
-        'f1_score': f1,
-        'recall': recall
-    }
-    
-    context.log.info(f"Phase 1 Results: Accuracy={accuracy:.4f}, F1={f1:.4f}")
-    
-    return metrics
+    return evaluate_classifier_metrics(
+        context,
+        model,
+        X_test,
+        y_test,
+        phase=1,
+        model_type='Soft Voting Ensemble',
+    )
 
 
 # ============================================================================
@@ -148,25 +167,14 @@ def create_phase2_stacking_ensemble(context, X_train, y_train, best_xgb_params=N
 @op
 def evaluate_phase2_model(context, model, X_test, y_test):
     """Evaluate Phase 2 model"""
-    from sklearn.metrics import accuracy_score, f1_score, recall_score
-    
-    y_pred = model.predict(X_test)
-    
-    accuracy = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred, average='weighted')
-    recall = recall_score(y_test, y_pred, average='weighted')
-    
-    metrics = {
-        'phase': 2,
-        'model_type': 'Stacking Ensemble (Optimized)',
-        'accuracy': accuracy,
-        'f1_score': f1,
-        'recall': recall
-    }
-    
-    context.log.info(f"Phase 2 Results: Accuracy={accuracy:.4f}, F1={f1:.4f}")
-    
-    return metrics
+    return evaluate_classifier_metrics(
+        context,
+        model,
+        X_test,
+        y_test,
+        phase=2,
+        model_type='Stacking Ensemble (Optimized)',
+    )
 
 
 # ============================================================================
@@ -242,74 +250,15 @@ def create_phase3_optimized_ensemble(context, X_train, y_train, selected_indices
 @op
 def evaluate_phase3_model(context, model, X_test, y_test, selected_indices):
     """Evaluate Phase 3 model on selected features"""
-    from sklearn.metrics import accuracy_score, f1_score, recall_score, confusion_matrix
-    
-    X_test_selected = X_test.iloc[:, selected_indices]
-    y_pred = model.predict(X_test_selected)
-    
-    accuracy = accuracy_score(y_test, y_pred)
-    f1 = f1_score(y_test, y_pred, average='weighted')
-    recall = recall_score(y_test, y_pred, average='weighted')
-    
-    metrics = {
-        'phase': 3,
-        'model_type': 'Stacking Ensemble (Feature-Selected)',
-        'accuracy': accuracy,
-        'f1_score': f1,
-        'recall': recall,
-        'selected_features': len(selected_indices)
-    }
-    
-    context.log.info(f"Phase 3 Results: Accuracy={accuracy:.4f}, F1={f1:.4f}")
-    context.log.info(f"Total improvement: +{(accuracy - 0.725)*100:.1f}% vs baseline (72.5%)")
-    
-    return metrics
-
-
-# ============================================================================
-# PRODUCTION INFERENCE
-# ============================================================================
-
-class SmartEnergyAIPredictor:
-    """Production inference wrapper for optimized energy model"""
-    
-    def __init__(self, model, selected_indices, feature_scaler=None):
-        self.model = model
-        self.selected_indices = selected_indices
-        self.scaler = feature_scaler
-        self.classes = ['BUY', 'SELL', 'HOLD', 'DISCHARGE']
-    
-    def predict(self, X):
-        """Single prediction"""
-        X_selected = X.iloc[:, self.selected_indices]
-        return self.model.predict(X_selected)
-    
-    def predict_proba(self, X):
-        """Prediction with probabilities"""
-        X_selected = X.iloc[:, self.selected_indices]
-        return self.model.predict_proba(X_selected)
-    
-    def predict_batch(self, X, batch_size=1000):
-        """Batch prediction for large datasets"""
-        predictions = []
-        for i in range(0, len(X), batch_size):
-            batch = X.iloc[i:i+batch_size]
-            pred = self.predict(batch)
-            predictions.extend(pred)
-        return np.array(predictions)
-    
-    def predict_with_confidence(self, X):
-        """Return prediction with confidence score"""
-        proba = self.predict_proba(X)
-        predictions = self.predict(X)
-        confidence = proba.max(axis=1)
-        
-        return {
-            'predictions': predictions,
-            'confidence': confidence,
-            'probabilities': proba,
-            'class_labels': [self.classes[p] for p in predictions]
-        }
+    return evaluate_classifier_metrics(
+        context,
+        model,
+        X_test,
+        y_test,
+        phase=3,
+        model_type='Stacking Ensemble (Feature-Selected)',
+        selected_indices=selected_indices,
+    )
 
 
 # ============================================================================
@@ -345,33 +294,4 @@ def energy_ml_star_pipeline():
 # DEPLOYMENT INSTRUCTIONS
 # ============================================================================
 
-"""
-DEPLOYMENT STEPS:
-
-1. Copy this file to: energy_ml/assets/ml_star_optimized_pipeline.py
-
-2. Update energy_ml/jobs/__init__.py to include:
-   from energy_ml.assets.ml_star_optimized_pipeline import energy_ml_star_pipeline
-   
-3. Replace old pipeline with:
-   @job
-   def energy_optimization_pipeline():
-       energy_ml_star_pipeline()
-
-4. Run:
-   dagster job execute -f energy_ml/jobs/__init__.py -j energy_optimization_pipeline
-
-5. Expected Results:
-   - Phase 1: 76%+ accuracy
-   - Phase 2: 79-80%+ accuracy  
-   - Phase 3: 82-85%+ accuracy
-   
-6. Production Deployment:
-   predictor = SmartEnergyAIPredictor(phase3_model, selected_indices)
-   predictions = predictor.predict_batch(X_new)
-   
-7. Rollback if needed:
-   - Keep old model in backup
-   - Use A/B testing (50% old, 50% new)
-   - Monitor for 1 week before full cutover
-"""
+__doc__ = (__doc__ or "") + "\n\n" + DEPLOYMENT_INSTRUCTIONS

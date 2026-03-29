@@ -1,7 +1,13 @@
 // Control API - Command Execution Endpoint
 // POST /api/control/execute
 
-import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
+import {
+  buildDecisionSnapshot,
+  buildOptimizationExecutionKey,
+  type DecisionSnapshot,
+  type PersistOptimizationHistoryResult,
+  persistOptimizationHistory,
+} from '../../utils/optimization-history'
 import { recordBillingUsageEvent } from '../../utils/billing'
 import { updateBatteryState } from '../../utils/battery'
 import { updateBatteryControlState } from '../../utils/battery-control-state'
@@ -15,6 +21,7 @@ import {
   type LoadProfileType,
   type StrategyWeights,
 } from '../../utils/auto-strategy'
+import { normalizeDecisionSource } from '../../utils/recommendation-contract'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 type ExecutableCommand = 'charge' | 'discharge' | 'hold'
@@ -32,6 +39,7 @@ type ExecutionPlan = {
   loadProfileType: LoadProfileType
   strategyWeights: StrategyWeights
   recommendationSource: string
+  decisionSnapshot: DecisionSnapshot
 }
 
 export default defineEventHandler(async (event) => {
@@ -117,7 +125,7 @@ export default defineEventHandler(async (event) => {
         
         const pythonResult = JSON.parse(result)
 
-        await persistCommandToOptimizationHistory({
+        const historyPersistResult = await persistCommandToOptimizationHistory({
           command: executableCommand,
           executionResult: pythonResult,
           executionSource: 'python_controller',
@@ -127,6 +135,7 @@ export default defineEventHandler(async (event) => {
           modeFrom: executionPlan.modeFrom,
           modeTo: executionPlan.modeTo,
           requestedCommand: executionPlan.requestedCommand,
+          decisionSnapshot: executionPlan.decisionSnapshot,
         })
 
         recordBillingForExecutedCommand(executableCommand, pythonResult, 'python_controller', executionPlan.requestedCommand)
@@ -158,6 +167,11 @@ export default defineEventHandler(async (event) => {
           optimization_strategy: executionPlan.optimizationStrategy,
           load_profile_type: executionPlan.loadProfileType,
           strategy_weights: executionPlan.strategyWeights,
+          execution_key: historyPersistResult.executionKey,
+          execution_status: pythonResult?.success === false ? 'failed' : 'executed',
+          is_reconciled: historyPersistResult.reconciled,
+          reconciliation_note: historyPersistResult.reconciliationNote ?? null,
+          decision_snapshot: executionPlan.decisionSnapshot,
           tenant_id: tenant.id,
           result: pythonResult,
           executed_at: new Date().toISOString(),
@@ -182,8 +196,16 @@ export default defineEventHandler(async (event) => {
             tenant_filter_applied: true,
             python_script: pythonScript,
             python_script_available: true,
+            execution_key: historyPersistResult.executionKey,
+            execution_status: pythonResult?.success === false ? 'failed' : 'executed',
+            is_reconciled: historyPersistResult.reconciled,
+            reconciliation_note: historyPersistResult.reconciliationNote ?? null,
             fallback_reason_code: 'none',
+            decision_snapshot_version: executionPlan.decisionSnapshot.version,
+            history_execution_key: historyPersistResult.executionKey,
+            optimization_history_reconciled: historyPersistResult.reconciled,
           },
+          decision_snapshot: executionPlan.decisionSnapshot,
           source: 'python_controller'
         }
         
@@ -246,6 +268,11 @@ export default defineEventHandler(async (event) => {
       optimization_strategy: executionPlan.optimizationStrategy,
       load_profile_type: executionPlan.loadProfileType,
       strategy_weights: executionPlan.strategyWeights,
+      execution_key: null,
+      execution_status: simulationResult?.success === false ? 'failed' : 'executed',
+      is_reconciled: false,
+      reconciliation_note: null,
+      decision_snapshot: executionPlan.decisionSnapshot,
       tenant_id: tenant.id,
       result: simulationResult,
       executed_at: new Date().toISOString(),
@@ -257,7 +284,7 @@ export default defineEventHandler(async (event) => {
 
     appendCommandHistory(historyEntry)
 
-    await persistCommandToOptimizationHistory({
+    const historyPersistResult = await persistCommandToOptimizationHistory({
       command: executableCommand,
       executionResult: simulationResult,
       executionSource: 'simulation',
@@ -267,7 +294,12 @@ export default defineEventHandler(async (event) => {
       modeFrom: executionPlan.modeFrom,
       modeTo: executionPlan.modeTo,
       requestedCommand: executionPlan.requestedCommand,
+      decisionSnapshot: executionPlan.decisionSnapshot,
     })
+
+    historyEntry.execution_key = historyPersistResult.executionKey
+    historyEntry.is_reconciled = historyPersistResult.reconciled
+    historyEntry.reconciliation_note = historyPersistResult.reconciliationNote ?? null
 
     recordBillingForExecutedCommand(executableCommand, simulationResult, 'simulation', executionPlan.requestedCommand)
 
@@ -303,7 +335,11 @@ export default defineEventHandler(async (event) => {
         python_script: pythonScript,
         python_script_available: pythonScriptAvailable,
         fallback_reason_code: fallbackReasonCode || 'python_unavailable',
+        decision_snapshot_version: executionPlan.decisionSnapshot.version,
+        history_execution_key: historyPersistResult.executionKey,
+        optimization_history_reconciled: historyPersistResult.reconciled,
       },
+      decision_snapshot: executionPlan.decisionSnapshot,
       source: 'simulation'
     }
     
@@ -358,6 +394,29 @@ function resolveCommandId(body: any, timestampIso: string): string {
   return `cmd_${Date.parse(timestampIso)}_${suffix}`
 }
 
+function toFiniteNumber(value: unknown): number | null {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function resolvePreviousActionForTenant(tenantId: string): 'BUY' | 'SELL' | 'HOLD' | null {
+  const history = Array.isArray(globalThis.commandHistory) ? globalThis.commandHistory : []
+  const previousEntry = history.find((entry: any) => {
+    const entryTenantId = String(entry?.tenant_id || entry?.tenantId || '')
+    return entryTenantId === tenantId
+  })
+
+  if (!previousEntry) {
+    return null
+  }
+
+  return mapExecutionCommandToRecommendationAction(previousEntry.resolved_command || previousEntry.command || 'hold')
+}
+
+function resolveSnapshotDecisionSource(value: string): string {
+  return normalizeDecisionSource(value, 'heuristic_fallback')
+}
+
 type CommandPayload = {
   command_id: string
   schedule_id: string | null
@@ -380,6 +439,7 @@ type PersistInput = {
   modeFrom: 'manual' | 'automatic'
   modeTo: 'manual' | 'automatic'
   requestedCommand: string
+  decisionSnapshot: DecisionSnapshot
 }
 
 type PricingContext = {
@@ -579,7 +639,7 @@ function computeCanonicalEconomics(command: CommandPayload, energyKwh: number, p
   }
 }
 
-async function persistCommandToOptimizationHistory(input: PersistInput): Promise<void> {
+async function persistCommandToOptimizationHistory(input: PersistInput): Promise<PersistOptimizationHistoryResult> {
   const command = input.command
   const executionResult = input.executionResult || {}
 
@@ -647,6 +707,7 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
     realized_revenue_uah: Number.isFinite(realizedRevenueUah) ? realizedRevenueUah : null,
     realized_cost_uah: Number.isFinite(realizedCostUah) ? realizedCostUah : null,
     realized_net_uah: Number.isFinite(realizedNetUah) ? realizedNetUah : null,
+    decision_snapshot: input.decisionSnapshot,
   })
 
   if (!persistResult.ok) {
@@ -655,7 +716,7 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
       execution_key: executionKey,
       error: persistResult.error || 'unknown',
     })
-    return
+    return persistResult
   }
 
   console.info('[control/execute] optimization_history persist outcome', {
@@ -664,6 +725,8 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
     inserted: persistResult.inserted,
     updated: persistResult.updated,
   })
+
+  return persistResult
 }
 
 function recordBillingForExecutedCommand(
@@ -727,6 +790,29 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
   const currentPrice = Number(pricesPayload?.prices?.current?.price)
   const avgPrice = Number(pricesPayload?.prices?.today?.avg)
   const batterySocPercent = Number(batteryPayload?.battery?.soc)
+  const batteryHealthPercent = Number(batteryPayload?.battery?.health)
+  const batteryTempC = Number(batteryPayload?.battery?.temperature)
+  const previousAction = resolvePreviousActionForTenant(tenantId)
+  const sharedSnapshotBase = {
+    tenant_id: tenantId,
+    timestamp: command.timestamp,
+    current_price_uah_kwh: toFiniteNumber(currentPrice),
+    avg_price_uah_kwh: toFiniteNumber(avgPrice),
+    battery_soc_percent: toFiniteNumber(batterySocPercent),
+    battery_health_percent: toFiniteNumber(batteryHealthPercent),
+    battery_temp_c: toFiniteNumber(batteryTempC),
+    estimated_load_kw: null,
+    estimated_solar_kw: null,
+    optimization_strategy: optimizationStrategy,
+    load_profile_type: loadProfileType,
+    previous_action: previousAction,
+    provenance: {
+      state_source: 'simulator_backed_telemetry',
+      state_source_detail: 'api/battery/status',
+      telemetry_classification: 'simulated_operational_telemetry',
+      recommendation_contract_version: null,
+    },
+  }
 
   if (command.command !== 'auto') {
     const normalizedPower = command.command === 'hold'
@@ -747,6 +833,13 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
       loadProfileType,
       strategyWeights,
       recommendationSource: 'manual_input',
+      decisionSnapshot: buildDecisionSnapshot({
+        ...sharedSnapshotBase,
+        decision_source: 'manual_override',
+        recommendation_source: 'manual_input',
+        selected_action: mapExecutionCommandToRecommendationAction(command.command as ExecutableCommand),
+        selected_power_kw: normalizedPower,
+      }),
     }
   }
 
@@ -783,6 +876,37 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
       loadProfileType,
       strategyWeights,
       recommendationSource: source || 'dagster_recommendation',
+      decisionSnapshot: buildDecisionSnapshot({
+        ...sharedSnapshotBase,
+        decision_source: resolveSnapshotDecisionSource(dagsterRecommendation?.provenance?.decision_source || source || 'dagster_optimizer'),
+        recommendation_source:
+          dagsterRecommendation?.source_metadata?.recommendation_source_detail
+          || dagsterRecommendation?.source_metadata?.recommendation_source
+          || source
+          || 'dagster_recommendation',
+        selected_action: mapExecutionCommandToRecommendationAction(adjusted.command),
+        selected_power_kw: adjusted.powerKw,
+        fallback_reason: dagsterRecommendation?.provenance?.fallback_reason_code,
+        provenance: {
+          state_source: dagsterRecommendation?.provenance?.state_source || sharedSnapshotBase.provenance.state_source,
+          state_source_detail: dagsterRecommendation?.provenance?.state_source_detail || sharedSnapshotBase.provenance.state_source_detail,
+          telemetry_classification:
+            dagsterRecommendation?.provenance?.telemetry_classification
+            || sharedSnapshotBase.provenance.telemetry_classification,
+          recommendation_contract_version: dagsterRecommendation?.contract?.version || null,
+        },
+        contract: {
+          version: dagsterRecommendation?.contract?.version || null,
+          normalized_action:
+            dagsterRecommendation?.contract?.normalized_action
+            || dagsterRecommendation?.recommendation?.normalized_action
+            || null,
+          compliance:
+            dagsterRecommendation?.contract?.compliance
+            || dagsterRecommendation?.recommendation?.policy_compliance
+            || null,
+        },
+      }),
     }
   } catch {
     try {
@@ -806,6 +930,46 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
         loadProfileType,
         strategyWeights,
         recommendationSource: 'ml_recommendation',
+        decisionSnapshot: buildDecisionSnapshot({
+          ...sharedSnapshotBase,
+          decision_source: resolveSnapshotDecisionSource(
+            mlRecommendation?.data?.provenance?.decision_source
+            || mlRecommendation?.contract?.provenance?.decision_source
+            || 'ml_recommendation',
+          ),
+          recommendation_source: 'ml_recommendation',
+          selected_action: mapExecutionCommandToRecommendationAction(adjusted.command),
+          selected_power_kw: adjusted.powerKw,
+          fallback_reason:
+            mlRecommendation?.data?.provenance?.fallback_reason_code
+            || mlRecommendation?.contract?.provenance?.fallback_reason_code,
+          provenance: {
+            state_source:
+              mlRecommendation?.data?.provenance?.state_source
+              || mlRecommendation?.contract?.provenance?.state_source
+              || sharedSnapshotBase.provenance.state_source,
+            state_source_detail:
+              mlRecommendation?.data?.provenance?.state_source_detail
+              || mlRecommendation?.contract?.provenance?.state_source_detail
+              || sharedSnapshotBase.provenance.state_source_detail,
+            telemetry_classification:
+              mlRecommendation?.data?.provenance?.telemetry_classification
+              || mlRecommendation?.contract?.provenance?.telemetry_classification
+              || sharedSnapshotBase.provenance.telemetry_classification,
+            recommendation_contract_version: mlRecommendation?.contract?.version || null,
+          },
+          contract: {
+            version: mlRecommendation?.contract?.version || null,
+            normalized_action:
+              mlRecommendation?.contract?.normalized_action
+              || mlRecommendation?.data?.normalized_action
+              || null,
+            compliance:
+              mlRecommendation?.contract?.compliance
+              || mlRecommendation?.data?.policy_compliance
+              || null,
+          },
+        }),
       }
     } catch {
       const pricesPayload = await $fetch<any>('/api/prices/current', tenantRequest).catch(() => null)
@@ -830,6 +994,14 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
         loadProfileType,
         strategyWeights,
         recommendationSource: 'heuristic_fallback',
+        decisionSnapshot: buildDecisionSnapshot({
+          ...sharedSnapshotBase,
+          decision_source: 'heuristic_fallback',
+          recommendation_source: 'heuristic_fallback',
+          selected_action: mapExecutionCommandToRecommendationAction(adjusted.command),
+          selected_power_kw: adjusted.powerKw,
+          fallback_reason: 'heuristic_price_threshold',
+        }),
       }
     }
   }

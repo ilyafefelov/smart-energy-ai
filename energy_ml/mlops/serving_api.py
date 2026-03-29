@@ -5,23 +5,64 @@ FastAPI serving layer with real-time prediction, WebSocket updates, and health c
 
 import logging
 import asyncio
-from typing import Dict, List, Optional, Any
+import importlib.util
+import sys
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 import json
 import time
-from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import numpy as np
 
 from .model_registry import get_model_registry
 from .feature_store import get_feature_store
 from .battery_physics import BatteryPhysicsEngine
-from .optimization_engine import OptimizationEngine, OptimizationStrategy
+from .optimization_engine import OptimizationEngine
 from .monitoring_dashboard import get_monitoring_dashboard
 from .retraining_pipeline import get_retraining_pipeline, get_ab_test_manager
+from ..user_config import UserConfigModel
+
+try:
+    from energy_ml.mlops.serving_api_support import (
+        build_feature_vector,
+        build_fallback_prediction,
+        build_health_components,
+        build_health_response_payload,
+        build_prediction_response_payload,
+        coerce_prediction_output,
+        estimate_power_kw,
+        estimate_profit_uah,
+        prediction_value_from_decision,
+        prune_disconnected_websockets,
+        simulate_battery_response,
+        summarize_model_versions,
+    )
+except ImportError:
+    _SUPPORT_MODULE_NAME = "energy_ml.mlops.serving_api_support"
+    _SUPPORT_PATH = Path(__file__).with_name("serving_api_support.py")
+    _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
+    if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
+        raise ImportError(f"Unable to load serving API support module from {_SUPPORT_PATH}")
+    _SUPPORT_MODULE = sys.modules.get(_SUPPORT_MODULE_NAME)
+    if _SUPPORT_MODULE is None:
+        _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
+        sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
+        _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
+    build_feature_vector = _SUPPORT_MODULE.build_feature_vector
+    build_fallback_prediction = _SUPPORT_MODULE.build_fallback_prediction
+    build_health_components = _SUPPORT_MODULE.build_health_components
+    build_health_response_payload = _SUPPORT_MODULE.build_health_response_payload
+    build_prediction_response_payload = _SUPPORT_MODULE.build_prediction_response_payload
+    coerce_prediction_output = _SUPPORT_MODULE.coerce_prediction_output
+    estimate_power_kw = _SUPPORT_MODULE.estimate_power_kw
+    estimate_profit_uah = _SUPPORT_MODULE.estimate_profit_uah
+    prediction_value_from_decision = _SUPPORT_MODULE.prediction_value_from_decision
+    prune_disconnected_websockets = _SUPPORT_MODULE.prune_disconnected_websockets
+    simulate_battery_response = _SUPPORT_MODULE.simulate_battery_response
+    summarize_model_versions = _SUPPORT_MODULE.summarize_model_versions
 
 logger = logging.getLogger(__name__)
 
@@ -95,16 +136,15 @@ class MLServingAPI:
         
         # Initialize physics engines for different chemistries
         self.physics_engines = {
-            "LFP": BatteryPhysicsEngine("LFP"),
-            "Lead-Acid": BatteryPhysicsEngine("Lead-Acid"),
-            "VRFB": BatteryPhysicsEngine("VRFB")
+            chemistry: BatteryPhysicsEngine()
+            for chemistry in BatteryPhysicsEngine.CHEMISTRY_PARAMS
         }
         
         # Initialize optimization engines
-        self.optimization_engines = {}
-        for strategy in OptimizationStrategy:
-            engine = OptimizationEngine(self.physics_engines["LFP"], strategy)
-            self.optimization_engines[strategy.value] = engine
+        self.optimization_engines = {
+            strategy: OptimizationEngine()
+            for strategy in OptimizationEngine.OPTIMIZATION_STRATEGIES
+        }
             
         # WebSocket connections for real-time updates
         self.websocket_connections: List[WebSocket] = []
@@ -126,27 +166,16 @@ class MLServingAPI:
         async def health_check():
             """Health check endpoint with detailed status"""
             start_time = time.time()
-            
-            # Check component health
-            components = {
-                "model_registry": self._check_model_registry(),
-                "feature_store": self._check_feature_store(),
-                "physics_engines": len(self.physics_engines) > 0,
-                "optimization_engines": len(self.optimization_engines) > 0,
-                "cached_model": self.cached_model is not None
-            }
-            
-            all_healthy = all(components.values())
-            latency_ms = (time.time() - start_time) * 1000
-            
-            return HealthCheckResponse(
-                status="healthy" if all_healthy else "degraded",
-                timestamp=datetime.now().isoformat(),
-                version="2.0.0",
-                models_loaded=self.cached_model is not None,
-                latency_ms=latency_ms,
-                components=components
+            components = build_health_components(
+                self._check_model_registry(),
+                self._check_feature_store(),
+                len(self.physics_engines),
+                len(self.optimization_engines),
+                self.cached_model,
             )
+            latency_ms = (time.time() - start_time) * 1000
+
+            return HealthCheckResponse(**build_health_response_payload(components, latency_ms, datetime.now()))
             
         @self.app.post("/predict", response_model=PredictionResponse)
         async def predict_optimization(request: PredictionRequest, background_tasks: BackgroundTasks):
@@ -168,7 +197,7 @@ class MLServingAPI:
                     raise HTTPException(status_code=503, detail="No model available for prediction")
                     
                 # Get real-time features
-                features = self.feature_store.get_online_features(
+                features = self.feature_store.load_online_features(
                     "energy_features",
                     {"user_id": request.user_id, "timestamp": datetime.now()}
                 )
@@ -184,16 +213,14 @@ class MLServingAPI:
                 })
                 
                 # Get optimization engine for strategy
-                strategy = OptimizationStrategy(request.strategy) if request.strategy in [s.value for s in OptimizationStrategy] else OptimizationStrategy.BALANCED
-                optimization_engine = self.optimization_engines[strategy.value]
+                strategy = self._resolve_strategy(request.strategy)
+                optimization_engine = self.optimization_engines[strategy]
+                base_prediction = self._build_base_prediction(model, features)
                 
                 # Make optimization decision
                 decision = optimization_engine.optimize_decision(
-                    grid_price_uah_kwh=request.grid_price_uah_kwh,
-                    load_demand_kw=request.load_demand_kw,
-                    solar_generation_kw=request.solar_generation_kw,
-                    wind_generation_kw=request.wind_generation_kw,
-                    temperature=request.temperature_celsius
+                    base_prediction,
+                    strategy,
                 )
                 
                 # Calculate latency
@@ -205,27 +232,23 @@ class MLServingAPI:
                     model_version, features, decision, request.user_id, latency_ms
                 )
                 
-                response = PredictionResponse(
-                    action=decision.action,
-                    power_kw=decision.power_kw,
-                    duration_h=decision.duration_h,
-                    confidence=decision.confidence,
-                    expected_profit_uah=decision.expected_profit_uah,
-                    health_impact_percent=decision.health_impact_percent,
-                    reasoning=decision.reasoning,
-                    strategy_used=decision.strategy_used.value,
-                    prediction_id=prediction_id,
-                    timestamp=datetime.now().isoformat(),
-                    model_version=model_version
+                response = self._build_prediction_response(
+                    decision,
+                    request,
+                    prediction_id,
+                    model_version,
+                    strategy,
                 )
                 
                 # Send real-time update to WebSocket clients
                 await self._broadcast_websocket_update({
                     "type": "prediction",
-                    "data": response.dict()
+                    "data": response.model_dump()
                 })
                 
                 return response
+            except HTTPException:
+                raise
                 
             except Exception as e:
                 logger.error(f"Prediction failed: {str(e)}")
@@ -238,47 +261,9 @@ class MLServingAPI:
             try:
                 if request.battery_type not in self.physics_engines:
                     raise HTTPException(status_code=400, detail=f"Unsupported battery type: {request.battery_type}")
-                    
-                physics_engine = self.physics_engines[request.battery_type]
-                
-                # Store initial state
-                initial_state = physics_engine.current_model.state
-                
-                # Run simulation
-                final_state = physics_engine.simulate_charge_discharge(
-                    request.power_kw,
-                    request.duration_h,
-                    request.temperature
-                )
-                
-                # Get physics summary
-                summary = physics_engine.get_physics_summary()
-                
-                # Restore initial state (don't modify global state)
-                physics_engine.current_model.state = initial_state
-                
-                return {
-                    "initial_state": {
-                        "soc_percent": initial_state.soc * 100,
-                        "soh_percent": initial_state.soh * 100,
-                        "voltage": initial_state.voltage,
-                        "temperature": initial_state.temperature
-                    },
-                    "final_state": {
-                        "soc_percent": final_state.soc * 100,
-                        "soh_percent": final_state.soh * 100,
-                        "voltage": final_state.voltage,
-                        "temperature": final_state.temperature,
-                        "cycles_completed": final_state.cycles_completed
-                    },
-                    "physics_summary": summary,
-                    "simulation_params": {
-                        "power_kw": request.power_kw,
-                        "duration_h": request.duration_h,
-                        "temperature": request.temperature,
-                        "battery_type": request.battery_type
-                    }
-                }
+                return self._simulate_battery_request(request)
+            except HTTPException:
+                raise
                 
             except Exception as e:
                 logger.error(f"Battery simulation failed: {str(e)}")
@@ -356,25 +341,7 @@ class MLServingAPI:
                 development_models = self.model_registry.list_model_versions("energy_optimizer", stage="development")
                 
                 return {
-                    "production": [
-                        {
-                            "version_id": m.version_id,
-                            "created_at": m.created_at.isoformat(),
-                            "performance_mape": m.performance_metrics.get("test_mape", 0),
-                            "health_status": m.health_status
-                        }
-                        for m in production_models[:5]  # Latest 5
-                    ],
-                    "staging": [
-                        {
-                            "version_id": m.version_id,
-                            "created_at": m.created_at.isoformat(),
-                            "performance_mape": m.performance_metrics.get("test_mape", 0),
-                            "health_status": m.health_status
-                        }
-                        for m in staging_models[:5]
-                    ],
-                    "development": len(development_models)
+                    **summarize_model_versions(production_models, staging_models, development_models)
                 }
                 
             except Exception as e:
@@ -385,6 +352,8 @@ class MLServingAPI:
         """Check if model registry is healthy"""
         try:
             models = self.model_registry.list_model_versions("energy_optimizer")
+            if models is None:
+                return False
             return len(models) > 0
         except Exception:
             return False
@@ -392,7 +361,10 @@ class MLServingAPI:
     def _check_feature_store(self) -> bool:
         """Check if feature store is healthy"""
         try:
-            return len(self.feature_store.feature_views) > 0
+            feature_views = getattr(self.feature_store, "feature_views", None)
+            if feature_views is None:
+                return False
+            return len(feature_views) > 0
         except Exception:
             return False
             
@@ -426,15 +398,72 @@ class MLServingAPI:
         except Exception as e:
             logger.error(f"Failed to load model version {version_id}: {str(e)}")
             return None
+
+    def _resolve_strategy(self, requested_strategy: str) -> str:
+        """Return a known optimization strategy token."""
+        if requested_strategy in self.optimization_engines:
+            return requested_strategy
+        return "balanced"
+
+    def _build_base_prediction(self, model: Any, features: Dict[str, Any]) -> Dict[str, Any]:
+        """Adapt raw model output into the optimizer's dict contract."""
+        if hasattr(model, "predict"):
+            try:
+                raw_prediction = model.predict(build_feature_vector(features))
+                return self._coerce_prediction_output(raw_prediction, features)
+            except Exception as exc:
+                logger.warning(f"Model prediction adapter failed, using fallback decision seed: {exc}")
+
+        return self._build_fallback_prediction(features)
+
+    def _coerce_prediction_output(self, raw_prediction: Any, features: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize raw model output into a prediction envelope."""
+        return coerce_prediction_output(raw_prediction, features, datetime.now())
+
+    def _build_fallback_prediction(self, features: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a conservative prediction envelope when the raw model is not directly adaptable."""
+        return build_fallback_prediction(features, datetime.now())
+
+    def _build_prediction_response(
+        self,
+        decision: Dict[str, Any],
+        request: PredictionRequest,
+        prediction_id: str,
+        model_version: str,
+        strategy: str,
+    ) -> PredictionResponse:
+        """Fill the serving response model from the optimizer's dict contract."""
+        return PredictionResponse(
+            **build_prediction_response_payload(decision, request, prediction_id, model_version, strategy, datetime.now())
+        )
+
+    def _estimate_power_kw(self, action: str, request: PredictionRequest) -> float:
+        """Choose a bounded power estimate when the optimizer does not provide one."""
+        return estimate_power_kw(action, float(request.load_demand_kw))
+
+    def _estimate_profit_uah(self, action: str, power_kw: float, duration_h: float, grid_price_uah_kwh: float) -> float:
+        """Compute a simple profit proxy for a stable API envelope."""
+        return estimate_profit_uah(action, power_kw, duration_h, grid_price_uah_kwh)
+
+    def _simulate_battery_request(self, request: BatterySimulationRequest) -> Dict[str, Any]:
+        """Adapt the request to the current battery physics engine contract."""
+        physics_engine = self.physics_engines[request.battery_type]
+        config = UserConfigModel(
+            battery_type=request.battery_type,
+            battery_temperature_c=request.temperature,
+        )
+        physics_data = physics_engine.simulate_battery_behavior(config)
+        return simulate_battery_response(physics_data, request, float(config.battery_capacity_kwh))
             
     async def _log_prediction_async(self, model_version: str, features: Dict[str, Any], decision, user_id: str, latency_ms: float):
         """Log prediction asynchronously for monitoring"""
         
         try:
+            prediction_value = prediction_value_from_decision(decision)
             self.monitoring_dashboard.monitor.log_prediction(
                 model_version=model_version,
                 features=features,
-                prediction=decision.expected_profit_uah,  # Use profit as prediction value
+                prediction=prediction_value,
                 latency_ms=latency_ms
             )
             
@@ -443,7 +472,7 @@ class MLServingAPI:
                 self.ab_test_manager.log_ab_result(
                     test_name=test_name,
                     version=model_version,
-                    prediction=decision.expected_profit_uah
+                    prediction=prediction_value
                 )
                 
         except Exception as e:
@@ -488,10 +517,7 @@ class MLServingAPI:
             except Exception:
                 disconnected.append(websocket)
                 
-        # Remove disconnected clients
-        for ws in disconnected:
-            if ws in self.websocket_connections:
-                self.websocket_connections.remove(ws)
+        self.websocket_connections = prune_disconnected_websockets(self.websocket_connections, disconnected)
                 
     def _start_background_tasks(self):
         """Start background monitoring tasks"""

@@ -1,6 +1,7 @@
-// MLflow metrics logging - logs to file (MLflow API has issues in container)
+// Runtime diagnostics capture for MLflow-adjacent metrics.
 
 import { resolve } from 'path'
+import { appendMlflowDiagnosticEvent } from '../../utils/mlflow-diagnostics'
 
 export default defineEventHandler(async (event) => {
   const method = getMethod(event)
@@ -9,6 +10,8 @@ export default defineEventHandler(async (event) => {
     return {
       status: 'error',
       error: 'POST required',
+      service_role: 'runtime_diagnostic_capture',
+      tracking_mode: 'diagnostic_only',
       example: {
         action: 'BUY',
         confidence: 0.85,
@@ -22,34 +25,51 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
     const timestamp = new Date().toISOString()
+    const projectRoot = resolve(process.cwd(), '..')
     
-    // Create log entry
     const logEntry = {
       timestamp,
+      service_role: 'runtime_diagnostic_capture' as const,
+      tracking_mode: 'diagnostic_only' as const,
+      event_kind: 'runtime_metric_capture' as const,
       run_id: body.run_id || `session-${Date.now()}`,
-      action: body.action,
-      confidence: body.confidence,
-      actual_price: body.actual_price,
-      predicted_profit: body.predicted_profit,
-      actual_profit: body.actual_profit,
+      action: typeof body.action === 'string' ? body.action : null,
+      confidence: Number.isFinite(Number(body.confidence)) ? Number(body.confidence) : null,
+      actual_price: Number.isFinite(Number(body.actual_price)) ? Number(body.actual_price) : null,
+      predicted_profit: Number.isFinite(Number(body.predicted_profit)) ? Number(body.predicted_profit) : null,
+      actual_profit: Number.isFinite(Number(body.actual_profit)) ? Number(body.actual_profit) : null,
       metrics: body.metrics || {},
       params: body.params || {},
-      model_version: body.model_version || '1.0.0',
-      environment: process.env.NODE_ENV || 'development'
+      model_version: typeof body.model_version === 'string' ? body.model_version : null,
+      environment: process.env.NODE_ENV || 'development',
     }
-    
-    // Log to console (for debugging)
-    console.log('[mlflow-log-metrics]', JSON.stringify(logEntry))
+
+    const storage = await appendMlflowDiagnosticEvent(projectRoot, logEntry)
+    console.info('[mlflow-log-metrics] recorded local runtime diagnostics', {
+      path: storage.relativePath,
+      run_id: logEntry.run_id,
+      action: logEntry.action,
+    })
     
     return {
       status: 'success',
       timestamp,
-      logged: logEntry
+      service_role: logEntry.service_role,
+      tracking_mode: logEntry.tracking_mode,
+      mlflow_tracking_enabled: false,
+      logged: true,
+      storage: {
+        path: storage.relativePath,
+        format: 'jsonl',
+      },
+      event: logEntry,
     }
   } catch (error: any) {
     console.error('[mlflow-log-metrics] Error:', error.message)
     return {
       status: 'error',
+      service_role: 'runtime_diagnostic_capture',
+      tracking_mode: 'diagnostic_only',
       error: error.message
     }
   }

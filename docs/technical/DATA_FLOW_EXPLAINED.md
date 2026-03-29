@@ -1,363 +1,96 @@
-# Smart Energy AI - Complete Data Flow
+# Smart Energy AI - Current Data Flow
 
-## 🔄 End-to-End Data Pipeline
+## Purpose
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    DATA SOURCES (Layer 1)                       │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-        ▼                     ▼                     ▼
-   ┌─────────┐          ┌──────────┐          ┌─────────┐
-   │  OREE   │          │ Weather  │          │ Battery │
-   │ Prices  │          │   API    │          │  BMS    │
-   │ Scraper │          │(OpenWeather)        │ Device  │
-   └─────────┘          └──────────┘          └─────────┘
-        │                     │                     │
-        │ Hourly prices       │ Temp, humidity,     │ Current SOC,
-        │ (₴/kWh)             │ wind, clouds,       │ power, health
-        │                     │ radiation           │
-        │                     │                     │
-        └─────────────────────┴─────────────────────┘
-                              │
-                              ▼
-        ┌─────────────────────────────────────────┐
-        │  CACHING & ARCHIVAL (6-hour cache)     │
-        │                                         │
-        │  • Save to data/archived/              │
-        │  • Timestamp indexed                   │
-        │  • Allow offline processing            │
-        └─────────────────────────────────────────┘
-                              │
-                              ▼
-        ┌─────────────────────────────────────────┐
-        │  CALCULATIONS (Derived Data)            │
-        │                                         │
-        │  • Solar irradiance from position +    │
-        │    cloud cover + time of day           │
-        │  • Wind power from wind speed curve    │
-        │  • Price classification (peak/off-peak)│
-        └─────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-        ▼                     ▼                     ▼
-   ┌──────────┐         ┌──────────┐         ┌──────────┐
-   │   Time   │         │ Weather  │         │ Battery  │
-   │ Features │         │ Features │         │ Features │
-   │    13    │         │    14    │         │    10    │
-   └──────────┘         └──────────┘         └──────────┘
-        │                     │                     │
-        │                     │                     │
-        └─────────────────────┴─────────────────────┘
-                              │
-                              ▼
-        ┌─────────────────────────────────────────┐
-        │  FEATURE MATRIX (Layer 2)               │
-        │                                         │
-        │  • 73 Total Features                    │
-        │  • Normalized (z-score)                │
-        │  • Timestamped                         │
-        │  • Includes price + generation + time  │
-        │                                         │
-        │  Rows: 1 per hour                      │
-        │  Columns: 73 features                  │
-        └─────────────────────────────────────────┘
-                              │
-                              ▼
-        ┌─────────────────────────────────────────┐
-        │  HISTORICAL DATA (Layer 3)              │
-        │                                         │
-        │  • 2-year synthetic dataset             │
-        │  • 17,520 hourly records                │
-        │  • Training targets (BUY/SELL/etc)     │
-        │  • Created from real patterns           │
-        └─────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┴─────────────────────┐
-        │                                           │
-        ▼                                           ▼
-   ┌──────────────┐                        ┌──────────────┐
-   │  TRAINING    │                        │  VALIDATION  │
-   │   Set 80%    │                        │   Set 20%    │
-   │  14,016      │                        │   3,504      │
-   │  samples     │                        │   samples    │
-   └──────────────┘                        └──────────────┘
-        │                                           │
-        │                                           │
-        └───────────────────────┬───────────────────┘
-                                │
-                                ▼
-        ┌─────────────────────────────────────────┐
-        │  MODEL TRAINING (Layer 4)               │
-        │                                         │
-        │  XGBoost Classifier                     │
-        │  • 4 Classes: BUY/SELL/HOLD/DISCHARGE │
-        │  • Hyperparameter tuning (Optuna)      │
-        │  • 5-fold cross-validation             │
-        │  • Backtesting on 2-year data          │
-        │                                         │
-        │  Result: 72.5% Test Accuracy           │
-        │  Profit Simulation: ₴1,826 (2 years)   │
-        └─────────────────────────────────────────┘
-                              │
-                              ▼
-        ┌─────────────────────────────────────────┐
-        │  TRAINED MODEL                          │
-        │                                         │
-        │  • XGBoost binary weights               │
-        │  • Feature importance scores            │
-        │  • Ready for predictions                │
-        │  • Versioned in MLflow registry         │
-        └─────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────────┐
-│                  REAL-TIME INFERENCE (Layer 5)                  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-        ┌─────────────────────────────────────────┐
-        │  CURRENT DATA REFRESH                   │
-        │  (Every hour, or on-demand)             │
-        │                                         │
-        │  • Fetch latest OREE prices             │
-        │  • Get current weather                  │
-        │  • Read battery state                   │
-        │  • Recalculate solar/wind               │
-        │  • Apply current feature engineering    │
-        └─────────────────────────────────────────┘
-                              │
-                              ▼
-        ┌─────────────────────────────────────────┐
-        │  PREDICTION                             │
-        │                                         │
-        │  Input: 73 current features             │
-        │  Model: XGBoost (trained)               │
-        │  Output: [BUY prob, SELL prob,          │
-        │           HOLD prob, DISCHARGE prob]    │
-        │                                         │
-        │  Result: Best action + confidence       │
-        └─────────────────────────────────────────┘
-                              │
-                              ▼
-        ┌─────────────────────────────────────────┐
-        │  RECOMMENDATION API                     │
-        │                                         │
-        │  POST /api/dagster/recommendation       │
-        │                                         │
-        │  Returns:                               │
-        │  • Action: BUY/SELL/HOLD/DISCHARGE     │
-        │  • Confidence: 0.92 (92%)               │
-        │  • Rationale: "Price low, battery..."   │
-        │  • Current price: 14.26 ₴/kWh          │
-        │  • Current SOC: 72.6%                   │
-        │  • Features used: [all 73]              │
-        │  • Data lineage: [sources + timestamps] │
-        └─────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────────┐
-│                    DASHBOARD INTEGRATION                        │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-        ┌─────────────────────┴─────────────────────┐
-        │                                           │
-        ▼                                           ▼
-   ┌─────────────────┐                     ┌──────────────────┐
-   │ MLPipelineMonitor│                     │  mlPipelineStore │
-   │   Component     │                     │     (Pinia)      │
-   │                 │                     │                  │
-   │ Shows:          │                     │ Manages:         │
-   │ • Recommendation│────calls────→       │ • State          │
-   │   (Action +     │                     │ • API requests   │
-   │    Confidence)  │                     │ • Auto-refresh   │
-   │ • Model accuracy│                     │ • Error handling │
-   │ • Features      │                     │                  │
-   │ • Trend chart   │                     └──────────────────┘
-   │ • Drift alert   │
-   └─────────────────┘
-        ▲
-        │
-        └────────────────────────────────┐
-                                         │
-                                         ▼
-                        ┌──────────────────────────────────┐
-                        │  REAL-TIME DISPLAY              │
-                        │                                 │
-                        │  User sees on dashboard:        │
-                        │  ✓ "BUY now (92% confidence)" │
-                        │  ✓ Price: 14.26 ₴/kWh          │
-                        │  ✓ Battery: 72.6% SOC          │
-                        │  ✓ Why: "Low price, capacity"  │
-                        │  ✓ Features: top 5 factors      │
-                        │  ✓ Model: 72.5% accurate       │
-                        │                                 │
-                        │  Updates: Every 5 minutes       │
-                        │  Latency: <2 seconds            │
-                        └──────────────────────────────────┘
-                                         │
-                                         ▼
-                        ┌──────────────────────────────────┐
-                        │  USER EXECUTES RECOMMENDATION  │
-                        │                                 │
-                        │  Click: "Execute BUY"          │
-                        │  System sends:                 │
-                        │  • Action: BUY                 │
-                        │  • Confidence: 0.92            │
-                        │  • Actual profit result         │
-                        └──────────────────────────────────┘
-                                         │
-                                         ▼
-                        ┌──────────────────────────────────┐
-                        │  METRICS LOGGING                │
-                        │                                 │
-                        │  POST /api/mlflow/log-metrics  │
-                        │  Log:                          │
-                        │  • Predicted vs actual profit   │
-                        │  • Accuracy of prediction       │
-                        │  • System latency               │
-                        │  • Model performance update     │
-                        │                                 │
-                        │  MLflow tracking server:       │
-                        │  • Update model metrics         │
-                        │  • Track accuracy trend        │
-                        │  • Detect drift                │
-                        │  • Plan retraining             │
-                        └──────────────────────────────────┘
-                                         │
-                                         ▼
-                        ┌──────────────────────────────────┐
-                        │  NEXT CYCLE BEGINS             │
-                        │                                 │
-                        │  Auto-refresh every 5 min:     │
-                        │  • New prices from OREE        │
-                        │  • New weather data            │
-                        │  • New battery state           │
-                        │  • Recalculate features        │
-                        │  • New prediction              │
-                        │  • Updated dashboard           │
-                        └──────────────────────────────────┘
-```
+This document explains the current runtime data flow honestly. It replaces older descriptions that implied:
 
----
+- real battery BMS telemetry in the live loop
+- a trained end-to-end action model serving BUY/SELL/HOLD directly
+- automatic MLflow-backed runtime metric ingestion for every prediction
 
-## 🎯 Data Flow Stages Explained
+Those claims are not the current runtime truth.
 
-### Stage 1: Data Scraping & Collection
-**Where:** `energy_ml/assets/data_sources.py`
+## Active Runtime Flow
 
-```
-Real-time data from 3 sources:
-├── OREE API
-│   └── Hourly energy prices (₴/kWh)
-│   └── Cached 60 sec (stable, fresh)
-│
-├── OpenWeather API
-│   ├── Temperature (°C)
-│   ├── Humidity (%)
-│   ├── Wind speed (m/s)
-│   ├── Cloud cover (%)
-│   └── Solar radiation (W/m²)
-│   └── Cached 3 hours
-│
-└── Battery BMS (simulated in demo)
-    ├── State of charge (%)
-    ├── Voltage (V)
-    ├── Current (A)
-    ├── Temperature (°C)
-    └── Health score (0-100)
-    └── Cached 5 min
-```
+### 1. External signals
 
-**Saving:** All data automatically saved to `data/archived/` with timestamp index for offline use.
+The system uses real or near-real external signals where available:
 
----
+- OREE-backed price data and dashboard price APIs
+- Open-Meteo weather data in dashboard and Dagster paths
+- tenant configuration stored by the application
 
-### Stage 2: Feature Engineering
-**Where:** `energy_ml/assets/features.py`
+### 2. Operational battery and control state
 
-```
-Raw Data (5 sources) → 73 Engineered Features
+The dashboard maintains the operational battery loop using simulator-backed persisted state:
 
-TIME FEATURES (13):
-├── hour_of_day (0-23)
-├── day_of_week (0-6)
-├── month (1-12)
-├── is_peak_hour (boolean)
-├── sin/cos encoding (cyclical: hour repeats, not linear)
-└── day_of_year, is_weekend, season
+- battery APIs read and write tenant battery state
+- control execution writes command effects back into that same state
+- command history and control mode fallbacks are derived from persisted tenant records
 
-WEATHER FEATURES (14):
-├── temperature (normalized)
-├── humidity (%)
-├── wind_speed (m/s)
-├── cloud_cover (%)
-├── solar_radiation (W/m²)
-├── weather_category (rainy/cloudy/clear)
-├── 3-hour forecast average
-├── 24-hour trend
-└── pressure, dewpoint
+This is operationally live inside the app, but it is still simulated telemetry rather than plant telemetry.
 
-GENERATION FEATURES (9):
-├── solar_irradiance (calculated from position + weather)
-├── wind_power (from wind speed curve)
-├── combined_generation (solar + wind)
-├── generation/battery ratio
-├── generation/price ratio
-└── forecast next hour
+### 3. Dagster recommendation path
 
-BATTERY FEATURES (10):
-├── soc_percent (0-100)
-├── charge_rate (kW)
-├── discharge_rate (kW)
-├── available_capacity (kWh)
-├── battery_health (0-100)
-├── time_to_empty (hours)
-├── time_to_full (hours)
-├── temperature (°C)
-└── charge/discharge efficiency (%)
+The primary runtime recommendation path is:
 
-PRICE FEATURES (14):
-├── current_price (₴/kWh)
-├── price_lag_1h, lag_2h, lag_6h
-├── moving_average_6h, ma_24h
-├── price_change (%), volatility
-├── price_level (peak/normal/off-peak)
-├── forecast_next_hour, next_3h
-└── daily_min/max
+1. market and weather assets ingest or refresh external data
+2. client state is built from simulator-backed tenant battery state when available, with config fallback
+3. price forecast and optimization assets compute a schedule
+4. the dashboard reads a schedule-backed recommendation from `/api/dagster/recommendation`
 
-INTERACTION FEATURES (12):
-├── gen/price ratio (generation opportunity)
-├── battery/gen ratio (capacity efficiency)
-├── price/battery ratio (arbitrage potential)
-├── solar_efficiency (irradiance → power)
-├── wind_efficiency (wind speed → power)
-├── charge_value (capacity × price)
-├── discharge_profit (soc × price)
-└── composite opportunity score
+This path is forecast plus optimizer plus normalization, not end-to-end learned action inference.
 
-All normalized using z-score (mean=0, std=1)
-All timestamped (YYYY-MM-DD HH:MM:SS)
-```
+### 4. Python fallback recommendation path
 
----
+When the Dagster recommendation is stale or unavailable, the dashboard falls back to `/api/ml/recommendation`:
 
-### Stage 3: Training Data Preparation
-**Where:** `energy_ml/assets/training.py`
+1. the route builds live context from tenant config, prices, battery state, and weather
+2. it invokes `ml_integration_api.py`
+3. the Python bridge applies incumbent rule, optimization, renewable, and live-price logic
+4. if explicitly configured, learned-policy mode can attempt MLflow-backed serving through `PredictionService`
+5. otherwise the bridge falls back to the incumbent runtime path with explicit provenance
 
-```
-Historical Data Collection:
-├── 2-year synthetic dataset generated from real patterns
-├── 17,520 hourly records (365 days × 24 hours × 2 years)
-├── Each record has:
-│   ├── 73 features (from Stage 2)
-│   ├── Target label: BUY/SELL/HOLD/DISCHARGE
-│   └── Timestamp
-│
-└── Target generation logic:
-    ├── IF price < avg × 0.85 AND soc < 80% → BUY
-    ├── IF price > avg × 1.15 → SELL
+### 5. Diagnostics and registry metadata
+
+MLflow is not the primary runtime authority.
+
+- `/api/mlflow/status` reports experiment and registry diagnostics
+- `/api/mlflow/log-metrics` captures local runtime diagnostic events
+- MLflow metadata may support experiments, registry inventory, and promotion workflows later
+- live runtime truth must still come from `serving`, `contract`, and Dagster snapshot metadata
+
+## Data Provenance Summary
+
+### Real external live data
+
+- market prices
+- weather inputs
+- tenant configuration
+
+### Simulated operational telemetry
+
+- persisted dashboard battery state
+- command history and control state in the live tenant loop
+- simulator-updated SoC and related battery state
+
+### Fabricated or experimental training scaffolding
+
+- synthetic history rows
+- synthetic labels
+- mock-serving behavior when no explicit learned-policy model is configured
+
+## What the Dashboard Should Show
+
+The most defensible dashboard story today is:
+
+- current action recommendation and confidence
+- provenance and fallback reason
+- serving mode and whether learned-policy mode is actually active
+- Dagster snapshot freshness and schedule quality
+- optional MLflow diagnostics as registry and experiment metadata
+
+The dashboard should not imply that MLflow reachability alone means a live learned policy is serving production actions.
     ├── IF price > avg × 1.25 AND soc > 50% → DISCHARGE
     └── ELSE → HOLD
 

@@ -11,6 +11,8 @@ Set-Location D:\OpenClaw-Backup\clawd\projects\smart-energy-ai
 .\scripts\local\start-local-stack.ps1 -Start both
 ```
 
+`dashboard/` is the canonical Nuxt app used by the local launcher and runtime checks. The former `nuxt_dashboard/` tree has been archived to `archive/nuxt_dashboard_legacy_20260306/` and is not started by the root scripts.
+
 Canonical local endpoints:
 
 - Dagster UI: `http://127.0.0.1:3000`
@@ -56,6 +58,20 @@ Run the dedicated schedule contract-check job:
 ```powershell
 dagster job execute -m src.definitions -j optimization_schedule_contract_checks
 ```
+
+Run the local MVP smoke path from the repository root:
+
+```powershell
+.\scripts\local\run-local-mvp-smoke.ps1
+```
+
+Run the focused Stage 2 evidence smoke command directly against a running dashboard:
+
+```powershell
+node dashboard/scripts/stage2_demo_evidence.mjs
+```
+
+`run-local-mvp-smoke.ps1` now includes both the dashboard API smoke checks and the Stage 2 evidence smoke step. Use the direct Node command when the local stack is already up and you only want the Stage 2 scenario gate. The dashboard package also exposes the same runner as `npm -C dashboard run smoke:stage2-evidence` when you prefer the npm alias.
 
 ## Notes
 

@@ -3,7 +3,12 @@
 
 import { createError, defineEventHandler, readBody } from 'h3'
 import { recordBillingUsageEvent } from '../../utils/billing'
-import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
+import {
+  buildDecisionSnapshot,
+  buildOptimizationExecutionKey,
+  type DecisionSnapshot,
+  persistOptimizationHistory,
+} from '../../utils/optimization-history'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event: any) => {
@@ -14,7 +19,7 @@ export default defineEventHandler(async (event: any) => {
     let fallbackReasonCode: string | null = null
     
     // Validate input
-    if (!body.command || !body.power_kw || !body.scheduled_time) {
+    if (!body.command || body.power_kw == null || !body.scheduled_time) {
       throw createError({
         statusCode: 400,
         statusMessage: 'Command, power_kw, and scheduled_time are required'
@@ -59,6 +64,8 @@ export default defineEventHandler(async (event: any) => {
       created_at: new Date().toISOString(),
       status: 'pending'
     }
+    const decisionSnapshot = await buildScheduledIntentDecisionSnapshot(schedule, tenant.id)
+    schedule.decision_snapshot = decisionSnapshot
     
     console.log('Creating schedule:', schedule)
     
@@ -96,7 +103,9 @@ export default defineEventHandler(async (event: any) => {
             python_script: pythonScript,
             python_script_available: true,
             fallback_reason_code: 'none',
+            decision_snapshot_version: decisionSnapshot.version,
           },
+          decision_snapshot: decisionSnapshot,
           source: 'python_controller'
         }
         
@@ -135,7 +144,9 @@ export default defineEventHandler(async (event: any) => {
         python_script: pythonScript,
         python_script_available: pythonScriptAvailable,
         fallback_reason_code: fallbackReasonCode || 'python_unavailable',
+        decision_snapshot_version: decisionSnapshot.version,
       },
+      decision_snapshot: decisionSnapshot,
       source: 'memory_storage'
     }
     
@@ -182,6 +193,35 @@ function resolveScheduleId(body: any): string {
   return generateScheduleId()
 }
 
+function toFiniteNumber(value: unknown): number | null {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function mapCommandToSnapshotAction(command: string): 'BUY' | 'SELL' | 'HOLD' {
+  if (command === 'charge') {
+    return 'BUY'
+  }
+  if (command === 'discharge') {
+    return 'SELL'
+  }
+  return 'HOLD'
+}
+
+function resolvePreviousActionForTenant(tenantId: string): 'BUY' | 'SELL' | 'HOLD' | null {
+  const history = Array.isArray(globalThis.commandHistory) ? globalThis.commandHistory : []
+  const previousEntry = history.find((entry: any) => {
+    const entryTenantId = String(entry?.tenant_id || entry?.tenantId || '')
+    return entryTenantId === tenantId
+  })
+
+  if (!previousEntry) {
+    return null
+  }
+
+  return mapCommandToSnapshotAction(previousEntry.resolved_command || previousEntry.command || 'hold')
+}
+
 function mapCommandToAction(command: string): number {
   switch (command) {
     case 'charge':
@@ -193,6 +233,49 @@ function mapCommandToAction(command: string): number {
     default:
       return 4
   }
+}
+
+async function buildScheduledIntentDecisionSnapshot(schedule: any, tenantId: string): Promise<DecisionSnapshot> {
+  const tenantRequest = {
+    headers: {
+      'x-tenant-id': tenantId,
+    },
+    query: {
+      tenantId,
+    },
+  }
+
+  const [configPayload, pricesPayload, batteryPayload] = await Promise.all([
+    $fetch<any>('/api/config/current', tenantRequest).catch(() => null),
+    $fetch<any>('/api/prices/current', tenantRequest).catch(() => null),
+    $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
+  ])
+
+  return buildDecisionSnapshot({
+    tenant_id: tenantId,
+    timestamp: schedule.created_at,
+    decision_source: 'manual_override',
+    recommendation_source: 'manual_input',
+    selected_action: mapCommandToSnapshotAction(String(schedule.command || 'hold')),
+    selected_power_kw: toFiniteNumber(schedule.power_kw),
+    current_price_uah_kwh: toFiniteNumber(pricesPayload?.prices?.current?.price),
+    avg_price_uah_kwh: toFiniteNumber(pricesPayload?.prices?.today?.avg),
+    battery_soc_percent: toFiniteNumber(batteryPayload?.battery?.soc),
+    battery_health_percent: toFiniteNumber(batteryPayload?.battery?.health),
+    battery_temp_c: toFiniteNumber(batteryPayload?.battery?.temperature),
+    estimated_load_kw: null,
+    estimated_solar_kw: null,
+    optimization_strategy: configPayload?.data?.optimization_strategy,
+    load_profile_type: configPayload?.data?.load_profile_type,
+    fallback_reason: null,
+    previous_action: resolvePreviousActionForTenant(tenantId),
+    provenance: {
+      state_source: 'simulator_backed_telemetry',
+      state_source_detail: 'api/battery/status',
+      telemetry_classification: 'simulated_operational_telemetry',
+      recommendation_contract_version: null,
+    },
+  })
 }
 
 async function persistScheduledIntent(schedule: any, source: 'python_controller' | 'memory_storage'): Promise<void> {
@@ -243,6 +326,7 @@ async function persistScheduledIntent(schedule: any, source: 'python_controller'
     realized_revenue_uah: null,
     realized_cost_uah: null,
     realized_net_uah: null,
+    decision_snapshot: schedule.decision_snapshot || null,
   })
 
   if (!result.ok) {

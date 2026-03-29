@@ -5,7 +5,7 @@ data lineage from user config through features to predictions.
 """
 import logging
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict, Optional, TypedDict
 
 import polars as pl
 from dagster import asset, AssetIn
@@ -13,13 +13,90 @@ from dagster import asset, AssetIn
 from energy_ml.pipeline import PipelineOrchestrator
 from energy_ml.features import FeatureEngineer
 from energy_ml.ml_integration import PredictionService
-from energy_ml.user_config import UserConfigModel, ConfigurationManager
+from energy_ml.user_config import UserConfigModel, ConfigurationManager, UserConfigPayload, ConfigLoadResult
 from energy_ml.mlops.optimization_engine import OptimizationEngine
 from energy_ml.mlops.battery_physics import BatteryPhysicsEngine
 from energy_ml.mlops.renewable_forecasting import RenewableForecaster
 
 
 logger = logging.getLogger(__name__)
+
+
+class AssetEnvelope(TypedDict, total=False):
+    status: str
+    timestamp: str
+    error: str
+
+
+class IntegratedPipelineAssetPayload(AssetEnvelope, total=False):
+    action: str
+    reasoning: str
+    confidence: float
+    estimated_savings: float
+    battery_impact: float
+    details: Dict[str, Any]
+
+
+class MLPredictionAssetPayload(AssetEnvelope, total=False):
+    action: str
+    confidence: float
+    reasoning: str
+    model_version: str
+    feature_importance: Dict[str, Any]
+
+
+class PipelineStatusAssetPayload(AssetEnvelope, total=False):
+    pipeline_status: str
+    pipeline_action: str
+    pipeline_confidence: float
+    features_count: int
+    features_valid: bool
+    ml_status: str
+    ml_action: str
+    ml_confidence: float
+    agreement: float
+
+
+class OptimizationPreferencesAssetPayload(AssetEnvelope, total=False):
+    strategy: str
+    weights: Dict[str, Any]
+    constraints: Dict[str, Any]
+    preferences: Dict[str, Any]
+
+
+class BatteryPhysicsAssetPayload(AssetEnvelope, total=False):
+    chemistry: str
+    simulation_results: Dict[str, Any]
+    charging_curves: Dict[str, Any]
+    degradation_model: Dict[str, Any]
+    efficiency_model: Dict[str, Any]
+
+
+class RenewableGenerationAssetPayload(AssetEnvelope, total=False):
+    solar_forecast: Dict[str, Any]
+    wind_forecast: Dict[str, Any]
+    total_renewable: Dict[str, Any]
+    weather_data: Dict[str, Any]
+    capacity_factors: Dict[str, Any]
+    integration: Dict[str, Any]
+
+
+class EnhancedPredictionAssetPayload(MLPredictionAssetPayload, total=False):
+    base_prediction: Dict[str, Any]
+    optimization_applied: str
+    physics_constraints: Dict[str, Any]
+    renewable_integration: Dict[str, Any]
+    enhancement_confidence: float
+
+
+def _resolve_asset_config(user_config_data: Optional[UserConfigPayload]) -> ConfigLoadResult:
+    """Resolve asset config without relying on exception-based control flow."""
+    config_manager = ConfigurationManager()
+    return config_manager.resolve_config(user_config_data)
+
+
+def _config_error_text(config_result: ConfigLoadResult) -> str:
+    return "; ".join(config_result.errors) if config_result.errors else "Configuration could not be loaded"
 
 
 @asset(
@@ -29,8 +106,8 @@ logger = logging.getLogger(__name__)
     compute_kind="python",
 )
 def integrated_pipeline_asset(
-    user_config_data: Dict[str, Any] = None,
-) -> Dict[str, Any]:
+    user_config_data: Optional[UserConfigPayload] = None,
+) -> IntegratedPipelineAssetPayload:
     """Asset: Full pipeline integration and recommendation generation.
     
     Orchestrates:
@@ -58,11 +135,23 @@ def integrated_pipeline_asset(
     """
     try:
         # Load configuration
-        if user_config_data is None:
-            config_manager = ConfigurationManager()
-            config = config_manager.load_config()
-        else:
-            config = UserConfigModel(**user_config_data)
+        config_result = _resolve_asset_config(user_config_data)
+        if not config_result.success or config_result.config is None:
+            error_text = _config_error_text(config_result)
+            logger.error(f"Pipeline configuration failed: {error_text}")
+            return {
+                'action': 'HOLD',
+                'reasoning': f'Pipeline configuration error: {error_text}',
+                'confidence': 0.0,
+                'estimated_savings': 0.0,
+                'battery_impact': 0.0,
+                'timestamp': datetime.now().isoformat(),
+                'details': {'config_errors': config_result.errors},
+                'status': 'error',
+                'error': error_text,
+            }
+
+        config = config_result.config
         
         logger.info(f"Integrated pipeline using config: {config.dict()}")
         
@@ -108,7 +197,7 @@ def integrated_pipeline_asset(
         "integrated_pipeline": AssetIn()
     },
 )
-def engineered_features_asset(integrated_pipeline: Dict[str, Any]) -> pl.DataFrame:
+def engineered_features_asset(integrated_pipeline: IntegratedPipelineAssetPayload) -> pl.DataFrame:
     """Asset: Feature engineering output for ML models.
     
     Uses FeatureEngineer to extract normalized features from pipeline state.
@@ -148,8 +237,12 @@ def engineered_features_asset(integrated_pipeline: Dict[str, Any]) -> pl.DataFra
         engineer = FeatureEngineer()
         
         # Create orchestrator for context
-        config_manager = ConfigurationManager()
-        config = config_manager.load_config()
+        config_result = _resolve_asset_config(None)
+        if not config_result.success or config_result.config is None:
+            logger.error(f"Feature engineering configuration failed: {_config_error_text(config_result)}")
+            raise RuntimeError(_config_error_text(config_result))
+
+        config = config_result.config
         orchestrator = PipelineOrchestrator(config)
         
         # Extract features
@@ -197,7 +290,7 @@ def engineered_features_asset(integrated_pipeline: Dict[str, Any]) -> pl.DataFra
         "engineered_features": AssetIn()
     },
 )
-def ml_predictions_asset(engineered_features: pl.DataFrame) -> Dict[str, Any]:
+def ml_predictions_asset(engineered_features: pl.DataFrame) -> MLPredictionAssetPayload:
     """Asset: ML model predictions.
     
     Uses PredictionService to load MLflow model and generate predictions.
@@ -255,10 +348,10 @@ def ml_predictions_asset(engineered_features: pl.DataFrame) -> Dict[str, Any]:
     },
 )
 def pipeline_status_asset(
-    integrated_pipeline: Dict[str, Any],
+    integrated_pipeline: IntegratedPipelineAssetPayload,
     engineered_features: pl.DataFrame,
-    ml_predictions: Dict[str, Any],
-) -> Dict[str, Any]:
+    ml_predictions: MLPredictionAssetPayload,
+) -> PipelineStatusAssetPayload:
     """Asset: Overall pipeline status combining all components.
     
     Inputs:
@@ -295,7 +388,7 @@ def pipeline_status_asset(
     tags={"optimization": "true", "user_preferences": "true"},
     compute_kind="python",
 )
-def optimization_preferences_asset(user_config_data: Dict[str, Any] = None) -> Dict[str, Any]:
+def optimization_preferences_asset(user_config_data: Optional[UserConfigPayload] = None) -> OptimizationPreferencesAssetPayload:
     """Asset: User optimization strategy preferences.
     
     Loads user optimization strategy (Max Earn, Max Health, Max Charge)
@@ -310,11 +403,21 @@ def optimization_preferences_asset(user_config_data: Dict[str, Any] = None) -> D
     """
     try:
         # Load configuration
-        if user_config_data is None:
-            config_manager = ConfigurationManager()
-            config = config_manager.load_config()
-        else:
-            config = UserConfigModel(**user_config_data)
+        config_result = _resolve_asset_config(user_config_data)
+        if not config_result.success or config_result.config is None:
+            error_text = _config_error_text(config_result)
+            logger.error(f"Optimization preference configuration failed: {error_text}")
+            return {
+                'strategy': 'balanced',
+                'weights': {'earnings': 0.4, 'battery_health': 0.4, 'charge_availability': 0.2},
+                'constraints': {},
+                'preferences': {},
+                'timestamp': datetime.now().isoformat(),
+                'status': 'error',
+                'error': error_text,
+            }
+
+        config = config_result.config
         
         # Initialize optimization engine
         optimization_engine = OptimizationEngine()
@@ -355,7 +458,7 @@ def optimization_preferences_asset(user_config_data: Dict[str, Any] = None) -> D
     tags={"physics": "true", "battery": "true"},
     compute_kind="python",
 )
-def battery_physics_asset(user_config_data: Dict[str, Any] = None) -> Dict[str, Any]:
+def battery_physics_asset(user_config_data: Optional[UserConfigPayload] = None) -> BatteryPhysicsAssetPayload:
     """Asset: Real battery physics simulation.
     
     Runs real battery physics simulation with actual charging behavior
@@ -371,11 +474,22 @@ def battery_physics_asset(user_config_data: Dict[str, Any] = None) -> Dict[str, 
     """
     try:
         # Load configuration
-        if user_config_data is None:
-            config_manager = ConfigurationManager()
-            config = config_manager.load_config()
-        else:
-            config = UserConfigModel(**user_config_data)
+        config_result = _resolve_asset_config(user_config_data)
+        if not config_result.success or config_result.config is None:
+            error_text = _config_error_text(config_result)
+            logger.error(f"Battery physics configuration failed: {error_text}")
+            return {
+                'chemistry': 'LFP',
+                'simulation_results': {},
+                'charging_curves': {},
+                'degradation_model': {},
+                'efficiency_model': {},
+                'timestamp': datetime.now().isoformat(),
+                'status': 'error',
+                'error': error_text,
+            }
+
+        config = config_result.config
         
         # Initialize battery physics engine
         physics_engine = BatteryPhysicsEngine()
@@ -415,7 +529,7 @@ def battery_physics_asset(user_config_data: Dict[str, Any] = None) -> Dict[str, 
     tags={"renewable": "true", "forecasting": "true"},
     compute_kind="python",
 )
-def renewable_generation_asset(user_config_data: Dict[str, Any] = None) -> Dict[str, Any]:
+def renewable_generation_asset(user_config_data: Optional[UserConfigPayload] = None) -> RenewableGenerationAssetPayload:
     """Asset: Real-time renewable generation modeling.
     
     Models solar and wind generation based on weather data,
@@ -431,11 +545,22 @@ def renewable_generation_asset(user_config_data: Dict[str, Any] = None) -> Dict[
     """
     try:
         # Load configuration
-        if user_config_data is None:
-            config_manager = ConfigurationManager()
-            config = config_manager.load_config()
-        else:
-            config = UserConfigModel(**user_config_data)
+        config_result = _resolve_asset_config(user_config_data)
+        if not config_result.success or config_result.config is None:
+            error_text = _config_error_text(config_result)
+            logger.error(f"Renewable forecast configuration failed: {error_text}")
+            return {
+                'solar_forecast': {},
+                'wind_forecast': {},
+                'total_renewable': {},
+                'weather_data': {},
+                'capacity_factors': {},
+                'timestamp': datetime.now().isoformat(),
+                'status': 'error',
+                'error': error_text,
+            }
+
+        config = config_result.config
         
         # Initialize renewable forecaster
         renewable_forecaster = RenewableForecaster()
@@ -483,10 +608,10 @@ def renewable_generation_asset(user_config_data: Dict[str, Any] = None) -> Dict[
 )
 def enhanced_ml_predictions_asset(
     engineered_features: pl.DataFrame,
-    optimization_preferences: Dict[str, Any],
-    battery_physics_simulation: Dict[str, Any],
-    renewable_generation_forecast: Dict[str, Any]
-) -> Dict[str, Any]:
+    optimization_preferences: OptimizationPreferencesAssetPayload,
+    battery_physics_simulation: BatteryPhysicsAssetPayload,
+    renewable_generation_forecast: RenewableGenerationAssetPayload
+) -> EnhancedPredictionAssetPayload:
     """Asset: Enhanced ML predictions with user optimization and physics.
     
     Uses PredictionService with optimization preferences to generate

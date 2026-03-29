@@ -17,9 +17,23 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 import json
 import os
+
+from .inverter_controller_support import (
+    append_command_result,
+    build_command_log,
+    build_persisted_status_data,
+    build_schedule_entry,
+    build_status_payload,
+    calculate_charge_completion_time,
+    calculate_discharge_completion_time,
+    estimate_completion,
+    retain_recent_scheduled_commands,
+    trim_command_history,
+    validate_command,
+)
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -113,15 +127,7 @@ class VirtualInverterController:
             raise ValueError(f"Invalid command: {validation_result['reason']}")
             
         # Log command for Dagster Asset Metadata
-        command_log = {
-            'timestamp': action.timestamp.isoformat(),
-            'command': action.command.value,
-            'power_kw': action.power_kw,
-            'reason': action.reason,
-            'user_id': action.user_id,
-            'soc_before': self.current_soc,
-            'power_before': self.current_power_kw
-        }
+        command_log = build_command_log(action, self.current_soc, self.current_power_kw)
         
         # Execute command
         if action.command == ControlCommand.CHARGE:
@@ -134,17 +140,18 @@ class VirtualInverterController:
             await self._enable_auto_mode()
             
         # Update command log with results
-        command_log.update({
-            'soc_after': self.current_soc,
-            'power_after': self.current_power_kw,
-            'estimated_completion': self._estimate_completion(action)
-        })
+        estimated_completion = self._estimate_completion(action)
+        append_command_result(
+            command_log,
+            self.current_soc,
+            self.current_power_kw,
+            estimated_completion,
+        )
         
         self.command_history.append(command_log)
         
         # Keep only last 100 commands in memory
-        if len(self.command_history) > 100:
-            self.command_history = self.command_history[-100:]
+        self.command_history = trim_command_history(self.command_history)
             
         # Update active command
         self.active_command = action
@@ -157,7 +164,7 @@ class VirtualInverterController:
             'success': True,
             'new_soc': self.current_soc,
             'power_kw': self.current_power_kw,
-            'estimated_completion': self._estimate_completion(action),
+            'estimated_completion': estimated_completion,
             'command_id': len(self.command_history)
         }
     
@@ -165,13 +172,11 @@ class VirtualInverterController:
                              action: ControlAction, 
                              scheduled_time: datetime) -> Dict[str, Any]:
         """Schedule a command for future execution"""
-        schedule_entry = {
-            'id': f"sched_{len(self.scheduled_commands)}_{int(scheduled_time.timestamp())}",
-            'action': action.to_dict(),
-            'scheduled_time': scheduled_time.isoformat(),
-            'created_at': datetime.now().isoformat(),
-            'status': 'pending'
-        }
+        schedule_entry = build_schedule_entry(
+            action,
+            scheduled_time,
+            len(self.scheduled_commands),
+        )
         
         self.scheduled_commands.append(schedule_entry)
         logger.info(f"Scheduled command: {action.command} at {scheduled_time}")
@@ -226,12 +231,10 @@ class VirtualInverterController:
                         logger.error(f"Failed to execute scheduled command {cmd['id']}: {e}")
                         
         # Clean up old executed commands (keep for 24 hours)
-        cutoff_time = now - timedelta(hours=24)
-        self.scheduled_commands = [
-            cmd for cmd in self.scheduled_commands 
-            if (cmd['status'] == 'pending' or 
-                datetime.fromisoformat(cmd.get('executed_at', cmd['created_at'])) > cutoff_time)
-        ]
+        self.scheduled_commands = retain_recent_scheduled_commands(
+            self.scheduled_commands,
+            now,
+        )
         
         if executed_commands:
             await self._save_status()
@@ -240,18 +243,16 @@ class VirtualInverterController:
     
     def get_status(self) -> Dict[str, Any]:
         """Get current system status"""
-        return {
-            'soc': round(self.current_soc * 100, 1),  # Convert to percentage
-            'power_kw': self.current_power_kw,
-            'mode': self.mode.value,
-            'active_command': self.active_command.command.value if self.active_command else None,
-            'command_reason': self.active_command.reason if self.active_command else None,
-            'battery_capacity_kwh': self.battery_capacity_kwh,
-            'max_power_kw': self.max_power_kw,
-            'last_update': datetime.now().isoformat(),
-            'estimated_completion': self.estimated_completion_time.isoformat() if self.estimated_completion_time else None,
-            'scheduled_commands_count': len([c for c in self.scheduled_commands if c['status'] == 'pending'])
-        }
+        return build_status_payload(
+            current_soc=self.current_soc,
+            current_power_kw=self.current_power_kw,
+            mode_value=self.mode.value,
+            active_command=self.active_command,
+            battery_capacity_kwh=self.battery_capacity_kwh,
+            max_power_kw=self.max_power_kw,
+            estimated_completion_time=self.estimated_completion_time,
+            scheduled_commands=self.scheduled_commands,
+        )
         
     def get_command_history(self, limit: int = 50) -> List[Dict[str, Any]]:
         """Get recent command history"""
@@ -264,40 +265,7 @@ class VirtualInverterController:
     def _validate_command(self, action: ControlAction) -> Dict[str, Any]:
         """Validate command before execution"""
         
-        # Check power limits
-        if abs(action.power_kw) > self.max_power_kw:
-            return {
-                'valid': False, 
-                'reason': f"Power {action.power_kw}kW exceeds limit {self.max_power_kw}kW"
-            }
-        
-        # Check SOC limits for charging
-        if action.command == ControlCommand.CHARGE:
-            if self.current_soc >= 0.95:
-                return {
-                    'valid': False,
-                    'reason': "Battery SOC too high for charging (>=95%)"
-                }
-            if action.power_kw <= 0:
-                return {
-                    'valid': False,
-                    'reason': "Charge power must be positive"
-                }
-                
-        # Check SOC limits for discharging
-        elif action.command == ControlCommand.DISCHARGE:
-            if self.current_soc <= 0.05:
-                return {
-                    'valid': False,
-                    'reason': "Battery SOC too low for discharging (<=5%)"
-                }
-            if action.power_kw >= 0:
-                return {
-                    'valid': False,
-                    'reason': "Discharge power must be negative"
-                }
-        
-        return {'valid': True, 'reason': 'Command validated'}
+        return validate_command(action, self.current_soc, self.max_power_kw)
     
     async def _start_charging(self, power_kw: float):
         """Start charging at specified power"""
@@ -326,47 +294,31 @@ class VirtualInverterController:
         
     def _estimate_completion(self, action: ControlAction) -> Optional[str]:
         """Estimate when command will complete"""
-        if action.duration_minutes:
-            completion_time = datetime.now() + timedelta(minutes=action.duration_minutes)
-            return completion_time.isoformat()
-        elif action.command in [ControlCommand.CHARGE, ControlCommand.DISCHARGE]:
-            # Estimate based on SOC and power
-            if action.command == ControlCommand.CHARGE and action.power_kw > 0:
-                remaining_capacity = (0.9 - self.current_soc) * self.battery_capacity_kwh  # Charge to 90%
-                hours_to_complete = remaining_capacity / action.power_kw
-                completion_time = datetime.now() + timedelta(hours=hours_to_complete)
-                return completion_time.isoformat()
-            elif action.command == ControlCommand.DISCHARGE and action.power_kw < 0:
-                available_capacity = (self.current_soc - 0.1) * self.battery_capacity_kwh  # Discharge to 10%
-                hours_to_complete = available_capacity / abs(action.power_kw)
-                completion_time = datetime.now() + timedelta(hours=hours_to_complete)
-                return completion_time.isoformat()
-        return None
+        return estimate_completion(action, self.current_soc, self.battery_capacity_kwh)
         
     def _calculate_charge_completion_time(self, power_kw: float) -> Optional[datetime]:
         """Calculate when charging will complete"""
-        if power_kw <= 0:
-            return None
-        remaining_capacity = (0.9 - self.current_soc) * self.battery_capacity_kwh
-        hours_to_complete = remaining_capacity / power_kw
-        return datetime.now() + timedelta(hours=hours_to_complete)
+        return calculate_charge_completion_time(
+            self.current_soc,
+            self.battery_capacity_kwh,
+            power_kw,
+        )
         
     def _calculate_discharge_completion_time(self, power_kw: float) -> Optional[datetime]:
         """Calculate when discharging will complete"""
-        if power_kw >= 0:
-            return None
-        available_capacity = (self.current_soc - 0.1) * self.battery_capacity_kwh
-        hours_to_complete = available_capacity / abs(power_kw)
-        return datetime.now() + timedelta(hours=hours_to_complete)
+        return calculate_discharge_completion_time(
+            self.current_soc,
+            self.battery_capacity_kwh,
+            power_kw,
+        )
         
     async def _save_status(self):
         """Save current status to file for persistence"""
-        status_data = {
-            'system_status': self.get_status(),
-            'command_history': self.get_command_history(20),  # Last 20 commands
-            'scheduled_commands': self.scheduled_commands,
-            'last_saved': datetime.now().isoformat()
-        }
+        status_data = build_persisted_status_data(
+            self.get_status(),
+            self.get_command_history(20),
+            self.scheduled_commands,
+        )
         
         try:
             with open(self.status_file, 'w') as f:

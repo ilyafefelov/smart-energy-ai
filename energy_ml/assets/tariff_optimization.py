@@ -37,11 +37,13 @@ def tariff_optimization_analysis(user_profile: UserProfile) -> dict:
     
     # Calculate battery optimization potential
     battery_cfg = user_profile.battery
+    charge_efficiency = getattr(battery_cfg, 'charge_efficiency', battery_cfg.efficiency)
+    discharge_efficiency = getattr(battery_cfg, 'discharge_efficiency', battery_cfg.efficiency)
     savings_result = tariff.estimate_savings_with_battery(
         hourly_loads_8760,
         battery_capacity_kwh=battery_cfg.capacity_kwh,
-        charge_efficiency=battery_cfg.charge_efficiency,
-        discharge_efficiency=battery_cfg.discharge_efficiency
+        charge_efficiency=charge_efficiency,
+        discharge_efficiency=discharge_efficiency,
     )
     
     # Compile output

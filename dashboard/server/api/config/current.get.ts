@@ -14,6 +14,13 @@ function normalizeLoadProfileType(value: unknown): 'standard' | 'multi-shift' | 
   return 'standard'
 }
 
+function normalizeMarketRegimeOverride(value: unknown): 'auto' | 'net_billing' | 'market_premium' {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (normalized === 'net_billing' || normalized === 'net-billing') return 'net_billing'
+  if (normalized === 'market_premium' || normalized === 'market-premium') return 'market_premium'
+  return 'auto'
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const tenant = await resolveTenantContext(event)
@@ -79,7 +86,9 @@ export default defineEventHandler(async (event) => {
       wind_rated_speed_mps: 12,
       latitude: 50.45,
       longitude: 30.52,
-      timezone: 'Europe/Kiev'
+      timezone: 'Europe/Kiev',
+      connected_power_kw: 10.0,
+      market_regime_override: 'auto',
     }
     
     let currentConfig = defaultConfig
@@ -93,6 +102,7 @@ export default defineEventHandler(async (event) => {
         // Merge saved config with defaults (in case new fields were added)
         currentConfig = { ...defaultConfig, ...savedConfig }
         currentConfig.load_profile_type = normalizeLoadProfileType(currentConfig.load_profile_type)
+        currentConfig.market_regime_override = normalizeMarketRegimeOverride(currentConfig.market_regime_override)
         currentConfig.has_solar = Boolean(
           currentConfig.has_solar ?? Number(currentConfig.solar_capacity_kw || 0) > 0,
         )

@@ -32,11 +32,14 @@ dashboard/data/battery_state.json
 dashboard/data/battery_control_state.json
 dashboard/data/retraining/job-*.json
 dashboard/data/api_smoke_test_report.json
+dashboard/data/stage2_demo_evidence_report.json
 dashboard/data/dashboard_render_snapshot.json
+dashboard/data/mlflow-diagnostics/
 dashboard/data/backups/
 dashboard/data/tenants/
 .playwright-mcp/*.log
 data/dagster_home/storage/
+artifacts/local-smoke/
 
 # Generated model artifacts from retraining runs
 models/model_job-*.pkl

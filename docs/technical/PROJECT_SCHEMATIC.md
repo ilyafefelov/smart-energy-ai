@@ -26,21 +26,11 @@ smart-energy-ai/
 │   ├── real_price_data.py        # Real price data from European sources
 │   ├── oree_*.py                 # OREE price scrapers
 │   └── price_processor.py        # Price data processing
-├── streamlit_dashboard/          # Streamlit web interface
+├── streamlit_dashboard/          # Legacy Streamlit web interface
 │   ├── app.py                    # Main Streamlit app
 │   └── app_config.py             # Streamlit configuration
-├── nuxt_dashboard/               # Nuxt3 Vue.js web interface
-│   ├── app/                      # Application pages
-│   ├── pages/                    # Page components (index, analytics, control, settings)
-│   ├── components/               # Reusable Vue components
-│   ├── composables/              # Vue composables
-│   ├── stores/                   # Vuex stores
-│   ├── layouts/                  # Page layouts
-│   ├── data/                     # Static data files
-│   ├── package.json              # NPM dependencies
-│   ├── nuxt.config.ts            # Nuxt configuration
-│   ├── tailwind.config.ts        # Tailwind CSS configuration
-│   └── tsconfig.json             # TypeScript configuration
+├── dashboard/                    # Canonical Nuxt3 Vue.js web interface
+├── archive/                      # Archived legacy trees and historical snapshots
 ├── energy_ml/                    # Energy ML module with APIs
 │   ├── simulator/                # Battery physics and simulation
 │   ├── ml_integration_api.py     # API for ML integration
@@ -104,20 +94,20 @@ smart-energy-ai/
   - Training analysis and model evaluation
   - Technical guide and documentation
 
-### Nuxt Dashboard (`nuxt_dashboard/`)
+### Canonical Nuxt Dashboard (`dashboard/`)
 
-- **Pages**:
-  - `index.vue` - Main dashboard with KPIs
-  - `analytics.vue` - Data analytics and reports
-  - `control.vue` - System control and management
-  - `settings.vue` - Configuration settings
-  - `configuration.vue` - Battery and market configuration
-- **Features**:
-  - Real-time energy data visualization
-  - Control system integration
-  - Settings management and import/export
-  - Analytics and reporting
-  - Responsive UI with Tailwind CSS
+- **Runtime role**: primary operator-facing web UI used by root scripts, local launcher, and current runtime validation
+- **Notes**:
+  - Default local URL is `http://127.0.0.1:3600`
+  - This is the Nuxt app that root docs refer to when they say `dashboard`
+
+### Archived Legacy Nuxt Dashboard
+
+- **Archive path**: `archive/nuxt_dashboard_legacy_20260306/`
+- **Runtime role**: historical reference only; not part of the active app or root launcher
+- **Notes**:
+  - `dashboard/` is the only active Nuxt runtime target
+  - Keep future references pointed at the archive path, not a live root-level `nuxt_dashboard/` folder
 
 ## APIs
 
@@ -163,7 +153,7 @@ streamlit run streamlit_dashboard/app.py
 ### Nuxt Dashboard
 
 ```bash
-cd nuxt_dashboard
+cd dashboard
 npm install
 npm run dev
 ```

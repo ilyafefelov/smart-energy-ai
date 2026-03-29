@@ -1,49 +1,94 @@
 // API endpoint to get Dagster asset results from PostgreSQL
 // Returns stored asset results for dashboard display
 
+import {
+  buildStrictDagsterTenantPredicate,
+  dagsterAssetResultsHasTenantColumn,
+  dagsterAssetResultsTableExists,
+  resolveDagsterAssetResultsDbConfig,
+} from '../../utils/dagster-asset-results'
+import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
+
+function buildEmptyAssetResponse(tenant: ReturnType<typeof getTenantResponseMetadata>, warning?: string) {
+  return {
+    success: true,
+    timestamp: new Date().toISOString(),
+    tenant,
+    assets: [],
+    total_assets: 0,
+    source: 'dagster_asset_results',
+    warning,
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return ''
+}
+
+function isDagsterAssetDbUnavailable(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+
+  const candidate = error as { code?: unknown; errno?: unknown; message?: unknown; cause?: unknown }
+  const code = typeof candidate.code === 'string'
+    ? candidate.code
+    : typeof candidate.errno === 'string'
+      ? candidate.errno
+      : ''
+  const message = typeof candidate.message === 'string' ? candidate.message.toLowerCase() : ''
+  const connectionErrorCodes = new Set(['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', '3D000', '28P01'])
+
+  if (connectionErrorCodes.has(code)) {
+    return true
+  }
+
+  return message.includes('connect') || message.includes('database') || message.includes('connection terminated')
+}
+
 export default defineEventHandler(async (event) => {
   let pool: any = null
 
   try {
+    const tenant = await resolveTenantContext(event)
+    const tenantMetadata = getTenantResponseMetadata(tenant)
     const { Pool } = await import('pg')
 
     pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      user: process.env.DB_USER || 'dagster',
-      password: process.env.DB_PASSWORD || 'dagster',
-      database: process.env.DB_NAME || 'dagster',
+      ...resolveDagsterAssetResultsDbConfig(),
     })
 
-    // Keep schema creation aligned with src/dagster_api/database.py.
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS asset_results (
-        id SERIAL PRIMARY KEY,
-        asset_name VARCHAR(255) NOT NULL,
-        run_id VARCHAR(255),
-        materialization_time TIMESTAMP DEFAULT NOW(),
-        data JSONB,
-        status VARCHAR(50) DEFAULT 'success',
-        error_message TEXT,
-        execution_time_ms INTEGER,
-        UNIQUE(asset_name, run_id)
-      )
-    `)
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_asset_results_name ON asset_results(asset_name)')
-    await pool.query('CREATE INDEX IF NOT EXISTS idx_asset_results_time ON asset_results(materialization_time DESC)')
+    if (!(await dagsterAssetResultsTableExists(pool))) {
+      return buildEmptyAssetResponse(tenantMetadata, 'asset_results table not available')
+    }
+
+    const hasTenantColumn = await dagsterAssetResultsHasTenantColumn(pool)
+    if (!hasTenantColumn) {
+      console.warn('[dagster/assets] asset_results is missing required tenant_id enforcement')
+      return buildEmptyAssetResponse(tenantMetadata, 'asset_results tenant scoping unavailable')
+    }
+
+    const tenantPredicate = buildStrictDagsterTenantPredicate()
 
     const result = await pool.query(`
       SELECT 
         asset_name,
         run_id,
+        tenant_id,
+        data,
         materialization_time,
         status,
         execution_time_ms,
         error_message
       FROM asset_results
+      WHERE ${tenantPredicate}
       ORDER BY materialization_time DESC
       LIMIT 50
-    `)
+    `, [tenant.id])
 
     // Group by asset
     const assets: Record<string, {
@@ -76,14 +121,23 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       timestamp: new Date().toISOString(),
+      tenant: tenantMetadata,
       assets: Object.values(assets),
       total_assets: Object.keys(assets).length
     }
   } catch (error) {
+    if (isDagsterAssetDbUnavailable(error)) {
+      const tenant = await resolveTenantContext(event)
+      const tenantMetadata = getTenantResponseMetadata(tenant)
+      const message = getErrorMessage(error) || 'dagster asset results database unavailable'
+      console.warn('[dagster/assets] Falling back to empty results:', message)
+      return buildEmptyAssetResponse(tenantMetadata, message)
+    }
+
     console.error('[dagster/assets] Error:', error)
     return {
       success: false,
-      error: error.message
+      error: getErrorMessage(error) || 'Failed to fetch Dagster asset results'
     }
   } finally {
     if (pool) {

@@ -2,7 +2,7 @@
 SQLAlchemy ORM models for Smart Energy AI database
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Index, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, Index, Boolean, JSON
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -74,6 +74,7 @@ class OptimizationHistory(Base):
     realized_revenue_uah = Column(Float, nullable=True)
     realized_cost_uah = Column(Float, nullable=True)
     realized_net_uah = Column(Float, nullable=True)
+    decision_snapshot = Column(JSON, nullable=True)
     is_reconciled = Column(Boolean, nullable=False, default=False)
     reconciled_at = Column(DateTime, nullable=True)
     reconciliation_note = Column(String, nullable=True)
