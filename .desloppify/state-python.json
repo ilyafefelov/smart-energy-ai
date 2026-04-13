@@ -4,15 +4,15 @@
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
   "overall_score": 88.6,
-  "objective_score": 94.7,
+  "objective_score": 94.8,
   "strict_score": 88.2,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 138,
-    "open": 242,
+    "fixed": 145,
+    "open": 235,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -25,8 +25,8 @@
       "2": {
         "auto_resolved": 36,
         "false_positive": 0,
-        "fixed": 26,
-        "open": 25,
+        "fixed": 33,
+        "open": 18,
         "wontfix": 75
       },
       "3": {
@@ -2330,11 +2330,11 @@
   },
   "dimension_scores": {
     "Code quality": {
-      "score": 90.3,
-      "strict": 84.8,
+      "score": 90.6,
+      "strict": 85.1,
       "verified_strict_score": 84.8,
       "checks": 1032,
-      "failing": 178,
+      "failing": 171,
       "tier": 3,
       "detectors": {
         "unused": {
@@ -2369,9 +2369,9 @@
         },
         "dict_keys": {
           "potential": 143,
-          "pass_rate": 0.8762237762237762,
-          "failing": 48,
-          "weighted_failures": 17.7
+          "pass_rate": 0.8972027972027973,
+          "failing": 41,
+          "weighted_failures": 14.7
         },
         "global_mutable_config": {
           "potential": 143,
@@ -17982,17 +17982,23 @@
         "line": 154,
         "info": "Created at line 125 in demo_physics_simulator() \u2014 will raise KeyError or return None via .get()"
       },
-      "status": "open",
-      "note": "Reopened (\u00d74) \u2014 reappeared in scan (was fixed)",
+      "status": "fixed",
+      "note": "The legacy demo surface is already removed from the active repo and validated by tests/unit/test_legacy_demo_surface_cleanup.py.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T17:56:16+00:00",
       "reopen_count": 4,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually The legacy demo surface is already removed from the active repo and validated by tests/unit/test_legacy_demo_surface_cleanup.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T17:56:16+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Model trained successfully": {
       "id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Model trained successfully",
@@ -23708,17 +23714,23 @@
         "line": 145,
         "info": "Created at line 124 in _normalize_client_config() \u2014 will raise KeyError or return None via .get()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading base_load_kw, validated by tests/unit/test_client_state_and_market_parsing.py.",
       "first_seen": "2026-03-02T23:31:12+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T17:56:25+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading base_load_kw, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T17:56:25+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_capacity_kwh": {
       "id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_capacity_kwh",
@@ -23733,17 +23745,23 @@
         "line": 136,
         "info": "Created at line 124 in _normalize_client_config() \u2014 will raise KeyError or return None via .get()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading battery_capacity_kwh, validated by tests/unit/test_client_state_and_market_parsing.py.",
       "first_seen": "2026-03-02T23:31:12+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T17:56:33+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading battery_capacity_kwh, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T17:56:33+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_type": {
       "id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_type",
@@ -23758,17 +23776,23 @@
         "line": 134,
         "info": "Created at line 124 in _normalize_client_config() \u2014 will raise KeyError or return None via .get()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading battery_type, validated by tests/unit/test_client_state_and_market_parsing.py.",
       "first_seen": "2026-03-02T23:31:12+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T17:56:42+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading battery_type, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T17:56:42+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::load_profile": {
       "id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::load_profile",
@@ -23783,17 +23807,23 @@
         "line": 147,
         "info": "Created at line 124 in _normalize_client_config() \u2014 will raise KeyError or return None via .get()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading load_profile, validated by tests/unit/test_client_state_and_market_parsing.py.",
       "first_seen": "2026-03-02T23:31:12+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T17:56:50+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading load_profile, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T17:56:50+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::peak_load_kw": {
       "id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::peak_load_kw",
@@ -23808,17 +23838,23 @@
         "line": 142,
         "info": "Created at line 124 in _normalize_client_config() \u2014 will raise KeyError or return None via .get()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading peak_load_kw, validated by tests/unit/test_client_state_and_market_parsing.py.",
       "first_seen": "2026-03-02T23:31:12+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T17:56:58+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading peak_load_kw, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T17:56:58+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::solar_capacity_kw": {
       "id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::solar_capacity_kw",
@@ -23833,17 +23869,23 @@
         "line": 139,
         "info": "Created at line 124 in _normalize_client_config() \u2014 will raise KeyError or return None via .get()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading solar_capacity_kw, validated by tests/unit/test_client_state_and_market_parsing.py.",
       "first_seen": "2026-03-02T23:31:12+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T17:57:07+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading solar_capacity_kw, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T17:57:07+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::src/optimization/baseline_dp.py::dead_write::objective::net_cost_eur": {
       "id": "dict_keys::src/optimization/baseline_dp.py::dead_write::objective::net_cost_eur",

@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-04-13T17:51:55+00:00",
+  "updated": "2026-04-13T17:57:05+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -1060,38 +1060,38 @@
     "dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP": {
       "issue_id": "dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-phantom_read",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:56:16+00:00"
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::base_load_kw": {
       "issue_id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::base_load_kw",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-phantom_read",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:56:25+00:00"
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_capacity_kwh": {
       "issue_id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_capacity_kwh",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-phantom_read",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:56:33+00:00"
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_type": {
       "issue_id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_type",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-phantom_read",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:56:42+00:00"
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::load_profile": {
       "issue_id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::load_profile",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-phantom_read",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:56:50+00:00"
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::peak_load_kw": {
       "issue_id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::peak_load_kw",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-phantom_read",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:56:58+00:00"
     },
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::solar_capacity_kw": {
       "issue_id": "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::solar_capacity_kw",
@@ -2188,12 +2188,6 @@
       "name": "auto/dict_keys-phantom_read",
       "description": "Fix 7 phantom read issues",
       "issue_ids": [
-        "dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP",
-        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::base_load_kw",
-        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_capacity_kwh",
-        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_type",
-        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::load_profile",
-        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::peak_load_kw",
         "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::solar_capacity_kw"
       ],
       "created_at": "2026-03-06T10:42:05+00:00",
@@ -8800,6 +8794,183 @@
         "status": "fixed",
         "attestation": "I have actually The file is already removed from the active repo surface and tests/unit/test_legacy_run_optimization_cleanup.py validates that removal, so this stale structural finding was cleared without new code changes. and I am not gaming the score."
       }
+    },
+    {
+      "timestamp": "2026-04-13T17:52:38+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/optimizer/dagster_integration.py",
+        "structural::energy_ml/optimizer/ml_star_optimizer.py",
+        "structural::energy_ml/optimizer/run_optimization.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "3b717aef630e",
+        "branch": "cleanup/clean-code-dry-pass"
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:56:15+00:00",
+      "action": "done",
+      "issue_ids": [
+        "dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "The legacy demo surface is already removed from the active repo and validated by tests/unit/test_legacy_demo_surface_cleanup.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:56:16+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "The legacy demo surface is already removed from the active repo and validated by tests/unit/test_legacy_demo_surface_cleanup.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually The legacy demo surface is already removed from the active repo and validated by tests/unit/test_legacy_demo_surface_cleanup.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:56:23+00:00",
+      "action": "done",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::base_load_kw"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading base_load_kw, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:56:25+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::base_load_kw"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading base_load_kw, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading base_load_kw, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:56:32+00:00",
+      "action": "done",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_capacity_kwh"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading battery_capacity_kwh, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:56:33+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_capacity_kwh"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading battery_capacity_kwh, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading battery_capacity_kwh, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:56:40+00:00",
+      "action": "done",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_type"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading battery_type, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:56:42+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_type"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading battery_type, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading battery_type, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:56:48+00:00",
+      "action": "done",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::load_profile"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading load_profile, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:56:50+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::load_profile"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading load_profile, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading load_profile, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:56:57+00:00",
+      "action": "done",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::peak_load_kw"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading peak_load_kw, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:56:58+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::peak_load_kw"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading peak_load_kw, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually client_state normalization now merges nested energy_system overrides into a flat config before reading peak_load_kw, validated by tests/unit/test_client_state_and_market_parsing.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:57:05+00:00",
+      "action": "done",
+      "issue_ids": [
+        "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::solar_capacity_kw"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "client_state normalization now merges nested energy_system overrides into a flat config before reading solar_capacity_kw, validated by tests/unit/test_client_state_and_market_parsing.py.",
+      "detail": {}
     }
   ],
   "epic_triage_meta": {
@@ -9528,12 +9699,27 @@
       "recorded_at": "2026-04-13T17:47:43+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "3b717aef630e",
+      "branch": "cleanup/clean-code-dry-pass",
+      "issue_ids": [
+        "structural::energy_ml/optimizer/dagster_integration.py",
+        "structural::energy_ml/optimizer/ml_star_optimizer.py",
+        "structural::energy_ml/optimizer/run_optimization.py"
+      ],
+      "recorded_at": "2026-04-13T17:52:38+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/optimizer/dagster_integration.py",
-    "structural::energy_ml/optimizer/ml_star_optimizer.py",
-    "structural::energy_ml/optimizer/run_optimization.py"
+    "dict_keys::energy_ml/demo_complete_system.py::phantom_read::models::LFP",
+    "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::base_load_kw",
+    "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_capacity_kwh",
+    "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_type",
+    "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::load_profile",
+    "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::peak_load_kw"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
