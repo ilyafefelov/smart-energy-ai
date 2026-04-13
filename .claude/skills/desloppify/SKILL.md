@@ -1,5 +1,3 @@
-<!-- desloppify-begin -->
-<!-- desloppify-skill-version: 2 -->
 ---
 name: desloppify
 description: >
@@ -7,7 +5,9 @@ description: >
   about code quality, technical debt, dead code, large files, god classes,
   duplicate functions, code smells, naming issues, import cycles, or coupling
   problems. Also use when asked for a health score, what to fix next, or to
-  create a cleanup plan. Supports 28 languages.
+  create a cleanup plan. Apply Karpathy-style guardrails: explicit assumptions,
+  simplest viable fix, surgical edits, and verifiable success criteria.
+  Supports 28 languages.
 allowed-tools: Bash(desloppify *)
 ---
 
@@ -20,6 +20,13 @@ Improve code quality by maximising the **strict score** honestly.
 **The main thing you do is run `desloppify next`** — it tells you exactly what to fix and how. Fix it, resolve it, run `next` again. Keep going.
 
 Follow the scan output's **INSTRUCTIONS FOR AGENTS** — don't substitute your own analysis.
+
+Keep the work Karpathy-simple:
+
+- Think before coding: make assumptions explicit and do not hide uncertainty.
+- Simplicity first: write the minimum code needed to resolve the finding.
+- Surgical changes: touch only the code required for the issue you are clearing.
+- Goal-driven execution: define the smallest convincing validation step and run it immediately.
 
 ## 2. The Workflow
 
@@ -46,6 +53,9 @@ Repeat until the queue is clear:
 
 Score may temporarily drop after fixes — cascade effects are normal, keep going.
 If `next` suggests an auto-fixer, run `desloppify fix <fixer> --dry-run` to preview, then apply.
+
+Do not widen scope while clearing a single queue item. If you notice unrelated
+cleanup, record it or mention it separately.
 
 **To be strategic**, use `plan` to shape what `next` gives you:
 ```bash
@@ -119,8 +129,6 @@ When desloppify itself appears wrong or inconsistent:
 
 `command -v desloppify >/dev/null 2>&1 && echo "desloppify: installed" || echo "NOT INSTALLED — run: pip install --upgrade git+https://github.com/peteromallet/desloppify.git"`
 
-<!-- desloppify-end -->
-
 ## Claude Code Overlay
 
 Use Claude subagents for subjective scoring work that should be context-isolated.
@@ -146,6 +154,3 @@ For the manual path:
 5. Return machine-readable JSON matching the format in the base skill doc. For `--external-submit`, include `session` from the generated template.
 6. `findings` MUST match `query.system_prompt` exactly. Use `"findings": []` when no defects found.
 7. Import is fail-closed: invalid findings abort unless `--allow-partial` is passed.
-
-<!-- desloppify-overlay: claude -->
-<!-- desloppify-end -->

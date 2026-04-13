@@ -14,15 +14,16 @@ allowed-tools: Bash(desloppify *)
 # Desloppify Copilot Overlay
 
 This file is a narrow Copilot overlay for desloppify and code-health work.
-Repo-wide workflow remains in `AGENTS.md` and stays authoritative for Beads,
-validation, landing, branch lifecycle, and local runtime guidance. If this file
-and `AGENTS.md` overlap, follow `AGENTS.md` for repository workflow and use
-this file only for desloppify-specific execution.
+Repo-wide workflow remains in `AGENTS.md` and stays authoritative for runtime
+truth, Beads workflow, validation, landing, and branch lifecycle rules. If this
+file and `AGENTS.md` overlap, follow `AGENTS.md` and keep this file limited to
+desloppify-specific execution.
 
 ## Core Rules
 
-  of inventing a separate prioritization scheme when the tool already provides
-  one.
+- Follow `desloppify next` and the scan output instead of inventing a separate prioritization scheme.
+- Apply the repo execution style from `AGENTS.md`: explicit assumptions, simplest viable fix, surgical edits, and immediate behavior-scoped validation.
+- Keep cleanup work narrow. If a finding turns into broader architecture work, stop treating it as a queue-clearing slice.
 
 ## Minimal Workflow
 
@@ -51,7 +52,6 @@ desloppify plan triage --complete --strategy "execution plan..."
 Use plan shaping commands only when they clarify execution order:
 
 ```bash
-desloppify plan reorder <pat> top
 desloppify plan cluster create <name>
 desloppify plan focus <cluster>
 desloppify plan resolve <pat>
@@ -59,22 +59,21 @@ desloppify plan resolve <pat>
 
 ### 3. Execute and Land
 
-  as required by `AGENTS.md`.
-  passes. Do not commit health work directly to `main`.
-  creating unnecessary branch churn.
-  leaving stale health branches behind.
+- Use the Beads, validation, and landing flow from `AGENTS.md`.
+- Do not commit health work directly to `main`.
+- Prefer small, related batches instead of unnecessary branch churn.
+- Close or prune stale cleanup branches once the landing flow is complete.
 
 ```bash
 desloppify config set commit_pr 42
 ```
 
-
 ```bash
 desloppify plan commit-log record
 ```
 
-  run the landing flow from `AGENTS.md` so Beads status, branch history, and the
-  PR all describe the same state.
+After recording the cleanup batch, run the landing flow from `AGENTS.md` so
+Beads status, branch history, and the PR all describe the same state.
 
 ## Useful Commands
 
@@ -91,6 +90,10 @@ desloppify plan commit-log pr
 ```
 
 ## Review and Scoring Notes
+
+- Prefer objective queue work first: orphaned code, dead writes, duplication, and narrow structural fixes.
+- For subjective review prompts, keep findings evidence-based and avoid turning cleanup work into a broad rewrite.
+- If a finding is valid but not worth the disruption, document the reason instead of forcing a cosmetic refactor.
 
 
 ## Copilot Review Agents

@@ -1,12 +1,12 @@
 # Smart Energy AI - Agent Instructions
 
-This file is the current workspace-level guidance for agents working in this repository. Keep it concise and current; do not let it turn into a historical report.
-Other repo instruction overlays should defer to this file for Beads workflow,
-validation, landing, and branch lifecycle rules.
+This file is the workspace-level source of truth for repository workflow,
+runtime truth, validation, and landing expectations. Other overlays should stay
+narrow and defer to this file when guidance overlaps.
 
 ## Beads-First Workflow
 
-This repo uses `bd` (Beads) for all task tracking.
+This repo uses `bd` (Beads) for task tracking.
 
 Before writing code, editing docs, or doing cleanup:
 
@@ -17,6 +17,10 @@ Before writing code, editing docs, or doing cleanup:
 5. Close the issue with `bd close <id> --reason "..." --json` only after validation.
 
 Do not track work in markdown TODO lists or external trackers.
+
+If `bd` or its Dolt backend is unavailable in the local environment, call out
+the blocker explicitly and continue with scoped changes plus validation. Do not
+invent an alternate tracker.
 
 Useful commands:
 
@@ -74,6 +78,13 @@ pytest tests/unit/<target_test>.py -q
 dagster asset materialize -m src.definitions --select "*optimization_schedule_asset"
 dagster job execute -m src.definitions -j optimization_schedule_contract_checks
 ```
+
+## Execution Style
+
+- Think before coding: state assumptions, surface ambiguity, and do not silently choose between multiple plausible interpretations when behavior would change.
+- Simplicity first: prefer the minimum code that solves the task; avoid speculative abstractions, extra configurability, or broad refactors.
+- Surgical changes: touch only the requested surface, remove only the orphans created by your own change, and leave unrelated cleanup for separate work unless explicitly asked.
+- Goal-driven execution: define a concrete success check for each slice and validate the narrowest relevant path immediately after editing.
 
 ## Key References
 
