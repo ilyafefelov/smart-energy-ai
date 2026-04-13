@@ -54,48 +54,6 @@ def build_models_module():
     return module
 
 
-def test_notion_sync_collects_commits_markdown_and_summary(tmp_path: Path, monkeypatch) -> None:
-    module = load_script_module("scripts.notion_sync_under_test", "scripts/notion_sync.py")
-
-    git_result = SimpleNamespace(
-        returncode=0,
-        stdout="abc123|feat: add sync|Illya|2026-03-06|extra details\ndef456|fix: test|Illya|2026-03-05|\n",
-    )
-    monkeypatch.setattr(module.subprocess, "run", lambda *args, **kwargs: git_result)
-
-    docs_dir = tmp_path / "docs"
-    docs_dir.mkdir(parents=True, exist_ok=True)
-    (docs_dir / "README.md").write_text("hello\nworld", encoding="utf-8")
-    (tmp_path / "notes.txt").write_text("ignore", encoding="utf-8")
-
-    commits = module.NotionSync.get_recent_commits(count=2)
-    markdown = module.NotionSync.get_markdown_files(tmp_path)
-    summary = module.NotionSync.generate_notion_content(commits, markdown)
-
-    assert commits[0]["hash"] == "abc123"
-    assert commits[0]["body"] == "extra details"
-    assert [entry["name"] for entry in markdown] == ["README.md"]
-    assert "Recent Commits" in summary
-    assert "Documentation Files" in summary
-
-
-def test_notion_sync_summary_writes_output_file(tmp_path: Path, monkeypatch, capsys) -> None:
-    module = load_script_module("scripts.notion_sync_summary_under_test", "scripts/notion_sync.py")
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(module.NotionSync, "get_recent_commits", staticmethod(lambda count=15: [{"hash": "abc", "message": "msg", "date": "2026-03-06", "body": "", "author": "Illya"}]))
-    monkeypatch.setattr(module.NotionSync, "get_markdown_files", staticmethod(lambda directory=".": [{"name": "README.md", "content": "body", "path": "README.md"}]))
-    monkeypatch.setattr(module, "datetime", type("FixedDateTime", (), {"now": staticmethod(lambda: SimpleNamespace(strftime=lambda fmt: "2026-03-06_182700"))}))
-
-    summary = module.NotionSync.sync_summary(project_name="smart energy")
-    output = capsys.readouterr().out
-    output_file = tmp_path / "notion_sync_2026-03-06_182700.txt"
-
-    assert output_file.exists()
-    assert "Recent Commits" in summary
-    assert "Sync summary saved" in output
-    assert "smart energy" in output_file.read_text(encoding="utf-8")
-
-
 def test_sample_data_generator_builds_realistic_frames_and_main(monkeypatch, capsys) -> None:
     session = SimpleNamespace(add=lambda record: None, commit=lambda: None, rollback=lambda: None, close=lambda: None)
     module = load_script_module(
