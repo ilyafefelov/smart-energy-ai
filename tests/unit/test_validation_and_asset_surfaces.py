@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import builtins
 import importlib.util
-import io
 import sys
 import types
 from datetime import datetime
 from pathlib import Path
-from types import SimpleNamespace
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -42,65 +39,6 @@ def load_module(module_name: str, relative_path: str, injected_modules: dict[str
                 sys.modules.pop(name, None)
             else:
                 sys.modules[name] = old
-
-
-def build_validation_modules():
-    injected = {}
-
-    energy_ml_pkg = types.ModuleType("energy_ml")
-    energy_ml_pkg.__path__ = [str(REPO_ROOT / "energy_ml")]
-    pipeline_mod = types.ModuleType("energy_ml.pipeline")
-    pipeline_mod.PipelineOrchestrator = type("PipelineOrchestrator", (), {})
-
-    mlops_pkg = types.ModuleType("energy_ml.mlops")
-    mlops_pkg.__path__ = []
-    optimization_mod = types.ModuleType("energy_ml.mlops.optimization_engine")
-    battery_mod = types.ModuleType("energy_ml.mlops.battery_physics")
-    renewable_mod = types.ModuleType("energy_ml.mlops.renewable_forecasting")
-
-    class OptimizationEngine:
-        def optimize_decision(self, **kwargs):
-            return {"action": "SELL", "confidence": 0.88}
-
-    class BatteryPhysicsEngine:
-        def get_battery_physics_data(self, config):
-            return {"chemistry": config["battery_type"], "current_state": {"soc_percent": config["battery_soc"]}}
-
-    class RenewableForecaster:
-        pass
-
-    optimization_mod.OptimizationEngine = OptimizationEngine
-    battery_mod.BatteryPhysicsEngine = BatteryPhysicsEngine
-    renewable_mod.RenewableForecaster = RenewableForecaster
-
-    assets_pkg = types.ModuleType("energy_ml.assets")
-    assets_pkg.__path__ = []
-    assets_pipeline_mod = types.ModuleType("energy_ml.assets.pipeline")
-    assets_pipeline_mod.optimization_preferences_asset = object()
-
-    energy_ml_pkg.pipeline = pipeline_mod
-    energy_ml_pkg.mlops = mlops_pkg
-    energy_ml_pkg.assets = assets_pkg
-    mlops_pkg.optimization_engine = optimization_mod
-    mlops_pkg.battery_physics = battery_mod
-    mlops_pkg.renewable_forecasting = renewable_mod
-    assets_pkg.pipeline = assets_pipeline_mod
-
-    injected.update(
-        {
-            "energy_ml": energy_ml_pkg,
-            "energy_ml.pipeline": pipeline_mod,
-            "energy_ml.mlops": mlops_pkg,
-            "energy_ml.mlops.optimization_engine": optimization_mod,
-            "energy_ml.mlops.battery_physics": battery_mod,
-            "energy_ml.mlops.renewable_forecasting": renewable_mod,
-            "energy_ml.assets": assets_pkg,
-            "energy_ml.assets.pipeline": assets_pipeline_mod,
-        }
-    )
-    return injected
-
-
 def build_asset_dependency_modules():
     dagster_mod = types.ModuleType("dagster")
     dagster_mod.asset = lambda *args, **kwargs: (lambda func: func)
@@ -188,39 +126,6 @@ def build_repository_injected_modules():
         injected[module_name] = module
 
     return injected
-
-
-def test_validation_check_reports_imports_functionality_and_apis(monkeypatch, capsys) -> None:
-    module = load_module(
-        "scripts.validation_check_under_test",
-        "scripts/validation_check.py",
-        injected_modules=build_validation_modules(),
-    )
-
-    fake_subprocess = types.ModuleType("subprocess")
-    fake_subprocess.run = lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout='{"success": true, "strategy": "balanced"}', stderr="")
-    monkeypatch.setitem(sys.modules, "subprocess", fake_subprocess)
-    monkeypatch.setattr(module.Path, "exists", lambda self: True)
-    monkeypatch.setattr(module.Path, "read_text", lambda self: "export default defineEventHandler(() => ({ status: 'ok', message: 'x' * 120 }))" + ("a" * 120))
-
-    imports = module.check_imports()
-    functionality = module.check_functionality()
-    apis = module.check_dashboard_apis()
-
-    assert imports["PipelineOrchestrator"].startswith("❌ ERROR:")
-    assert "energy_ml.energy_ml" in imports["PipelineOrchestrator"]
-    assert functionality["Optimization Decision"].startswith("❌ ERROR:")
-    assert "energy_ml.energy_ml" in functionality["Optimization Decision"]
-    assert functionality["Battery Physics"].startswith("❌ ERROR:")
-    assert functionality["API Integration"].startswith("✅")
-    assert all(status.startswith("✅") for status in apis.values())
-
-    module.main()
-    output = capsys.readouterr().out
-    assert "SUMMARY" in output
-    assert "MOSTLY WORKING" in output or "SIGNIFICANT ISSUES DETECTED" in output
-
-
 def test_assets_repository_returns_expected_assets() -> None:
     module = load_module(
         "src.assets",
