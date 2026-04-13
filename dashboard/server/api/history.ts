@@ -291,7 +291,7 @@ function buildRowsFromPpoValidation(
 
 function resolveProjectRoot(): string {
   const cwd = process.cwd()
-  if (existsSync(join(cwd, 'ml_integration_api.py'))) return cwd
+  if (existsSync(join(cwd, 'workspace.yaml'))) return cwd
   return resolve(cwd, '..')
 }
 

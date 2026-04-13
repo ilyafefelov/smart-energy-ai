@@ -149,7 +149,7 @@ async function triggerPipelineRecalculation(config: any) {
     // Try to execute Python recalculation script in background
     try {
       const pythonCommand = process.platform === 'win32' ? 'python' : 'python3'
-      const scriptPath = join(process.cwd(), '../recalculate_pipeline.py')
+      const scriptPath = join(process.cwd(), '../scripts/recalculate_pipeline.py')
       
       // Run in background - don't wait for completion
       setTimeout(() => {

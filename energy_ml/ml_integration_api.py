@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Compatibility wrapper for the canonical root ML integration bridge."""
+"""Compatibility wrapper for the canonical scripts ML integration bridge."""
 
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 
 def _load_root_bridge():
-    root_path = Path(__file__).resolve().parents[1] / "ml_integration_api.py"
+    root_path = Path(__file__).resolve().parents[1] / "scripts" / "ml_integration_api.py"
     spec = spec_from_file_location("smart_energy_ai_root_ml_integration_api", root_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Unable to load root ML bridge from {root_path}")

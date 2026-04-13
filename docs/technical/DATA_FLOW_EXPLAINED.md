@@ -46,7 +46,7 @@ This path is forecast plus optimizer plus normalization, not end-to-end learned 
 When the Dagster recommendation is stale or unavailable, the dashboard falls back to `/api/ml/recommendation`:
 
 1. the route builds live context from tenant config, prices, battery state, and weather
-2. it invokes `ml_integration_api.py`
+2. it invokes `scripts/ml_integration_api.py`
 3. the Python bridge applies incumbent rule, optimization, renewable, and live-price logic
 4. if explicitly configured, learned-policy mode can attempt MLflow-backed serving through `PredictionService`
 5. otherwise the bridge falls back to the incumbent runtime path with explicit provenance

@@ -84,7 +84,7 @@ export default defineEventHandler(async (event: any) => {
     }
 
     const projectRoot = path.resolve(process.cwd(), '..')
-    const bridgeScriptPath = path.join(projectRoot, 'ml_integration_api.py')
+    const bridgeScriptPath = path.join(projectRoot, 'scripts', 'ml_integration_api.py')
 
     const [mlflowStatus, recommendation, monitoring, dagsterRecommendation, mlflowReachability, dagsterAssetChecks] = await Promise.all([
       $fetch<any>('/api/mlflow/status', tenantRequest).catch(() => null),

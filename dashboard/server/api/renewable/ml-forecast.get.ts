@@ -63,7 +63,7 @@ interface RenewableForecastResponse {
 export default defineEventHandler(async (): Promise<RenewableForecastResponse> => {
   try {
     const projectRoot = path.resolve(process.cwd(), '..')
-    const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
+    const pythonScript = path.join(projectRoot, 'scripts', 'ml_integration_api.py')
 
     console.log('[Renewable API] Getting ML renewable energy forecast')
 

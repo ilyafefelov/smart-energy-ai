@@ -41,7 +41,7 @@ As of March 29, the active runtime includes the regime-aware deterministic optim
 - d:/OpenClaw-Backup/clawd/projects/smart-energy-ai/dashboard/server/utils/recommendation-contract.ts — canonical normalized action/provenance surface to extend with Stage 2 reasoning and compliance metadata.
 - d:/OpenClaw-Backup/clawd/projects/smart-energy-ai/dashboard/server/api/ml/recommendation.get.ts — current forecast/reasoning bridge and likely shortest path for Stage 2 recommendation payload enrichment.
 - d:/OpenClaw-Backup/clawd/projects/smart-energy-ai/energy_ml/ml_integration.py — existing reasoning-generation and response-normalization surface that can back the deterministic commander output without introducing a separate live agent runtime.
-- d:/OpenClaw-Backup/clawd/projects/smart-energy-ai/ml_integration_api.py — canonical Python bridge returning reasoning and decision-source metadata for dashboard-facing ML and strategy routes.
+- d:/OpenClaw-Backup/clawd/projects/smart-energy-ai/scripts/ml_integration_api.py — canonical Python bridge returning reasoning and decision-source metadata for dashboard-facing ML and strategy routes.
 - d:/OpenClaw-Backup/clawd/projects/smart-energy-ai/dashboard/app/components/ML/ForecastChart.vue — existing price/action/reasoning visualization surface to reuse for the timeline.
 - d:/OpenClaw-Backup/clawd/projects/smart-energy-ai/dashboard/app/components/ML/RecommendationCard.vue — current explanation card to extend with regime/compliance output.
 - d:/OpenClaw-Backup/clawd/projects/smart-energy-ai/dashboard/pages/control.vue — existing command-history surface that can become the Stage 2 reasoning/audit timeline with minimal UI churn.

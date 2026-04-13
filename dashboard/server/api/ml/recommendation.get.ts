@@ -377,7 +377,7 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
 
     // Get the project root path (dashboard/../ = project root)
     const projectRoot = path.resolve(process.cwd(), '..')
-    const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
+    const pythonScript = path.join(projectRoot, 'scripts', 'ml_integration_api.py')
     const tenantConfigDir = path.join(projectRoot, 'energy_ml', 'configs', 'tenants', tenant.id)
     
     console.log(`[ML API] Project root: ${projectRoot}`)

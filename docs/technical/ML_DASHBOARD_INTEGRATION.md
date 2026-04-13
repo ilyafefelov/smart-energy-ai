@@ -46,7 +46,7 @@ Primary operational recommendation endpoint.
 Fallback recommendation surface.
 
 - builds live context from tenant config, prices, battery state, and weather
-- invokes the shared Python bridge `ml_integration_api.py`
+- invokes the shared Python bridge `scripts/ml_integration_api.py`
 - exposes the same normalized `contract` and `serving` metadata used by the Dagster handoff
 
 ### `/api/mlflow/status`

@@ -65,7 +65,7 @@ export default defineEventHandler(async (event): Promise<BatteryPhysicsResponse>
   try {
     // Get the project root path
     const projectRoot = path.resolve(process.cwd(), '..')
-    const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
+    const pythonScript = path.join(projectRoot, 'scripts', 'ml_integration_api.py')
     
     console.log(`[Battery Physics API] Getting battery physics simulation`)
     

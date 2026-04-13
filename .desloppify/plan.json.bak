@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-03-06T23:02:25+00:00",
+  "updated": "2026-04-13T17:39:09+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -22,14 +22,14 @@
     "structural::energy_ml/assets/pipeline.py": {
       "issue_id": "structural::energy_ml/assets/pipeline.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/structural-pipeline.py",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:37:48+00:00"
     },
     "structural::energy_ml/pipeline.py": {
       "issue_id": "structural::energy_ml/pipeline.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/structural-pipeline.py",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:37:56+00:00"
     },
     "structural::energy_ml/energy_ml/assets/features.py": {
       "issue_id": "structural::energy_ml/energy_ml/assets/features.py",
@@ -46,8 +46,8 @@
     "structural::energy_ml/ml_integration_api.py": {
       "issue_id": "structural::energy_ml/ml_integration_api.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/structural-ml_integration_api.py",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:39:02+00:00"
     },
     "structural::ml_integration_api.py": {
       "issue_id": "structural::ml_integration_api.py",
@@ -2024,10 +2024,7 @@
     "auto/structural-pipeline.py": {
       "name": "auto/structural-pipeline.py",
       "description": "Review file size: pipeline.py",
-      "issue_ids": [
-        "structural::energy_ml/assets/pipeline.py",
-        "structural::energy_ml/pipeline.py"
-      ],
+      "issue_ids": [],
       "created_at": "2026-03-06T10:42:05+00:00",
       "updated_at": "2026-03-06T10:42:05+00:00",
       "auto": true,
@@ -2050,7 +2047,6 @@
       "name": "auto/structural-ml_integration_api.py",
       "description": "Review file size: ml_integration_api.py",
       "issue_ids": [
-        "structural::energy_ml/ml_integration_api.py",
         "structural::ml_integration_api.py"
       ],
       "created_at": "2026-03-06T10:42:05+00:00",
@@ -8505,6 +8501,117 @@
         "status": "fixed",
         "attestation": "I have actually extracted the retraining, drift, and A/B helper logic into retraining_pipeline_support.py, validated the split with focused pytest coverage, and I am not gaming the score by resolving without fixing."
       }
+    },
+    {
+      "timestamp": "2026-03-06T23:02:49+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/mlops/retraining_pipeline.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "0dcefff2b7b1",
+        "branch": "chore/desloppify-quality-pass"
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:37:46+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/assets/pipeline.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Reduced the asset surface with shared envelope/config helpers and kept focused smoke coverage for optimization preference error envelopes.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:37:48+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/assets/pipeline.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Reduced the asset surface with shared envelope/config helpers and kept focused smoke coverage for optimization preference error envelopes.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Reduced the asset surface with shared envelope/config helpers and kept focused smoke coverage for optimization preference error envelopes. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:37:55+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/pipeline.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the duplicated user-config application path in PipelineOrchestrator and pinned the override behavior with focused pipeline surface tests.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:37:56+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/pipeline.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the duplicated user-config application path in PipelineOrchestrator and pinned the override behavior with focused pipeline surface tests.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted the duplicated user-config application path in PipelineOrchestrator and pinned the override behavior with focused pipeline surface tests. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:37:56+00:00",
+      "action": "cluster_done",
+      "issue_ids": [
+        "structural::energy_ml/pipeline.py"
+      ],
+      "cluster_name": "auto/structural-pipeline.py",
+      "actor": "user",
+      "note": null,
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:39:00+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/ml_integration_api.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Reduced energy_ml/ml_integration_api.py to a compatibility wrapper that loads the canonical bridge from scripts/ml_integration_api.py, validated by focused ML surface tests.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:39:02+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/ml_integration_api.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Reduced energy_ml/ml_integration_api.py to a compatibility wrapper that loads the canonical bridge from scripts/ml_integration_api.py, validated by focused ML surface tests.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Reduced energy_ml/ml_integration_api.py to a compatibility wrapper that loads the canonical bridge from scripts/ml_integration_api.py, validated by focused ML surface tests. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:39:09+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::ml_integration_api.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Removed the loose root bridge path by relocating the canonical script to scripts/ml_integration_api.py and retargeting runtime consumers, validated by focused ML surface and docs tests.",
+      "detail": {}
     }
   ],
   "epic_triage_meta": {
@@ -9199,10 +9306,22 @@
       "recorded_at": "2026-03-06T22:54:16+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "0dcefff2b7b1",
+      "branch": "chore/desloppify-quality-pass",
+      "issue_ids": [
+        "structural::energy_ml/mlops/retraining_pipeline.py"
+      ],
+      "recorded_at": "2026-03-06T23:02:49+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/mlops/retraining_pipeline.py"
+    "structural::energy_ml/assets/pipeline.py",
+    "structural::energy_ml/pipeline.py",
+    "structural::energy_ml/ml_integration_api.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

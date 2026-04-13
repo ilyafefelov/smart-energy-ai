@@ -7,6 +7,7 @@ The Smart Energy AI system is an energy arbitrage platform centered on Dagster o
 
 ```
 smart-energy-ai/
+├── scripts/                      # Operational and bridge scripts
 ├── src/                          # Main Python source code
 │   ├── assets/                   # Dagster assets
 │   │   ├── core/                 # Core data definitions
@@ -26,9 +27,10 @@ smart-energy-ai/
 │   ├── real_price_data.py        # Real price data from European sources
 │   ├── oree_*.py                 # OREE price scrapers
 │   └── price_processor.py        # Price data processing
-├── streamlit_dashboard/          # Legacy Streamlit web interface kept for reference
 ├── dashboard/                    # Canonical Nuxt3 Vue.js web interface
 ├── archive/                      # Archived legacy trees and historical snapshots
+│   ├── nuxt_dashboard_legacy_20260306/
+│   └── streamlit_dashboard_legacy_20260413/
 ├── energy_ml/                    # Energy ML runtime and ML ops support code
 │   ├── simulator/                # Battery physics and simulation
 │   ├── mlops/                    # Model-serving and MLflow support surfaces
@@ -43,8 +45,7 @@ smart-energy-ai/
 ├── artifacts/                   # Generated artifacts
 ├── plots/                       # Generated plots
 ├── projects/                    # Project files
-├── .beads/                      # Beads issue tracking
-├── ml_integration_api.py         # Canonical Python bridge used by dashboard APIs
+├── .beads/                       # Beads issue tracking
 └── README.md                    # Project documentation
 ```
 
@@ -86,13 +87,13 @@ smart-energy-ai/
 
 ### Legacy UIs
 
-- `streamlit_dashboard/` is legacy and no longer the primary runtime path.
+- `archive/streamlit_dashboard_legacy_20260413/` is the archived Streamlit UI reference.
 - `archive/nuxt_dashboard_legacy_20260306/` is the archived legacy Nuxt application.
 - There is no active root-level `nuxt_dashboard/` runtime anymore.
 
 ## APIs
 
-### Energy ML bridge (`ml_integration_api.py`)
+### Energy ML bridge (`scripts/ml_integration_api.py`)
 
 - Canonical Python bridge invoked by dashboard ML and optimization strategy routes.
 - `energy_ml/ml_integration_api.py` now exists only as a compatibility wrapper for older import and cwd-based entrypoints.

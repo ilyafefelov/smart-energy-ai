@@ -169,7 +169,7 @@ def _load_root_ml_api_module():
         "energy_ml.mlops.battery_physics": battery_module,
         "energy_ml.mlops.renewable_forecasting": renewable_module,
     }
-    return _load_module("root_ml_integration_api_under_test", "ml_integration_api.py", injected)
+    return _load_module("root_ml_integration_api_under_test", "scripts/ml_integration_api.py", injected)
 
 
 ROOT_ML_API = _load_root_ml_api_module()

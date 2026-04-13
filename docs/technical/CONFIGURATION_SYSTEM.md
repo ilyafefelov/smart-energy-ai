@@ -10,7 +10,7 @@ The active configuration flow is centered on tenant-scoped settings consumed by 
 - `dashboard/server/api/config/current.get.ts` returns normalized tenant configuration to the UI.
 - `dashboard/server/api/config/save.post.ts` validates and persists operator changes.
 - `dashboard/app/components/Preferences/OptimizationProfile.vue` is the active operator surface for Stage 2 settings such as connected power and market-regime override.
-- `ml_integration_api.py` is the canonical Python bridge that reads the saved configuration during dashboard-driven ML and optimization flows.
+- `scripts/ml_integration_api.py` is the canonical Python bridge that reads the saved configuration during dashboard-driven ML and optimization flows.
 
 ## Storage Model
 
@@ -35,6 +35,6 @@ The active configuration flow is centered on tenant-scoped settings consumed by 
 
 ## Current Notes
 
-- `streamlit_dashboard/` is legacy and should be treated as reference-only.
+- `archive/streamlit_dashboard_legacy_20260413/` is the archived Streamlit-era UI reference.
 - `archive/nuxt_dashboard_legacy_20260306/` is archived legacy UI code, not an active config surface.
 - New documentation should describe the dashboard plus config API flow, not the older Streamlit workflow.

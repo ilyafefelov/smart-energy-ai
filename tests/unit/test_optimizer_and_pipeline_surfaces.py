@@ -185,3 +185,19 @@ def test_pipeline_validation_reports_invalid_config_values():
     assert "Invalid efficiency: 1.2" in errors
     assert "Invalid peak load: 0" in errors
     assert "Unknown load profile: unknown" in errors
+
+
+def test_pipeline_recommendation_override_rebuilds_runtime_components():
+    orchestrator = pipeline_module.PipelineOrchestrator()
+    override = pipeline_module.UserConfigModel(
+        battery_capacity_kwh=18.0,
+        battery_efficiency=0.9,
+        load_peak_kw=22.0,
+    )
+
+    recommendation = orchestrator.calculate_recommendation(user_config=override, current_hour=8)
+
+    assert orchestrator.config.load_peak_kw == 22.0
+    assert orchestrator.battery.config.capacity_kwh == 18.0
+    assert orchestrator.load_profile.config.peak_load_kw == 22.0
+    assert recommendation["details"]["load_kw"] == pytest.approx(22.0)

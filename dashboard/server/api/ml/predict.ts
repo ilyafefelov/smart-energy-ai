@@ -25,7 +25,7 @@ function sanitizeNumber(value: unknown, defaultValue: number): number {
 }
 
 async function syncOptimizationStrategy(projectRoot: string, tenantId: string, strategy: string) {
-  const pythonScript = resolve(projectRoot, 'ml_integration_api.py')
+  const pythonScript = resolve(projectRoot, 'scripts', 'ml_integration_api.py')
   const tenantConfigDir = resolve(projectRoot, 'energy_ml', 'configs', 'tenants', tenantId)
   const setStrategyCmd = `python "${pythonScript}" --action=set_optimization_strategy --strategy=${strategy} --format=json`
 
@@ -76,7 +76,7 @@ export default eventHandler(async (event) => {
     const batterySoc = sanitizeNumber(body?.battery_soc, 50)
     const price = sanitizeNumber(body?.price, 14.26)
     const projectRoot = resolve(process.cwd(), '..')
-    const pythonScript = resolve(projectRoot, 'ml_integration_api.py')
+    const pythonScript = resolve(projectRoot, 'scripts', 'ml_integration_api.py')
     const tenantConfigDir = resolve(projectRoot, 'energy_ml', 'configs', 'tenants', tenant.id)
     const liveContext = buildLiveContext(tenant.id, strategy, batterySoc, price)
 

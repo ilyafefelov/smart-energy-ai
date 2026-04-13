@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
 async function startRecalculationProcess(jobId: string, statusPath: string) {
   const pythonCommand = process.platform === 'win32' ? 'python' : 'python3'
   const workingDir = join(process.cwd(), '..')
-  const scriptPath = join(workingDir, 'recalculate_pipeline.py')
+  const scriptPath = join(workingDir, 'scripts', 'recalculate_pipeline.py')
   
   try {
     // Update status to running

@@ -23,7 +23,7 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 # Project root
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = PROJECT_ROOT / "energy_ml" / "configs"
 STATUS_FILE = CONFIG_DIR / "recalculation_status.json"
 SEED_CONFIG_FILE = CONFIG_DIR / "templates" / "user_config.seed.json"

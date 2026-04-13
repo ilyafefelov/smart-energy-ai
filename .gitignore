@@ -12,6 +12,9 @@ data/processed/*
 !data/processed/.gitkeep
 .idea/
 .vscode/
+.pytest_cache/
+.coverage
+htmlcov/
 *.joblib
 checkpoints/
 *.pth
@@ -64,3 +67,7 @@ energy_ml/energy_ml/outputs/
 
 # Root-local runtime state recreated as needed
 mlflow.db
+
+# Generated local logs
+logs/*
+!logs/.gitkeep

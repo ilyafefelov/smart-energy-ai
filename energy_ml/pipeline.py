@@ -121,19 +121,8 @@ class PipelineOrchestrator:
                         If None, loads from disk or uses defaults.
         """
         self.config_manager = ConfigurationManager()
-        
-        if user_config is None:
-            self.config = self.config_manager.load_config_or_raise()
-        else:
-            self.config = user_config
-        
-        # Convert UserConfigModel to config_models for Phase 4 components
-        self.battery_config = self._create_battery_config(self.config)
-        self.load_config = self._create_load_config(self.config)
-        
-        # Initialize Phase 4 components
-        self.battery = BatteryModel(self.battery_config)
-        self.load_profile = StandardWorkSimulator(self.load_config)
+        resolved_config = user_config if user_config is not None else self.config_manager.load_config_or_raise()
+        self._apply_user_config(resolved_config)
         self.tariff = UkraineTariffModel()
         
         # Initialize new MLOps components
@@ -148,6 +137,13 @@ class PipelineOrchestrator:
         self._live_price_map_kwh: Dict[int, float] = {}
         self._live_current_price_kwh: Optional[float] = None
         self._live_battery_state: Dict[str, float] = {}
+
+    def _apply_user_config(self, user_config: UserConfigModel) -> None:
+        self.config = user_config
+        self.battery_config = self._create_battery_config(user_config)
+        self.load_config = self._create_load_config(user_config)
+        self.battery = BatteryModel(self.battery_config)
+        self.load_profile = StandardWorkSimulator(self.load_config)
 
     @staticmethod
     def _safe_float(value: Any, default: float = 0.0) -> float:
@@ -294,11 +290,7 @@ class PipelineOrchestrator:
         """
         # Use provided config or existing
         if user_config is not None:
-            self.config = user_config
-            self.battery_config = self._create_battery_config(user_config)
-            self.load_config = self._create_load_config(user_config)
-            self.battery = BatteryModel(self.battery_config)
-            self.load_profile = StandardWorkSimulator(self.load_config)
+            self._apply_user_config(user_config)
         
         # Determine current hour
         if current_hour is None:

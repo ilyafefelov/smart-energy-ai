@@ -34,7 +34,7 @@ interface OptimizationStrategyResponse {
 
 function resolveProjectRoot(): string {
   const cwd = process.cwd()
-  if (existsSync(path.join(cwd, 'ml_integration_api.py'))) {
+  if (existsSync(path.join(cwd, 'workspace.yaml'))) {
     return cwd
   }
   return path.resolve(cwd, '..')
@@ -116,7 +116,7 @@ export default eventHandler(async (event): Promise<OptimizationStrategyResponse 
   try {
     const tenant = await resolveTenantContext(event, { requireTrustedOverride: true })
     const tenantConfig = resolveTenantConfig(projectRoot, tenant.id, tenant.defaultTenantId)
-    const pythonScript = path.join(projectRoot, 'ml_integration_api.py')
+    const pythonScript = path.join(projectRoot, 'scripts', 'ml_integration_api.py')
     if (!existsSync(pythonScript)) {
       throw new Error(`Python script not found at ${pythonScript}`)
     }

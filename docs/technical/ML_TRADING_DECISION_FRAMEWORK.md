@@ -21,7 +21,7 @@ The current user-facing path works in this order:
 2. Dagster builds that recommendation from market and weather inputs, a synthesized client state, a real price-forecast model, and schedule optimization.
 3. Schedule output is normalized into BUY, SELL, or HOLD for dashboard use.
 4. If the Dagster snapshot is stale, invalid, or unavailable, the dashboard falls back to `/api/ml/recommendation`.
-5. `/api/ml/recommendation` uses live tenant config, current prices, current battery status, and weather context, then calls the root Python bridge in `ml_integration_api.py`.
+5. `/api/ml/recommendation` uses live tenant config, current prices, current battery status, and weather context, then calls the Python bridge in `scripts/ml_integration_api.py`.
 6. The Python path applies rule-based decision logic, heuristic optimization, renewable inference, and a live-price override.
 7. When an operator executes a control command, the resulting battery-state effect is written back into persisted tenant battery state and becomes part of the next dashboard-control inference loop.
 
@@ -120,7 +120,7 @@ This is a real forecast-plus-optimizer path, but it still depends on a synthesiz
 When Dagster output is unavailable or stale, the dashboard falls back to `dashboard/server/api/ml/recommendation.get.ts`:
 
 - the endpoint gathers tenant config, live prices, battery state, and weather context
-- it shells into `ml_integration_api.py` using the live context payload
+- it shells into `scripts/ml_integration_api.py` using the live context payload
 - `energy_ml/pipeline.py` uses rule-based decision logic in `_make_decision`
 - `energy_ml/mlops/optimization_engine.py` re-scores the action with static strategy weights and heuristic scores
 - renewable and battery-physics helpers modify the result further

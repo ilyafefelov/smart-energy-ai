@@ -41,7 +41,7 @@ The active runtime uses Dagster for market, weather, forecasting, and scheduling
 ### Level 3: Intelligence (Decision)
 * **`price_forecast_asset`**: RandomForest-based 24-hour price forecast trained from market history
 * **`optimization_schedule_asset`** and **`optimization_schedule_milp_asset`**: Compute charge and discharge schedules from forecast prices and synthesized client state
-* **Dashboard fallback path**: `dashboard/server/api/ml/recommendation.get.ts` calls `ml_integration_api.py`, which applies heuristic decision logic, optimization scoring, renewable inference, and a live-price override
+* **Dashboard fallback path**: `dashboard/server/api/ml/recommendation.get.ts` calls `scripts/ml_integration_api.py`, which applies heuristic decision logic, optimization scoring, renewable inference, and a live-price override
   - **Current truth:** the live BUY, SELL, or HOLD result is produced by schedule normalization or heuristics, not by a trained end-to-end trading policy
 
 ---
@@ -139,7 +139,7 @@ For thesis and experimentation work, the repo still includes benchmark and MLflo
 - **Tags:** `engine_type=polars` vs `engine_type=nvtabular`
 
 These paths are useful for benchmarking and experiments, but they are not the current end-to-end live decision engine. In particular, MLflow-backed inference remains optional and falls back to mock behavior unless a real model URI is provided.
-The dashboard `/api/mlflow/*` routes should be read as experiment and registry diagnostics, not as proof that the live BUY/SELL/HOLD path is currently served by a learned policy. Runtime serving authority remains the Dagster schedule path and the shared Python serving contract in `ml_integration_api.py`.
+The dashboard `/api/mlflow/*` routes should be read as experiment and registry diagnostics, not as proof that the live BUY/SELL/HOLD path is currently served by a learned policy. Runtime serving authority remains the Dagster schedule path and the shared Python serving contract in `scripts/ml_integration_api.py`.
 
 **Defensive Logic:**
 Code automatically checks for GPU availability:

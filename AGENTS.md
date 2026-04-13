@@ -37,7 +37,7 @@ pwsh ./scripts/local/bd-dolt-sync-safe.ps1
 
 - `dashboard/` is the canonical Nuxt application.
 - `archive/nuxt_dashboard_legacy_20260306/` is legacy and should not be treated as active runtime code.
-- `streamlit_dashboard/` still exists, but it is not the primary dashboard path for the active local stack.
+- `archive/streamlit_dashboard_legacy_20260413/` is legacy reference-only Streamlit code and is not part of the active local stack.
 - The main local operator flow is the Dagster + Nuxt stack started from the repository root.
 
 Start the local stack:
@@ -82,6 +82,7 @@ dagster job execute -m src.definitions -j optimization_schedule_contract_checks
 ## Execution Style
 
 - Think before coding: state assumptions, surface ambiguity, and do not silently choose between multiple plausible interpretations when behavior would change.
+- Preferably Use Red / Green TDD.
 - Simplicity first: prefer the minimum code that solves the task; avoid speculative abstractions, extra configurability, or broad refactors.
 - Surgical changes: touch only the requested surface, remove only the orphans created by your own change, and leave unrelated cleanup for separate work unless explicitly asked.
 - Goal-driven execution: define a concrete success check for each slice and validate the narrowest relevant path immediately after editing.
