@@ -48,6 +48,29 @@ def test_normalize_client_config_supports_nested_energy_system():
     assert normalized["load_profile"] == "commercial"
 
 
+def test_normalize_client_config_preserves_flat_top_level_values():
+    raw = {
+        "id": "client_flat",
+        "type": "industrial",
+        "battery_type": "LFP_280Ah",
+        "battery_capacity_kwh": 220.0,
+        "solar_capacity_kw": 75.0,
+        "peak_load_kw": 160.0,
+        "base_load_kw": 45.0,
+        "load_profile": "industrial",
+    }
+
+    normalized = _normalize_client_config(raw)
+
+    assert normalized is not None
+    assert normalized["battery_type"] == "LFP_280Ah"
+    assert normalized["battery_capacity_kwh"] == 220.0
+    assert normalized["solar_capacity_kw"] == 75.0
+    assert normalized["peak_load_kw"] == 160.0
+    assert normalized["base_load_kw"] == 45.0
+    assert normalized["load_profile"] == "industrial"
+
+
 def test_generate_client_state_handles_normalized_nested_config():
     raw = {
         "id": "client_nested",

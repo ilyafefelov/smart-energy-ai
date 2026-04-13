@@ -130,9 +130,10 @@ def _normalize_client_config(raw_config: Dict[str, Any]) -> Optional[Dict[str, A
         logger.warning("Skipping invalid customer config row: expected object")
         return None
 
-    energy_system = raw_config.get("energy_system")
-    if not isinstance(energy_system, dict):
-        energy_system = {}
+    merged_config: Dict[str, Any] = dict(raw_config)
+    energy_system_overrides = raw_config.get("energy_system")
+    if isinstance(energy_system_overrides, dict):
+        merged_config.update(energy_system_overrides)
 
     client_id = raw_config.get("id")
     if not client_id:
@@ -142,22 +143,22 @@ def _normalize_client_config(raw_config: Dict[str, Any]) -> Optional[Dict[str, A
     normalized_tenant_id = _normalize_tenant_id(str(client_id))
 
     normalized: Dict[str, Any] = dict(raw_config)
-    normalized["battery_type"] = energy_system.get("battery_type", raw_config.get("battery_type", "LFP_280Ah"))
+    normalized["battery_type"] = merged_config.get("battery_type", "LFP_280Ah")
     normalized["battery_capacity_kwh"] = float(
-        energy_system.get("battery_capacity_kwh", raw_config.get("battery_capacity_kwh", 200.0))
+        merged_config.get("battery_capacity_kwh", 200.0)
     )
     normalized["solar_capacity_kw"] = float(
-        energy_system.get("solar_capacity_kw", raw_config.get("solar_capacity_kw", 0.0))
+        merged_config.get("solar_capacity_kw", 0.0)
     )
     normalized["peak_load_kw"] = float(
-        energy_system.get("peak_load_kw", raw_config.get("peak_load_kw", 120.0))
+        merged_config.get("peak_load_kw", 120.0)
     )
     normalized["base_load_kw"] = float(
-        energy_system.get("base_load_kw", raw_config.get("base_load_kw", 30.0))
+        merged_config.get("base_load_kw", 30.0)
     )
-    normalized["load_profile"] = energy_system.get(
+    normalized["load_profile"] = merged_config.get(
         "load_profile",
-        raw_config.get("load_profile", raw_config.get("type", "commercial")),
+        raw_config.get("type", "commercial"),
     )
     normalized["tenant_id"] = normalized_tenant_id
     normalized["tenant_namespace"] = f"tenant/{normalized_tenant_id}"
