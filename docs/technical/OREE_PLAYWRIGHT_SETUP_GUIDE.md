@@ -186,8 +186,6 @@ src/
 ├── improved_price_fetcher.py ← NEW (Ukraine priority)
 ├── real_price_data.py (exists)
 └── enhanced_price_ingester.py (exists)
-
-check_oree_structure.py ← Diagnostic script
 ```
 
 ---

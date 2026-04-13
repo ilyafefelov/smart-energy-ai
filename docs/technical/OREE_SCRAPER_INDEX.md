@@ -106,9 +106,6 @@ src/improved_price_fetcher.py
 
 src/oree_playwright_scraper.py
 - Original Playwright implementation
-
-check_oree_structure.py
-- Page structure analysis tool
 ```
 
 ---
