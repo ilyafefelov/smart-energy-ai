@@ -1,7 +1,7 @@
 # Smart Energy AI Project Schematic
 
 ## Project Overview
-The Smart Energy AI system is an autonomous energy arbitrage platform designed to optimize energy storage and consumption for commercial and industrial clients using reinforcement learning and machine learning techniques.
+The Smart Energy AI system is an energy arbitrage platform centered on Dagster orchestration, a canonical Nuxt operator dashboard, and a Python decision stack that currently combines schedule optimization with rule-based and heuristic fallback logic.
 
 ## Directory Structure
 
@@ -26,29 +26,25 @@ smart-energy-ai/
 │   ├── real_price_data.py        # Real price data from European sources
 │   ├── oree_*.py                 # OREE price scrapers
 │   └── price_processor.py        # Price data processing
-├── streamlit_dashboard/          # Legacy Streamlit web interface
-│   ├── app.py                    # Main Streamlit app
-│   └── app_config.py             # Streamlit configuration
+├── streamlit_dashboard/          # Legacy Streamlit web interface kept for reference
 ├── dashboard/                    # Canonical Nuxt3 Vue.js web interface
 ├── archive/                      # Archived legacy trees and historical snapshots
-├── energy_ml/                    # Energy ML module with APIs
+├── energy_ml/                    # Energy ML runtime and ML ops support code
 │   ├── simulator/                # Battery physics and simulation
-│   ├── ml_integration_api.py     # API for ML integration
-│   └── control_api.py            # Control system API
-├── config/                       # Configuration files
-├── data/                        # Data storage
+│   ├── mlops/                    # Model-serving and MLflow support surfaces
+│   └── optimizer/                # Optimization and schedule logic
+├── data/                         # Data storage
 │   ├── raw/
-│   └── processed/
-├── checkpoints/                 # Model checkpoints
+│   ├── processed/
+│   └── results/
 ├── docker/                      # Docker configuration
 ├── docs/                        # Documentation
 ├── tests/                       # Test suite
-├── notebooks/                   # Jupyter notebooks
 ├── artifacts/                   # Generated artifacts
 ├── plots/                       # Generated plots
-├── memory/                      # Memory files
 ├── projects/                    # Project files
 ├── .beads/                      # Beads issue tracking
+├── ml_integration_api.py         # Canonical Python bridge used by dashboard APIs
 └── README.md                    # Project documentation
 ```
 
@@ -60,7 +56,7 @@ smart-energy-ai/
 | **Machine Learning** | PyTorch, XGBoost, Optuna, Scikit-learn |
 | **Data Processing** | Polars, Pandas, NVTabular |
 | **Orchestration** | Dagster |
-| **Web Frameworks** | Streamlit, Nuxt3/Vue.js, FastAPI |
+| **Web Frameworks** | Nuxt3/Vue.js, Streamlit (legacy), CLI-style Python bridges |
 | **Storage** | PostgreSQL, AWS S3, Local File System |
 | **Deployment** | Docker, Kubernetes, AWS Lambda |
 | **APIs** | Open-Meteo, ENTSO-E, Ukrenergo, MQTT |
@@ -81,44 +77,25 @@ smart-energy-ai/
 3. **Checkpoints**: Trained models saved in `checkpoints/` directory
 4. **Inference**: Uses trained models for real-time decision-making
 
-## Dashboards
+## Runtime Surfaces
 
-### Streamlit Dashboard (`streamlit_dashboard/`)
+### Canonical dashboard (`dashboard/`)
 
-- **Main App**: `streamlit_dashboard/app.py` - Real-time monitoring of energy usage, savings, and system performance
-- **Configuration**: `streamlit_dashboard/app_config.py` - Dashboard settings and constants
-- **Features**:
-  - Scenario selection (Normal, Winter, Blackout)
-  - Hour-by-hour energy strategy visualization
-  - Battery SOC and health monitoring
-  - Training analysis and model evaluation
-  - Technical guide and documentation
+- Primary operator-facing web UI used by the local launcher, runtime docs, and current validation flows.
+- Default local URL is `http://127.0.0.1:3600`.
 
-### Canonical Nuxt Dashboard (`dashboard/`)
+### Legacy UIs
 
-- **Runtime role**: primary operator-facing web UI used by root scripts, local launcher, and current runtime validation
-- **Notes**:
-  - Default local URL is `http://127.0.0.1:3600`
-  - This is the Nuxt app that root docs refer to when they say `dashboard`
-
-### Archived Legacy Nuxt Dashboard
-
-- **Archive path**: `archive/nuxt_dashboard_legacy_20260306/`
-- **Runtime role**: historical reference only; not part of the active app or root launcher
-- **Notes**:
-  - `dashboard/` is the only active Nuxt runtime target
-  - Keep future references pointed at the archive path, not a live root-level `nuxt_dashboard/` folder
+- `streamlit_dashboard/` is legacy and no longer the primary runtime path.
+- `archive/nuxt_dashboard_legacy_20260306/` is the archived legacy Nuxt application.
+- There is no active root-level `nuxt_dashboard/` runtime anymore.
 
 ## APIs
 
-### Energy ML API (`energy_ml/ml_integration_api.py`)
+### Energy ML bridge (`ml_integration_api.py`)
 
-- **Endpoints**:
-  - `/api/control/status` - Get system status
-  - `/api/control/execute` - Execute control commands
-  - `/api/control/schedule` - Get optimization schedule
-  - `/api/settings/battery` - Manage battery settings
-  - `/api/settings/market` - Manage market settings
+- Canonical Python bridge invoked by dashboard ML and optimization strategy routes.
+- `energy_ml/ml_integration_api.py` now exists only as a compatibility wrapper for older import and cwd-based entrypoints.
 
 ## Key Files and Their Purpose
 
@@ -137,25 +114,18 @@ smart-energy-ai/
 
 ## Setup and Running
 
-### Streamlit Dashboard
-
-```bash
-cd streamlit_dashboard
-streamlit run app.py
-```
-
-Equivalent root-level invocation:
-
-```bash
-streamlit run streamlit_dashboard/app.py
-```
-
 ### Nuxt Dashboard
 
 ```bash
 cd dashboard
 npm install
 npm run dev
+```
+
+### Local Stack
+
+```powershell
+.\scripts\local\start-local-stack.ps1 -Start both
 ```
 
 ### Data Pipeline
@@ -188,9 +158,8 @@ pytest tests/ -v
 - **Styling**: Use Tailwind CSS for responsive design
 - **Documentation**: Write clear READMEs and inline comments
 
-## Future Development
+## Current Development Focus
 
-- Real IoT integration via MQTT
-- Industrial SCADA system integration
-- Edge device deployment
-- Real-time mobile notifications
+- Harden optimization history and decision-snapshot contracts for Stage 2 learned-policy rollout.
+- Keep dashboard behavior grounded in Dagster schedule truth first, with explicit fallback provenance.
+- Continue moving legacy/demo surfaces out of the active runtime path.

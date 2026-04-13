@@ -153,15 +153,15 @@ for hour in range(24):
     env.step(action, price=price)
 ```
 
-### Streamlit Dashboard
+### Dashboard API Consumer
 ```python
-import streamlit as st
 from src.oree_effective_scraper import OREEEffectiveScraper
 
 scraper = OREEEffectiveScraper(use_cache=True)
 prices = scraper.fetch_today_prices()
 
-st.line_chart(prices.set_index('hour')['price_uah_mwh'])
+payload = prices.to_dict(orient='records')
+print(payload[0])
 ```
 
 ### FastAPI Endpoint

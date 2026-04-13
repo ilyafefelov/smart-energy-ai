@@ -360,13 +360,9 @@ smart-energy-ai/
 - [ ] DAG monitoring in Airflow UI
 
 **Days 6-7: Dashboard Update**
-- [ ] Update `streamlit_dashboard/app.py` Streamlit:
-  - Tab 1: Current day plan (RL recommendations)
-  - Tab 2: Historical performance (RL vs baseline)
-  - Tab 3: Cost savings graph (cumulative)
-  - Tab 4: Forecast accuracy (MAPE %)
-  - Tab 5: RL training loss over time
-- [ ] Git commit: "Week 2: RL agent + Airflow automation"
+- [ ] Extend the active `dashboard/` UI with any additional plan, history, and analytics views needed for the slice
+- [ ] Keep new UI work aligned with the existing API and recommendation contracts instead of reviving legacy Streamlit surfaces
+- [ ] Git commit: "Week 2: RL agent + Dagster/dashboard automation"
 
 **Output:** Daily automated RL agent generating optimized plans + visible results
 
@@ -405,7 +401,7 @@ smart-energy-ai/
   - Data pipeline diagram
   - RL agent visualization
   - Results: Cost savings %, forecast accuracy
-  - Demo: Live Streamlit dashboard + Airflow DAG
+  - Demo: Live dashboard + orchestration flow
   - Future work (sensors, distributed RL, multi-site)
 - [ ] Record short demo video (2-3 min)
 - [ ] Final git cleanup:
