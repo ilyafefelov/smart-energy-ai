@@ -13,7 +13,7 @@ from dagster import asset, AssetIn
 from energy_ml.pipeline import PipelineOrchestrator
 from energy_ml.features import FeatureEngineer
 from energy_ml.ml_integration import PredictionService
-from energy_ml.user_config import UserConfigModel, ConfigurationManager, UserConfigPayload, ConfigLoadResult
+from energy_ml.user_config import ConfigurationManager, UserConfigPayload, ConfigLoadResult
 from energy_ml.mlops.optimization_engine import OptimizationEngine
 from energy_ml.mlops.battery_physics import BatteryPhysicsEngine
 from energy_ml.mlops.renewable_forecasting import RenewableForecaster
@@ -99,6 +99,31 @@ def _config_error_text(config_result: ConfigLoadResult) -> str:
     return "; ".join(config_result.errors) if config_result.errors else "Configuration could not be loaded"
 
 
+def _asset_timestamp() -> str:
+    return datetime.now().isoformat()
+
+
+def _with_asset_envelope(payload: Dict[str, Any], *, status: str, error: Optional[str] = None) -> Dict[str, Any]:
+    envelope = {**payload, 'timestamp': _asset_timestamp(), 'status': status}
+    if error is not None:
+        envelope['error'] = error
+    return envelope
+
+
+def _load_asset_config_or_error(
+    user_config_data: Optional[UserConfigPayload],
+    *,
+    error_context: str,
+    fallback_payload: Dict[str, Any],
+) -> tuple[Optional[Any], Optional[Dict[str, Any]]]:
+    config_result = _resolve_asset_config(user_config_data)
+    if not config_result.success or config_result.config is None:
+        error_text = _config_error_text(config_result)
+        logger.error(f"{error_context} configuration failed: {error_text}")
+        return None, _with_asset_envelope(fallback_payload, status='error', error=error_text)
+    return config_result.config, None
+
+
 @asset(
     name="integrated_pipeline",
     description="Full pipeline integration orchestrating all Phase 4 components",
@@ -134,24 +159,23 @@ def integrated_pipeline_asset(
         - status: str ('success' or 'error')
     """
     try:
-        # Load configuration
-        config_result = _resolve_asset_config(user_config_data)
-        if not config_result.success or config_result.config is None:
-            error_text = _config_error_text(config_result)
-            logger.error(f"Pipeline configuration failed: {error_text}")
-            return {
+        config, error_payload = _load_asset_config_or_error(
+            user_config_data,
+            error_context='Pipeline',
+            fallback_payload={
                 'action': 'HOLD',
-                'reasoning': f'Pipeline configuration error: {error_text}',
+                'reasoning': 'Pipeline configuration error',
                 'confidence': 0.0,
                 'estimated_savings': 0.0,
                 'battery_impact': 0.0,
-                'timestamp': datetime.now().isoformat(),
-                'details': {'config_errors': config_result.errors},
-                'status': 'error',
-                'error': error_text,
-            }
-
-        config = config_result.config
+                'details': {},
+            },
+        )
+        if error_payload is not None:
+            config_result = _resolve_asset_config(user_config_data)
+            error_payload['reasoning'] = f"Pipeline configuration error: {error_payload['error']}"
+            error_payload['details'] = {'config_errors': config_result.errors}
+            return error_payload
         
         logger.info(f"Integrated pipeline using config: {config.dict()}")
         
@@ -175,17 +199,14 @@ def integrated_pipeline_asset(
     
     except Exception as e:
         logger.error(f"Pipeline failed: {e}")
-        return {
+        return _with_asset_envelope({
             'action': 'HOLD',
             'reasoning': f'Pipeline error: {str(e)}',
             'confidence': 0.0,
             'estimated_savings': 0.0,
             'battery_impact': 0.0,
-            'timestamp': datetime.now().isoformat(),
             'details': {},
-            'status': 'error',
-            'error': str(e),
-        }
+        }, status='error', error=str(e))
 
 
 @asset(
@@ -324,16 +345,13 @@ def ml_predictions_asset(engineered_features: pl.DataFrame) -> MLPredictionAsset
     
     except Exception as e:
         logger.error(f"Prediction failed: {e}")
-        return {
+        return _with_asset_envelope({
             'action': 'HOLD',
             'confidence': 0.0,
             'reasoning': f'Prediction service error: {str(e)}',
             'model_version': 'error',
-            'timestamp': datetime.now().isoformat(),
             'feature_importance': {},
-            'status': 'error',
-            'error': str(e),
-        }
+        }, status='error', error=str(e))
 
 
 @asset(
@@ -363,7 +381,7 @@ def pipeline_status_asset(
         dict with comprehensive pipeline status
     """
     return {
-        'timestamp': datetime.now().isoformat(),
+        'timestamp': _asset_timestamp(),
         'pipeline_status': integrated_pipeline.get('status', 'unknown'),
         'pipeline_action': integrated_pipeline.get('action', 'HOLD'),
         'pipeline_confidence': integrated_pipeline.get('confidence', 0.0),
@@ -402,22 +420,18 @@ def optimization_preferences_asset(user_config_data: Optional[UserConfigPayload]
         - preferences: dict (full user preferences)
     """
     try:
-        # Load configuration
-        config_result = _resolve_asset_config(user_config_data)
-        if not config_result.success or config_result.config is None:
-            error_text = _config_error_text(config_result)
-            logger.error(f"Optimization preference configuration failed: {error_text}")
-            return {
+        config, error_payload = _load_asset_config_or_error(
+            user_config_data,
+            error_context='Optimization preference',
+            fallback_payload={
                 'strategy': 'balanced',
                 'weights': {'earnings': 0.4, 'battery_health': 0.4, 'charge_availability': 0.2},
                 'constraints': {},
                 'preferences': {},
-                'timestamp': datetime.now().isoformat(),
-                'status': 'error',
-                'error': error_text,
-            }
-
-        config = config_result.config
+            },
+        )
+        if error_payload is not None:
+            return error_payload
         
         # Initialize optimization engine
         optimization_engine = OptimizationEngine()
@@ -430,26 +444,21 @@ def optimization_preferences_asset(user_config_data: Optional[UserConfigPayload]
         
         logger.info(f"Loaded optimization strategy: {strategy}")
         
-        return {
+        return _with_asset_envelope({
             'strategy': strategy,
             'weights': preferences.get('weights', {}),
             'constraints': preferences.get('constraints', {}),
             'preferences': preferences,
-            'timestamp': datetime.now().isoformat(),
-            'status': 'success'
-        }
+        }, status='success')
     
     except Exception as e:
         logger.error(f"Optimization preferences failed: {e}")
-        return {
+        return _with_asset_envelope({
             'strategy': 'balanced',
             'weights': {'earnings': 0.4, 'battery_health': 0.4, 'charge_availability': 0.2},
             'constraints': {},
             'preferences': {},
-            'timestamp': datetime.now().isoformat(),
-            'status': 'error',
-            'error': str(e)
-        }
+        }, status='error', error=str(e))
 
 
 @asset(
@@ -473,23 +482,19 @@ def battery_physics_asset(user_config_data: Optional[UserConfigPayload] = None) 
         - efficiency_model: dict (efficiency at different states)
     """
     try:
-        # Load configuration
-        config_result = _resolve_asset_config(user_config_data)
-        if not config_result.success or config_result.config is None:
-            error_text = _config_error_text(config_result)
-            logger.error(f"Battery physics configuration failed: {error_text}")
-            return {
+        config, error_payload = _load_asset_config_or_error(
+            user_config_data,
+            error_context='Battery physics',
+            fallback_payload={
                 'chemistry': 'LFP',
                 'simulation_results': {},
                 'charging_curves': {},
                 'degradation_model': {},
                 'efficiency_model': {},
-                'timestamp': datetime.now().isoformat(),
-                'status': 'error',
-                'error': error_text,
-            }
-
-        config = config_result.config
+            },
+        )
+        if error_payload is not None:
+            return error_payload
         
         # Initialize battery physics engine
         physics_engine = BatteryPhysicsEngine()
@@ -499,28 +504,23 @@ def battery_physics_asset(user_config_data: Optional[UserConfigPayload] = None) 
         
         logger.info(f"Battery physics simulation completed for {config.battery_type}")
         
-        return {
+        return _with_asset_envelope({
             'chemistry': config.battery_type,
             'simulation_results': simulation_results,
             'charging_curves': simulation_results.get('charging_curves', {}),
             'degradation_model': simulation_results.get('degradation_model', {}),
             'efficiency_model': simulation_results.get('efficiency_model', {}),
-            'timestamp': datetime.now().isoformat(),
-            'status': 'success'
-        }
+        }, status='success')
     
     except Exception as e:
         logger.error(f"Battery physics simulation failed: {e}")
-        return {
+        return _with_asset_envelope({
             'chemistry': 'LFP',
             'simulation_results': {},
             'charging_curves': {},
             'degradation_model': {},
             'efficiency_model': {},
-            'timestamp': datetime.now().isoformat(),
-            'status': 'error',
-            'error': str(e)
-        }
+        }, status='error', error=str(e))
 
 
 @asset(
@@ -544,23 +544,19 @@ def renewable_generation_asset(user_config_data: Optional[UserConfigPayload] = N
         - capacity_factors: dict (renewable capacity factors)
     """
     try:
-        # Load configuration
-        config_result = _resolve_asset_config(user_config_data)
-        if not config_result.success or config_result.config is None:
-            error_text = _config_error_text(config_result)
-            logger.error(f"Renewable forecast configuration failed: {error_text}")
-            return {
+        config, error_payload = _load_asset_config_or_error(
+            user_config_data,
+            error_context='Renewable forecast',
+            fallback_payload={
                 'solar_forecast': {},
                 'wind_forecast': {},
                 'total_renewable': {},
                 'weather_data': {},
                 'capacity_factors': {},
-                'timestamp': datetime.now().isoformat(),
-                'status': 'error',
-                'error': error_text,
-            }
-
-        config = config_result.config
+            },
+        )
+        if error_payload is not None:
+            return error_payload
         
         # Initialize renewable forecaster
         renewable_forecaster = RenewableForecaster()
@@ -570,28 +566,23 @@ def renewable_generation_asset(user_config_data: Optional[UserConfigPayload] = N
         
         logger.info("Renewable generation forecast completed")
         
-        return {
+        return _with_asset_envelope({
             'solar_forecast': forecasts.get('solar_forecast', {}),
             'wind_forecast': forecasts.get('wind_forecast', {}),
             'total_renewable': forecasts.get('total_renewable', {}),
             'weather_data': forecasts.get('weather_data', {}),
             'capacity_factors': forecasts.get('capacity_factors', {}),
-            'timestamp': datetime.now().isoformat(),
-            'status': 'success'
-        }
+        }, status='success')
     
     except Exception as e:
         logger.error(f"Renewable generation forecast failed: {e}")
-        return {
+        return _with_asset_envelope({
             'solar_forecast': {},
             'wind_forecast': {},
             'total_renewable': {},
             'weather_data': {},
             'capacity_factors': {},
-            'timestamp': datetime.now().isoformat(),
-            'status': 'error',
-            'error': str(e)
-        }
+        }, status='error', error=str(e))
 
 
 @asset(
@@ -681,18 +672,15 @@ def enhanced_ml_predictions_asset(
     
     except Exception as e:
         logger.error(f"Enhanced prediction failed: {e}")
-        return {
+        return _with_asset_envelope({
             'action': 'HOLD',
             'confidence': 0.0,
             'reasoning': f'Enhanced prediction service error: {str(e)}',
             'model_version': 'enhanced-error',
-            'timestamp': datetime.now().isoformat(),
             'feature_importance': {},
             'base_prediction': {},
             'optimization_applied': 'none',
             'physics_constraints': {},
             'renewable_integration': {},
             'enhancement_confidence': 0.0,
-            'status': 'error',
-            'error': str(e)
-        }
+        }, status='error', error=str(e))
