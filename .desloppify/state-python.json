@@ -4,15 +4,15 @@
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
   "overall_score": 88.5,
-  "objective_score": 94.4,
+  "objective_score": 94.6,
   "strict_score": 88.1,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 133,
-    "open": 247,
+    "fixed": 135,
+    "open": 245,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -32,8 +32,8 @@
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 85,
-        "open": 212,
+        "fixed": 87,
+        "open": 210,
         "wontfix": 72
       },
       "4": {
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 92.2,
-      "strict": 92.2,
+      "score": 92.7,
+      "strict": 92.7,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 37,
+      "failing": 35,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.9223776223776224,
-          "failing": 37,
-          "weighted_failures": 11.100000000000005
+          "pass_rate": 0.9265734265734266,
+          "failing": 35,
+          "weighted_failures": 10.500000000000004
         }
       }
     },
@@ -3125,17 +3125,23 @@
           "5 many_classes"
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted shared battery-model helpers for C-rate, efficiency clipping, and initialization logging while preserving simulator behavior under focused battery physics tests.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T17:47:33+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Extracted shared battery-model helpers for C-rate, efficiency clipping, and initialization logging while preserving simulator behavior under focused battery physics tests. and I am not gaming the score.",
+        "attested_at": "2026-04-13T17:47:33+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/assets/benchmarks/performance.py": {
       "id": "structural::src/assets/benchmarks/performance.py",
@@ -3437,17 +3443,23 @@
       "detail": {
         "loc": 502
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted shared chemistry resolution, current-state construction, and timestamped error/result helpers while preserving simulation behavior under focused engine tests.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T17:47:25+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Extracted shared chemistry resolution, current-state construction, and timestamped error/result helpers while preserving simulation behavior under focused engine tests. and I am not gaming the score.",
+        "attested_at": "2026-04-13T17:47:25+00:00",
+        "scan_verified": false
+      }
     },
     "structural::energy_ml/mlops/feature_store.py": {
       "id": "structural::energy_ml/mlops/feature_store.py",

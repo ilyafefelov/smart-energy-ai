@@ -72,6 +72,31 @@ class BatteryPhysicsEngine:
         """Initialize battery physics engine."""
         self.temperature = 25.0  # Default temperature in Celsius
         self.simulation_timestep = 0.1  # Hours
+
+    def _simulation_timestamp(self) -> str:
+        return datetime.now().isoformat()
+
+    def _resolve_chemistry_params(self, chemistry: str) -> Tuple[str, Dict[str, Any]]:
+        if chemistry not in self.CHEMISTRY_PARAMS:
+            logger.warning(f"Unknown chemistry {chemistry}, using LFP")
+            chemistry = 'LFP'
+        return chemistry, self.CHEMISTRY_PARAMS[chemistry]
+
+    def _build_current_state(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            'soc_percent': 60.0,
+            'voltage': params['nominal_voltage'],
+            'temperature': self.temperature,
+            'cycles_completed': 1000,
+            'age_days': 365,
+        }
+
+    def _build_error_result(self, chemistry: str, error: Exception) -> Dict[str, Any]:
+        return {
+            'chemistry': chemistry,
+            'error': str(error),
+            'timestamp': self._simulation_timestamp(),
+        }
         
     def simulate_battery_behavior(self, user_config: UserConfigModel) -> Dict[str, Any]:
         """Simulate comprehensive battery behavior.
@@ -85,21 +110,8 @@ class BatteryPhysicsEngine:
         try:
             chemistry = user_config.battery_type
             capacity_kwh = user_config.battery_capacity_kwh
-            
-            if chemistry not in self.CHEMISTRY_PARAMS:
-                logger.warning(f"Unknown chemistry {chemistry}, using LFP")
-                chemistry = 'LFP'
-            
-            params = self.CHEMISTRY_PARAMS[chemistry]
-            
-            # Current battery state (mock - in real implementation, get from BMS)
-            current_state = {
-                'soc_percent': 60.0,
-                'voltage': params['nominal_voltage'],
-                'temperature': self.temperature,
-                'cycles_completed': 1000,
-                'age_days': 365
-            }
+            chemistry, params = self._resolve_chemistry_params(chemistry)
+            current_state = self._build_current_state(params)
             
             # Generate charging curves
             charging_curves = self._generate_charging_curves(chemistry, capacity_kwh, params)
@@ -126,7 +138,7 @@ class BatteryPhysicsEngine:
                 'power_limits': power_limits,
                 'thermal_model': thermal_model,
                 'physics_constraints': self._generate_physics_constraints(chemistry, params, current_state),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': self._simulation_timestamp(),
             }
             
             logger.info(f"Battery physics simulation completed for {chemistry}")
@@ -135,11 +147,7 @@ class BatteryPhysicsEngine:
             
         except Exception as e:
             logger.error(f"Battery physics simulation failed: {e}")
-            return {
-                'chemistry': user_config.battery_type,
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }
+            return self._build_error_result(user_config.battery_type, e)
     
     def _generate_charging_curves(self, chemistry: str, capacity_kwh: float, params: Dict) -> Dict[str, Any]:
         """Generate realistic charging curves for the battery chemistry."""

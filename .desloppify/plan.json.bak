@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-04-13T17:39:10+00:00",
+  "updated": "2026-04-13T17:47:32+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -16,8 +16,8 @@
     "structural::energy_ml/mlops/battery_physics.py": {
       "issue_id": "structural::energy_ml/mlops/battery_physics.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/structural-battery_physics.py",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:47:25+00:00"
     },
     "structural::energy_ml/assets/pipeline.py": {
       "issue_id": "structural::energy_ml/assets/pipeline.py",
@@ -2011,8 +2011,7 @@
       "name": "auto/structural-battery_physics.py",
       "description": "Review file size: battery_physics.py",
       "issue_ids": [
-        "structural::energy_ml/simulator/battery_physics.py",
-        "structural::energy_ml/mlops/battery_physics.py"
+        "structural::energy_ml/simulator/battery_physics.py"
       ],
       "created_at": "2026-03-06T10:42:05+00:00",
       "updated_at": "2026-03-06T10:42:05+00:00",
@@ -8635,6 +8634,59 @@
       "actor": "user",
       "note": null,
       "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:42:33+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/assets/pipeline.py",
+        "structural::energy_ml/pipeline.py",
+        "structural::energy_ml/ml_integration_api.py",
+        "structural::ml_integration_api.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "940650846870",
+        "branch": "cleanup/clean-code-dry-pass"
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:47:23+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/mlops/battery_physics.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted shared chemistry resolution, current-state construction, and timestamped error/result helpers while preserving simulation behavior under focused engine tests.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:47:25+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/mlops/battery_physics.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted shared chemistry resolution, current-state construction, and timestamped error/result helpers while preserving simulation behavior under focused engine tests.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted shared chemistry resolution, current-state construction, and timestamped error/result helpers while preserving simulation behavior under focused engine tests. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:47:32+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/simulator/battery_physics.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted shared battery-model helpers for C-rate, efficiency clipping, and initialization logging while preserving simulator behavior under focused battery physics tests.",
+      "detail": {}
     }
   ],
   "epic_triage_meta": {
@@ -9339,13 +9391,23 @@
       "recorded_at": "2026-03-06T23:02:49+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "940650846870",
+      "branch": "cleanup/clean-code-dry-pass",
+      "issue_ids": [
+        "structural::energy_ml/assets/pipeline.py",
+        "structural::energy_ml/pipeline.py",
+        "structural::energy_ml/ml_integration_api.py",
+        "structural::ml_integration_api.py"
+      ],
+      "recorded_at": "2026-04-13T17:42:33+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/assets/pipeline.py",
-    "structural::energy_ml/pipeline.py",
-    "structural::energy_ml/ml_integration_api.py",
-    "structural::ml_integration_api.py"
+    "structural::energy_ml/mlops/battery_physics.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

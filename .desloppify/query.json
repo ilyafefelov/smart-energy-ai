@@ -1,43 +1,23 @@
 {
-  "command": "next",
-  "items": [
-    {
-      "id": "auto/structural-battery_physics.py",
-      "kind": "cluster",
-      "action_type": "refactor",
-      "summary": "Review file size: battery_physics.py",
-      "member_count": 2,
-      "members": [
-        {
-          "id": "structural::energy_ml/mlops/battery_physics.py",
-          "kind": "issue",
-          "confidence": "low",
-          "detector": "structural",
-          "file": "energy_ml/mlops/battery_physics.py",
-          "summary": "Large file: large (502 LOC)",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"structural::energy_ml/mlops/battery_physics.py\" --note \"<what you did>\" --confirm"
-        },
-        {
-          "id": "structural::energy_ml/simulator/battery_physics.py",
-          "kind": "issue",
-          "confidence": "low",
-          "detector": "structural",
-          "file": "energy_ml/simulator/battery_physics.py",
-          "summary": "Large file: large (612 LOC) / complexity score 30",
-          "status": "open",
-          "primary_command": "desloppify plan resolve \"structural::energy_ml/simulator/battery_physics.py\" --note \"<what you did>\" --confirm"
-        }
-      ],
-      "cluster_name": "auto/structural-battery_physics.py",
-      "cluster_auto": true,
-      "detector": "structural",
-      "primary_command": "review large files"
-    }
+  "command": "resolve",
+  "patterns": [
+    "structural::energy_ml/simulator/battery_physics.py"
   ],
-  "queue": {
-    "total": 1
-  },
+  "status": "fixed",
+  "resolved": [
+    "structural::energy_ml/simulator/battery_physics.py"
+  ],
+  "count": 1,
+  "next_command": "desloppify next",
+  "overall_score": 88.5,
+  "objective_score": 94.6,
+  "strict_score": 88.1,
+  "verified_strict_score": 78.6,
+  "prev_overall_score": 88.5,
+  "prev_objective_score": 94.5,
+  "prev_strict_score": 88.1,
+  "prev_verified_strict_score": 78.6,
+  "attestation": "I have actually Extracted shared battery-model helpers for C-rate, efficiency clipping, and initialization logging while preserving simulator behavior under focused battery physics tests. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -90,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 92.2,
+          "strict": 92.7,
           "stuck_scans": 5
         },
         {
@@ -165,30 +145,22 @@
         "type": "reorganize",
         "detector": "orphaned",
         "count": 61,
-        "description": "61 orphaned issues in 1 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "61 orphaned issues \u2014 delete dead files or relocate with `desloppify move`",
+        "command": "desloppify show orphaned --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 1,
-        "clusters": [
-          "auto/orphaned"
-        ],
-        "cluster_count": 1,
         "lane": "restructure"
       },
       {
         "type": "reorganize",
         "detector": "flat_dirs",
         "count": 3,
-        "description": "3 flat_dirs issues in 1 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "3 flat_dirs issues \u2014 create subdirectories and use `desloppify move`",
+        "command": "desloppify show flat_dirs --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 2,
-        "clusters": [
-          "auto/flat_dirs-overload"
-        ],
-        "cluster_count": 1,
         "lane": "restructure"
       },
       {
@@ -206,66 +178,44 @@
         "type": "reorganize",
         "detector": "facade",
         "count": 11,
-        "description": "11 facade issues in 1 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "11 facade issues \u2014 flatten re-export facades or consolidate barrel files",
+        "command": "desloppify show facade --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 4,
-        "clusters": [
-          "auto/facade-file"
-        ],
-        "cluster_count": 1,
         "lane": "restructure"
       },
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 40,
-        "description": "40 structural issues in 4 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "count": 38,
+        "description": "38 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
         "priority": 5,
-        "clusters": [
-          "auto/structural-battery_physics.py",
-          "auto/structural-pipeline.py",
-          "auto/structural-features.py",
-          "auto/structural-ml_integration_api.py"
-        ],
-        "cluster_count": 4,
         "lane": "refactor_0"
       },
       {
         "type": "refactor",
         "detector": "dict_keys",
         "count": 48,
-        "description": "48 dict_keys issues in 4 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "48 dict_keys issues \u2014 fix dict key mismatches \u2014 dead writes are likely dead code, schema drift suggests a typo or missed rename",
+        "command": "desloppify show dict_keys --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 6,
-        "clusters": [
-          "auto/dict_keys-phantom_read",
-          "auto/dict_keys-overwritten_key",
-          "auto/dict_keys-dead_write",
-          "auto/dict_keys-schema_drift"
-        ],
-        "cluster_count": 4,
         "lane": "refactor_0"
       },
       {
         "type": "refactor",
         "detector": "test_coverage",
         "count": 10,
-        "description": "10 test_coverage issues in 1 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "10 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
+        "command": "desloppify show test_coverage --status open",
         "impact": 0.0,
         "dimension": "Test health",
         "priority": 7,
-        "clusters": [
-          "auto/test_coverage"
-        ],
-        "cluster_count": 1,
         "lane": "test_coverage"
       },
       {
@@ -294,20 +244,11 @@
         "type": "manual_fix",
         "detector": "smells",
         "count": 45,
-        "description": "45 smells issues in 6 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "45 smells issues \u2014 inspect with `desloppify next` and fix manually",
+        "command": "desloppify show smells --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 10,
-        "clusters": [
-          "auto/smells-silent_except",
-          "auto/smells-hardcoded_url",
-          "auto/smells-high_cyclomatic_complexity",
-          "auto/smells-nested_closure",
-          "auto/smells-magic_number",
-          "auto/smells-deferred_import"
-        ],
-        "cluster_count": 6,
         "lane": "refactor_0"
       },
       {
@@ -325,22 +266,18 @@
         "type": "manual_fix",
         "detector": "stale_exclude",
         "count": 9,
-        "description": "9 stale_exclude issues in 1 cluster(s) \u2014 run `desloppify next`",
-        "command": "desloppify next",
+        "description": "9 stale_exclude issues \u2014 remove stale exclusion or verify it's still needed",
+        "command": "desloppify show stale_exclude --status open",
         "impact": 0.0,
         "dimension": "Code quality",
         "priority": 12,
-        "clusters": [
-          "auto/stale_exclude"
-        ],
-        "cluster_count": 1,
         "lane": "refactor_1"
       }
     ],
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 247,
+        "total_count": 245,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -367,7 +304,7 @@
             10,
             11
           ],
-          "file_count": 76,
+          "file_count": 74,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -422,8 +359,8 @@
     },
     "milestone": "All T1 items cleared!",
     "primary_action": {
-      "command": "desloppify next",
-      "description": "61 orphaned issues in 1 cluster(s) \u2014 run `desloppify next`"
+      "command": "desloppify show orphaned --status open",
+      "description": "61 orphaned issues \u2014 delete dead files or relocate with `desloppify move`"
     },
     "why_now": "4 independent workstreams, safe to parallelize. Rescan after each phase to verify.",
     "verification_step": {
@@ -446,6 +383,20 @@
     },
     "reminders": [
       {
+        "type": "rereview_needed",
+        "message": "Subjective results may be stale after resolve. Re-run `desloppify review --prepare` to refresh, or reset with `desloppify scan --reset-subjective` before a clean rerun.",
+        "command": "desloppify review --prepare",
+        "priority": 1,
+        "severity": "high"
+      },
+      {
+        "type": "rescan_needed",
+        "message": "Rescan to verify \u2014 cascading effects may create new issues.",
+        "command": "desloppify scan",
+        "priority": 1,
+        "severity": "high"
+      },
+      {
         "type": "review_not_run",
         "message": "Mechanical checks look good! Run a subjective design review to catch issues linters miss: desloppify review --prepare",
         "command": "desloppify review --prepare",
@@ -460,604 +411,11 @@
       "stagnant_nudge": 15,
       "review_findings_pending": 3,
       "badge_recommendation": 1,
-      "review_not_run": 2
+      "review_not_run": 2,
+      "rereview_needed": 1,
+      "rescan_needed": 1
     }
   },
-  "agent_notes": [
-    "Do NOT use `desloppify plan skip` unless the user explicitly asks you to skip an item.",
-    "If you cannot fix an item, report it and move to the next one.",
-    "For cluster items: if the autofix_hint finds 0 results, drill into individual issues with the primary_command."
-  ],
-  "plan": {
-    "active": true,
-    "focus": null,
-    "clusters": [
-      {
-        "name": "auto/structural-battery_physics.py",
-        "description": "Review file size: battery_physics.py",
-        "item_count": 2
-      },
-      {
-        "name": "auto/structural-pipeline.py",
-        "description": "Review file size: pipeline.py",
-        "item_count": 0
-      },
-      {
-        "name": "auto/structural-features.py",
-        "description": "Review file size: features.py",
-        "item_count": 0
-      },
-      {
-        "name": "auto/structural-ml_integration_api.py",
-        "description": "Review file size: ml_integration_api.py",
-        "item_count": 0
-      },
-      {
-        "name": "auto/flat_dirs-overload",
-        "description": "Fix 3 overload issues",
-        "item_count": 3
-      },
-      {
-        "name": "auto/orphaned",
-        "description": "Fix 61 orphaned issues",
-        "item_count": 61
-      },
-      {
-        "name": "auto/facade-file",
-        "description": "Fix 11 file issues",
-        "item_count": 11
-      },
-      {
-        "name": "auto/test_coverage",
-        "description": "Fix 92 test coverage issues",
-        "item_count": 10
-      },
-      {
-        "name": "auto/dict_keys-phantom_read",
-        "description": "Fix 7 phantom read issues",
-        "item_count": 7
-      },
-      {
-        "name": "auto/dict_keys-overwritten_key",
-        "description": "Fix 31 overwritten key issues",
-        "item_count": 31
-      },
-      {
-        "name": "auto/dict_keys-dead_write",
-        "description": "Fix 7 dead write issues",
-        "item_count": 7
-      },
-      {
-        "name": "auto/dict_keys-schema_drift",
-        "description": "Fix 3 schema drift issues",
-        "item_count": 3
-      },
-      {
-        "name": "auto/smells-silent_except",
-        "description": "Fix 3 silent except issues",
-        "item_count": 3
-      },
-      {
-        "name": "auto/smells-hardcoded_url",
-        "description": "Fix 2 hardcoded url issues",
-        "item_count": 2
-      },
-      {
-        "name": "auto/smells-high_cyclomatic_complexity",
-        "description": "Fix 17 high cyclomatic complexity issues",
-        "item_count": 17
-      },
-      {
-        "name": "auto/smells-nested_closure",
-        "description": "Fix 3 nested closure issues",
-        "item_count": 3
-      },
-      {
-        "name": "auto/smells-magic_number",
-        "description": "Fix 11 magic number issues",
-        "item_count": 11
-      },
-      {
-        "name": "auto/smells-deferred_import",
-        "description": "Fix 8 deferred import issues",
-        "item_count": 8
-      },
-      {
-        "name": "auto/stale_exclude",
-        "description": "Fix 9 stale exclude issues",
-        "item_count": 9
-      },
-      {
-        "name": "auto/stale-review",
-        "description": "Re-review 4 stale subjective dimensions",
-        "item_count": 0
-      },
-      {
-        "name": "auth-boundaries",
-        "description": "Tenant authorization and Dagster result isolation fixes across dashboard APIs and storage.",
-        "item_count": 0
-      },
-      {
-        "name": "python-contracts",
-        "description": "Python result-contract, typing, and schema-shape fixes centered on user_config, serving_api, schedule assets, and ingestion paths.",
-        "item_count": 14
-      },
-      {
-        "name": "init-side-effects",
-        "description": "Import-time bootstrap, singleton initialization, and migration-drift issues in MLOps and market-data modules.",
-        "item_count": 15
-      },
-      {
-        "name": "serving-api-contracts",
-        "description": "Serving API contract-coherence fixes for ML serving and battery simulation adapters.",
-        "item_count": 0
-      },
-      {
-        "name": "helper-envelope-contracts",
-        "description": "Public helper contract fixes for optimizer strategy envelopes and battery specification serialization.",
-        "item_count": 0
-      },
-      {
-        "name": "contract-coherence-low-risk",
-        "description": "Low-risk contract cleanup across simulator, ingestion, pipeline, optimizer, and feature-store interfaces.",
-        "item_count": 0
-      },
-      {
-        "name": "contract-coherence-design",
-        "description": "Deeper contract-design alignment for configuration loading, error semantics, and structured pipeline inputs.",
-        "item_count": 0
-      }
-    ],
-    "total_ordered": 0,
-    "total_skipped": 0,
-    "plan_overrides_narrative": true
-  },
-  "overall_score": 88.5,
-  "objective_score": 94.4,
-  "strict_score": 88.1,
-  "scorecard_dimensions": [
-    {
-      "name": "File health",
-      "score": 92.2,
-      "strict": 92.2,
-      "checks": 143,
-      "failing": 37,
-      "tier": 3,
-      "subjective": false
-    },
-    {
-      "name": "AI generated debt",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "ai_generated_debt"
-      ]
-    },
-    {
-      "name": "API coherence",
-      "score": 55.0,
-      "strict": 55.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "api_surface_coherence"
-      ]
-    },
-    {
-      "name": "Abstraction fit",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "abstraction_fitness"
-      ]
-    },
-    {
-      "name": "Auth consistency",
-      "score": 24.0,
-      "strict": 24.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "authorization_consistency"
-      ]
-    },
-    {
-      "name": "Code quality",
-      "score": 90.3,
-      "strict": 84.8,
-      "checks": 1032,
-      "failing": 178,
-      "tier": 3,
-      "subjective": false
-    },
-    {
-      "name": "Contracts",
-      "score": 48.0,
-      "strict": 48.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "contract_coherence"
-      ]
-    },
-    {
-      "name": "Convention drift",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "convention_outlier"
-      ]
-    },
-    {
-      "name": "Cross-module arch",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "cross_module_architecture"
-      ]
-    },
-    {
-      "name": "Dep health",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "dependency_health"
-      ]
-    },
-    {
-      "name": "Design coherence",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "design_coherence"
-      ]
-    },
-    {
-      "name": "Duplication",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 796,
-      "failing": 0,
-      "tier": 3,
-      "subjective": false
-    },
-    {
-      "name": "Elegance",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 30,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "high_level_elegance",
-        "mid_level_elegance",
-        "low_level_elegance"
-      ]
-    },
-    {
-      "name": "Error consistency",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "error_consistency"
-      ]
-    },
-    {
-      "name": "Init coupling",
-      "score": 33.0,
-      "strict": 33.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "initialization_coupling"
-      ]
-    },
-    {
-      "name": "Security",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 286,
-      "failing": 0,
-      "tier": 4,
-      "subjective": false
-    },
-    {
-      "name": "Structure nav",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "package_organization"
-      ]
-    },
-    {
-      "name": "Test health",
-      "score": 90.7,
-      "strict": 90.7,
-      "checks": 1788,
-      "failing": 10,
-      "tier": 4,
-      "subjective": false
-    },
-    {
-      "name": "Test strategy",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "test_strategy"
-      ]
-    },
-    {
-      "name": "Type safety",
-      "score": 38.5,
-      "strict": 38.5,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "type_safety"
-      ]
-    }
-  ],
-  "subjective_measures": [
-    {
-      "name": "AI generated debt",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "ai_generated_debt"
-      ]
-    },
-    {
-      "name": "API coherence",
-      "score": 55.0,
-      "strict": 55.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "api_surface_coherence"
-      ]
-    },
-    {
-      "name": "Abstraction fit",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "abstraction_fitness"
-      ]
-    },
-    {
-      "name": "Auth consistency",
-      "score": 24.0,
-      "strict": 24.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "authorization_consistency"
-      ]
-    },
-    {
-      "name": "Contracts",
-      "score": 48.0,
-      "strict": 48.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "contract_coherence"
-      ]
-    },
-    {
-      "name": "Convention drift",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "convention_outlier"
-      ]
-    },
-    {
-      "name": "Cross-module arch",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "cross_module_architecture"
-      ]
-    },
-    {
-      "name": "Dep health",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "dependency_health"
-      ]
-    },
-    {
-      "name": "Design coherence",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "design_coherence"
-      ]
-    },
-    {
-      "name": "Elegance",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 30,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "high_level_elegance",
-        "mid_level_elegance",
-        "low_level_elegance"
-      ]
-    },
-    {
-      "name": "Error consistency",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "error_consistency"
-      ]
-    },
-    {
-      "name": "Init coupling",
-      "score": 33.0,
-      "strict": 33.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "initialization_coupling"
-      ]
-    },
-    {
-      "name": "Structure nav",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "package_organization"
-      ]
-    },
-    {
-      "name": "Test strategy",
-      "score": 100.0,
-      "strict": 100.0,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "test_strategy"
-      ]
-    },
-    {
-      "name": "Type safety",
-      "score": 38.5,
-      "strict": 38.5,
-      "checks": 10,
-      "failing": 0,
-      "tier": 4,
-      "subjective": true,
-      "placeholder": false,
-      "cli_keys": [
-        "type_safety"
-      ]
-    }
-  ],
   "config": {
     "target_strict_score": 95,
     "review_max_age_days": 30,

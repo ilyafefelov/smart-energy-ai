@@ -70,6 +70,16 @@ class BatteryModel(ABC):
             cycles_completed=0.0, current_power_kw=0.0,
             voltage=self.get_nominal_voltage(), internal_resistance=0.0
         )
+
+    def _c_rate(self, power_kw: float) -> float:
+        return abs(power_kw) / self.capacity_kwh if power_kw else 0.0
+
+    @staticmethod
+    def _clip_efficiency(total_efficiency: float, minimum: float, maximum: float) -> float:
+        return float(np.clip(total_efficiency, minimum, maximum))
+
+    def _log_initialization(self, label: str) -> None:
+        logger.info(f"Initialized {label}: {self.capacity_kwh}kWh, {self.max_power_kw}kW max power")
         
     @abstractmethod
     def calculate_degradation(self, power_kw: float, duration_hours: float) -> float:
@@ -160,8 +170,7 @@ class LFPBatteryModel(BatteryModel):
         self.nominal_voltage_v = 3.2  # Per cell, scaled by system
         
         super().__init__(capacity_kwh, max_power_kw)
-        
-        logger.info(f"Initialized LFP battery: {capacity_kwh}kWh, {max_power_kw}kW max power")
+        self._log_initialization("LFP battery")
         
     def get_nominal_voltage(self) -> float:
         """LFP nominal voltage"""
@@ -179,7 +188,7 @@ class LFPBatteryModel(BatteryModel):
         """
         
         # C-rate effect (higher rates = more degradation)
-        c_rate = abs(power_kw) / self.capacity_kwh
+        c_rate = self._c_rate(power_kw)
         if c_rate <= 0.5:
             c_rate_factor = 1.0  # Optimal range
         elif c_rate <= 1.0:
@@ -231,7 +240,7 @@ class LFPBatteryModel(BatteryModel):
         base_efficiency = 0.95
         
         # Power efficiency curve (optimal around 0.5C)
-        c_rate = abs(power_kw) / self.capacity_kwh if power_kw != 0 else 0
+        c_rate = self._c_rate(power_kw)
         
         if c_rate < 0.1:
             power_efficiency = 0.92  # Very low power is less efficient (inverter losses)
@@ -255,7 +264,7 @@ class LFPBatteryModel(BatteryModel):
         
         total_efficiency = base_efficiency * power_efficiency * soc_efficiency * temp_eff
         
-        return np.clip(total_efficiency, 0.70, 0.98)
+        return self._clip_efficiency(total_efficiency, 0.70, 0.98)
         
     def get_max_power(self, soc: float, direction: str) -> float:
         """
@@ -315,8 +324,7 @@ class LeadAcidBatteryModel(BatteryModel):
         self.nominal_voltage_v = 2.0  # Per cell
         
         super().__init__(capacity_kwh, max_power_kw)
-        
-        logger.info(f"Initialized Lead-Acid battery: {capacity_kwh}kWh, {max_power_kw}kW max power")
+        self._log_initialization("Lead-Acid battery")
         
     def get_nominal_voltage(self) -> float:
         """Lead-acid nominal voltage"""
@@ -350,7 +358,7 @@ class LeadAcidBatteryModel(BatteryModel):
         temp_factor = 1.0 + max(0, self.state.temperature_c - 25) * 0.02
         
         # C-rate effect (less sensitive than LFP)
-        c_rate = abs(power_kw) / self.capacity_kwh if power_kw != 0 else 0
+        c_rate = self._c_rate(power_kw)
         c_rate_factor = 1.0 + max(0, c_rate - 0.3) * 0.3
         
         equivalent_cycles = dod * deep_discharge_penalty * temp_factor * c_rate_factor
@@ -387,7 +395,7 @@ class LeadAcidBatteryModel(BatteryModel):
             soc_efficiency = 0.95  # Good at high SOC
             
         # C-rate effect (less efficient at high rates)
-        c_rate = abs(power_kw) / self.capacity_kwh if power_kw != 0 else 0
+        c_rate = self._c_rate(power_kw)
         if c_rate > 0.5:
             c_rate_efficiency = max(0.8, 1.0 - (c_rate - 0.5) * 0.2)
         else:
@@ -403,7 +411,7 @@ class LeadAcidBatteryModel(BatteryModel):
             
         total_efficiency = base_efficiency * soc_efficiency * c_rate_efficiency * temp_efficiency
         
-        return np.clip(total_efficiency, 0.50, 0.90)
+        return self._clip_efficiency(total_efficiency, 0.50, 0.90)
         
     def get_max_power(self, soc: float, direction: str) -> float:
         """
@@ -460,8 +468,7 @@ class VRFBBatteryModel(BatteryModel):
         self.nominal_voltage_v = 1.4  # Average stack voltage
         
         super().__init__(capacity_kwh, max_power_kw)
-        
-        logger.info(f"Initialized VRFB: {capacity_kwh}kWh, {max_power_kw}kW max power")
+        self._log_initialization("VRFB")
         
     def get_nominal_voltage(self) -> float:
         """VRFB stack voltage"""
@@ -526,7 +533,7 @@ class VRFBBatteryModel(BatteryModel):
         # SOC has minimal effect (unlike batteries)
         soc_factor = 1.0  # VRFB power independent of SOC
         
-        return np.clip(total_efficiency * soc_factor, 0.60, 0.88)
+        return self._clip_efficiency(total_efficiency * soc_factor, 0.60, 0.88)
         
     def get_max_power(self, soc: float, direction: str) -> float:
         """
