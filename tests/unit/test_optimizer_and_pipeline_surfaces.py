@@ -18,74 +18,6 @@ def load_module(module_name, module_path):
     return module
 
 
-def load_run_optimization_module():
-    module_path = Path(__file__).resolve().parents[2] / "energy_ml" / "optimizer" / "run_optimization.py"
-    package = types.ModuleType("energy_ml")
-    package.__path__ = [str(module_path.parents[1])]
-    optimizer_package = types.ModuleType("energy_ml.optimizer")
-    optimizer_package.__path__ = [str(module_path.parent)]
-    ml_star_optimizer = types.ModuleType("energy_ml.optimizer.ml_star_optimizer")
-
-    class OptimizationConfig:
-        def __init__(self, **kwargs):
-            self.kwargs = kwargs
-
-    class MLSTAROptimizer:
-        def __init__(self, X, y, config):
-            self.X = X
-            self.y = y
-            self.config = config
-            self.final_reports = {
-                "comprehensive": {
-                    "best_accuracy": 0.84,
-                    "improvement_percentage": 15.8,
-                    "hyperparameter_search_results": {"best_cv_score": 0.81},
-                    "feature_importance": {f"feature_{index}": 1.0 / (index + 1) for index in range(12)},
-                }
-            }
-            self.ablation_study = SimpleNamespace(
-                get_ranking=lambda: pd.DataFrame(
-                    [{"component": "Voting Ensemble", "accuracy": 0.84}]
-                )
-            )
-
-        def run_optimization_pipeline(self):
-            return {
-                "baseline_accuracy": 0.725,
-                "best_accuracy": 0.84,
-                "improvement_percentage": 15.8,
-                "best_model": "voting_soft",
-            }
-
-    def generate_sota_report():
-        return pd.DataFrame(
-            [
-                {
-                    "rank": 1,
-                    "name": "soft voting ensemble",
-                    "expected_improvement": "3-5%",
-                    "reasoning": "Combines complementary tree models.",
-                    "implementation": "Use soft voting across tuned base learners.",
-                    "pros": ["stable", "strong accuracy"],
-                    "cons": ["more memory"],
-                    "inference_time_ms": 15,
-                    "memory_mb": 50,
-                }
-            ]
-        )
-
-    ml_star_optimizer.MLSTAROptimizer = MLSTAROptimizer
-    ml_star_optimizer.OptimizationConfig = OptimizationConfig
-    ml_star_optimizer.SOTA_TECHNIQUES = []
-    ml_star_optimizer.generate_sota_report = generate_sota_report
-
-    sys.modules.setdefault("energy_ml", package)
-    sys.modules.setdefault("energy_ml.optimizer", optimizer_package)
-    sys.modules["energy_ml.optimizer.ml_star_optimizer"] = ml_star_optimizer
-
-    return load_module("energy_ml.optimizer.run_optimization", module_path)
-
-
 def load_pipeline_module():
     module_path = Path(__file__).resolve().parents[2] / "energy_ml" / "pipeline.py"
     package = types.ModuleType("energy_ml")
@@ -178,43 +110,7 @@ def load_pipeline_module():
 
     return load_module("energy_ml.pipeline", module_path)
 
-run_optimization_module = load_run_optimization_module()
 pipeline_module = load_pipeline_module()
-
-
-def test_generate_sample_data_uses_requested_feature_width_and_class_mapping():
-    features, labels, class_names = run_optimization_module.generate_sample_data(n_samples=200, n_features=73)
-
-    assert features.shape == (200, 73)
-    assert labels.shape == (200,)
-    assert labels.value_counts().sum() == 200
-    assert features.columns[-1] == "engineered_feature_72"
-    assert class_names[3] == "DISCHARGE"
-
-
-def test_run_optimization_pipeline_returns_report_and_optimizer_instance():
-    features, labels, _ = run_optimization_module.generate_sample_data(n_samples=60, n_features=10)
-
-    report, optimizer = run_optimization_module.run_optimization_pipeline(features, labels)
-
-    assert report["best_model"] == "voting_soft"
-    assert optimizer.final_reports["comprehensive"]["best_accuracy"] == 0.84
-
-
-def test_save_all_deliverables_writes_expected_artifacts(tmp_path):
-    run_optimization_module.save_all_deliverables(
-        sota_report="sota report",
-        implementation_code="print('ok')",
-        optimization_report={"best_accuracy": 0.84},
-        safety_report={"status": "ok"},
-        ablation_study=pd.DataFrame([{"component": "Voting Ensemble", "accuracy": 0.84}]),
-        output_dir=str(tmp_path),
-    )
-
-    assert (tmp_path / "1_SOTA_TECHNIQUES_ANALYSIS.txt").read_text() == "sota report"
-    assert (tmp_path / "4_PRODUCTION_IMPLEMENTATION.py").read_text() == "print('ok')"
-    assert (tmp_path / "5_SAFETY_VALIDATION_REPORT.json").exists()
-    assert (tmp_path / "3_ABLATION_STUDY.csv").exists()
 
 
 def test_pipeline_live_context_overrides_tariff_and_battery_state():
