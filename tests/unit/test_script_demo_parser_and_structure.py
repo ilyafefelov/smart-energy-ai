@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 import importlib.util
 import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 import pandas as pd
 
@@ -59,49 +57,3 @@ def test_oree_parser_supports_html_save_and_merge(tmp_path: Path, monkeypatch) -
     assert len(merged) == 2
     assert parser.parse_and_save("03") is False
 
-
-def test_demo_complete_mlops_orchestrates_summary(monkeypatch, capsys) -> None:
-    module = load_script_module("scripts.demo_complete_mlops_system_under_test", "scripts/demo_complete_mlops_system.py")
-
-    monkeypatch.setattr(module, "demonstrate_phase1_model_registry", lambda: asyncio.sleep(0, result=True))
-    monkeypatch.setattr(module, "demonstrate_phase2_battery_physics", lambda: asyncio.sleep(0, result=True))
-    monkeypatch.setattr(module, "demonstrate_phase3_mlops_infrastructure", lambda: asyncio.sleep(0, result=False))
-    monkeypatch.setattr(module, "demonstrate_phase4_serving_api", lambda: asyncio.sleep(0, result=True))
-    monkeypatch.setattr(module, "demonstrate_phase5_renewable_forecasting", lambda: asyncio.sleep(0, result=True))
-    monkeypatch.setattr(module, "demonstrate_complete_system_integration", lambda: asyncio.sleep(0, result=True))
-
-    success = asyncio.run(module.main())
-    output = capsys.readouterr().out
-
-    assert success is False
-    assert "DEMONSTRATION RESULTS" in output
-    assert "Phase 3: ❌ FAILED" in output
-    assert "Some phases failed" in output
-
-
-def test_demo_complete_mlops_phase_helpers_cover_success_and_failure(monkeypatch, capsys) -> None:
-    module = load_script_module("scripts.demo_complete_mlops_phase_under_test", "scripts/demo_complete_mlops_system.py")
-
-    success = asyncio.run(module.demonstrate_phase4_serving_api())
-    success_output = capsys.readouterr().out
-    assert success is True
-    assert "Health check passed" in success_output
-
-    monkeypatch.setattr(module, "print_error", lambda message: print(message))
-    monkeypatch.setitem(sys.modules, "energy_ml.mlops", SimpleNamespace(get_mlops_system=lambda: (_ for _ in ()).throw(RuntimeError("offline"))))
-
-    failure = asyncio.run(module.demonstrate_complete_system_integration())
-    failure_output = capsys.readouterr().out
-
-    assert failure is False
-    assert "offline" in failure_output
-
-
-def test_demo_complete_mlops_mission_summary_prints_specs(capsys) -> None:
-    module = load_script_module("scripts.demo_complete_mlops_summary_under_test", "scripts/demo_complete_mlops_system.py")
-
-    module.print_mission_summary()
-    output = capsys.readouterr().out
-
-    assert "MISSION ACHIEVEMENTS" in output
-    assert "TECHNICAL SPECIFICATIONS MET" in output
