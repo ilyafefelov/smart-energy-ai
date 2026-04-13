@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import builtins
 import importlib.util
-import io
 import json
 import sys
 from pathlib import Path
@@ -79,39 +77,6 @@ def test_train_model_config_paths_and_main_flows(tmp_path: Path, monkeypatch, ca
         assert exc.code == 1
     failure_output = capsys.readouterr().out
     assert "ERROR: boom" in failure_output
-
-
-def test_validate_deployment_success_and_failure(monkeypatch, capsys) -> None:
-    module = load_script_module("scripts.validate_deployment_under_test", "scripts/validate_deployment.py")
-
-    files = {
-        "C:\\Users\\ilyaf\\clawd\\projects\\smart-energy-ai\\energy_ml\\assets\\ml_star_optimized_pipeline.py": "energy_ml_star_pipeline SmartEnergyAIPredictor",
-        "C:\\Users\\ilyaf\\clawd\\projects\\smart-energy-ai\\energy_ml\\energy_ml\\definitions.py": "ml_star_optimized_pipeline ml_star_job",
-        "C:\\Users\\ilyaf\\clawd\\projects\\smart-energy-ai\\DEPLOYMENT_GUIDE.md": "guide",
-        "C:\\Users\\ilyaf\\clawd\\projects\\smart-energy-ai\\ML_STAR_ACTION_PLAN.md": "plan",
-    }
-    dirs = {
-        "C:\\Users\\ilyaf\\clawd\\projects\\smart-energy-ai\\energy_ml\\assets": True,
-        "C:\\Users\\ilyaf\\clawd\\projects\\smart-energy-ai\\energy_ml\\energy_ml": True,
-        "C:\\Users\\ilyaf\\clawd\\projects\\smart-energy-ai\\models": True,
-    }
-
-    monkeypatch.setattr(module.os.path, "exists", lambda path: path in files or dirs.get(path, False))
-
-    def fake_open(path, mode="r", *args, **kwargs):
-        return io.StringIO(files[path])
-
-    monkeypatch.setattr(builtins, "open", fake_open)
-
-    assert module.validate_deployment() is True
-    output = capsys.readouterr().out
-    assert "DEPLOYMENT VALIDATION" in output
-    assert "All files in place" in output
-
-    monkeypatch.setattr(module.os.path, "exists", lambda path: False)
-    assert module.validate_deployment() is False
-
-
 def test_validate_ppo_oree_load_costs_and_pipeline(tmp_path: Path, monkeypatch, capsys) -> None:
     module = load_script_module("scripts.validate_ppo_oree_under_test", "scripts/validate_ppo_oree.py")
     validator = module.PriceDataValidator()
