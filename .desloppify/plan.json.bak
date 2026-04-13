@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-04-13T17:47:34+00:00",
+  "updated": "2026-04-13T17:51:53+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -8710,6 +8710,82 @@
       "actor": "user",
       "note": null,
       "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:47:43+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/mlops/battery_physics.py",
+        "structural::energy_ml/simulator/battery_physics.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "59725be980b8",
+        "branch": "cleanup/clean-code-dry-pass"
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:50:03+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/optimizer/dagster_integration.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "The file is already removed from the active repo surface and that cleanup is guarded by tests/unit/test_legacy_dagster_integration_cleanup.py, so this stale structural finding was validated and cleared without new code changes.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:50:05+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/optimizer/dagster_integration.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "The file is already removed from the active repo surface and that cleanup is guarded by tests/unit/test_legacy_dagster_integration_cleanup.py, so this stale structural finding was validated and cleared without new code changes.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually The file is already removed from the active repo surface and that cleanup is guarded by tests/unit/test_legacy_dagster_integration_cleanup.py, so this stale structural finding was validated and cleared without new code changes. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:51:08+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/optimizer/ml_star_optimizer.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "The file is already removed from the active repo surface, and tests/unit/test_legacy_ml_star_cleanup.py now explicitly guards that removal, so this stale structural finding was validated and cleared.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:51:10+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/optimizer/ml_star_optimizer.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "The file is already removed from the active repo surface, and tests/unit/test_legacy_ml_star_cleanup.py now explicitly guards that removal, so this stale structural finding was validated and cleared.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually The file is already removed from the active repo surface, and tests/unit/test_legacy_ml_star_cleanup.py now explicitly guards that removal, so this stale structural finding was validated and cleared. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:51:53+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/optimizer/run_optimization.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "The file is already removed from the active repo surface and tests/unit/test_legacy_run_optimization_cleanup.py validates that removal, so this stale structural finding was cleared without new code changes.",
+      "detail": {}
     }
   ],
   "epic_triage_meta": {
@@ -9427,11 +9503,22 @@
       "recorded_at": "2026-04-13T17:42:33+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "59725be980b8",
+      "branch": "cleanup/clean-code-dry-pass",
+      "issue_ids": [
+        "structural::energy_ml/mlops/battery_physics.py",
+        "structural::energy_ml/simulator/battery_physics.py"
+      ],
+      "recorded_at": "2026-04-13T17:47:43+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
   "uncommitted_issues": [
-    "structural::energy_ml/mlops/battery_physics.py",
-    "structural::energy_ml/simulator/battery_physics.py"
+    "structural::energy_ml/optimizer/dagster_integration.py",
+    "structural::energy_ml/optimizer/ml_star_optimizer.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
