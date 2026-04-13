@@ -149,7 +149,7 @@ def create_smart_energy_page():
                 "object": "block",
                 "type": "bulleted_list_item",
                 "bulleted_list_item": {
-                    "rich_text": [{"text": {"content": "scripts/create_notion_docs.py - Notion automation"}}]
+                    "rich_text": [{"text": {"content": "Notion automation scripts - legacy sprint tooling"}}]
                 }
             },
             {
