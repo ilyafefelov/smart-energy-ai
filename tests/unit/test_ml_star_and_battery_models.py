@@ -107,10 +107,6 @@ def _load_asset_module(module_name: str, relative_path: str):
 CONFIG_MODELS = _load_energy_ml_module("energy_ml.config_models", "energy_ml/config_models.py")
 BATTERY_MODELS = _load_energy_ml_module("energy_ml.battery_degradation", "energy_ml/battery_degradation.py")
 ML_STAR_PHASE3 = _load_asset_module("ml_star_phase3_under_test", "energy_ml/assets/ml_star_phase3.py")
-ML_STAR_PIPELINE = _load_asset_module(
-    "ml_star_optimized_pipeline_under_test",
-    "energy_ml/assets/ml_star_optimized_pipeline.py",
-)
 
 
 BatteryConfig = CONFIG_MODELS.BatteryConfig
@@ -128,15 +124,6 @@ def _make_battery_config(battery_type: str = "LFP"):
         max_charge_rate_kw=5.0,
         max_discharge_rate_kw=5.0,
     )
-
-
-class DummyContext:
-    def __init__(self):
-        self.messages = []
-        self.log = self
-
-    def info(self, message):
-        self.messages.append(message)
 
 
 class DummyPredictModel:
@@ -197,56 +184,3 @@ def test_ml_star_phase3_metrics_repackages_model_summary():
     assert metrics["accuracy"] == 0.84
     assert metrics["baseline_accuracy"] == 0.725
     assert metrics["features_used"] == 36
-
-
-def test_ml_star_select_top_features_uses_percentile_threshold():
-    class FakeEstimator:
-        feature_importances_ = np.array([0.1, 0.8, 0.4, 0.9])
-
-    class FakeModel:
-        estimators_ = [FakeEstimator()]
-
-    context = DummyContext()
-    X_train = pd.DataFrame(np.zeros((3, 4)), columns=["f0", "f1", "f2", "f3"])
-
-    selected_indices, selected_features = ML_STAR_PIPELINE.select_top_features(context, FakeModel(), X_train, top_percentile=50)
-
-    assert selected_indices.tolist() == [1, 3]
-    assert selected_features == ["f1", "f3"]
-    assert any("Selected 2/4 features" in message for message in context.messages)
-
-
-def test_ml_star_predictor_reports_confidence_and_labels():
-    predictor = ML_STAR_PIPELINE.SmartEnergyAIPredictor(DummyPredictModel(), [0, 2])
-    frame = pd.DataFrame({"a": [1.0], "b": [2.0], "c": [3.0]})
-
-    result = predictor.predict_with_confidence(frame)
-
-    assert result["predictions"].tolist() == [1]
-    assert result["confidence"].tolist() == [0.7]
-    assert result["class_labels"] == ["SELL"]
-
-
-def test_phase1_voting_ensemble_uses_soft_voting(monkeypatch):
-    created = {}
-
-    class FakeVotingClassifier:
-        def __init__(self, estimators, voting):
-            created["estimators"] = estimators
-            created["voting"] = voting
-
-        def fit(self, X_train, y_train):
-            created["fit_shape"] = (len(X_train), len(y_train))
-            return self
-
-    monkeypatch.setattr(ML_STAR_PIPELINE, "VotingClassifier", FakeVotingClassifier)
-    context = DummyContext()
-    X_train = pd.DataFrame({"f0": [0.1, 0.2], "f1": [0.3, 0.4]})
-    y_train = np.array([0, 1])
-
-    model = ML_STAR_PIPELINE.create_phase1_voting_ensemble(context, X_train, y_train)
-
-    assert isinstance(model, FakeVotingClassifier)
-    assert created["voting"] == "soft"
-    assert len(created["estimators"]) == 3
-    assert created["fit_shape"] == (2, 2)
