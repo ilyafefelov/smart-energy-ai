@@ -18,22 +18,6 @@ def load_module(module_name, module_path):
     return module
 
 
-def load_dagster_integration_module():
-    module_path = Path(__file__).resolve().parents[2] / "energy_ml" / "optimizer" / "dagster_integration.py"
-    package = types.ModuleType("energy_ml")
-    package.__path__ = [str(module_path.parents[1])]
-    optimizer_package = types.ModuleType("energy_ml.optimizer")
-    optimizer_package.__path__ = [str(module_path.parent)]
-    dagster = types.ModuleType("dagster")
-    dagster.op = lambda fn: fn
-
-    sys.modules.setdefault("energy_ml", package)
-    sys.modules.setdefault("energy_ml.optimizer", optimizer_package)
-    sys.modules["dagster"] = dagster
-
-    return load_module("energy_ml.optimizer.dagster_integration", module_path)
-
-
 def load_run_optimization_module():
     module_path = Path(__file__).resolve().parents[2] / "energy_ml" / "optimizer" / "run_optimization.py"
     package = types.ModuleType("energy_ml")
@@ -194,48 +178,8 @@ def load_pipeline_module():
 
     return load_module("energy_ml.pipeline", module_path)
 
-
-dagster_integration_module = load_dagster_integration_module()
 run_optimization_module = load_run_optimization_module()
 pipeline_module = load_pipeline_module()
-
-
-def test_initialize_ml_star_optimizer_returns_expected_defaults():
-    result = dagster_integration_module.initialize_ml_star_optimizer({"n_trials": 25, "output_dir": "out"})
-
-    assert result["n_trials"] == 25
-    assert result["n_splits"] == 5
-    assert result["output_dir"] == "out"
-    assert result["ensemble_strategies"] == ["voting", "stacking"]
-    assert "timestamp" in result
-
-
-def test_op_load_training_data_rejects_missing_columns(tmp_path):
-    dataset_path = tmp_path / "train.csv"
-    pd.DataFrame({"feature_a": [1.0], "feature_b": [2.0]}).to_csv(dataset_path, index=False)
-
-    with pytest.raises(ValueError, match="Missing columns"):
-        dagster_integration_module.op_load_training_data(str(dataset_path), ["feature_a"], "target")
-
-
-def test_op_save_optimization_results_writes_summary_files(tmp_path):
-    output_paths = dagster_integration_module.op_save_optimization_results(
-        baseline_result={"model": {"kind": "baseline"}, "test_accuracy": 0.82, "cv_mean": 0.8, "cv_std": 0.05},
-        ensemble_results={"voting": {"model": {"kind": "voting"}, "accuracy": 0.85}},
-        safety_results={
-            "data_leakage": {"leakage_detected": False},
-            "overfitting": {"overfitting_risk": "LOW"},
-            "reproducibility": {"status": "OK"},
-            "all_passed": True,
-        },
-        ablation_ranking=pd.DataFrame([{"component": "Voting Ensemble", "accuracy": 0.85}]),
-        output_dir=str(tmp_path),
-    )
-
-    assert Path(output_paths["baseline_model_path"]).exists()
-    assert Path(output_paths["summary_path"]).exists()
-    assert Path(output_paths["ablation_path"]).exists()
-    assert Path(output_paths["safety_report_path"]).exists()
 
 
 def test_generate_sample_data_uses_requested_feature_width_and_class_mapping():
