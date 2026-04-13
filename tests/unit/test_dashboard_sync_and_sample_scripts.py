@@ -54,39 +54,6 @@ def build_models_module():
     return module
 
 
-def test_create_dashboard_page_handles_success_and_failure(monkeypatch, capsys) -> None:
-    module = load_script_module("scripts.create_dashboard_page_under_test", "scripts/create_dashboard_page.py")
-    calls = []
-
-    def success_post(url, headers=None, json=None):
-        calls.append((url, headers, json))
-        return SimpleNamespace(status_code=200, json=lambda: {"id": "page-xyz"}, text="")
-
-    monkeypatch.setattr(module.requests, "post", success_post)
-
-    page_id = module.create_smart_energy_page()
-    output = capsys.readouterr().out
-
-    assert page_id == "page-xyz"
-    assert "Created page: Smart Energy AI V2" in output
-    assert calls[0][0].endswith("/pages")
-    assert calls[0][2]["properties"]["title"]["title"][0]["text"]["content"] == "Smart Energy AI V2"
-    assert calls[0][2]["parent"]["page_id"] == "2f633f80f2dc817d807fed5c311b642b"
-
-    monkeypatch.setattr(
-        module.requests,
-        "post",
-        lambda url, headers=None, json=None: SimpleNamespace(status_code=500, json=lambda: {}, text="server error"),
-    )
-
-    failed = module.create_smart_energy_page()
-    failure_output = capsys.readouterr().out
-
-    assert failed is None
-    assert "Error: 500" in failure_output
-    assert "server error" in failure_output
-
-
 def test_notion_sync_collects_commits_markdown_and_summary(tmp_path: Path, monkeypatch) -> None:
     module = load_script_module("scripts.notion_sync_under_test", "scripts/notion_sync.py")
 

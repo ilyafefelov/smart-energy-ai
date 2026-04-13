@@ -6,3 +6,4 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def test_legacy_notion_script_is_removed() -> None:
     assert not (ROOT / "scripts/create_notion_docs.py").exists()
+    assert not (ROOT / "scripts/create_dashboard_page.py").exists()
