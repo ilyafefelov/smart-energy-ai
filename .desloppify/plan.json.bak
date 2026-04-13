@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-04-13T17:39:09+00:00",
+  "updated": "2026-04-13T17:39:10+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -52,8 +52,8 @@
     "structural::ml_integration_api.py": {
       "issue_id": "structural::ml_integration_api.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/structural-ml_integration_api.py",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T17:39:10+00:00"
     },
     "flat_dirs::src": {
       "issue_id": "flat_dirs::src",
@@ -2046,9 +2046,7 @@
     "auto/structural-ml_integration_api.py": {
       "name": "auto/structural-ml_integration_api.py",
       "description": "Review file size: ml_integration_api.py",
-      "issue_ids": [
-        "structural::ml_integration_api.py"
-      ],
+      "issue_ids": [],
       "created_at": "2026-03-06T10:42:05+00:00",
       "updated_at": "2026-03-06T10:42:05+00:00",
       "auto": true,
@@ -8612,6 +8610,31 @@
       "actor": "user",
       "note": "Removed the loose root bridge path by relocating the canonical script to scripts/ml_integration_api.py and retargeting runtime consumers, validated by focused ML surface and docs tests.",
       "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:39:10+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::ml_integration_api.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Removed the loose root bridge path by relocating the canonical script to scripts/ml_integration_api.py and retargeting runtime consumers, validated by focused ML surface and docs tests.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Removed the loose root bridge path by relocating the canonical script to scripts/ml_integration_api.py and retargeting runtime consumers, validated by focused ML surface and docs tests. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T17:39:10+00:00",
+      "action": "cluster_done",
+      "issue_ids": [
+        "structural::ml_integration_api.py"
+      ],
+      "cluster_name": "auto/structural-ml_integration_api.py",
+      "actor": "user",
+      "note": null,
+      "detail": {}
     }
   ],
   "epic_triage_meta": {
@@ -9321,7 +9344,8 @@
   "uncommitted_issues": [
     "structural::energy_ml/assets/pipeline.py",
     "structural::energy_ml/pipeline.py",
-    "structural::energy_ml/ml_integration_api.py"
+    "structural::energy_ml/ml_integration_api.py",
+    "structural::ml_integration_api.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

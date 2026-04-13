@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-04-13T17:39:10+00:00",
+  "updated": "2026-04-13T17:42:33+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -8635,6 +8635,23 @@
       "actor": "user",
       "note": null,
       "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T17:42:33+00:00",
+      "action": "commit_record",
+      "issue_ids": [
+        "structural::energy_ml/assets/pipeline.py",
+        "structural::energy_ml/pipeline.py",
+        "structural::energy_ml/ml_integration_api.py",
+        "structural::ml_integration_api.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": null,
+      "detail": {
+        "sha": "940650846870",
+        "branch": "cleanup/clean-code-dry-pass"
+      }
     }
   ],
   "epic_triage_meta": {
@@ -9339,14 +9356,22 @@
       "recorded_at": "2026-03-06T23:02:49+00:00",
       "note": null,
       "cluster_name": null
+    },
+    {
+      "sha": "940650846870",
+      "branch": "cleanup/clean-code-dry-pass",
+      "issue_ids": [
+        "structural::energy_ml/assets/pipeline.py",
+        "structural::energy_ml/pipeline.py",
+        "structural::energy_ml/ml_integration_api.py",
+        "structural::ml_integration_api.py"
+      ],
+      "recorded_at": "2026-04-13T17:42:33+00:00",
+      "note": null,
+      "cluster_name": null
     }
   ],
-  "uncommitted_issues": [
-    "structural::energy_ml/assets/pipeline.py",
-    "structural::energy_ml/pipeline.py",
-    "structural::energy_ml/ml_integration_api.py",
-    "structural::ml_integration_api.py"
-  ],
+  "uncommitted_issues": [],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28
 }
