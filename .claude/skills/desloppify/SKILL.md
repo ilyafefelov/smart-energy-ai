@@ -5,7 +5,8 @@ description: >
   about code quality, technical debt, dead code, large files, god classes,
   duplicate functions, code smells, naming issues, import cycles, or coupling
   problems. Also use when asked for a health score, what to fix next, or to
-  create a cleanup plan. Apply Karpathy-style guardrails: explicit assumptions,
+  create a cleanup plan. Do not use for ordinary feature work, debugging, or
+  runtime fixes. Apply Karpathy-style guardrails: explicit assumptions,
   simplest viable fix, surgical edits, and verifiable success criteria.
   Supports 28 languages.
 allowed-tools: Bash(desloppify *)

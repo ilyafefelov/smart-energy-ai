@@ -85,6 +85,7 @@ dagster job execute -m src.definitions -j optimization_schedule_contract_checks
 - Simplicity first: prefer the minimum code that solves the task; avoid speculative abstractions, extra configurability, or broad refactors.
 - Surgical changes: touch only the requested surface, remove only the orphans created by your own change, and leave unrelated cleanup for separate work unless explicitly asked.
 - Goal-driven execution: define a concrete success check for each slice and validate the narrowest relevant path immediately after editing.
+- Use `desloppify` only for explicit code-health, technical-debt, dead-code, or cleanup work. It is not the default workflow for normal feature work, debugging, or runtime fixes.
 
 ## Key References
 
