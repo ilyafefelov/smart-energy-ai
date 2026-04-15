@@ -12,10 +12,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-
-# Add the project root to Python path
-sys.path.insert(0, str(PROJECT_ROOT))
+# Add the current directory to Python path
+sys.path.insert(0, str(Path(__file__).parent))
 
 try:
     from energy_ml.features import FeatureEngineer
@@ -27,7 +25,7 @@ try:
     from energy_ml.mlops.renewable_forecasting import RenewableForecaster
 except ImportError:
     # Fallback: try direct imports from the energy_ml directory
-    sys.path.insert(0, str(PROJECT_ROOT / "energy_ml"))
+    sys.path.insert(0, str(Path(__file__).parent / "energy_ml"))
     from features import FeatureEngineer
     from ml_integration import PredictionService
     from pipeline import PipelineOrchestrator

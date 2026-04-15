@@ -67,6 +67,87 @@ class RenewableForecaster:
             'solar': SolarGenerationModel(),
             'wind': WindGenerationModel()
         }
+
+    def _resolve_forecast_inputs(self, user_config: UserConfigModel) -> tuple[float, float, float, float, Dict[str, Any]]:
+        latitude = getattr(user_config, 'latitude', 50.45)
+        longitude = getattr(user_config, 'longitude', 30.52)
+        solar_capacity_kw = getattr(user_config, 'solar_capacity_kw', 0.0)
+        wind_capacity_kw = getattr(user_config, 'wind_capacity_kw', 0.0)
+        weather_data = self._get_weather_data(latitude, longitude)
+        return latitude, longitude, solar_capacity_kw, wind_capacity_kw, weather_data
+
+    def _generate_resource_forecasts(
+        self,
+        latitude: float,
+        longitude: float,
+        solar_capacity_kw: float,
+        wind_capacity_kw: float,
+        weather_data: Dict[str, Any],
+    ) -> tuple[Dict[str, Any], Dict[str, Any]]:
+        solar_forecast: Dict[str, Any] = {}
+        wind_forecast: Dict[str, Any] = {}
+
+        if solar_capacity_kw > 0:
+            solar_forecast = self.generation_models['solar'].generate_forecast(
+                capacity_kw=solar_capacity_kw,
+                latitude=latitude,
+                longitude=longitude,
+                weather_data=weather_data,
+            )
+
+        if wind_capacity_kw > 0:
+            wind_forecast = self.generation_models['wind'].generate_forecast(
+                capacity_kw=wind_capacity_kw,
+                latitude=latitude,
+                longitude=longitude,
+                weather_data=weather_data,
+            )
+
+        return solar_forecast, wind_forecast
+
+    def _build_forecasts_response(
+        self,
+        latitude: float,
+        longitude: float,
+        solar_capacity_kw: float,
+        wind_capacity_kw: float,
+        weather_data: Dict[str, Any],
+        solar_forecast: Dict[str, Any],
+        wind_forecast: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        total_renewable = self._combine_forecasts(solar_forecast, wind_forecast)
+        capacity_factors = self._calculate_capacity_factors(
+            solar_forecast,
+            wind_forecast,
+            solar_capacity_kw,
+            wind_capacity_kw,
+        )
+
+        return {
+            'solar_forecast': solar_forecast,
+            'wind_forecast': wind_forecast,
+            'total_renewable': total_renewable,
+            'weather_data': weather_data,
+            'capacity_factors': capacity_factors,
+            'location': {'latitude': latitude, 'longitude': longitude},
+            'installed_capacity': {
+                'solar_kw': solar_capacity_kw,
+                'wind_kw': wind_capacity_kw,
+                'total_kw': solar_capacity_kw + wind_capacity_kw,
+            },
+            'timestamp': datetime.now().isoformat(),
+        }
+
+    def _build_error_forecasts(self, error: Exception) -> Dict[str, Any]:
+        return {
+            'solar_forecast': {},
+            'wind_forecast': {},
+            'total_renewable': {},
+            'weather_data': {},
+            'capacity_factors': {},
+            'error': str(error),
+            'timestamp': datetime.now().isoformat(),
+        }
     
     def generate_forecasts(self, user_config: UserConfigModel) -> Dict[str, Any]:
         """Generate renewable energy forecasts.
@@ -78,59 +159,25 @@ class RenewableForecaster:
             dict with solar, wind, and combined forecasts
         """
         try:
-            # Get location (extend UserConfigModel to include this)
-            latitude = getattr(user_config, 'latitude', 50.45)  # Default: Kyiv
-            longitude = getattr(user_config, 'longitude', 30.52)
-            
-            # Get installed capacity (extend UserConfigModel)
-            solar_capacity_kw = getattr(user_config, 'solar_capacity_kw', 0.0)
-            wind_capacity_kw = getattr(user_config, 'wind_capacity_kw', 0.0)
-            
-            # Get weather data
-            weather_data = self._get_weather_data(latitude, longitude)
-            
-            # Generate solar forecast
-            solar_forecast = {}
-            if solar_capacity_kw > 0:
-                solar_forecast = self.generation_models['solar'].generate_forecast(
-                    capacity_kw=solar_capacity_kw,
-                    latitude=latitude,
-                    longitude=longitude,
-                    weather_data=weather_data
-                )
-            
-            # Generate wind forecast
-            wind_forecast = {}
-            if wind_capacity_kw > 0:
-                wind_forecast = self.generation_models['wind'].generate_forecast(
-                    capacity_kw=wind_capacity_kw,
-                    latitude=latitude,
-                    longitude=longitude,
-                    weather_data=weather_data
-                )
-            
-            # Combine forecasts
-            total_renewable = self._combine_forecasts(solar_forecast, wind_forecast)
-            
-            # Calculate capacity factors
-            capacity_factors = self._calculate_capacity_factors(
-                solar_forecast, wind_forecast, solar_capacity_kw, wind_capacity_kw
+            latitude, longitude, solar_capacity_kw, wind_capacity_kw, weather_data = self._resolve_forecast_inputs(
+                user_config
             )
-            
-            forecasts = {
-                'solar_forecast': solar_forecast,
-                'wind_forecast': wind_forecast,
-                'total_renewable': total_renewable,
-                'weather_data': weather_data,
-                'capacity_factors': capacity_factors,
-                'location': {'latitude': latitude, 'longitude': longitude},
-                'installed_capacity': {
-                    'solar_kw': solar_capacity_kw,
-                    'wind_kw': wind_capacity_kw,
-                    'total_kw': solar_capacity_kw + wind_capacity_kw
-                },
-                'timestamp': datetime.now().isoformat()
-            }
+            solar_forecast, wind_forecast = self._generate_resource_forecasts(
+                latitude,
+                longitude,
+                solar_capacity_kw,
+                wind_capacity_kw,
+                weather_data,
+            )
+            forecasts = self._build_forecasts_response(
+                latitude,
+                longitude,
+                solar_capacity_kw,
+                wind_capacity_kw,
+                weather_data,
+                solar_forecast,
+                wind_forecast,
+            )
             
             logger.info(f"Generated renewable forecasts for {solar_capacity_kw}kW solar + {wind_capacity_kw}kW wind")
             
@@ -138,15 +185,7 @@ class RenewableForecaster:
             
         except Exception as e:
             logger.error(f"Renewable forecasting failed: {e}")
-            return {
-                'solar_forecast': {},
-                'wind_forecast': {},
-                'total_renewable': {},
-                'weather_data': {},
-                'capacity_factors': {},
-                'error': str(e),
-                'timestamp': datetime.now().isoformat()
-            }
+            return self._build_error_forecasts(e)
     
     def _get_weather_data(self, latitude: float, longitude: float) -> Dict[str, Any]:
         """Get weather data for the location.

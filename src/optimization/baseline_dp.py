@@ -52,6 +52,113 @@ class BaselineDPOptimizer:
         self.config = config.with_defaults()
         self._eta = sqrt(max(min(self.config.roundtrip_efficiency, 1.0), 1e-6))
 
+    def _advance_hour_states(
+        self,
+        *,
+        hour: int,
+        states: Mapping[Tuple[int, int], Dict[str, float]],
+        actions_kw: Sequence[float],
+        price_eur_mwh: float,
+        load_kw: float,
+        solar_kw: float,
+        soc_min_kwh: float,
+        soc_max_kwh: float,
+        throughput_limit_kwh: float,
+    ) -> tuple[
+        MutableMapping[Tuple[int, int], Dict[str, float]],
+        Dict[Tuple[int, int], Tuple[Tuple[int, int], Dict[str, float]]],
+    ]:
+        next_states: MutableMapping[Tuple[int, int], Dict[str, float]] = {}
+        step_backpointer: Dict[Tuple[int, int], Tuple[Tuple[int, int], Dict[str, float]]] = {}
+
+        for state_key, node in states.items():
+            for action_kw in actions_kw:
+                transition = self._transition(
+                    hour=hour,
+                    action_kw=action_kw,
+                    soc_kwh=node["soc"],
+                    throughput_so_far_kwh=node["throughput"],
+                    price_eur_mwh=price_eur_mwh,
+                    load_kw=load_kw,
+                    solar_kw=solar_kw,
+                    soc_min_kwh=soc_min_kwh,
+                    soc_max_kwh=soc_max_kwh,
+                    throughput_limit_kwh=throughput_limit_kwh,
+                )
+                if transition is None:
+                    continue
+
+                cumulative_cost = node["cost"] + transition["net_cost_eur"]
+                next_key = (
+                    self._quantize(transition["soc_after_kwh"], self.config.soc_step_kwh),
+                    self._quantize(transition["throughput_total_kwh"], self.config.throughput_step_kwh),
+                )
+                existing = next_states.get(next_key)
+                if existing is not None and cumulative_cost >= existing["cost"]:
+                    continue
+
+                next_states[next_key] = {
+                    "cost": cumulative_cost,
+                    "soc": transition["soc_after_kwh"],
+                    "throughput": transition["throughput_total_kwh"],
+                }
+                step_backpointer[next_key] = (state_key, transition)
+
+        if not next_states:
+            raise RuntimeError(f"No feasible states remaining at hour {hour}")
+
+        return next_states, step_backpointer
+
+    @staticmethod
+    def _reconstruct_schedule(
+        backpointers: Sequence[Dict[Tuple[int, int], Tuple[Tuple[int, int], Dict[str, float]]]],
+        final_key: Tuple[int, int],
+    ) -> List[Dict[str, float]]:
+        schedule_reversed: List[Dict[str, float]] = []
+
+        for hour in range(len(backpointers) - 1, -1, -1):
+            prev_key, transition = backpointers[hour][final_key]
+            schedule_reversed.append(transition)
+            final_key = prev_key
+
+        return list(reversed(schedule_reversed))
+
+    @staticmethod
+    def _build_result(
+        schedule: Sequence[Dict[str, float]],
+        *,
+        soc_min: float,
+        soc_max: float,
+        throughput_limit: float,
+        final_soc: float,
+        final_throughput: float,
+        horizon: int,
+        state_bins: int,
+    ) -> Dict[str, Any]:
+        objective = {
+            "purchase_cost_eur": sum(row["purchase_cost_eur"] for row in schedule),
+            "export_revenue_eur": sum(row["export_revenue_eur"] for row in schedule),
+            "degradation_penalty_eur": sum(row["degradation_penalty_eur"] for row in schedule),
+        }
+        objective["net_cost_eur"] = objective["purchase_cost_eur"] - objective["export_revenue_eur"] + objective["degradation_penalty_eur"]
+
+        return {
+            "schedule": list(schedule),
+            "objective": objective,
+            "constraints": {
+                "soc_min_kwh": soc_min,
+                "soc_max_kwh": soc_max,
+                "throughput_limit_kwh": throughput_limit,
+                "final_soc_kwh": final_soc,
+                "final_throughput_kwh": final_throughput,
+            },
+            "metadata": {
+                "horizon_hours": horizon,
+                "algorithm": "dynamic_programming_baseline",
+                "state_bins": state_bins,
+            },
+        }
+
     def optimize(
         self,
         price_eur_mwh: Sequence[float],
@@ -89,78 +196,33 @@ class BaselineDPOptimizer:
         ]
 
         for hour in range(horizon):
-            next_states: MutableMapping[Tuple[int, int], Dict[str, float]] = {}
-            step_backpointer: Dict[Tuple[int, int], Tuple[Tuple[int, int], Dict[str, float]]] = {}
-
-            for state_key, node in states.items():
-                for action_kw in actions_kw:
-                    transition = self._transition(
-                        hour=hour,
-                        action_kw=action_kw,
-                        soc_kwh=node["soc"],
-                        throughput_so_far_kwh=node["throughput"],
-                        price_eur_mwh=prices[hour],
-                        load_kw=loads[hour],
-                        solar_kw=solars[hour],
-                        soc_min_kwh=soc_min,
-                        soc_max_kwh=soc_max,
-                        throughput_limit_kwh=throughput_limit,
-                    )
-                    if transition is None:
-                        continue
-
-                    cumulative_cost = node["cost"] + transition["net_cost_eur"]
-                    next_key = (
-                        self._quantize(transition["soc_after_kwh"], self.config.soc_step_kwh),
-                        self._quantize(transition["throughput_total_kwh"], self.config.throughput_step_kwh),
-                    )
-                    existing = next_states.get(next_key)
-                    if existing is None or cumulative_cost < existing["cost"]:
-                        next_states[next_key] = {
-                            "cost": cumulative_cost,
-                            "soc": transition["soc_after_kwh"],
-                            "throughput": transition["throughput_total_kwh"],
-                        }
-                        step_backpointer[next_key] = (state_key, transition)
-
-            if not next_states:
-                raise RuntimeError(f"No feasible states remaining at hour {hour}")
+            next_states, step_backpointer = self._advance_hour_states(
+                hour=hour,
+                states=states,
+                actions_kw=actions_kw,
+                price_eur_mwh=prices[hour],
+                load_kw=loads[hour],
+                solar_kw=solars[hour],
+                soc_min_kwh=soc_min,
+                soc_max_kwh=soc_max,
+                throughput_limit_kwh=throughput_limit,
+            )
 
             backpointers.append(step_backpointer)
             states = next_states
 
         final_key, final_node = min(states.items(), key=lambda item: item[1]["cost"])
-        schedule_reversed: List[Dict[str, float]] = []
-
-        for hour in range(horizon - 1, -1, -1):
-            prev_key, transition = backpointers[hour][final_key]
-            schedule_reversed.append(transition)
-            final_key = prev_key
-
-        schedule = list(reversed(schedule_reversed))
-        objective = {
-            "purchase_cost_eur": sum(row["purchase_cost_eur"] for row in schedule),
-            "export_revenue_eur": sum(row["export_revenue_eur"] for row in schedule),
-            "degradation_penalty_eur": sum(row["degradation_penalty_eur"] for row in schedule),
-        }
-        objective["net_cost_eur"] = objective["purchase_cost_eur"] - objective["export_revenue_eur"] + objective["degradation_penalty_eur"]
-
-        return {
-            "schedule": schedule,
-            "objective": objective,
-            "constraints": {
-                "soc_min_kwh": soc_min,
-                "soc_max_kwh": soc_max,
-                "throughput_limit_kwh": throughput_limit,
-                "final_soc_kwh": final_node["soc"],
-                "final_throughput_kwh": final_node["throughput"],
-            },
-            "metadata": {
-                "horizon_hours": horizon,
-                "algorithm": "dynamic_programming_baseline",
-                "state_bins": len(states),
-            },
-        }
+        schedule = self._reconstruct_schedule(backpointers, final_key)
+        return self._build_result(
+            schedule,
+            soc_min=soc_min,
+            soc_max=soc_max,
+            throughput_limit=throughput_limit,
+            final_soc=final_node["soc"],
+            final_throughput=final_node["throughput"],
+            horizon=horizon,
+            state_bins=len(states),
+        )
 
     def _transition(
         self,

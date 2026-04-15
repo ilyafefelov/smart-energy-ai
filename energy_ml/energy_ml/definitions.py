@@ -1,6 +1,6 @@
-"""Dagster definitions for Energy ML system - Minimal Config.
+"""Legacy ML-STAR Dagster definitions kept for compatibility imports.
 
-This is the entry point for Dagster. Loads only available assets.
+The active Dagster runtime for this repository lives under ``src/``.
 """
 from dagster import Definitions, define_asset_job
 

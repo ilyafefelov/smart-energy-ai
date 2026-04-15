@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
 from datetime import datetime
 from typing import Any, Callable, Dict, Optional
+from urllib.parse import urlunsplit
 
 import requests
+
+
+OPEN_METEO_HOST = os.getenv("ENERGY_ML_OPEN_METEO_HOST", "api.open-meteo.com")
+OPEN_METEO_FORECAST_URL = urlunsplit(("https", OPEN_METEO_HOST, "/v1/forecast", "", ""))
+
+logger = logging.getLogger(__name__)
 
 
 def safe_float(value: Any, default: float = 0.0) -> float:
@@ -35,6 +43,7 @@ def build_live_context_weather() -> Optional[Dict[str, Any]]:
     try:
         payload = json.loads(raw)
     except Exception:
+        logger.debug("Ignoring invalid ENERGY_ML_LIVE_CONTEXT_JSON payload")
         return None
 
     weather_signal = payload.get("weather_signal") if isinstance(payload, dict) else None
@@ -53,6 +62,7 @@ def build_live_context_weather() -> Optional[Dict[str, Any]]:
         try:
             hour = datetime.fromisoformat(str(row.get("timestamp")).replace("Z", "+00:00")).hour
         except Exception:
+            logger.debug("Skipping live-context forecast row with invalid timestamp: %r", row.get("timestamp"))
             continue
         hourly_forecast[f"hour_{hour}"] = {
             "solar_irradiance_w_m2": max(0.0, safe_float(row.get("shortwave_radiation_w_m2"))),
@@ -91,7 +101,7 @@ def build_open_meteo_weather(latitude: float, longitude: float, logger) -> Optio
     """Fetch and normalize Open-Meteo weather data."""
     try:
         response = requests.get(
-            "https://api.open-meteo.com/v1/forecast",
+            OPEN_METEO_FORECAST_URL,
             params={
                 "latitude": latitude,
                 "longitude": longitude,
@@ -118,6 +128,7 @@ def build_open_meteo_weather(latitude: float, longitude: float, logger) -> Optio
             try:
                 timestamp = datetime.fromisoformat(str(item).replace("Z", "+00:00"))
             except Exception:
+                logger.debug("Skipping Open-Meteo timestamp during forecast alignment: %r", item)
                 continue
             if timestamp >= now_utc:
                 current_index = idx

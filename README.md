@@ -159,7 +159,6 @@ except ImportError:
 ```
 smart-energy-ai/
 ├── dagster.yaml                        # Dagster deployment config
-├── workspace.yaml                      # Asset location descriptions
 ├── customers.yaml                      # Multi-tenancy config
 ├── requirements.txt                    # core Python dependencies for orchestration, ML, and local runtime
 ├── src/

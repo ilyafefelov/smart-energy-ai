@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from typing import Dict, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 def _load_profiles_module():
@@ -239,6 +239,8 @@ class UkraineTariffConfig(BaseModel):
 
 class UserProfile(BaseModel):
     """Complete user profile for SaaS multi-tenancy."""
+
+    model_config = ConfigDict()
     
     # User identification
     user_id: str = Field(description="Unique user identifier")
@@ -268,7 +270,3 @@ class UserProfile(BaseModel):
         description="Override electricity price if not using OREE"
     )
     
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }

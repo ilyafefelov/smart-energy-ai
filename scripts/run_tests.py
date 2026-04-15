@@ -211,6 +211,51 @@ def check_test_environment():
     
     return True
 
+
+def _run_selected_suites(args) -> dict[str, bool]:
+    if args.unit:
+        return {'unit': run_unit_tests()}
+    if args.integration:
+        return {'integration': run_integration_tests()}
+    if args.e2e:
+        return {'e2e': run_e2e_tests()}
+    if args.performance:
+        return {'performance': run_performance_tests()}
+    if args.coverage:
+        return {'coverage': run_with_coverage()}
+
+    print("🚀 Running Full Test Suite")
+    print("=" * 30)
+    return {
+        'unit': run_unit_tests(),
+        'integration': run_integration_tests(),
+        'e2e': run_e2e_tests(),
+        'performance': run_performance_tests(),
+    }
+
+
+def _print_summary(results: dict[str, bool], duration: float) -> int:
+    print("\n" + "=" * 50)
+    print("📊 TEST SUITE SUMMARY")
+    print("=" * 50)
+
+    total_tests = len(results)
+    passed_tests = sum(1 for result in results.values() if result)
+
+    for test_type, success in results.items():
+        status = "✅ PASSED" if success else "❌ FAILED"
+        print(f"{test_type.upper():<15} {status}")
+
+    print(f"\nTotal: {passed_tests}/{total_tests} test suites passed")
+    print(f"Duration: {duration:.1f} seconds")
+
+    if passed_tests == total_tests:
+        print("\n🎉 ALL TESTS PASSED!")
+        return 0
+
+    print(f"\n⚠️  {total_tests - passed_tests} test suite(s) failed")
+    return 1
+
 def main():
     parser = argparse.ArgumentParser(description="Run Smart Energy AI Test Suite")
     parser.add_argument("--unit", action="store_true", help="Run unit tests only")
@@ -239,55 +284,13 @@ def main():
         if not check_test_environment():
             print("❌ Environment check failed")
             return 1
-    
-    # Run requested tests
-    results = {}
-    
-    if args.unit:
-        results['unit'] = run_unit_tests()
-    elif args.integration:
-        results['integration'] = run_integration_tests()
-    elif args.e2e:
-        results['e2e'] = run_e2e_tests()
-    elif args.performance:
-        results['performance'] = run_performance_tests()
-    elif args.coverage:
-        results['coverage'] = run_with_coverage()
-    else:
-        # Run all tests
-        print("🚀 Running Full Test Suite")
-        print("=" * 30)
-        
-        results['unit'] = run_unit_tests()
-        results['integration'] = run_integration_tests()
-        results['e2e'] = run_e2e_tests()
-        results['performance'] = run_performance_tests()
-    
-    # Summary
+
+    results = _run_selected_suites(args)
+
     end_time = time.time()
     duration = end_time - start_time
-    
-    print("\n" + "=" * 50)
-    print("📊 TEST SUITE SUMMARY")
-    print("=" * 50)
-    
-    total_tests = len(results)
-    passed_tests = sum(1 for result in results.values() if result)
-    
-    for test_type, success in results.items():
-        status = "✅ PASSED" if success else "❌ FAILED"
-        print(f"{test_type.upper():<15} {status}")
-    
-    print(f"\nTotal: {passed_tests}/{total_tests} test suites passed")
-    print(f"Duration: {duration:.1f} seconds")
-    
-    # Exit code
-    if passed_tests == total_tests:
-        print("\n🎉 ALL TESTS PASSED!")
-        return 0
-    else:
-        print(f"\n⚠️  {total_tests - passed_tests} test suite(s) failed")
-        return 1
+
+    return _print_summary(results, duration)
 
 if __name__ == "__main__":
     sys.exit(main())

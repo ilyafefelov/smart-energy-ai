@@ -7,7 +7,11 @@ from typing import Any, Dict, List, Optional
 
 from dagster import fs_io_manager
 
-from src.io_managers.s3_pickle_io_manager import S3PickleIOManager, build_asset_io_manager_from_env
+from src.io_managers.s3_pickle_io_manager import (
+    S3PickleIOManager,
+    S3PickleIOManagerConfig,
+    build_asset_io_manager_from_env,
+)
 
 
 class _FakeBody:
@@ -67,8 +71,10 @@ class _StubInputContext:
 
 def test_s3_key_is_deterministic_and_partition_scoped() -> None:
     manager = S3PickleIOManager(
-        s3_bucket="test-bucket",
-        key_prefix="smart-energy-ai/assets",
+        S3PickleIOManagerConfig(
+            s3_bucket="test-bucket",
+            key_prefix="smart-energy-ai/assets",
+        ),
         s3_client=_FakeS3Client(),
     )
 
@@ -86,8 +92,10 @@ def test_s3_key_is_deterministic_and_partition_scoped() -> None:
 def test_handle_output_and_load_input_roundtrip() -> None:
     client = _FakeS3Client()
     manager = S3PickleIOManager(
-        s3_bucket="test-bucket",
-        key_prefix="smart-energy-ai/assets",
+        S3PickleIOManagerConfig(
+            s3_bucket="test-bucket",
+            key_prefix="smart-energy-ai/assets",
+        ),
         s3_client=client,
     )
 
@@ -116,8 +124,10 @@ def test_handle_output_and_load_input_roundtrip() -> None:
 def test_retries_transient_s3_failures() -> None:
     client = _FakeS3Client(fail_put_times=2, fail_get_times=2)
     manager = S3PickleIOManager(
-        s3_bucket="test-bucket",
-        key_prefix="smart-energy-ai/assets",
+        S3PickleIOManagerConfig(
+            s3_bucket="test-bucket",
+            key_prefix="smart-energy-ai/assets",
+        ),
         s3_client=client,
     )
 

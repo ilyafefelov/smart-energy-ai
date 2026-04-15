@@ -1,23 +1,23 @@
 {
   "command": "resolve",
   "patterns": [
-    "structural::energy_ml/simulator/battery_physics.py"
+    "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity"
   ],
   "status": "fixed",
   "resolved": [
-    "structural::energy_ml/simulator/battery_physics.py"
+    "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 88.5,
-  "objective_score": 94.6,
-  "strict_score": 88.1,
+  "overall_score": 89.5,
+  "objective_score": 97.1,
+  "strict_score": 89.1,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 88.5,
-  "prev_objective_score": 94.5,
-  "prev_strict_score": 88.1,
+  "prev_overall_score": 89.5,
+  "prev_objective_score": 97.1,
+  "prev_strict_score": 89.1,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually Extracted shared battery-model helpers for C-rate, efficiency clipping, and initialization logging while preserving simulator behavior under focused battery physics tests. and I am not gaming the score.",
+  "attestation": "I have actually Extracted the per-hour state expansion, schedule reconstruction, and result assembly helpers from BaselineDPOptimizer.optimize and validated the dedicated baseline optimizer tests under the repo venv. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
     "headline": "All T1 items cleared!",
@@ -51,16 +51,16 @@
       "biggest_gap_dimensions": [
         {
           "name": "Code quality",
-          "lenient": 90.3,
-          "strict": 84.8,
-          "gap": 5.5,
+          "lenient": 92.3,
+          "strict": 86.7,
+          "gap": 5.6,
           "wontfix_count": 147
         }
       ],
       "stagnant_dimensions": [
         {
           "name": "Code quality",
-          "strict": 84.8,
+          "strict": 86.7,
           "stuck_scans": 5
         },
         {
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 92.7,
+          "strict": 94.5,
           "stuck_scans": 5
         },
         {
@@ -144,8 +144,8 @@
       {
         "type": "reorganize",
         "detector": "orphaned",
-        "count": 61,
-        "description": "61 orphaned issues \u2014 delete dead files or relocate with `desloppify move`",
+        "count": 57,
+        "description": "57 orphaned issues \u2014 delete dead files or relocate with `desloppify move`",
         "command": "desloppify show orphaned --status open",
         "impact": 0.0,
         "dimension": "Code quality",
@@ -188,8 +188,8 @@
       {
         "type": "refactor",
         "detector": "structural",
-        "count": 38,
-        "description": "38 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 28,
+        "description": "28 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
@@ -199,8 +199,8 @@
       {
         "type": "refactor",
         "detector": "dict_keys",
-        "count": 48,
-        "description": "48 dict_keys issues \u2014 fix dict key mismatches \u2014 dead writes are likely dead code, schema drift suggests a typo or missed rename",
+        "count": 20,
+        "description": "20 dict_keys issues \u2014 fix dict key mismatches \u2014 dead writes are likely dead code, schema drift suggests a typo or missed rename",
         "command": "desloppify show dict_keys --status open",
         "impact": 0.0,
         "dimension": "Code quality",
@@ -209,25 +209,14 @@
       },
       {
         "type": "refactor",
-        "detector": "test_coverage",
-        "count": 10,
-        "description": "10 test_coverage issues \u2014 add tests for untested production modules \u2014 prioritize by import count",
-        "command": "desloppify show test_coverage --status open",
-        "impact": 0.0,
-        "dimension": "Test health",
-        "priority": 7,
-        "lane": "test_coverage"
-      },
-      {
-        "type": "refactor",
         "detector": "signature",
-        "count": 2,
-        "description": "2 signature issues \u2014 consolidate inconsistent function signatures",
+        "count": 1,
+        "description": "1 signature issues \u2014 consolidate inconsistent function signatures",
         "command": "desloppify show signature --status open",
         "impact": 0.0,
         "dimension": "Unknown",
-        "priority": 8,
-        "lane": "refactor_0"
+        "priority": 7,
+        "lane": "refactor_1"
       },
       {
         "type": "refactor",
@@ -237,18 +226,18 @@
         "command": "desloppify show responsibility_cohesion --status open",
         "impact": 0.0,
         "dimension": "Code quality",
-        "priority": 9,
+        "priority": 8,
         "lane": "refactor_0"
       },
       {
         "type": "manual_fix",
         "detector": "smells",
-        "count": 45,
-        "description": "45 smells issues \u2014 inspect with `desloppify next` and fix manually",
+        "count": 30,
+        "description": "30 smells issues \u2014 inspect with `desloppify next` and fix manually",
         "command": "desloppify show smells --status open",
         "impact": 0.0,
         "dimension": "Code quality",
-        "priority": 10,
+        "priority": 9,
         "lane": "refactor_0"
       },
       {
@@ -259,7 +248,7 @@
         "command": "desloppify show global_mutable_config --status open",
         "impact": 0.0,
         "dimension": "Code quality",
-        "priority": 11,
+        "priority": 10,
         "lane": "refactor_0"
       },
       {
@@ -270,14 +259,14 @@
         "command": "desloppify show stale_exclude --status open",
         "impact": 0.0,
         "dimension": "Code quality",
-        "priority": 12,
-        "lane": "refactor_1"
+        "priority": 11,
+        "lane": "refactor_2"
       }
     ],
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 245,
+        "total_count": 177,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -290,7 +279,7 @@
             3,
             4
           ],
-          "file_count": 76,
+          "file_count": 72,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -301,28 +290,27 @@
             6,
             8,
             9,
-            10,
-            11
+            10
           ],
-          "file_count": 74,
+          "file_count": 60,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
         },
         "refactor_1": {
           "actions": [
-            12
+            7
           ],
-          "file_count": 9,
+          "file_count": 1,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
         },
-        "test_coverage": {
+        "refactor_2": {
           "actions": [
-            7
+            11
           ],
-          "file_count": 10,
+          "file_count": 9,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
@@ -336,7 +324,7 @@
       "move": {
         "available": true,
         "relevant": true,
-        "reason": "61 orphaned files + 1 single-use files + 3 flat directories",
+        "reason": "57 orphaned files + 1 single-use files + 3 flat directories",
         "usage": "desloppify move <source> <dest> [--dry-run]"
       },
       "plan": {
@@ -354,13 +342,13 @@
       "overall_gap": 0.2,
       "wontfix_count": 147,
       "worst_dimension": "Code quality",
-      "worst_gap": 5.5,
+      "worst_gap": 5.6,
       "trend": "stable"
     },
     "milestone": "All T1 items cleared!",
     "primary_action": {
       "command": "desloppify show orphaned --status open",
-      "description": "61 orphaned issues \u2014 delete dead files or relocate with `desloppify move`"
+      "description": "57 orphaned issues \u2014 delete dead files or relocate with `desloppify move`"
     },
     "why_now": "4 independent workstreams, safe to parallelize. Rescan after each phase to verify.",
     "verification_step": {
@@ -376,8 +364,8 @@
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 88.1,
-      "gap": 6.9,
+      "current": 89.1,
+      "gap": 5.9,
       "state": "below",
       "warning": null
     },

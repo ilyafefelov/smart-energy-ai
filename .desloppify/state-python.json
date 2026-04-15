@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 88.6,
-  "objective_score": 94.8,
-  "strict_score": 88.2,
+  "overall_score": 89.5,
+  "objective_score": 97.1,
+  "strict_score": 89.1,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 145,
-    "open": 235,
+    "fixed": 203,
+    "open": 177,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -25,15 +25,15 @@
       "2": {
         "auto_resolved": 36,
         "false_positive": 0,
-        "fixed": 33,
-        "open": 18,
+        "fixed": 40,
+        "open": 11,
         "wontfix": 75
       },
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 89,
-        "open": 208,
+        "fixed": 140,
+        "open": 157,
         "wontfix": 72
       },
       "4": {
@@ -2330,11 +2330,11 @@
   },
   "dimension_scores": {
     "Code quality": {
-      "score": 90.6,
-      "strict": 85.1,
+      "score": 92.3,
+      "strict": 86.7,
       "verified_strict_score": 84.8,
       "checks": 1032,
-      "failing": 171,
+      "failing": 131,
       "tier": 3,
       "detectors": {
         "unused": {
@@ -2345,15 +2345,15 @@
         },
         "smells": {
           "potential": 143,
-          "pass_rate": 0.8412587412587412,
-          "failing": 45,
-          "weighted_failures": 22.7
+          "pass_rate": 0.9006993006993008,
+          "failing": 30,
+          "weighted_failures": 14.2
         },
         "orphaned": {
           "potential": 143,
-          "pass_rate": 0.7013986013986013,
-          "failing": 61,
-          "weighted_failures": 42.700000000000024
+          "pass_rate": 0.7209790209790209,
+          "failing": 57,
+          "weighted_failures": 39.90000000000001
         },
         "flat_dirs": {
           "potential": 31,
@@ -2369,9 +2369,9 @@
         },
         "dict_keys": {
           "potential": 143,
-          "pass_rate": 0.8972027972027973,
-          "failing": 41,
-          "weighted_failures": 14.7
+          "pass_rate": 0.9475524475524476,
+          "failing": 20,
+          "weighted_failures": 7.5
         },
         "global_mutable_config": {
           "potential": 143,
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 93.3,
-      "strict": 93.3,
+      "score": 94.5,
+      "strict": 94.5,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 32,
+      "failing": 26,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.9328671328671329,
-          "failing": 32,
-          "weighted_failures": 9.600000000000001
+          "pass_rate": 0.9454545454545453,
+          "failing": 26,
+          "weighted_failures": 7.799999999999997
         }
       }
     },
@@ -2455,18 +2455,18 @@
       }
     },
     "Test health": {
-      "score": 90.7,
-      "strict": 90.7,
+      "score": 100.0,
+      "strict": 100.0,
       "verified_strict_score": 19.1,
       "checks": 1788,
-      "failing": 10,
+      "failing": 0,
       "tier": 4,
       "detectors": {
         "test_coverage": {
           "potential": 1782,
-          "pass_rate": 0.9070307971337012,
-          "failing": 10,
-          "weighted_failures": 165.67111950774472
+          "pass_rate": 1.0,
+          "failing": 0,
+          "weighted_failures": 0.0
         },
         "subjective_review": {
           "potential": 6,
@@ -3264,17 +3264,23 @@
       "detail": {
         "loc": 560
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Moved static battery specs and load-profile templates into energy_ml/user_config_support.py using a file-path-safe sibling loader, then validated the user_config contract tests.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:32:04+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Moved static battery specs and load-profile templates into energy_ml/user_config_support.py using a file-path-safe sibling loader, then validated the user_config contract tests. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:32:04+00:00",
+        "scan_verified": false
+      }
     },
     "structural::energy_ml/mlops/serving_api.py": {
       "id": "structural::energy_ml/mlops/serving_api.py",
@@ -3560,17 +3566,23 @@
       "detail": {
         "loc": 455
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings point at files removed from the repo; only scripts/recalculate_pipeline.py remains, not the deleted root recalculate_pipeline.py.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:26:09+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these tracked paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:26:09+00:00",
+        "scan_verified": false
+      }
     },
     "structural::energy_ml/mlops/renewable_forecasting.py": {
       "id": "structural::energy_ml/mlops/renewable_forecasting.py",
@@ -4036,17 +4048,23 @@
       "detail": {
         "loc": 359
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings point at files removed from the repo; only scripts/recalculate_pipeline.py remains, not the deleted root recalculate_pipeline.py.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:26:09+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "test",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these tracked paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:26:09+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/ukraine_stats_analyzer.py": {
       "id": "structural::src/ukraine_stats_analyzer.py",
@@ -4245,17 +4263,23 @@
           "long function (create_smart_energy_page: 324 LOC)"
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings point at files removed from the repo; only scripts/recalculate_pipeline.py remains, not the deleted root recalculate_pipeline.py.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:26:09+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these tracked paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:26:09+00:00",
+        "scan_verified": false
+      }
     },
     "structural::energy_ml/demo_complete_system.py": {
       "id": "structural::energy_ml/demo_complete_system.py",
@@ -4489,17 +4513,23 @@
       "detail": {
         "loc": 348
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings point at files removed from the repo; only scripts/recalculate_pipeline.py remains, not the deleted root recalculate_pipeline.py.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:26:09+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these tracked paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:26:09+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/price_processor.py": {
       "id": "structural::src/price_processor.py",
@@ -4706,17 +4736,23 @@
         ],
         "loc": 184
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings point at files removed from the repo; only scripts/recalculate_pipeline.py remains, not the deleted root recalculate_pipeline.py.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:26:09+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these tracked paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:26:09+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/data_fetcher.py": {
       "id": "structural::src/data_fetcher.py",
@@ -4790,17 +4826,23 @@
         ],
         "loc": 171
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted the payload-building logic into energy_ml/scripts/get_battery_physics_support.py while preserving the script contract and validating it with focused get_battery_physics surface tests.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:29:41+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Extracted the payload-building logic into energy_ml/scripts/get_battery_physics_support.py while preserving the script contract and validating it with focused get_battery_physics surface tests. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:29:41+00:00",
+        "scan_verified": false
+      }
     },
     "structural::scripts/generate_nuxt_structure.py": {
       "id": "structural::scripts/generate_nuxt_structure.py",
@@ -5236,17 +5278,23 @@
       "detail": {
         "loc": 682
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "orphaned::src/engines/nvtabular_engine.py": {
       "id": "orphaned::src/engines/nvtabular_engine.py",
@@ -5286,17 +5334,23 @@
       "detail": {
         "loc": 535
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "orphaned::src/enhanced_price_ingester.py": {
       "id": "orphaned::src/enhanced_price_ingester.py",
@@ -5418,17 +5472,23 @@
       "detail": {
         "loc": 455
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "orphaned::src/comprehensive_energy_scraper.py": {
       "id": "orphaned::src/comprehensive_energy_scraper.py",
@@ -6114,17 +6174,23 @@
       "detail": {
         "loc": 176
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "orphaned::energy_ml/scripts/get_battery_physics.py": {
       "id": "orphaned::energy_ml/scripts/get_battery_physics.py",
@@ -7480,17 +7546,23 @@
         "importer_count": 0,
         "loc_weight": 21.77154105707724
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused unit coverage for LCOS, arbitrage value, NPV/IRR, technology comparison, and sensitivity analysis in src/physics/economics.py.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:07:19+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused unit coverage for LCOS, arbitrage value, NPV/IRR, technology comparison, and sensitivity analysis in src/physics/economics.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:07:19+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/mlops/feature_store.py::untested_module": {
       "id": "test_coverage::energy_ml/mlops/feature_store.py::untested_module",
@@ -7724,17 +7796,23 @@
         "importer_count": 0,
         "loc_weight": 16.911534525287763
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused unit coverage for the LFP degradation model baseline stress factor, stressed marginal cost, knee-point prediction, optimal operating window, and cycle cost matrix outputs.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:05:13+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused unit coverage for the LFP degradation model baseline stress factor, stressed marginal cost, knee-point prediction, optimal operating window, and cycle cost matrix outputs. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:05:13+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::execute_ml_star_phase3.py::untested_module": {
       "id": "test_coverage::execute_ml_star_phase3.py::untested_module",
@@ -8406,17 +8484,23 @@
         "importer_count": 0,
         "loc_weight": 17.291616465790582
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused unit coverage for the simplified RL training path and evaluate() model-not-found fallback in src/rl_training.py using lightweight environment stubs.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:20:19+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused unit coverage for the simplified RL training path and evaluate() model-not-found fallback in src/rl_training.py using lightweight environment stubs. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:20:19+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/oree_selenium_scraper.py::untested_critical": {
       "id": "test_coverage::src/oree_selenium_scraper.py::untested_critical",
@@ -8526,17 +8610,23 @@
         "loc_weight": 18.788294228055936,
         "complexity_score": 27
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused unit coverage for CSV processing, trend analysis, ML feature creation, and the top-level report-generating entry point in src/ukraine_stats_analyzer.py.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:24:04+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused unit coverage for CSV processing, trend analysis, ML feature creation, and the top-level report-generating entry point in src/ukraine_stats_analyzer.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:24:04+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/weather_fetcher.py::untested_module": {
       "id": "test_coverage::src/weather_fetcher.py::untested_module",
@@ -8551,17 +8641,23 @@
         "importer_count": 0,
         "loc_weight": 5.196152422706632
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused unit coverage in tests/unit/test_weather_fetcher.py for the success path that writes the forecast CSV and the non-200 failure path that avoids writes.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:00:41+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused unit coverage in tests/unit/test_weather_fetcher.py for the success path that writes the forecast CSV and the non-200 failure path that avoids writes. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:00:41+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/improved_price_fetcher.py::untested_module": {
       "id": "test_coverage::src/improved_price_fetcher.py::untested_module",
@@ -8795,17 +8891,23 @@
         "importer_count": 0,
         "loc_weight": 10.723805294763608
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused unit coverage for the fallback training path and the legacy wrapper entry point, and fixed the summary line to report fallback correctly when the ingester returns an empty frame.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:03:24+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused unit coverage for the fallback training path and the legacy wrapper entry point, and fixed the summary line to report fallback correctly when the ingester returns an empty frame. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:03:24+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/dagster_api/trigger.py::untested_module": {
       "id": "test_coverage::src/dagster_api/trigger.py::untested_module",
@@ -8883,17 +8985,23 @@
         "importer_count": 0,
         "loc_weight": 16.186414056238647
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused unit coverage for reset/step transitions and render behavior in src/rl_environment.py, and fixed get_info/render consistency by persisting the latest step info.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:19:02+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused unit coverage for reset/step transitions and render behavior in src/rl_environment.py, and fixed get_info/render consistency by persisting the latest step info. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:19:02+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/mlops/model_registry.py::untested_module": {
       "id": "test_coverage::energy_ml/mlops/model_registry.py::untested_module",
@@ -9003,17 +9111,23 @@
         "importer_count": 0,
         "loc_weight": 23.979157616563597
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused unit coverage for nvtabular_engine non-GPU constructor guards, factory fallback, unavailable engine info, and runtime guard paths without requiring CUDA dependencies.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:23:29+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused unit coverage for nvtabular_engine non-GPU constructor guards, factory fallback, unavailable engine info, and runtime guard paths without requiring CUDA dependencies. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:23:29+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::scripts/generate_sample_data.py::untested_module": {
       "id": "test_coverage::scripts/generate_sample_data.py::untested_module",
@@ -9153,17 +9267,23 @@
         "importer_count": 0,
         "loc_weight": 18.0
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused unit coverage for validated market-pattern generation, EPEX response parsing, and the real-source fallback selector in src/real_price_data.py.",
       "first_seen": "2026-03-02T19:35:00+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:16:08+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused unit coverage for validated market-pattern generation, EPEX response parsing, and the real-source fallback selector in src/real_price_data.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:16:08+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/mlops/retraining_pipeline.py::untested_critical": {
       "id": "test_coverage::energy_ml/mlops/retraining_pipeline.py::untested_critical",
@@ -18013,17 +18133,23 @@
         "line": 599,
         "info": "in model_readiness_check()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Test accuracy > 60%": {
       "id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Test accuracy > 60%",
@@ -18038,17 +18164,23 @@
         "line": 610,
         "info": "in model_readiness_check()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::No overfitting (gap < 15%)": {
       "id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::No overfitting (gap < 15%)",
@@ -18063,17 +18195,23 @@
         "line": 623,
         "info": "in model_readiness_check()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Backtesting profitable": {
       "id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Backtesting profitable",
@@ -18088,17 +18226,23 @@
         "line": 634,
         "info": "in model_readiness_check()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Better than baseline": {
       "id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Better than baseline",
@@ -18113,17 +18257,23 @@
         "line": 642,
         "info": "in model_readiness_check()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/load_simulation.py::dead_write::overall::annual_energy_kwh": {
       "id": "dict_keys::energy_ml/load_simulation.py::dead_write::overall::annual_energy_kwh",
@@ -18599,17 +18749,23 @@
         "line": 335,
         "info": "in class EnsembleBuilder()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::stacking": {
       "id": "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::stacking",
@@ -18624,17 +18780,23 @@
         "line": 313,
         "info": "in class EnsembleBuilder()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::voting": {
       "id": "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::voting",
@@ -18649,17 +18811,23 @@
         "line": 294,
         "info": "in class EnsembleBuilder()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::overwritten_key::report::leakage_detected": {
       "id": "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::overwritten_key::report::leakage_detected",
@@ -18674,17 +18842,23 @@
         "line": 370,
         "info": "in check_data_leakage()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::scripts/demo_complete_mlops_system.py::dead_write::health_check::version": {
       "id": "dict_keys::scripts/demo_complete_mlops_system.py::dead_write::health_check::version",
@@ -18699,17 +18873,23 @@
         "line": 214,
         "info": "in demonstrate_phase4_serving_api()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::scripts/run_tests.py::overwritten_key::results::unit": {
       "id": "dict_keys::scripts/run_tests.py::overwritten_key::results::unit",
@@ -18824,17 +19004,23 @@
         "line": 24,
         "info": "in check_imports()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::OptimizationEngine": {
       "id": "dict_keys::scripts/validation_check.py::overwritten_key::results::OptimizationEngine",
@@ -18849,17 +19035,23 @@
         "line": 31,
         "info": "in check_imports()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::BatteryPhysicsEngine": {
       "id": "dict_keys::scripts/validation_check.py::overwritten_key::results::BatteryPhysicsEngine",
@@ -18874,17 +19066,23 @@
         "line": 37,
         "info": "in check_imports()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::RenewableForecaster": {
       "id": "dict_keys::scripts/validation_check.py::overwritten_key::results::RenewableForecaster",
@@ -18899,17 +19097,23 @@
         "line": 43,
         "info": "in check_imports()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::Dagster Assets": {
       "id": "dict_keys::scripts/validation_check.py::overwritten_key::results::Dagster Assets",
@@ -18924,17 +19128,23 @@
         "line": 50,
         "info": "in check_imports()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::Optimization Decision": {
       "id": "dict_keys::scripts/validation_check.py::overwritten_key::results::Optimization Decision",
@@ -18949,17 +19159,23 @@
         "line": 71,
         "info": "in check_functionality()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::Battery Physics": {
       "id": "dict_keys::scripts/validation_check.py::overwritten_key::results::Battery Physics",
@@ -18974,17 +19190,23 @@
         "line": 86,
         "info": "in check_functionality()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::API Integration": {
       "id": "dict_keys::scripts/validation_check.py::overwritten_key::results::API Integration",
@@ -18999,17 +19221,23 @@
         "line": 106,
         "info": "in check_functionality()"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-02T19:35:06+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::src/comprehensive_energy_scraper.py::overwritten_key::results::february_2026": {
       "id": "dict_keys::src/comprehensive_energy_scraper.py::overwritten_key::results::february_2026",
@@ -23962,17 +24190,23 @@
         "line": 201,
         "info": "Cluster of 20 similar dict literals. Key \"volume_mwh\" appears in only 4. Consensus keys: ['price_eur_mwh', 'price_uah_mwh', 'source', 'timestamp']"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Synthetic path now uses _build_market_row and float threshold max(100.0, volume) to keep volume_mwh shape aligned with other market rows.",
       "first_seen": "2026-03-02T23:31:13+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:31:26+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Synthetic path now uses _build_market_row and float threshold max(100.0, volume) to keep volume_mwh shape aligned with other market rows. and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:31:26+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::271": {
       "id": "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::271",
@@ -23987,17 +24221,23 @@
         "line": 271,
         "info": "Cluster of 20 similar dict literals. Key \"volume_mwh\" appears in only 4. Consensus keys: ['price_eur_mwh', 'price_uah_mwh', 'source', 'timestamp']"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Table parse path now emits rows through _build_market_row, ensuring stable keys and normalized numeric types for volume_mwh.",
       "first_seen": "2026-03-02T23:31:13+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:31:35+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Table parse path now emits rows through _build_market_row, ensuring stable keys and normalized numeric types for volume_mwh. and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:31:35+00:00",
+        "scan_verified": false
+      }
     },
     "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::163": {
       "id": "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::163",
@@ -24012,17 +24252,23 @@
         "line": 163,
         "info": "Cluster of 20 similar dict literals. Key \"volume_mwh\" appears in only 4. Consensus keys: ['price_eur_mwh', 'price_uah_mwh', 'source', 'timestamp']"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Replaced per-path dict literal with shared _build_market_row helper so volume_mwh is emitted in a consistent normalized row schema.",
       "first_seen": "2026-03-02T23:31:13+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:31:17+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Replaced per-path dict literal with shared _build_market_row helper so volume_mwh is emitted in a consistent normalized row schema. and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:31:17+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/assets/core/optimization_schedule_checks.py": {
       "id": "structural::src/assets/core/optimization_schedule_checks.py",
@@ -24415,17 +24661,23 @@
         "importer_count": 0,
         "loc_weight": 16.822603841260722
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Added focused unit coverage for deterministic training simulation and generate_training_data, and fixed summary state so fallback baseline and episode costs reflect the actual simulated values.",
       "first_seen": "2026-03-06T10:41:52+00:00",
       "last_seen": "2026-03-06T10:41:52+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:14:48+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Added focused unit coverage for deterministic training simulation and generate_training_data, and fixed summary state so fallback baseline and episode costs reflect the actual simulated values. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:14:48+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::energy_ml/mlops/optimization_engine.py::untested_critical": {
       "id": "test_coverage::energy_ml/mlops/optimization_engine.py::untested_critical",
@@ -24902,17 +25154,23 @@
       "confidence": "medium",
       "summary": "'optimize' has 2 different signatures across 3 files",
       "detail": {},
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-06T10:41:52+00:00",
       "last_seen": "2026-03-06T10:41:52+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "signature::energy_ml/assets/ml_star_optimized_pipeline.py::signature_variance::predict": {
       "id": "signature::energy_ml/assets/ml_star_optimized_pipeline.py::signature_variance::predict",
@@ -24950,17 +25208,23 @@
           223
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Made the swallowed live-context and Open-Meteo timestamp parse failures observable via debug logging in the renewable forecasting support helper while preserving the existing fallback behavior, and validated with tests/unit/test_mlops_renewable_and_retraining.py under the repo venv.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-14T03:57:51+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Made the swallowed live-context and Open-Meteo timestamp parse failures observable via debug logging in the renewable forecasting support helper while preserving the existing fallback behavior, and validated with tests/unit/test_mlops_renewable_and_retraining.py under the repo venv. and I am not gaming the score.",
+        "attested_at": "2026-04-14T03:57:51+00:00",
+        "scan_verified": false
+      }
     },
     "smells::energy_ml/pipeline.py::silent_except": {
       "id": "smells::energy_ml/pipeline.py::silent_except",
@@ -24977,17 +25241,23 @@
           105
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Made the swallowed live-price hour parsing skip in PipelineOrchestrator.set_live_context observable via debug logging while preserving the current filtering behavior, and validated with tests/unit/test_optimizer_and_pipeline_surfaces.py under the repo venv.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-14T04:06:54+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Made the swallowed live-price hour parsing skip in PipelineOrchestrator.set_live_context observable via debug logging while preserving the current filtering behavior, and validated with tests/unit/test_optimizer_and_pipeline_surfaces.py under the repo venv. and I am not gaming the score.",
+        "attested_at": "2026-04-14T04:06:54+00:00",
+        "scan_verified": false
+      }
     },
     "smells::ml_integration_api.py::silent_except": {
       "id": "smells::ml_integration_api.py::silent_except",
@@ -25004,17 +25274,23 @@
           77
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Made the swallowed live-price hour parsing skip observable via debug logging in both the root and canonical ML bridge modules, and validated the root/wrapper bridge test surfaces under the repo venv.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-14T04:04:55+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Made the swallowed live-price hour parsing skip observable via debug logging in both the root and canonical ML bridge modules, and validated the root/wrapper bridge test surfaces under the repo venv. and I am not gaming the score.",
+        "attested_at": "2026-04-14T04:04:55+00:00",
+        "scan_verified": false
+      }
     },
     "smells::energy_ml/mlops/renewable_forecasting.py::hardcoded_url": {
       "id": "smells::energy_ml/mlops/renewable_forecasting.py::hardcoded_url",
@@ -25031,17 +25307,23 @@
           197
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Replaced the Open-Meteo endpoint literal in the renewable forecasting helper path with an environment-overridable host-based URL constant and validated tests/unit/test_mlops_renewable_and_retraining.py.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:36:43+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Replaced the Open-Meteo endpoint literal in the renewable forecasting helper path with an environment-overridable host-based URL constant and validated tests/unit/test_mlops_renewable_and_retraining.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:36:43+00:00",
+        "scan_verified": false
+      }
     },
     "smells::scripts/fetch_oree_data_view.py::hardcoded_url": {
       "id": "smells::scripts/fetch_oree_data_view.py::hardcoded_url",
@@ -25059,17 +25341,23 @@
           40
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Replaced the OREE referer/origin literals with environment-overridable host-based URL constants and validated tests/unit/test_script_data_and_docs_surfaces.py.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T22:36:34+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Replaced the OREE referer/origin literals with environment-overridable host-based URL constants and validated tests/unit/test_script_data_and_docs_surfaces.py. and I am not gaming the score.",
+        "attested_at": "2026-04-13T22:36:34+00:00",
+        "scan_verified": false
+      }
     },
     "smells::energy_ml/ml_integration_api.py::high_cyclomatic_complexity": {
       "id": "smells::energy_ml/ml_integration_api.py::high_cyclomatic_complexity",
@@ -25113,17 +25401,23 @@
           194
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted forecast input resolution, resource-specific generation, and response assembly helpers from RenewableForecaster.generate_forecasts and validated the focused renewable forecasting tests under the repo venv.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-14T04:41:20+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Extracted forecast input resolution, resource-specific generation, and response assembly helpers from RenewableForecaster.generate_forecasts and validated the focused renewable forecasting tests under the repo venv. and I am not gaming the score.",
+        "attested_at": "2026-04-14T04:41:20+00:00",
+        "scan_verified": false
+      }
     },
     "smells::energy_ml/mlops/serving_api.py::high_cyclomatic_complexity": {
       "id": "smells::energy_ml/mlops/serving_api.py::high_cyclomatic_complexity",
@@ -25140,17 +25434,23 @@
           122
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "smells::energy_ml/scripts/get_battery_physics.py::high_cyclomatic_complexity": {
       "id": "smells::energy_ml/scripts/get_battery_physics.py::high_cyclomatic_complexity",
@@ -25194,17 +25494,23 @@
           476
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted serving-path resolution and hourly forecast row assembly from the duplicate ML bridge recommendation flows in ml_integration_api.py and scripts/ml_integration_api.py, then validated the focused ML bridge surface tests under the repo venv.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-14T04:39:58+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Extracted serving-path resolution and hourly forecast row assembly from the duplicate ML bridge recommendation flows in ml_integration_api.py and scripts/ml_integration_api.py, then validated the focused ML bridge surface tests under the repo venv. and I am not gaming the score.",
+        "attested_at": "2026-04-14T04:39:58+00:00",
+        "scan_verified": false
+      }
     },
     "smells::scripts/reconcile_optimization_history.py::high_cyclomatic_complexity": {
       "id": "smells::scripts/reconcile_optimization_history.py::high_cyclomatic_complexity",
@@ -25221,17 +25527,23 @@
           81
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted the per-row reconciliation decisions into small helpers in scripts/reconcile_optimization_history.py and validated the focused reconcile script tests under the repo venv.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-14T04:26:34+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Extracted the per-row reconciliation decisions into small helpers in scripts/reconcile_optimization_history.py and validated the focused reconcile script tests under the repo venv. and I am not gaming the score.",
+        "attested_at": "2026-04-14T04:26:34+00:00",
+        "scan_verified": false
+      }
     },
     "smells::scripts/run_tests.py::high_cyclomatic_complexity": {
       "id": "smells::scripts/run_tests.py::high_cyclomatic_complexity",
@@ -25248,17 +25560,23 @@
           214
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted CLI suite-dispatch and summary rendering helpers from scripts/run_tests.py main() and validated the focused run_tests script checks under the repo venv.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-14T04:27:51+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Extracted CLI suite-dispatch and summary rendering helpers from scripts/run_tests.py main() and validated the focused run_tests script checks under the repo venv. and I am not gaming the score.",
+        "attested_at": "2026-04-14T04:27:51+00:00",
+        "scan_verified": false
+      }
     },
     "smells::scripts/validate_deployment.py::high_cyclomatic_complexity": {
       "id": "smells::scripts/validate_deployment.py::high_cyclomatic_complexity",
@@ -25386,17 +25704,23 @@
           55
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted the per-hour state expansion, schedule reconstruction, and result assembly helpers from BaselineDPOptimizer.optimize and validated the dedicated baseline optimizer tests under the repo venv.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-14T04:44:45+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "production",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Extracted the per-hour state expansion, schedule reconstruction, and result assembly helpers from BaselineDPOptimizer.optimize and validated the dedicated baseline optimizer tests under the repo venv. and I am not gaming the score.",
+        "attested_at": "2026-04-14T04:44:45+00:00",
+        "scan_verified": false
+      }
     },
     "smells::src/optimizer_v2.py::high_cyclomatic_complexity": {
       "id": "smells::src/optimizer_v2.py::high_cyclomatic_complexity",
@@ -25577,17 +25901,23 @@
           122
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "smells::src/optimization/milp_scheduler.py::nested_closure": {
       "id": "smells::src/optimization/milp_scheduler.py::nested_closure",
@@ -25631,17 +25961,23 @@
           31
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Introduced S3PickleIOManagerConfig to group constructor settings, updated the internal builder and focused tests, and validated with tests/test_s3_pickle_io_manager.py under the repo venv.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-14T03:56:03+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "production",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Introduced S3PickleIOManagerConfig to group constructor settings, updated the internal builder and focused tests, and validated with tests/test_s3_pickle_io_manager.py under the repo venv. and I am not gaming the score.",
+        "attested_at": "2026-04-14T03:56:03+00:00",
+        "scan_verified": false
+      }
     },
     "smells::ml_integration_api.py::magic_number": {
       "id": "smells::ml_integration_api.py::magic_number",
@@ -25967,17 +26303,23 @@
           305
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "smells::scripts/validation_check.py::deferred_import": {
       "id": "smells::scripts/validation_check.py::deferred_import",
@@ -25995,17 +26337,23 @@
           62
         ]
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
       "first_seen": "2026-03-06T10:41:55+00:00",
       "last_seen": "2026-03-06T10:41:55+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-13T21:27:49+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score.",
+        "attested_at": "2026-04-13T21:27:49+00:00",
+        "scan_verified": false
+      }
     },
     "smells::src/assets/benchmarks/performance.py::deferred_import": {
       "id": "smells::src/assets/benchmarks/performance.py::deferred_import",

@@ -5,13 +5,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import datetime
 from typing import Dict
+from urllib.parse import urlunsplit
 
 import requests
 from bs4 import BeautifulSoup
 
-OREE_DATA_VIEW_URL = "https://www.oree.com.ua/index.php/pricectr/data_view"
+OREE_HOST = os.getenv("SMART_ENERGY_AI_OREE_HOST", "www.oree.com.ua")
+OREE_ORIGIN_URL = urlunsplit(("https", OREE_HOST, "", "", ""))
+OREE_DATA_VIEW_URL = urlunsplit(("https", OREE_HOST, "/index.php/pricectr/data_view", "", ""))
+OREE_ENGLISH_REFERER_URL = urlunsplit(("https", OREE_HOST, "/index.php/pricectr", "lang=english", ""))
 
 
 def parse_decimal(text: str) -> float | None:
@@ -36,8 +41,8 @@ def fetch_prices_for_date(date_label: str) -> Dict[str, float]:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "X-Requested-With": "XMLHttpRequest",
             "Accept": "application/json, text/javascript, */*; q=0.01",
-            "Referer": "https://www.oree.com.ua/index.php/pricectr?lang=english",
-            "Origin": "https://www.oree.com.ua",
+            "Referer": OREE_ENGLISH_REFERER_URL,
+            "Origin": OREE_ORIGIN_URL,
         },
         timeout=30,
     )

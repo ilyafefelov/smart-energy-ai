@@ -21,6 +21,23 @@ logger = logging.getLogger(__name__)
 UAH_PER_EUR = 40.0
 
 
+def _build_market_row(
+    timestamp: datetime,
+    price_eur_mwh: float,
+    price_uah_mwh: float,
+    volume_mwh: float,
+    source: str,
+) -> Dict[str, Any]:
+    """Build a normalized market row with stable key and value types."""
+    return {
+        "timestamp": timestamp,
+        "price_eur_mwh": float(price_eur_mwh),
+        "price_uah_mwh": float(price_uah_mwh),
+        "volume_mwh": float(max(0.0, volume_mwh)),
+        "source": source,
+    }
+
+
 @asset(
     group_name="market_data",
     description="Ukrainian electricity market prices from OREE",
@@ -160,13 +177,13 @@ def _extract_prices_from_data_view_content(content_html: str, target_date: datet
 
             timestamp = datetime.combine(target_date, datetime.min.time().replace(hour=hour_idx - 1))
             parsed_rows.append(
-                {
-                    "timestamp": timestamp,
-                    "price_eur_mwh": float(price_uah / UAH_PER_EUR),
-                    "price_uah_mwh": float(price_uah),
-                    "volume_mwh": 1000.0,
-                    "source": "OREE_DATA_VIEW",
-                }
+                _build_market_row(
+                    timestamp=timestamp,
+                    price_eur_mwh=price_uah / UAH_PER_EUR,
+                    price_uah_mwh=price_uah,
+                    volume_mwh=1000.0,
+                    source="OREE_DATA_VIEW",
+                )
             )
 
         return parsed_rows
@@ -198,13 +215,15 @@ def _generate_synthetic_prices() -> List[Dict]:
         price_uah = price_eur * UAH_PER_EUR  # Conversion rate
         volume = 1000 + np.random.normal(0, 200)  # Volume variation
         
-        prices.append({
-            'timestamp': timestamp,
-            'price_eur_mwh': price_eur,
-            'price_uah_mwh': price_uah,
-            'volume_mwh': max(100, volume),
-            'source': 'SYNTHETIC'
-        })
+        prices.append(
+            _build_market_row(
+                timestamp=timestamp,
+                price_eur_mwh=price_eur,
+                price_uah_mwh=price_uah,
+                volume_mwh=max(100.0, volume),
+                source="SYNTHETIC",
+            )
+        )
         
     return prices
 
@@ -268,13 +287,13 @@ def _parse_table_rows(table: Any, target_date: datetime.date) -> List[Dict]:
 
         timestamp = datetime.combine(target_date, datetime.min.time().replace(hour=hour))
         parsed_rows.append(
-            {
-                'timestamp': timestamp,
-                'price_eur_mwh': float(price_eur),
-                'price_uah_mwh': float(price_uah),
-                'volume_mwh': float(max(0.0, volume)),
-                'source': 'OREE',
-            }
+            _build_market_row(
+                timestamp=timestamp,
+                price_eur_mwh=price_eur,
+                price_uah_mwh=price_uah,
+                volume_mwh=volume,
+                source="OREE",
+            )
         )
         seen_hours.add(hour)
 

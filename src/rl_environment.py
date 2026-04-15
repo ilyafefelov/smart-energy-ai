@@ -72,12 +72,14 @@ class SmartEnergyEnv(gym.Env):
         # Initial state
         self.battery_soc = 50.0  # kWh
         self.episode_cost = 0.0
+        self.last_info = None
 
     def reset(self) -> np.ndarray:
         """Reset environment for new episode"""
         self.current_step = 0
         self.battery_soc = 50.0  # Start at 50% SOC
         self.episode_cost = 0.0
+        self.last_info = None
         return self._get_state()
 
     def _get_state(self) -> np.ndarray:
@@ -157,6 +159,7 @@ class SmartEnergyEnv(gym.Env):
             'solar_power': solar_power,
             'price_uah': price_uah,
         }
+        self.last_info = info
         
         return self._get_state(), reward, done, info
 
@@ -169,6 +172,9 @@ class SmartEnergyEnv(gym.Env):
 
     def get_info(self) -> dict:
         """Get current step info"""
+        if self.last_info is not None:
+            return dict(self.last_info)
+
         hour = (self.current_step - 1) % len(self.weather)
         price_uah = self.prices.loc[hour, 'price_uah_original']
         

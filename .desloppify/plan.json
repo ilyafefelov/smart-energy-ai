@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-04-13T17:57:07+00:00",
+  "updated": "2026-04-14T04:44:45+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -76,14 +76,14 @@
     "orphaned::energy_ml/energy_ml/assets/models.py": {
       "issue_id": "orphaned::energy_ml/energy_ml/assets/models.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/orphaned",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "orphaned::energy_ml/mlops/serving_api.py": {
       "issue_id": "orphaned::energy_ml/mlops/serving_api.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/orphaned",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "orphaned::src/enhanced_price_ingester.py": {
       "issue_id": "orphaned::src/enhanced_price_ingester.py",
@@ -118,8 +118,8 @@
     "orphaned::scripts/demo_complete_mlops_system.py": {
       "issue_id": "orphaned::scripts/demo_complete_mlops_system.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/orphaned",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "orphaned::src/comprehensive_energy_scraper.py": {
       "issue_id": "orphaned::src/comprehensive_energy_scraper.py",
@@ -262,8 +262,8 @@
     "orphaned::scripts/validation_check.py": {
       "issue_id": "orphaned::scripts/validation_check.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/orphaned",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "orphaned::energy_ml/scripts/get_battery_physics.py": {
       "issue_id": "orphaned::energy_ml/scripts/get_battery_physics.py",
@@ -598,8 +598,8 @@
     "test_coverage::src/physics/economics.py::untested_module": {
       "issue_id": "test_coverage::src/physics/economics.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:07:19+00:00"
     },
     "test_coverage::energy_ml/mlops/feature_store.py::untested_module": {
       "issue_id": "test_coverage::energy_ml/mlops/feature_store.py::untested_module",
@@ -640,8 +640,8 @@
     "test_coverage::src/physics/battery_lfp.py::untested_module": {
       "issue_id": "test_coverage::src/physics/battery_lfp.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:05:13+00:00"
     },
     "test_coverage::src/optimizer_v2.py::untested_module": {
       "issue_id": "test_coverage::src/optimizer_v2.py::untested_module",
@@ -748,8 +748,8 @@
     "test_coverage::src/rl_training.py::untested_module": {
       "issue_id": "test_coverage::src/rl_training.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:20:19+00:00"
     },
     "test_coverage::src/oree_selenium_scraper.py::untested_critical": {
       "issue_id": "test_coverage::src/oree_selenium_scraper.py::untested_critical",
@@ -772,14 +772,14 @@
     "test_coverage::src/ukraine_stats_analyzer.py::untested_critical": {
       "issue_id": "test_coverage::src/ukraine_stats_analyzer.py::untested_critical",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:24:04+00:00"
     },
     "test_coverage::src/weather_fetcher.py::untested_module": {
       "issue_id": "test_coverage::src/weather_fetcher.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:00:41+00:00"
     },
     "test_coverage::src/improved_price_fetcher.py::untested_module": {
       "issue_id": "test_coverage::src/improved_price_fetcher.py::untested_module",
@@ -820,8 +820,8 @@
     "test_coverage::src/train_baseline.py::untested_module": {
       "issue_id": "test_coverage::src/train_baseline.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:03:24+00:00"
     },
     "test_coverage::src/dagster_api/trigger.py::untested_module": {
       "issue_id": "test_coverage::src/dagster_api/trigger.py::untested_module",
@@ -832,8 +832,8 @@
     "test_coverage::src/rl_environment.py::untested_module": {
       "issue_id": "test_coverage::src/rl_environment.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:19:02+00:00"
     },
     "test_coverage::energy_ml/mlops/model_registry.py::untested_module": {
       "issue_id": "test_coverage::energy_ml/mlops/model_registry.py::untested_module",
@@ -856,8 +856,8 @@
     "test_coverage::src/engines/nvtabular_engine.py::untested_module": {
       "issue_id": "test_coverage::src/engines/nvtabular_engine.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:23:29+00:00"
     },
     "test_coverage::scripts/generate_sample_data.py::untested_module": {
       "issue_id": "test_coverage::scripts/generate_sample_data.py::untested_module",
@@ -886,8 +886,8 @@
     "test_coverage::src/real_price_data.py::untested_module": {
       "issue_id": "test_coverage::src/real_price_data.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:16:08+00:00"
     },
     "test_coverage::energy_ml/mlops/retraining_pipeline.py::untested_critical": {
       "issue_id": "test_coverage::energy_ml/mlops/retraining_pipeline.py::untested_critical",
@@ -964,8 +964,8 @@
     "test_coverage::src/training_analyzer.py::untested_module": {
       "issue_id": "test_coverage::src/training_analyzer.py::untested_module",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/test_coverage",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:14:48+00:00"
     },
     "test_coverage::energy_ml/mlops/optimization_engine.py::untested_critical": {
       "issue_id": "test_coverage::energy_ml/mlops/optimization_engine.py::untested_critical",
@@ -1102,32 +1102,32 @@
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Model trained successfully": {
       "issue_id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Model trained successfully",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Test accuracy > 60%": {
       "issue_id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Test accuracy > 60%",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::No overfitting (gap < 15%)": {
       "issue_id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::No overfitting (gap < 15%)",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Backtesting profitable": {
       "issue_id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Backtesting profitable",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Better than baseline": {
       "issue_id": "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Better than baseline",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::energy_ml/mlops/renewable_forecasting.py::overwritten_key::capacity_factors::solar": {
       "issue_id": "dict_keys::energy_ml/mlops/renewable_forecasting.py::overwritten_key::capacity_factors::solar",
@@ -1198,8 +1198,8 @@
     "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::overwritten_key::report::leakage_detected": {
       "issue_id": "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::overwritten_key::report::leakage_detected",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::scripts/run_tests.py::overwritten_key::results::unit": {
       "issue_id": "dict_keys::scripts/run_tests.py::overwritten_key::results::unit",
@@ -1228,50 +1228,50 @@
     "dict_keys::scripts/validation_check.py::overwritten_key::results::PipelineOrchestrator": {
       "issue_id": "dict_keys::scripts/validation_check.py::overwritten_key::results::PipelineOrchestrator",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::OptimizationEngine": {
       "issue_id": "dict_keys::scripts/validation_check.py::overwritten_key::results::OptimizationEngine",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::BatteryPhysicsEngine": {
       "issue_id": "dict_keys::scripts/validation_check.py::overwritten_key::results::BatteryPhysicsEngine",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::RenewableForecaster": {
       "issue_id": "dict_keys::scripts/validation_check.py::overwritten_key::results::RenewableForecaster",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::Dagster Assets": {
       "issue_id": "dict_keys::scripts/validation_check.py::overwritten_key::results::Dagster Assets",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::Optimization Decision": {
       "issue_id": "dict_keys::scripts/validation_check.py::overwritten_key::results::Optimization Decision",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::Battery Physics": {
       "issue_id": "dict_keys::scripts/validation_check.py::overwritten_key::results::Battery Physics",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::scripts/validation_check.py::overwritten_key::results::API Integration": {
       "issue_id": "dict_keys::scripts/validation_check.py::overwritten_key::results::API Integration",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-overwritten_key",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::src/comprehensive_energy_scraper.py::overwritten_key::results::february_2026": {
       "issue_id": "dict_keys::src/comprehensive_energy_scraper.py::overwritten_key::results::february_2026",
@@ -1288,26 +1288,26 @@
     "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::blending": {
       "issue_id": "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::blending",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-dead_write",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::stacking": {
       "issue_id": "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::stacking",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-dead_write",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::voting": {
       "issue_id": "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::voting",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-dead_write",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::scripts/demo_complete_mlops_system.py::dead_write::health_check::version": {
       "issue_id": "dict_keys::scripts/demo_complete_mlops_system.py::dead_write::health_check::version",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-dead_write",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "dict_keys::energy_ml/pipeline.py::dead_write::self._live_battery_state::cycles_remaining": {
       "issue_id": "dict_keys::energy_ml/pipeline.py::dead_write::self._live_battery_state::cycles_remaining",
@@ -1330,50 +1330,50 @@
     "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::201": {
       "issue_id": "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::201",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-schema_drift",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:31:26+00:00"
     },
     "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::271": {
       "issue_id": "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::271",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-schema_drift",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:31:35+00:00"
     },
     "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::163": {
       "issue_id": "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::163",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/dict_keys-schema_drift",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:31:17+00:00"
     },
     "smells::energy_ml/mlops/renewable_forecasting.py::silent_except": {
       "issue_id": "smells::energy_ml/mlops/renewable_forecasting.py::silent_except",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-silent_except",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-14T03:57:51+00:00"
     },
     "smells::energy_ml/pipeline.py::silent_except": {
       "issue_id": "smells::energy_ml/pipeline.py::silent_except",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-silent_except",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-14T04:06:54+00:00"
     },
     "smells::ml_integration_api.py::silent_except": {
       "issue_id": "smells::ml_integration_api.py::silent_except",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-silent_except",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-14T04:04:55+00:00"
     },
     "smells::energy_ml/mlops/renewable_forecasting.py::hardcoded_url": {
       "issue_id": "smells::energy_ml/mlops/renewable_forecasting.py::hardcoded_url",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-hardcoded_url",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:36:43+00:00"
     },
     "smells::scripts/fetch_oree_data_view.py::hardcoded_url": {
       "issue_id": "smells::scripts/fetch_oree_data_view.py::hardcoded_url",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-hardcoded_url",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T22:36:34+00:00"
     },
     "smells::energy_ml/ml_integration_api.py::high_cyclomatic_complexity": {
       "issue_id": "smells::energy_ml/ml_integration_api.py::high_cyclomatic_complexity",
@@ -1384,14 +1384,14 @@
     "smells::energy_ml/mlops/renewable_forecasting.py::high_cyclomatic_complexity": {
       "issue_id": "smells::energy_ml/mlops/renewable_forecasting.py::high_cyclomatic_complexity",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-high_cyclomatic_complexity",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-14T04:41:20+00:00"
     },
     "smells::energy_ml/mlops/serving_api.py::high_cyclomatic_complexity": {
       "issue_id": "smells::energy_ml/mlops/serving_api.py::high_cyclomatic_complexity",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-high_cyclomatic_complexity",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "smells::energy_ml/scripts/get_battery_physics.py::high_cyclomatic_complexity": {
       "issue_id": "smells::energy_ml/scripts/get_battery_physics.py::high_cyclomatic_complexity",
@@ -1402,20 +1402,20 @@
     "smells::ml_integration_api.py::high_cyclomatic_complexity": {
       "issue_id": "smells::ml_integration_api.py::high_cyclomatic_complexity",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-high_cyclomatic_complexity",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-14T04:39:58+00:00"
     },
     "smells::scripts/reconcile_optimization_history.py::high_cyclomatic_complexity": {
       "issue_id": "smells::scripts/reconcile_optimization_history.py::high_cyclomatic_complexity",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-high_cyclomatic_complexity",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-14T04:26:34+00:00"
     },
     "smells::scripts/run_tests.py::high_cyclomatic_complexity": {
       "issue_id": "smells::scripts/run_tests.py::high_cyclomatic_complexity",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-high_cyclomatic_complexity",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-14T04:27:51+00:00"
     },
     "smells::scripts/validate_deployment.py::high_cyclomatic_complexity": {
       "issue_id": "smells::scripts/validate_deployment.py::high_cyclomatic_complexity",
@@ -1444,8 +1444,8 @@
     "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity": {
       "issue_id": "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-high_cyclomatic_complexity",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-14T04:44:45+00:00"
     },
     "smells::src/optimizer_v2.py::high_cyclomatic_complexity": {
       "issue_id": "smells::src/optimizer_v2.py::high_cyclomatic_complexity",
@@ -1486,8 +1486,8 @@
     "smells::energy_ml/mlops/serving_api.py::nested_closure": {
       "issue_id": "smells::energy_ml/mlops/serving_api.py::nested_closure",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-nested_closure",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "smells::src/optimization/milp_scheduler.py::nested_closure": {
       "issue_id": "smells::src/optimization/milp_scheduler.py::nested_closure",
@@ -1564,14 +1564,14 @@
     "smells::scripts/demo_complete_mlops_system.py::deferred_import": {
       "issue_id": "smells::scripts/demo_complete_mlops_system.py::deferred_import",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-deferred_import",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "smells::scripts/validation_check.py::deferred_import": {
       "issue_id": "smells::scripts/validation_check.py::deferred_import",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-deferred_import",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-13T21:27:49+00:00"
     },
     "smells::src/assets/benchmarks/performance.py::deferred_import": {
       "issue_id": "smells::src/assets/benchmarks/performance.py::deferred_import",
@@ -2070,14 +2070,11 @@
       "name": "auto/orphaned",
       "description": "Fix 61 orphaned issues",
       "issue_ids": [
-        "orphaned::energy_ml/energy_ml/assets/models.py",
-        "orphaned::energy_ml/mlops/serving_api.py",
         "orphaned::src/enhanced_price_ingester.py",
         "orphaned::energy_ml/energy_ml/assets/features.py",
         "orphaned::energy_ml/energy_ml/assets/recommendations.py",
         "orphaned::src/physics/economics.py",
         "orphaned::energy_ml/optimizer/run_optimization.py",
-        "orphaned::scripts/demo_complete_mlops_system.py",
         "orphaned::src/comprehensive_energy_scraper.py",
         "orphaned::energy_ml/ml_integration_api.py",
         "orphaned::energy_ml/assets/ml_star_optimized_pipeline.py",
@@ -2101,7 +2098,6 @@
         "orphaned::scripts/demo_upgrades.py",
         "orphaned::scripts/create_notion_docs.py",
         "orphaned::src/improved_price_fetcher.py",
-        "orphaned::scripts/validation_check.py",
         "orphaned::energy_ml/scripts/get_battery_physics.py",
         "orphaned::scripts/train_model.py",
         "orphaned::scripts/generate_nuxt_structure.py",
@@ -2165,18 +2161,7 @@
     "auto/test_coverage": {
       "name": "auto/test_coverage",
       "description": "Fix 92 test coverage issues",
-      "issue_ids": [
-        "test_coverage::src/physics/economics.py::untested_module",
-        "test_coverage::src/physics/battery_lfp.py::untested_module",
-        "test_coverage::src/rl_training.py::untested_module",
-        "test_coverage::src/ukraine_stats_analyzer.py::untested_critical",
-        "test_coverage::src/weather_fetcher.py::untested_module",
-        "test_coverage::src/train_baseline.py::untested_module",
-        "test_coverage::src/rl_environment.py::untested_module",
-        "test_coverage::src/engines/nvtabular_engine.py::untested_module",
-        "test_coverage::src/real_price_data.py::untested_module",
-        "test_coverage::src/training_analyzer.py::untested_module"
-      ],
+      "issue_ids": [],
       "created_at": "2026-03-06T10:42:05+00:00",
       "updated_at": "2026-03-06T10:42:05+00:00",
       "auto": true,
@@ -2199,11 +2184,6 @@
       "name": "auto/dict_keys-overwritten_key",
       "description": "Fix 31 overwritten key issues",
       "issue_ids": [
-        "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Model trained successfully",
-        "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Test accuracy > 60%",
-        "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::No overfitting (gap < 15%)",
-        "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Backtesting profitable",
-        "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Better than baseline",
         "dict_keys::energy_ml/mlops/renewable_forecasting.py::overwritten_key::capacity_factors::solar",
         "dict_keys::energy_ml/mlops/renewable_forecasting.py::overwritten_key::capacity_factors::wind",
         "dict_keys::energy_ml/mlops/renewable_forecasting.py::overwritten_key::capacity_factors::combined",
@@ -2215,19 +2195,10 @@
         "dict_keys::energy_ml/mlops/retraining_pipeline.py::overwritten_key::training_result::new_model_version",
         "dict_keys::energy_ml/mlops/retraining_pipeline.py::overwritten_key::training_result::metrics",
         "dict_keys::energy_ml/mlops/retraining_pipeline.py::overwritten_key::training_result::error",
-        "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::overwritten_key::report::leakage_detected",
         "dict_keys::scripts/run_tests.py::overwritten_key::results::unit",
         "dict_keys::scripts/run_tests.py::overwritten_key::results::integration",
         "dict_keys::scripts/run_tests.py::overwritten_key::results::e2e",
         "dict_keys::scripts/run_tests.py::overwritten_key::results::performance",
-        "dict_keys::scripts/validation_check.py::overwritten_key::results::PipelineOrchestrator",
-        "dict_keys::scripts/validation_check.py::overwritten_key::results::OptimizationEngine",
-        "dict_keys::scripts/validation_check.py::overwritten_key::results::BatteryPhysicsEngine",
-        "dict_keys::scripts/validation_check.py::overwritten_key::results::RenewableForecaster",
-        "dict_keys::scripts/validation_check.py::overwritten_key::results::Dagster Assets",
-        "dict_keys::scripts/validation_check.py::overwritten_key::results::Optimization Decision",
-        "dict_keys::scripts/validation_check.py::overwritten_key::results::Battery Physics",
-        "dict_keys::scripts/validation_check.py::overwritten_key::results::API Integration",
         "dict_keys::src/comprehensive_energy_scraper.py::overwritten_key::results::february_2026",
         "dict_keys::src/comprehensive_energy_scraper.py::overwritten_key::results::january_2026"
       ],
@@ -2242,10 +2213,6 @@
       "name": "auto/dict_keys-dead_write",
       "description": "Fix 7 dead write issues",
       "issue_ids": [
-        "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::blending",
-        "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::stacking",
-        "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::voting",
-        "dict_keys::scripts/demo_complete_mlops_system.py::dead_write::health_check::version",
         "dict_keys::energy_ml/pipeline.py::dead_write::self._live_battery_state::cycles_remaining",
         "dict_keys::energy_ml/pipeline.py::dead_write::self._live_battery_state::health_percent",
         "dict_keys::energy_ml/pipeline.py::dead_write::self._live_battery_state::soc_percent"
@@ -2260,11 +2227,7 @@
     "auto/dict_keys-schema_drift": {
       "name": "auto/dict_keys-schema_drift",
       "description": "Fix 3 schema drift issues",
-      "issue_ids": [
-        "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::201",
-        "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::271",
-        "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::163"
-      ],
+      "issue_ids": [],
       "created_at": "2026-03-06T10:42:05+00:00",
       "updated_at": "2026-03-06T10:42:05+00:00",
       "auto": true,
@@ -2275,11 +2238,7 @@
     "auto/smells-silent_except": {
       "name": "auto/smells-silent_except",
       "description": "Fix 3 silent except issues",
-      "issue_ids": [
-        "smells::energy_ml/mlops/renewable_forecasting.py::silent_except",
-        "smells::energy_ml/pipeline.py::silent_except",
-        "smells::ml_integration_api.py::silent_except"
-      ],
+      "issue_ids": [],
       "created_at": "2026-03-06T10:42:05+00:00",
       "updated_at": "2026-03-06T10:42:05+00:00",
       "auto": true,
@@ -2290,10 +2249,7 @@
     "auto/smells-hardcoded_url": {
       "name": "auto/smells-hardcoded_url",
       "description": "Fix 2 hardcoded url issues",
-      "issue_ids": [
-        "smells::energy_ml/mlops/renewable_forecasting.py::hardcoded_url",
-        "smells::scripts/fetch_oree_data_view.py::hardcoded_url"
-      ],
+      "issue_ids": [],
       "created_at": "2026-03-06T10:42:05+00:00",
       "updated_at": "2026-03-06T10:42:05+00:00",
       "auto": true,
@@ -2306,17 +2262,11 @@
       "description": "Fix 17 high cyclomatic complexity issues",
       "issue_ids": [
         "smells::energy_ml/ml_integration_api.py::high_cyclomatic_complexity",
-        "smells::energy_ml/mlops/renewable_forecasting.py::high_cyclomatic_complexity",
-        "smells::energy_ml/mlops/serving_api.py::high_cyclomatic_complexity",
         "smells::energy_ml/scripts/get_battery_physics.py::high_cyclomatic_complexity",
-        "smells::ml_integration_api.py::high_cyclomatic_complexity",
-        "smells::scripts/reconcile_optimization_history.py::high_cyclomatic_complexity",
-        "smells::scripts/run_tests.py::high_cyclomatic_complexity",
         "smells::scripts/validate_deployment.py::high_cyclomatic_complexity",
         "smells::src/assets/core/client_state.py::high_cyclomatic_complexity",
         "smells::src/engines/selection.py::high_cyclomatic_complexity",
         "smells::src/enhanced_price_ingester.py::high_cyclomatic_complexity",
-        "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity",
         "smells::src/optimizer_v2.py::high_cyclomatic_complexity",
         "smells::src/oree_playwright_scraper.py::high_cyclomatic_complexity",
         "smells::src/oree_real_prices.py::high_cyclomatic_complexity",
@@ -2335,7 +2285,6 @@
       "description": "Fix 3 nested closure issues",
       "issue_ids": [
         "smells::energy_ml/assets/ml_star_phase3.py::nested_closure",
-        "smells::energy_ml/mlops/serving_api.py::nested_closure",
         "smells::src/optimization/milp_scheduler.py::nested_closure"
       ],
       "created_at": "2026-03-06T10:42:05+00:00",
@@ -2372,8 +2321,6 @@
       "name": "auto/smells-deferred_import",
       "description": "Fix 8 deferred import issues",
       "issue_ids": [
-        "smells::scripts/demo_complete_mlops_system.py::deferred_import",
-        "smells::scripts/validation_check.py::deferred_import",
         "smells::src/assets/benchmarks/performance.py::deferred_import",
         "smells::src/assets/core/market.py::deferred_import",
         "smells::src/assets/multi_tenant/asset_factory.py::deferred_import",
@@ -8994,6 +8941,799 @@
       "actor": "user",
       "note": null,
       "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T21:26:07+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/optimizer/test_ml_star.py",
+        "structural::scripts/demo_complete_mlops_system.py",
+        "structural::scripts/demo_upgrades.py",
+        "structural::scripts/create_dashboard_page.py",
+        "structural::recalculate_pipeline.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "These findings point at files removed from the repo; only scripts/recalculate_pipeline.py remains, not the deleted root recalculate_pipeline.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T21:26:09+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/optimizer/test_ml_star.py",
+        "structural::scripts/demo_complete_mlops_system.py",
+        "structural::scripts/demo_upgrades.py",
+        "structural::scripts/create_dashboard_page.py",
+        "structural::recalculate_pipeline.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "These findings point at files removed from the repo; only scripts/recalculate_pipeline.py remains, not the deleted root recalculate_pipeline.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually verified these tracked paths no longer exist in the repository and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T21:27:47+00:00",
+      "action": "done",
+      "issue_ids": [
+        "energy_ml/mlops/serving_api.py",
+        "energy_ml/optimizer/ml_star_optimizer.py",
+        "scripts/validation_check.py",
+        "energy_ml/energy_ml/assets/models.py",
+        "scripts/demo_complete_mlops_system.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T21:27:49+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "orphaned::energy_ml/mlops/serving_api.py",
+        "smells::energy_ml/mlops/serving_api.py::high_cyclomatic_complexity",
+        "smells::energy_ml/mlops/serving_api.py::nested_closure",
+        "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::blending",
+        "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::stacking",
+        "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::voting",
+        "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::overwritten_key::report::leakage_detected",
+        "signature::energy_ml/optimizer/ml_star_optimizer.py::signature_variance::optimize",
+        "orphaned::scripts/validation_check.py",
+        "dict_keys::scripts/validation_check.py::overwritten_key::results::PipelineOrchestrator",
+        "dict_keys::scripts/validation_check.py::overwritten_key::results::OptimizationEngine",
+        "dict_keys::scripts/validation_check.py::overwritten_key::results::BatteryPhysicsEngine",
+        "dict_keys::scripts/validation_check.py::overwritten_key::results::RenewableForecaster",
+        "dict_keys::scripts/validation_check.py::overwritten_key::results::Dagster Assets",
+        "dict_keys::scripts/validation_check.py::overwritten_key::results::Optimization Decision",
+        "dict_keys::scripts/validation_check.py::overwritten_key::results::Battery Physics",
+        "dict_keys::scripts/validation_check.py::overwritten_key::results::API Integration",
+        "smells::scripts/validation_check.py::deferred_import",
+        "orphaned::energy_ml/energy_ml/assets/models.py",
+        "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Model trained successfully",
+        "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Test accuracy > 60%",
+        "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::No overfitting (gap < 15%)",
+        "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Backtesting profitable",
+        "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Better than baseline",
+        "orphaned::scripts/demo_complete_mlops_system.py",
+        "dict_keys::scripts/demo_complete_mlops_system.py::dead_write::health_check::version",
+        "smells::scripts/demo_complete_mlops_system.py::deferred_import"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "These findings all point at files that were removed from the repository during the cleanup pass; they are stale tracker entries, not remaining code.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually verified these file paths no longer exist in the repository and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T21:31:15+00:00",
+      "action": "done",
+      "issue_ids": [
+        "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::163"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Replaced per-path dict literal with shared _build_market_row helper so volume_mwh is emitted in a consistent normalized row schema.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T21:31:17+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::163"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Replaced per-path dict literal with shared _build_market_row helper so volume_mwh is emitted in a consistent normalized row schema.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Replaced per-path dict literal with shared _build_market_row helper so volume_mwh is emitted in a consistent normalized row schema. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T21:31:24+00:00",
+      "action": "done",
+      "issue_ids": [
+        "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::201"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Synthetic path now uses _build_market_row and float threshold max(100.0, volume) to keep volume_mwh shape aligned with other market rows.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T21:31:26+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::201"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Synthetic path now uses _build_market_row and float threshold max(100.0, volume) to keep volume_mwh shape aligned with other market rows.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Synthetic path now uses _build_market_row and float threshold max(100.0, volume) to keep volume_mwh shape aligned with other market rows. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T21:31:33+00:00",
+      "action": "done",
+      "issue_ids": [
+        "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::271"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Table parse path now emits rows through _build_market_row, ensuring stable keys and normalized numeric types for volume_mwh.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T21:31:35+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::271"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Table parse path now emits rows through _build_market_row, ensuring stable keys and normalized numeric types for volume_mwh.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Table parse path now emits rows through _build_market_row, ensuring stable keys and normalized numeric types for volume_mwh. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T21:31:35+00:00",
+      "action": "cluster_done",
+      "issue_ids": [
+        "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::271"
+      ],
+      "cluster_name": "auto/dict_keys-schema_drift",
+      "actor": "user",
+      "note": null,
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:00:39+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/weather_fetcher.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage in tests/unit/test_weather_fetcher.py for the success path that writes the forecast CSV and the non-200 failure path that avoids writes.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:00:41+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/weather_fetcher.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage in tests/unit/test_weather_fetcher.py for the success path that writes the forecast CSV and the non-200 failure path that avoids writes.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit coverage in tests/unit/test_weather_fetcher.py for the success path that writes the forecast CSV and the non-200 failure path that avoids writes. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:03:22+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/train_baseline.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for the fallback training path and the legacy wrapper entry point, and fixed the summary line to report fallback correctly when the ingester returns an empty frame.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:03:24+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/train_baseline.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for the fallback training path and the legacy wrapper entry point, and fixed the summary line to report fallback correctly when the ingester returns an empty frame.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit coverage for the fallback training path and the legacy wrapper entry point, and fixed the summary line to report fallback correctly when the ingester returns an empty frame. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:05:11+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/physics/battery_lfp.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for the LFP degradation model baseline stress factor, stressed marginal cost, knee-point prediction, optimal operating window, and cycle cost matrix outputs.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:05:13+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/physics/battery_lfp.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for the LFP degradation model baseline stress factor, stressed marginal cost, knee-point prediction, optimal operating window, and cycle cost matrix outputs.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit coverage for the LFP degradation model baseline stress factor, stressed marginal cost, knee-point prediction, optimal operating window, and cycle cost matrix outputs. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:07:17+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/physics/economics.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for LCOS, arbitrage value, NPV/IRR, technology comparison, and sensitivity analysis in src/physics/economics.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:07:19+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/physics/economics.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for LCOS, arbitrage value, NPV/IRR, technology comparison, and sensitivity analysis in src/physics/economics.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit coverage for LCOS, arbitrage value, NPV/IRR, technology comparison, and sensitivity analysis in src/physics/economics.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:14:46+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/training_analyzer.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for deterministic training simulation and generate_training_data, and fixed summary state so fallback baseline and episode costs reflect the actual simulated values.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:14:48+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/training_analyzer.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for deterministic training simulation and generate_training_data, and fixed summary state so fallback baseline and episode costs reflect the actual simulated values.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit coverage for deterministic training simulation and generate_training_data, and fixed summary state so fallback baseline and episode costs reflect the actual simulated values. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:16:07+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/real_price_data.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for validated market-pattern generation, EPEX response parsing, and the real-source fallback selector in src/real_price_data.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:16:08+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/real_price_data.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for validated market-pattern generation, EPEX response parsing, and the real-source fallback selector in src/real_price_data.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit coverage for validated market-pattern generation, EPEX response parsing, and the real-source fallback selector in src/real_price_data.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:19:01+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/rl_environment.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for reset/step transitions and render behavior in src/rl_environment.py, and fixed get_info/render consistency by persisting the latest step info.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:19:02+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/rl_environment.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for reset/step transitions and render behavior in src/rl_environment.py, and fixed get_info/render consistency by persisting the latest step info.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit coverage for reset/step transitions and render behavior in src/rl_environment.py, and fixed get_info/render consistency by persisting the latest step info. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:20:17+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/rl_training.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for the simplified RL training path and evaluate() model-not-found fallback in src/rl_training.py using lightweight environment stubs.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:20:19+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/rl_training.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for the simplified RL training path and evaluate() model-not-found fallback in src/rl_training.py using lightweight environment stubs.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit coverage for the simplified RL training path and evaluate() model-not-found fallback in src/rl_training.py using lightweight environment stubs. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:21:44+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/ukraine_stats_analyzer.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for CSV processing, trend analysis, ML feature creation, and the top-level report-generating entry point in src/ukraine_stats_analyzer.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:23:28+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/engines/nvtabular_engine.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for nvtabular_engine non-GPU constructor guards, factory fallback, unavailable engine info, and runtime guard paths without requiring CUDA dependencies.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:23:29+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/engines/nvtabular_engine.py::untested_module"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for nvtabular_engine non-GPU constructor guards, factory fallback, unavailable engine info, and runtime guard paths without requiring CUDA dependencies.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit coverage for nvtabular_engine non-GPU constructor guards, factory fallback, unavailable engine info, and runtime guard paths without requiring CUDA dependencies. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:24:03+00:00",
+      "action": "done",
+      "issue_ids": [
+        "test_coverage::src/ukraine_stats_analyzer.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for CSV processing, trend analysis, ML feature creation, and the top-level report-generating entry point in src/ukraine_stats_analyzer.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:24:04+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "test_coverage::src/ukraine_stats_analyzer.py::untested_critical"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Added focused unit coverage for CSV processing, trend analysis, ML feature creation, and the top-level report-generating entry point in src/ukraine_stats_analyzer.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Added focused unit coverage for CSV processing, trend analysis, ML feature creation, and the top-level report-generating entry point in src/ukraine_stats_analyzer.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:24:04+00:00",
+      "action": "cluster_done",
+      "issue_ids": [
+        "test_coverage::src/ukraine_stats_analyzer.py::untested_critical"
+      ],
+      "cluster_name": "auto/test_coverage",
+      "actor": "user",
+      "note": null,
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:29:39+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/scripts/get_battery_physics.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the payload-building logic into energy_ml/scripts/get_battery_physics_support.py while preserving the script contract and validating it with focused get_battery_physics surface tests.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:29:41+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/scripts/get_battery_physics.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the payload-building logic into energy_ml/scripts/get_battery_physics_support.py while preserving the script contract and validating it with focused get_battery_physics surface tests.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted the payload-building logic into energy_ml/scripts/get_battery_physics_support.py while preserving the script contract and validating it with focused get_battery_physics surface tests. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:32:02+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::energy_ml/user_config.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Moved static battery specs and load-profile templates into energy_ml/user_config_support.py using a file-path-safe sibling loader, then validated the user_config contract tests.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:32:04+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::energy_ml/user_config.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Moved static battery specs and load-profile templates into energy_ml/user_config_support.py using a file-path-safe sibling loader, then validated the user_config contract tests.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Moved static battery specs and load-profile templates into energy_ml/user_config_support.py using a file-path-safe sibling loader, then validated the user_config contract tests. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:36:33+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::scripts/fetch_oree_data_view.py::hardcoded_url"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Replaced the OREE referer/origin literals with environment-overridable host-based URL constants and validated tests/unit/test_script_data_and_docs_surfaces.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:36:34+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::scripts/fetch_oree_data_view.py::hardcoded_url"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Replaced the OREE referer/origin literals with environment-overridable host-based URL constants and validated tests/unit/test_script_data_and_docs_surfaces.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Replaced the OREE referer/origin literals with environment-overridable host-based URL constants and validated tests/unit/test_script_data_and_docs_surfaces.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:36:41+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::energy_ml/mlops/renewable_forecasting.py::hardcoded_url"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Replaced the Open-Meteo endpoint literal in the renewable forecasting helper path with an environment-overridable host-based URL constant and validated tests/unit/test_mlops_renewable_and_retraining.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-13T22:36:43+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::energy_ml/mlops/renewable_forecasting.py::hardcoded_url"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Replaced the Open-Meteo endpoint literal in the renewable forecasting helper path with an environment-overridable host-based URL constant and validated tests/unit/test_mlops_renewable_and_retraining.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Replaced the Open-Meteo endpoint literal in the renewable forecasting helper path with an environment-overridable host-based URL constant and validated tests/unit/test_mlops_renewable_and_retraining.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-13T22:36:43+00:00",
+      "action": "cluster_done",
+      "issue_ids": [
+        "smells::energy_ml/mlops/renewable_forecasting.py::hardcoded_url"
+      ],
+      "cluster_name": "auto/smells-hardcoded_url",
+      "actor": "user",
+      "note": null,
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T03:56:02+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::src/io_managers/s3_pickle_io_manager.py::optional_param_sprawl"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Introduced S3PickleIOManagerConfig to group constructor settings, updated the internal builder and focused tests, and validated with tests/test_s3_pickle_io_manager.py under the repo venv.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T03:56:03+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::src/io_managers/s3_pickle_io_manager.py::optional_param_sprawl"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Introduced S3PickleIOManagerConfig to group constructor settings, updated the internal builder and focused tests, and validated with tests/test_s3_pickle_io_manager.py under the repo venv.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Introduced S3PickleIOManagerConfig to group constructor settings, updated the internal builder and focused tests, and validated with tests/test_s3_pickle_io_manager.py under the repo venv. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-14T03:57:49+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::energy_ml/mlops/renewable_forecasting.py::silent_except"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Made the swallowed live-context and Open-Meteo timestamp parse failures observable via debug logging in the renewable forecasting support helper while preserving the existing fallback behavior, and validated with tests/unit/test_mlops_renewable_and_retraining.py under the repo venv.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T03:57:51+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::energy_ml/mlops/renewable_forecasting.py::silent_except"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Made the swallowed live-context and Open-Meteo timestamp parse failures observable via debug logging in the renewable forecasting support helper while preserving the existing fallback behavior, and validated with tests/unit/test_mlops_renewable_and_retraining.py under the repo venv.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Made the swallowed live-context and Open-Meteo timestamp parse failures observable via debug logging in the renewable forecasting support helper while preserving the existing fallback behavior, and validated with tests/unit/test_mlops_renewable_and_retraining.py under the repo venv. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-14T04:04:53+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::ml_integration_api.py::silent_except"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Made the swallowed live-price hour parsing skip observable via debug logging in both the root and canonical ML bridge modules, and validated the root/wrapper bridge test surfaces under the repo venv.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T04:04:55+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::ml_integration_api.py::silent_except"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Made the swallowed live-price hour parsing skip observable via debug logging in both the root and canonical ML bridge modules, and validated the root/wrapper bridge test surfaces under the repo venv.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Made the swallowed live-price hour parsing skip observable via debug logging in both the root and canonical ML bridge modules, and validated the root/wrapper bridge test surfaces under the repo venv. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-14T04:06:53+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::energy_ml/pipeline.py::silent_except"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Made the swallowed live-price hour parsing skip in PipelineOrchestrator.set_live_context observable via debug logging while preserving the current filtering behavior, and validated with tests/unit/test_optimizer_and_pipeline_surfaces.py under the repo venv.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T04:06:54+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::energy_ml/pipeline.py::silent_except"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Made the swallowed live-price hour parsing skip in PipelineOrchestrator.set_live_context observable via debug logging while preserving the current filtering behavior, and validated with tests/unit/test_optimizer_and_pipeline_surfaces.py under the repo venv.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Made the swallowed live-price hour parsing skip in PipelineOrchestrator.set_live_context observable via debug logging while preserving the current filtering behavior, and validated with tests/unit/test_optimizer_and_pipeline_surfaces.py under the repo venv. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-14T04:06:54+00:00",
+      "action": "cluster_done",
+      "issue_ids": [
+        "smells::energy_ml/pipeline.py::silent_except"
+      ],
+      "cluster_name": "auto/smells-silent_except",
+      "actor": "user",
+      "note": null,
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T04:26:32+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::scripts/reconcile_optimization_history.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the per-row reconciliation decisions into small helpers in scripts/reconcile_optimization_history.py and validated the focused reconcile script tests under the repo venv.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T04:26:34+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::scripts/reconcile_optimization_history.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the per-row reconciliation decisions into small helpers in scripts/reconcile_optimization_history.py and validated the focused reconcile script tests under the repo venv.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted the per-row reconciliation decisions into small helpers in scripts/reconcile_optimization_history.py and validated the focused reconcile script tests under the repo venv. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-14T04:27:49+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::scripts/run_tests.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted CLI suite-dispatch and summary rendering helpers from scripts/run_tests.py main() and validated the focused run_tests script checks under the repo venv.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T04:27:51+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::scripts/run_tests.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted CLI suite-dispatch and summary rendering helpers from scripts/run_tests.py main() and validated the focused run_tests script checks under the repo venv.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted CLI suite-dispatch and summary rendering helpers from scripts/run_tests.py main() and validated the focused run_tests script checks under the repo venv. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-14T04:39:57+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::ml_integration_api.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted serving-path resolution and hourly forecast row assembly from the duplicate ML bridge recommendation flows in ml_integration_api.py and scripts/ml_integration_api.py, then validated the focused ML bridge surface tests under the repo venv.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T04:39:58+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::ml_integration_api.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted serving-path resolution and hourly forecast row assembly from the duplicate ML bridge recommendation flows in ml_integration_api.py and scripts/ml_integration_api.py, then validated the focused ML bridge surface tests under the repo venv.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted serving-path resolution and hourly forecast row assembly from the duplicate ML bridge recommendation flows in ml_integration_api.py and scripts/ml_integration_api.py, then validated the focused ML bridge surface tests under the repo venv. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-14T04:41:18+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::energy_ml/mlops/renewable_forecasting.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted forecast input resolution, resource-specific generation, and response assembly helpers from RenewableForecaster.generate_forecasts and validated the focused renewable forecasting tests under the repo venv.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T04:41:20+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::energy_ml/mlops/renewable_forecasting.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted forecast input resolution, resource-specific generation, and response assembly helpers from RenewableForecaster.generate_forecasts and validated the focused renewable forecasting tests under the repo venv.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted forecast input resolution, resource-specific generation, and response assembly helpers from RenewableForecaster.generate_forecasts and validated the focused renewable forecasting tests under the repo venv. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-14T04:44:44+00:00",
+      "action": "done",
+      "issue_ids": [
+        "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the per-hour state expansion, schedule reconstruction, and result assembly helpers from BaselineDPOptimizer.optimize and validated the dedicated baseline optimizer tests under the repo venv.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T04:44:45+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the per-hour state expansion, schedule reconstruction, and result assembly helpers from BaselineDPOptimizer.optimize and validated the dedicated baseline optimizer tests under the repo venv.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted the per-hour state expansion, schedule reconstruction, and result assembly helpers from BaselineDPOptimizer.optimize and validated the dedicated baseline optimizer tests under the repo venv. and I am not gaming the score."
+      }
     }
   ],
   "epic_triage_meta": {
@@ -9743,7 +10483,65 @@
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::battery_type",
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::load_profile",
     "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::peak_load_kw",
-    "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::solar_capacity_kw"
+    "dict_keys::src/assets/core/client_state.py::phantom_read::energy_system::solar_capacity_kw",
+    "structural::energy_ml/optimizer/test_ml_star.py",
+    "structural::scripts/demo_complete_mlops_system.py",
+    "structural::scripts/demo_upgrades.py",
+    "structural::scripts/create_dashboard_page.py",
+    "structural::recalculate_pipeline.py",
+    "orphaned::energy_ml/mlops/serving_api.py",
+    "smells::energy_ml/mlops/serving_api.py::high_cyclomatic_complexity",
+    "smells::energy_ml/mlops/serving_api.py::nested_closure",
+    "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::blending",
+    "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::stacking",
+    "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::dead_write::self.ensembles::voting",
+    "dict_keys::energy_ml/optimizer/ml_star_optimizer.py::overwritten_key::report::leakage_detected",
+    "signature::energy_ml/optimizer/ml_star_optimizer.py::signature_variance::optimize",
+    "orphaned::scripts/validation_check.py",
+    "dict_keys::scripts/validation_check.py::overwritten_key::results::PipelineOrchestrator",
+    "dict_keys::scripts/validation_check.py::overwritten_key::results::OptimizationEngine",
+    "dict_keys::scripts/validation_check.py::overwritten_key::results::BatteryPhysicsEngine",
+    "dict_keys::scripts/validation_check.py::overwritten_key::results::RenewableForecaster",
+    "dict_keys::scripts/validation_check.py::overwritten_key::results::Dagster Assets",
+    "dict_keys::scripts/validation_check.py::overwritten_key::results::Optimization Decision",
+    "dict_keys::scripts/validation_check.py::overwritten_key::results::Battery Physics",
+    "dict_keys::scripts/validation_check.py::overwritten_key::results::API Integration",
+    "smells::scripts/validation_check.py::deferred_import",
+    "orphaned::energy_ml/energy_ml/assets/models.py",
+    "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Model trained successfully",
+    "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Test accuracy > 60%",
+    "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::No overfitting (gap < 15%)",
+    "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Backtesting profitable",
+    "dict_keys::energy_ml/energy_ml/assets/models.py::overwritten_key::checks::Better than baseline",
+    "orphaned::scripts/demo_complete_mlops_system.py",
+    "dict_keys::scripts/demo_complete_mlops_system.py::dead_write::health_check::version",
+    "smells::scripts/demo_complete_mlops_system.py::deferred_import",
+    "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::163",
+    "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::201",
+    "dict_keys::src/assets/core/market.py::schema_drift::volume_mwh::271",
+    "test_coverage::src/weather_fetcher.py::untested_module",
+    "test_coverage::src/train_baseline.py::untested_module",
+    "test_coverage::src/physics/battery_lfp.py::untested_module",
+    "test_coverage::src/physics/economics.py::untested_module",
+    "test_coverage::src/training_analyzer.py::untested_module",
+    "test_coverage::src/real_price_data.py::untested_module",
+    "test_coverage::src/rl_environment.py::untested_module",
+    "test_coverage::src/rl_training.py::untested_module",
+    "test_coverage::src/engines/nvtabular_engine.py::untested_module",
+    "test_coverage::src/ukraine_stats_analyzer.py::untested_critical",
+    "structural::energy_ml/scripts/get_battery_physics.py",
+    "structural::energy_ml/user_config.py",
+    "smells::scripts/fetch_oree_data_view.py::hardcoded_url",
+    "smells::energy_ml/mlops/renewable_forecasting.py::hardcoded_url",
+    "smells::src/io_managers/s3_pickle_io_manager.py::optional_param_sprawl",
+    "smells::energy_ml/mlops/renewable_forecasting.py::silent_except",
+    "smells::ml_integration_api.py::silent_except",
+    "smells::energy_ml/pipeline.py::silent_except",
+    "smells::scripts/reconcile_optimization_history.py::high_cyclomatic_complexity",
+    "smells::scripts/run_tests.py::high_cyclomatic_complexity",
+    "smells::ml_integration_api.py::high_cyclomatic_complexity",
+    "smells::energy_ml/mlops/renewable_forecasting.py::high_cyclomatic_complexity",
+    "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

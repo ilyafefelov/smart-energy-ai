@@ -22,6 +22,8 @@ class TrainingAnalyzer:
         self.rewards = []
         self.costs = []
         self.learning_curve = []
+        self.baseline_cost = 100000.0
+        self.target_cost = 1595.0
         
     def simulate_training(self, num_episodes: int = 50) -> dict:
         """
@@ -47,6 +49,9 @@ class TrainingAnalyzer:
             # Fallback to estimated values if calculation fails
             baseline_cost = 3788.0  # Real normal scenario baseline
             target_cost = 1595.0    # Real optimized cost
+
+        self.baseline_cost = baseline_cost
+        self.target_cost = target_cost
         
         current_cost = baseline_cost
         
@@ -67,7 +72,7 @@ class TrainingAnalyzer:
             reward = -cost / 1000
             
             self.episodes.append(ep + 1)
-            self.costs.append(max(cost, 65000))  # Min cost limit
+            self.costs.append(cost)
             self.rewards.append(reward)
             
             # Learning curve (smoothed)
@@ -94,7 +99,7 @@ class TrainingAnalyzer:
         costs = np.array(self.costs)
         rewards = np.array(self.rewards)
         
-        baseline = 100000.0
+        baseline = self.baseline_cost
         final_cost = costs[-1]
         best_cost = np.min(costs)
         

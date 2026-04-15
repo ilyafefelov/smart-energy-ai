@@ -1,4 +1,4 @@
-"""Main Energy ML package."""
+"""Legacy Dagster compatibility surface for older Energy ML imports."""
 
 from energy_ml.energy_ml.definitions import defs
 

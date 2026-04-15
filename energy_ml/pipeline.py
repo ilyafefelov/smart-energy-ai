@@ -181,6 +181,7 @@ class PipelineOrchestrator:
             try:
                 hour = int(row.get('hour'))
             except Exception:
+                logger.debug('Skipping live price row with invalid hour: %r', row.get('hour'))
                 continue
             if hour < 0 or hour > 23:
                 continue

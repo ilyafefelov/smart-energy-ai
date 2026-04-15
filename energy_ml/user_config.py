@@ -2,11 +2,14 @@
 
 Handles battery, load profile, and tariff settings persistence with complete ML integration.
 """
+import importlib.util
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Literal, List, TypedDict
 import json
 import os
-from pydantic import BaseModel, ValidationError, Field, field_validator
+import sys
+from pydantic import BaseModel, ConfigDict, ValidationError, Field, field_validator
 
 
 class UserConfigModel(BaseModel):
@@ -28,7 +31,7 @@ class UserConfigModel(BaseModel):
     load_profile_type: Literal["standard", "multi-shift", "24_7", "custom"] = "standard"
     load_peak_kw: float = Field(default=10.0, ge=1.0, le=100.0)
     load_base_kw: float = Field(default=2.0, ge=0.5, le=20.0)
-    load_custom_hourly: Optional[List[float]] = Field(default=None, min_items=24, max_items=24)
+    load_custom_hourly: Optional[List[float]] = Field(default=None, min_length=24, max_length=24)
     load_seasonal_variation: float = Field(default=0.2, ge=0.0, le=0.5)
     load_weekend_factor: float = Field(default=0.6, ge=0.3, le=1.0)
     load_night_factor: float = Field(default=0.3, ge=0.1, le=0.8)
@@ -85,9 +88,7 @@ class UserConfigModel(BaseModel):
             return "24_7"
         return value
     
-    class Config:
-        """Pydantic config."""
-        extra = 'allow'
+    model_config = ConfigDict(extra='allow')
 
 
 class UserConfigPayload(TypedDict, total=False):
@@ -197,6 +198,49 @@ class ConfigTriggerResult(ConfigurationOperationResult):
     trigger_state: Literal["triggered", "failed"] = "failed"
 
 
+def _load_user_config_support():
+    from user_config_support import (
+        BATTERY_TEMPLATE_CAPACITY_KWH,
+        build_battery_templates,
+        build_profile_templates,
+        get_battery_specifications,
+        get_load_profile_templates,
+    )
+
+    class _SupportModule:
+        pass
+
+    support_module = _SupportModule()
+    support_module.BATTERY_TEMPLATE_CAPACITY_KWH = BATTERY_TEMPLATE_CAPACITY_KWH
+    support_module.build_battery_templates = build_battery_templates
+    support_module.build_profile_templates = build_profile_templates
+    support_module.get_battery_specifications = get_battery_specifications
+    support_module.get_load_profile_templates = get_load_profile_templates
+    return support_module
+
+
+try:
+    _SUPPORT_MODULE = _load_user_config_support()
+except ImportError:
+    _SUPPORT_MODULE_NAME = "energy_ml_user_config_support"
+    _SUPPORT_PATH = Path(__file__).with_name("user_config_support.py")
+    _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
+    if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
+        raise ImportError(f"Unable to load user config support module from {_SUPPORT_PATH}")
+    _SUPPORT_MODULE = sys.modules.get(_SUPPORT_MODULE_NAME)
+    if _SUPPORT_MODULE is None:
+        _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
+        sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
+        _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
+
+
+BATTERY_TEMPLATE_CAPACITY_KWH = _SUPPORT_MODULE.BATTERY_TEMPLATE_CAPACITY_KWH
+
+
+def _utc_timestamp() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 class ConfigurationManager:
     """Manages user configuration persistence and validation with ML integration."""
     
@@ -304,16 +348,15 @@ class ConfigurationManager:
             ConfigSaveResult with the shared operation envelope
         """
         try:
-            config_dict = config.dict()
+            config_dict = config.model_dump()
             
             # Save current config
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 json.dump(config_dict, f, indent=2)
             
             # Save to history
-            import datetime
             history_entry = {
-                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'timestamp': _utc_timestamp(),
                 'config': config_dict
             }
             with open(self.config_history_file, 'a', encoding='utf-8') as f:
@@ -394,63 +437,7 @@ class ConfigurationManager:
         Returns:
             Dict with battery specs, degradation info, cost analysis
         """
-        specs = {
-            'LFP': {
-                'name': 'Lithium Iron Phosphate (LFP)',
-                'efficiency': 0.95,
-                'cycles_max': 8000,
-                'degradation_per_cycle': 0.0000125,  # 0.00125% per cycle
-                'cost_usd_per_kwh': 350,
-                'cost_uah_per_kwh': 13000,  # Approximate
-                'c_rate_charge': 0.5,
-                'c_rate_discharge': 1.0,
-                'dod_max': 0.9,
-                'temperature_range': (-20, 60),
-                'description': 'Best for daily cycling, long lifespan, safe chemistry',
-                'degradation_cost_uah_per_cycle_per_kwh': 13000 / 8000,
-                'arbitrage_suitability': 9  # out of 10
-            },
-            'Lead-Acid': {
-                'name': 'Lead-Acid (Deep Cycle)',
-                'efficiency': 0.85,
-                'cycles_max': 600,
-                'degradation_per_cycle': 0.00017,  # 0.017% per cycle
-                'cost_usd_per_kwh': 150,
-                'cost_uah_per_kwh': 5500,
-                'c_rate_charge': 0.2,
-                'c_rate_discharge': 0.3,
-                'dod_max': 0.5,  # Limited to preserve life
-                'temperature_range': (-10, 45),
-                'description': 'Lower upfront cost but frequent replacement needed',
-                'degradation_cost_uah_per_cycle_per_kwh': 5500 / 600,
-                'arbitrage_suitability': 4  # out of 10
-            },
-            'VRFB': {
-                'name': 'Vanadium Redox Flow Battery',
-                'efficiency': 0.75,
-                'cycles_max': 20000,
-                'degradation_per_cycle': 0.000005,  # 0.0005% per cycle
-                'cost_usd_per_kwh': 600,
-                'cost_uah_per_kwh': 22000,
-                'c_rate_charge': 0.25,
-                'c_rate_discharge': 0.25,
-                'dod_max': 1.0,  # 100% DoD possible
-                'temperature_range': (5, 45),
-                'description': 'Best for long-duration storage, minimal degradation',
-                'degradation_cost_uah_per_cycle_per_kwh': 22000 / 20000,
-                'arbitrage_suitability': 7  # out of 10
-            }
-        }
-        
-        if battery_type in specs:
-            spec = specs[battery_type].copy()
-            normalized_capacity = 1.0 if capacity_kwh is None else max(capacity_kwh, 0.0)
-            spec['degradation_cost_uah_per_cycle'] = (
-                spec['degradation_cost_uah_per_cycle_per_kwh'] * normalized_capacity
-            )
-            return spec
-        else:
-            return {}
+        return _SUPPORT_MODULE.get_battery_specifications(battery_type, capacity_kwh)
     
     def get_load_profile_templates(self) -> Dict[str, Dict]:
         """Get enhanced load profile templates with hourly coefficients.
@@ -458,72 +445,7 @@ class ConfigurationManager:
         Returns:
             Dict mapping profile type to detailed template with hourly data
         """
-        import numpy as np
-        
-        templates = {
-            'standard': {
-                'name': 'Standard Business Hours (9-18)',
-                'description': 'Office or retail operation, active 9 AM - 6 PM',
-                'peak_kw': 10.0,
-                'base_kw': 2.0,
-                'hourly_coefficients': [
-                    # Hour 0-5: Night (low load)
-                    0.2, 0.2, 0.2, 0.2, 0.2, 0.3,
-                    # Hour 6-8: Morning ramp-up
-                    0.4, 0.6, 0.8,
-                    # Hour 9-17: Business hours (high load)
-                    1.0, 1.0, 0.9, 0.8, 0.9, 1.0, 1.0, 0.9, 0.8,
-                    # Hour 18-23: Evening wind-down
-                    0.6, 0.5, 0.4, 0.3, 0.3, 0.2
-                ],
-                'weekend_factor': 0.3,
-                'seasonal_variation': 0.15
-            },
-            'multi-shift': {
-                'name': 'Multi-Shift Manufacturing (2-Shift)',
-                'description': 'Manufacturing: 6 AM-2 PM + 10 PM-6 AM',
-                'peak_kw': 15.0,
-                'base_kw': 3.0,
-                'hourly_coefficients': [
-                    # Hour 0-5: Night shift
-                    0.8, 0.8, 0.7, 0.6, 0.5, 0.4,
-                    # Hour 6-13: Day shift (peak)
-                    1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                    # Hour 14-21: Shift change + break
-                    0.3, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.3,
-                    # Hour 22-23: Night shift start
-                    0.9, 0.9
-                ],
-                'weekend_factor': 0.7,
-                'seasonal_variation': 0.25
-            },
-            '24_7': {
-                'name': '24/7 Continuous Operations',
-                'description': 'Continuous process with minimal variation',
-                'peak_kw': 20.0,
-                'base_kw': 18.0,
-                'hourly_coefficients': [
-                    # Minimal variation throughout day
-                    0.9, 0.9, 0.9, 0.9, 0.9, 0.95,
-                    1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                    1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-                    1.0, 1.0, 0.95, 0.95, 0.9, 0.9
-                ],
-                'weekend_factor': 0.95,
-                'seasonal_variation': 0.1
-            },
-            'custom': {
-                'name': 'Custom Hourly Profile',
-                'description': 'Define your own 24-hour load pattern',
-                'peak_kw': 10.0,
-                'base_kw': 2.0,
-                'hourly_coefficients': [0.5] * 24,  # Default flat profile
-                'weekend_factor': 0.6,
-                'seasonal_variation': 0.2
-            }
-        }
-        
-        return templates
+        return _SUPPORT_MODULE.get_load_profile_templates()
     
     def calculate_arbitrage_potential(self, config: UserConfigModel) -> Dict[str, float]:
         """Calculate arbitrage potential based on current configuration.
@@ -660,26 +582,7 @@ class ConfigurationManager:
         Returns:
             Dict mapping battery type to basic template
         """
-        return {
-            'LFP': {
-                'name': 'Lithium Iron Phosphate (LFP)',
-                'capacity_kwh': 10.0,
-                'efficiency': 0.95,
-                'description': '8000 cycles, best for daily cycling'
-            },
-            'Lead-Acid': {
-                'name': 'Lead-Acid (Deep Cycle)',
-                'capacity_kwh': 5.0,
-                'efficiency': 0.85,
-                'description': '600 cycles, lower cost, limited cycling'
-            },
-            'VRFB': {
-                'name': 'Vanadium Redox Flow Battery',
-                'capacity_kwh': 20.0,
-                'efficiency': 0.75,
-                'description': '20000+ cycles, long duration, large systems'
-            }
-        }
+        return _SUPPORT_MODULE.build_battery_templates()
     
     def get_profile_templates(self) -> Dict[str, Dict]:
         """Get load profile templates (deprecated - use get_load_profile_templates).
@@ -687,28 +590,7 @@ class ConfigurationManager:
         Returns:
             Dict mapping profile type to description
         """
-        return {
-            'standard': {
-                'name': 'Standard Work Hours (9-18)',
-                'peak_load_kw': 10.0,
-                'description': 'Office or retail operation, active 9 AM - 6 PM'
-            },
-            'multi-shift': {
-                'name': 'Multi-Shift (2-Shift)',
-                'peak_load_kw': 15.0,
-                'description': 'Manufacturing: 6 AM-2 PM + 10 PM-6 AM'
-            },
-            '24_7': {
-                'name': '24/7 Continuous',
-                'peak_load_kw': 20.0,
-                'description': 'Continuous operation with baseline load'
-            },
-            'custom': {
-                'name': 'Custom Hourly',
-                'peak_load_kw': 10.0,
-                'description': 'Define custom hourly load coefficients'
-            }
-        }
+        return _SUPPORT_MODULE.build_profile_templates()
     
     def trigger_ml_recalculation(self, config: UserConfigModel) -> ConfigTriggerResult:
         """Trigger ML pipeline recalculation after config changes.
@@ -722,9 +604,10 @@ class ConfigurationManager:
         try:
             # Save recalculation trigger file
             trigger_file = self.config_dir / "recalculation_trigger.json"
+            config_payload = config.model_dump()
             trigger_data = {
-                'timestamp': __import__('datetime').datetime.utcnow().isoformat(),
-                'config_hash': str(hash(str(config.dict()))),
+                'timestamp': _utc_timestamp(),
+                'config_hash': str(hash(str(config_payload))),
                 'trigger_reason': 'configuration_update',
                 'status': 'pending'
             }

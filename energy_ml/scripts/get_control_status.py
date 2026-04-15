@@ -8,62 +8,59 @@ import sys
 import json
 from pathlib import Path
 
-# Add energy_ml to path
-sys.path.append(str(Path(__file__).parent.parent))
+SCRIPT_ROOT = Path(__file__).resolve().parents[1]
+if str(SCRIPT_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_ROOT))
 
-try:
-    from control.inverter_controller import get_controller
-    
-    def main():
-        """Get current control system status"""
-        try:
-            controller = get_controller()
-            status = controller.get_status()
-            
-            # Add additional metadata
-            result = {
-                **status,
-                'physics_enabled': True,
-                'connection_status': 'connected',
-                'last_command_time': controller.last_command_time.isoformat() if controller.last_command_time else None,
-                'system_health': 'good'
-            }
-            
-            print(json.dumps(result, indent=2))
-            return 0
-            
-        except Exception as e:
-            error_result = {
-                'error': str(e),
-                'soc': 50,
-                'power_kw': 0,
-                'mode': 'automatic',
-                'active_command': None,
-                'battery_capacity_kwh': 10.0,
-                'max_power_kw': 5.0,
-                'physics_enabled': False,
-                'connection_status': 'error',
-                'system_health': 'error'
-            }
-            print(json.dumps(error_result, indent=2))
-            return 1
-    
-    if __name__ == "__main__":
-        sys.exit(main())
-        
-except ImportError as e:
-    # Fallback if control system not available
-    fallback_status = {
-        'error': f'Control system not available: {e}',
-        'soc': 50,
-        'power_kw': 0,
-        'mode': 'automatic', 
-        'active_command': None,
-        'battery_capacity_kwh': 10.0,
-        'max_power_kw': 5.0,
-        'physics_enabled': False,
-        'connection_status': 'unavailable',
-        'system_health': 'offline'
+def _emit(payload):
+    print(json.dumps(payload, indent=2))
+
+
+def _default_status(error_message, connection_status, system_health):
+    return {
+        "error": error_message,
+        "soc": 50,
+        "power_kw": 0,
+        "mode": "automatic",
+        "active_command": None,
+        "battery_capacity_kwh": 10.0,
+        "max_power_kw": 5.0,
+        "physics_enabled": False,
+        "connection_status": connection_status,
+        "system_health": system_health,
     }
-    print(json.dumps(fallback_status, indent=2))
-    sys.exit(1)
+
+
+def _load_control_runtime():
+    from control.inverter_controller import get_controller
+
+    return get_controller
+
+
+def main():
+    """Get current control system status."""
+    try:
+        get_controller = _load_control_runtime()
+    except ImportError as error:
+        _emit(_default_status(f"Control system not available: {error}", "unavailable", "offline"))
+        return 1
+
+    try:
+        controller = get_controller()
+        status = controller.get_status()
+        result = {
+            **status,
+            "physics_enabled": True,
+            "connection_status": "connected",
+            "last_command_time": controller.last_command_time.isoformat() if controller.last_command_time else None,
+            "system_health": "good",
+        }
+        _emit(result)
+        return 0
+    except Exception as error:
+        _emit(_default_status(str(error), "error", "error"))
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

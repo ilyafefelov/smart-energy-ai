@@ -77,6 +77,8 @@ def test_save_and_trigger_results_use_shared_envelope(tmp_path: Path) -> None:
 
     save_result = manager.save_config(config)
     trigger_result = manager.trigger_ml_recalculation(config)
+    history_entry = (tmp_path / "config_history.jsonl").read_text(encoding="utf-8").strip().splitlines()[-1]
+    trigger_payload = (tmp_path / "recalculation_trigger.json").read_text(encoding="utf-8")
 
     assert save_result.success is True
     assert save_result.data is not None
@@ -87,6 +89,8 @@ def test_save_and_trigger_results_use_shared_envelope(tmp_path: Path) -> None:
     assert trigger_result.trigger_id
     assert trigger_result.trigger_state == "triggered"
     assert trigger_result.errors == []
+    assert USER_CONFIG_MODULE.json.loads(history_entry)["timestamp"].endswith("+00:00")
+    assert USER_CONFIG_MODULE.json.loads(trigger_payload)["timestamp"].endswith("+00:00")
 
 
 def test_load_profile_uses_single_canonical_machine_token() -> None:
@@ -186,3 +190,30 @@ def test_load_profile_templates_expose_full_day_coefficients() -> None:
     assert set(templates) == {"standard", "multi-shift", "24_7", "custom"}
     assert len(templates["24_7"]["hourly_coefficients"]) == 24
     assert len(templates["standard"]["hourly_coefficients"]) == 24
+
+
+def test_deprecated_battery_templates_stay_aligned_with_canonical_specs(tmp_path: Path) -> None:
+    manager = ConfigurationManager(config_dir=tmp_path)
+
+    templates = manager.get_battery_templates()
+
+    for battery_type, template in templates.items():
+        specs = manager.get_battery_specifications(battery_type)
+
+        assert template["name"] == specs["name"]
+        assert template["efficiency"] == specs["efficiency"]
+        assert template["description"] == specs["description"]
+
+
+def test_deprecated_profile_templates_stay_aligned_with_canonical_profiles() -> None:
+    manager = ConfigurationManager()
+
+    templates = manager.get_profile_templates()
+    canonical_templates = manager.get_load_profile_templates()
+
+    for profile_type, template in templates.items():
+        canonical = canonical_templates[profile_type]
+
+        assert template["name"] == canonical["name"]
+        assert template["peak_load_kw"] == canonical["peak_kw"]
+        assert template["description"] == canonical["description"]

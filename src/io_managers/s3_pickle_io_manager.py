@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
 import os
 import pickle
@@ -25,23 +26,36 @@ def _normalize_prefix(prefix: str) -> str:
     return value or "smart-energy-ai/assets"
 
 
+@dataclass(frozen=True)
+class S3PickleIOManagerConfig:
+    """Configuration for the S3-backed pickle IO manager."""
+
+    s3_bucket: str
+    key_prefix: str = "smart-energy-ai/assets"
+    region_name: Optional[str] = None
+    max_retries: int = 3
+
+
 class S3PickleIOManager(IOManager):
     """Persist Dagster asset payloads in S3 using pickle serialization."""
 
     def __init__(
         self,
+        config: S3PickleIOManagerConfig,
         *,
-        s3_bucket: str,
-        key_prefix: str = "smart-energy-ai/assets",
-        region_name: Optional[str] = None,
-        max_retries: int = 3,
         s3_client: Any = None,
     ) -> None:
-        self._s3_bucket = s3_bucket
-        self._key_prefix = _normalize_prefix(key_prefix)
-        self._region_name = region_name
-        self._max_retries = max(1, int(max_retries))
-        self._s3_client = s3_client or self._create_s3_client(region_name)
+        self._config = S3PickleIOManagerConfig(
+            s3_bucket=config.s3_bucket,
+            key_prefix=_normalize_prefix(config.key_prefix),
+            region_name=config.region_name,
+            max_retries=max(1, int(config.max_retries)),
+        )
+        self._s3_bucket = self._config.s3_bucket
+        self._key_prefix = self._config.key_prefix
+        self._region_name = self._config.region_name
+        self._max_retries = self._config.max_retries
+        self._s3_client = s3_client or self._create_s3_client(self._config.region_name)
 
     @staticmethod
     def _create_s3_client(region_name: Optional[str]):
@@ -122,10 +136,12 @@ def build_asset_io_manager_from_env() -> IOManagerDefinition:
 
     try:
         manager = S3PickleIOManager(
-            s3_bucket=bucket,
-            key_prefix=key_prefix,
-            region_name=region_name,
-            max_retries=max_retries,
+            S3PickleIOManagerConfig(
+                s3_bucket=bucket,
+                key_prefix=key_prefix,
+                region_name=region_name,
+                max_retries=max_retries,
+            ),
         )
     except Exception as exc:
         logger.warning(

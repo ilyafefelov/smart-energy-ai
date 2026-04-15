@@ -1,2 +1,2 @@
 [tool.dagster]
-module_name = "smart_energy_ml.definitions"
+module_name = "energy_ml.definitions"

@@ -27,8 +27,9 @@ def train_baseline_with_real_data():
     # Fetch REAL prices
     ingester = PriceIngester()
     prices_df = ingester.fetch_oree_prices()
+    used_fallback = prices_df is None or prices_df.empty
     
-    if prices_df is None or prices_df.empty:
+    if used_fallback:
         print("⚠️  OREE prices not available, using realistic fallback for demo...\n")
         # Create realistic fallback
         base_prices = [70, 77, 73, 70, 73, 98, 157, 217, 262, 238, 192, 175, 
@@ -101,7 +102,7 @@ def train_baseline_with_real_data():
     mae = mean_absolute_error(y, y_pred)
     print(f"\nTraining MAE: {mae:.2f} EUR/MWh")
     print(f"\n✅ Baseline training complete")
-    print(f"   Data source: {'REAL OREE' if prices_df is not None else 'Realistic fallback'}")
+    print(f"   Data source: {'Realistic fallback' if used_fallback else 'REAL OREE'}")
     print(f"   Hours trained: {len(df)}")
     
     return model

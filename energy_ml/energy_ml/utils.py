@@ -1,20 +1,33 @@
-"""Utility functions for solar and wind calculations."""
+"""Legacy utility compatibility helpers for solar and wind calculations."""
 import importlib.util
-import math
 from datetime import datetime
 from pathlib import Path
 import sys
 from typing import Dict
 
-try:
-    from energy_ml.energy_ml.utils_support import (
+def _load_support_module():
+    from utils_support import (
         apply_cloud_cover,
         build_solar_position,
         clear_sky_ghi,
         split_irradiance_components,
     )
+
+    class _SupportModule:
+        pass
+
+    support_module = _SupportModule()
+    support_module.apply_cloud_cover = apply_cloud_cover
+    support_module.build_solar_position = build_solar_position
+    support_module.clear_sky_ghi = clear_sky_ghi
+    support_module.split_irradiance_components = split_irradiance_components
+    return support_module
+
+
+try:
+    _SUPPORT_MODULE = _load_support_module()
 except ImportError:
-    _SUPPORT_MODULE_NAME = "energy_ml.energy_ml.utils_support"
+    _SUPPORT_MODULE_NAME = "energy_ml_legacy_utils_support"
     _SUPPORT_PATH = Path(__file__).with_name("utils_support.py")
     _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
     if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
@@ -24,10 +37,11 @@ except ImportError:
         _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
         sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
         _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
-    apply_cloud_cover = _SUPPORT_MODULE.apply_cloud_cover
-    build_solar_position = _SUPPORT_MODULE.build_solar_position
-    clear_sky_ghi = _SUPPORT_MODULE.clear_sky_ghi
-    split_irradiance_components = _SUPPORT_MODULE.split_irradiance_components
+
+apply_cloud_cover = _SUPPORT_MODULE.apply_cloud_cover
+build_solar_position = _SUPPORT_MODULE.build_solar_position
+clear_sky_ghi = _SUPPORT_MODULE.clear_sky_ghi
+split_irradiance_components = _SUPPORT_MODULE.split_irradiance_components
 
 def get_solar_position(lat: float, lon: float, dt: datetime) -> Dict[str, float]:
     """
