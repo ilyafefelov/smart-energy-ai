@@ -47,6 +47,8 @@ artifacts/local-smoke/
 # Generated model artifacts from retraining runs
 models/model_job-*.pkl
 models/tenants/
+models/logs/*
+!models/logs/.gitkeep
 
 # Generated local ML runtime state
 energy_ml/configs/tenants/
@@ -63,6 +65,7 @@ energy_ml/energy_ml/outputs/
 
 # Dolt database files (added by bd init)
 .dolt/
+.beads/*.port
 *.db
 
 # Root-local runtime state recreated as needed
