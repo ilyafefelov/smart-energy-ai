@@ -1,26 +1,26 @@
 {
   "command": "resolve",
   "patterns": [
-    "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity"
+    "structural::scripts/reconcile_optimization_history.py"
   ],
   "status": "fixed",
   "resolved": [
-    "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity"
+    "structural::scripts/reconcile_optimization_history.py"
   ],
   "count": 1,
   "next_command": "desloppify next",
-  "overall_score": 89.5,
-  "objective_score": 97.1,
-  "strict_score": 89.1,
+  "overall_score": 89.6,
+  "objective_score": 97.4,
+  "strict_score": 89.2,
   "verified_strict_score": 78.6,
-  "prev_overall_score": 89.5,
-  "prev_objective_score": 97.1,
-  "prev_strict_score": 89.1,
+  "prev_overall_score": 89.6,
+  "prev_objective_score": 97.4,
+  "prev_strict_score": 89.2,
   "prev_verified_strict_score": 78.6,
-  "attestation": "I have actually Extracted the per-hour state expansion, schedule reconstruction, and result assembly helpers from BaselineDPOptimizer.optimize and validated the dedicated baseline optimizer tests under the repo venv. and I am not gaming the score.",
+  "attestation": "I have actually Moved the pure optimization history row-evaluation dataclasses and helpers into src.data_pipeline.optimization_history_reconciliation, kept scripts/reconcile_optimization_history.py focused on env resolution, SQL flow, and CLI handling, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_schedule_reconcile_and_test_runner_scripts.py::test_reconcile_optimization_history_computes_stats_and_main -q. and I am not gaming the score.",
   "narrative": {
     "phase": "regression",
-    "headline": "All T1 items cleared!",
+    "headline": "All T1 and T2 items cleared!",
     "dimensions": {
       "lowest_dimensions": [
         {
@@ -51,8 +51,8 @@
       "biggest_gap_dimensions": [
         {
           "name": "Code quality",
-          "lenient": 92.3,
-          "strict": 86.7,
+          "lenient": 93.1,
+          "strict": 87.5,
           "gap": 5.6,
           "wontfix_count": 147
         }
@@ -60,7 +60,7 @@
       "stagnant_dimensions": [
         {
           "name": "Code quality",
-          "strict": 86.7,
+          "strict": 87.5,
           "stuck_scans": 5
         },
         {
@@ -70,7 +70,7 @@
         },
         {
           "name": "File health",
-          "strict": 94.5,
+          "strict": 95.0,
           "stuck_scans": 5
         },
         {
@@ -175,25 +175,14 @@
         "lane": "restructure"
       },
       {
-        "type": "reorganize",
-        "detector": "facade",
-        "count": 11,
-        "description": "11 facade issues \u2014 flatten re-export facades or consolidate barrel files",
-        "command": "desloppify show facade --status open",
-        "impact": 0.0,
-        "dimension": "Code quality",
-        "priority": 4,
-        "lane": "restructure"
-      },
-      {
         "type": "refactor",
         "detector": "structural",
-        "count": 28,
-        "description": "28 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
+        "count": 26,
+        "description": "26 structural issues \u2014 review large files \u2014 split only when responsibilities are clearly separable",
         "command": "desloppify show structural --status open",
         "impact": 0.0,
         "dimension": "File health",
-        "priority": 5,
+        "priority": 4,
         "lane": "refactor_0"
       },
       {
@@ -204,7 +193,7 @@
         "command": "desloppify show dict_keys --status open",
         "impact": 0.0,
         "dimension": "Code quality",
-        "priority": 6,
+        "priority": 5,
         "lane": "refactor_0"
       },
       {
@@ -215,7 +204,7 @@
         "command": "desloppify show signature --status open",
         "impact": 0.0,
         "dimension": "Unknown",
-        "priority": 7,
+        "priority": 6,
         "lane": "refactor_1"
       },
       {
@@ -226,7 +215,7 @@
         "command": "desloppify show responsibility_cohesion --status open",
         "impact": 0.0,
         "dimension": "Code quality",
-        "priority": 8,
+        "priority": 7,
         "lane": "refactor_0"
       },
       {
@@ -237,7 +226,7 @@
         "command": "desloppify show smells --status open",
         "impact": 0.0,
         "dimension": "Code quality",
-        "priority": 9,
+        "priority": 8,
         "lane": "refactor_0"
       },
       {
@@ -248,7 +237,7 @@
         "command": "desloppify show global_mutable_config --status open",
         "impact": 0.0,
         "dimension": "Code quality",
-        "priority": 10,
+        "priority": 9,
         "lane": "refactor_0"
       },
       {
@@ -259,14 +248,14 @@
         "command": "desloppify show stale_exclude --status open",
         "impact": 0.0,
         "dimension": "Code quality",
-        "priority": 11,
+        "priority": 10,
         "lane": "refactor_2"
       }
     ],
     "strategy": {
       "fixer_leverage": {
         "auto_fixable_count": 0,
-        "total_count": 177,
+        "total_count": 164,
         "coverage": 0.0,
         "impact_ratio": 0.0,
         "recommendation": "none"
@@ -276,30 +265,29 @@
           "actions": [
             1,
             2,
-            3,
-            4
+            3
           ],
-          "file_count": 72,
+          "file_count": 61,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
         },
         "refactor_0": {
           "actions": [
+            4,
             5,
-            6,
+            7,
             8,
-            9,
-            10
+            9
           ],
-          "file_count": 60,
+          "file_count": 58,
           "total_impact": 0.0,
           "automation": "manual",
           "run_first": false
         },
         "refactor_1": {
           "actions": [
-            7
+            6
           ],
           "file_count": 1,
           "total_impact": 0.0,
@@ -308,7 +296,7 @@
         },
         "refactor_2": {
           "actions": [
-            11
+            10
           ],
           "file_count": 9,
           "total_impact": 0.0,
@@ -345,7 +333,7 @@
       "worst_gap": 5.6,
       "trend": "stable"
     },
-    "milestone": "All T1 items cleared!",
+    "milestone": "All T1 and T2 items cleared!",
     "primary_action": {
       "command": "desloppify show orphaned --status open",
       "description": "57 orphaned issues \u2014 delete dead files or relocate with `desloppify move`"
@@ -364,8 +352,8 @@
     ],
     "strict_target": {
       "target": 95.0,
-      "current": 89.1,
-      "gap": 5.9,
+      "current": 89.2,
+      "gap": 5.8,
       "state": "below",
       "warning": null
     },

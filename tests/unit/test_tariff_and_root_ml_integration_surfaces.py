@@ -169,7 +169,7 @@ def _load_root_ml_api_module():
         "energy_ml.mlops.battery_physics": battery_module,
         "energy_ml.mlops.renewable_forecasting": renewable_module,
     }
-    return _load_module("root_ml_integration_api_under_test", "scripts/ml_integration_api.py", injected)
+    return _load_module("root_ml_integration_api_under_test", "ml_integration_api.py", injected)
 
 
 ROOT_ML_API = _load_root_ml_api_module()
@@ -300,3 +300,39 @@ def test_root_ml_api_main_emits_json_for_cli(monkeypatch: pytest.MonkeyPatch, ca
     assert payload["success"] is True
     assert payload["status"]["battery_state"]["soc_percent"] == 42.0
     assert exit_codes == [0]
+
+
+def test_root_ml_api_wrapper_contract_preserves_expected_exports() -> None:
+    expected_exports = {
+        "INCUMBENT_SERVING_MODE",
+        "LEARNED_POLICY_SERVING_MODE",
+        "_load_user_config",
+        "_save_user_config",
+        "get_battery_physics",
+        "get_forecast",
+        "get_optimization_strategy",
+        "get_pipeline_status",
+        "get_recommendation",
+        "get_renewable_forecast",
+        "load_user_config",
+        "main",
+        "set_optimization_strategy",
+        "setup_logging",
+        "sys",
+    }
+
+    assert set(ROOT_ML_API.__all__) == expected_exports
+    assert ROOT_ML_API._CANONICAL_BRIDGE is not None
+
+    for export_name in expected_exports:
+        assert hasattr(ROOT_ML_API, export_name)
+
+    assert ROOT_ML_API.load_user_config is ROOT_ML_API._load_user_config
+    assert callable(ROOT_ML_API.get_recommendation)
+    assert callable(ROOT_ML_API.get_forecast)
+    assert callable(ROOT_ML_API.get_pipeline_status)
+    assert callable(ROOT_ML_API.set_optimization_strategy)
+    assert callable(ROOT_ML_API.get_optimization_strategy)
+    assert callable(ROOT_ML_API.get_battery_physics)
+    assert callable(ROOT_ML_API.get_renewable_forecast)
+    assert callable(ROOT_ML_API.main)

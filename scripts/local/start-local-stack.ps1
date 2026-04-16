@@ -45,7 +45,7 @@ Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\configs\recalculat
 Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\configs\recalculation_trigger.json') -SeedPath (Join-Path $repoRoot 'energy_ml\configs\templates\recalculation_trigger.seed.json')
 Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\outputs\analytics_cache.json') -SeedPath (Join-Path $repoRoot 'energy_ml\outputs\templates\analytics_cache.seed.json')
 Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\outputs\latest_ml_results.json') -SeedPath (Join-Path $repoRoot 'energy_ml\outputs\templates\latest_ml_results.seed.json')
-Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\energy_ml\outputs\control_status.json') -SeedPath (Join-Path $repoRoot 'energy_ml\energy_ml\outputs\templates\control_status.seed.json')
+Ensure-SeededJson -TargetPath (Join-Path $repoRoot 'energy_ml\outputs\control_status.json') -SeedPath (Join-Path $repoRoot 'energy_ml\outputs\templates\control_status.seed.json')
 
 Write-Host 'Smart Energy AI Local Stack Launcher' -ForegroundColor Cyan
 Write-Host "Repo root: $repoRoot"

@@ -6,73 +6,20 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import create_engine, text
 
-
-@dataclass
-class ReconcileResult:
-    scanned: int = 0
-    eligible: int = 0
-    updated: int = 0
-    unchanged: int = 0
-    skipped: int = 0
-
-
-@dataclass(frozen=True)
-class RowReconcileOutcome:
-    row_id: int
-    eligible: bool
-    status: str
-    update_params: Optional[Dict[str, Any]] = None
-
-
-def determine_tariff_window(ts: datetime) -> str:
-    hour = ts.hour
-    if 8 <= hour <= 20:
-        return "peak"
-    if hour in (7, 21):
-        return "shoulder"
-    return "offpeak"
-
-
-def _safe_number(value: Any) -> Optional[float]:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return None
-    if number != number:
-        return None
-    return number
-
-
-def compute_canonical_costs(
-    *,
-    predicted_action: int,
-    energy_kwh: float,
-    unit_price_uah_kwh: float,
-    peak_price: Optional[float],
-    off_peak_price: Optional[float],
-) -> Tuple[float, float]:
-    baseline_cost = max(0.0, energy_kwh * unit_price_uah_kwh)
-
-    peak = peak_price if peak_price is not None else unit_price_uah_kwh
-    off_peak = off_peak_price if off_peak_price is not None else unit_price_uah_kwh
-
-    optimized_rate = unit_price_uah_kwh
-    if predicted_action == 0:  # charge
-        optimized_rate = min(unit_price_uah_kwh, off_peak)
-    elif predicted_action == 1:  # discharge
-        spread = max(0.0, peak - off_peak)
-        optimized_rate = max(0.0, unit_price_uah_kwh - spread)
-
-    optimized_cost = max(0.0, energy_kwh * optimized_rate)
-    return baseline_cost, optimized_cost
-
-
+from src.data_pipeline.optimization_history_reconciliation import (
+    ReconcileResult,
+    evaluate_row_for_reconciliation,
+)
+from src.data_pipeline.optimization_economics import (
+    _resolve_canonical_prices,
+    _safe_number,
+    compute_canonical_costs,
+    determine_tariff_window,
+)
 def resolve_db_url() -> str:
     explicit = os.getenv("DATABASE_URL")
     if explicit:
@@ -84,66 +31,6 @@ def resolve_db_url() -> str:
     password = os.getenv("APP_DB_PASSWORD") or os.getenv("DB_PASSWORD") or "dagster"
     database = os.getenv("APP_DB_NAME") or os.getenv("OPTIMIZATION_DB_NAME") or "smart_energy_ai"
     return f"postgresql://{user}:{password}@{host}:{port}/{database}"
-
-
-def _resolve_canonical_prices(unit_price: float, tariff_window: str, derived_window: str) -> Tuple[float, float]:
-    peak_price = unit_price if tariff_window == "peak" else (unit_price if derived_window == "peak" else unit_price * 1.15)
-    off_peak_price = unit_price if tariff_window == "offpeak" else (unit_price if derived_window == "offpeak" else unit_price * 0.85)
-    return peak_price, off_peak_price
-
-
-def _is_unchanged_cost_pair(
-    previous_baseline: Optional[float],
-    previous_optimized: Optional[float],
-    baseline_cost: float,
-    optimized_cost: float,
-) -> bool:
-    return (
-        previous_baseline is not None
-        and previous_optimized is not None
-        and abs(previous_baseline - baseline_cost) < 1e-6
-        and abs(previous_optimized - optimized_cost) < 1e-6
-    )
-
-
-def _evaluate_row_for_reconciliation(row: Dict[str, Any], note: str) -> RowReconcileOutcome:
-    row_id = int(row["id"])
-    ts = row["timestamp"]
-    predicted_action = int(row["predicted_action"])
-
-    energy_kwh = _safe_number(row["energy_kwh"])
-    unit_price = _safe_number(row["price_uah_kwh"])
-    if energy_kwh is None or energy_kwh <= 0 or unit_price is None or unit_price <= 0:
-        return RowReconcileOutcome(row_id=row_id, eligible=False, status="skipped")
-
-    tariff_window = str(row.get("tariff_window") or "").lower()
-    derived_window = determine_tariff_window(ts if isinstance(ts, datetime) else datetime.now(timezone.utc))
-    peak_price, off_peak_price = _resolve_canonical_prices(unit_price, tariff_window, derived_window)
-
-    baseline_cost, optimized_cost = compute_canonical_costs(
-        predicted_action=predicted_action,
-        energy_kwh=energy_kwh,
-        unit_price_uah_kwh=unit_price,
-        peak_price=peak_price,
-        off_peak_price=off_peak_price,
-    )
-
-    old_baseline = _safe_number(row["cost_baseline"])
-    old_rl = _safe_number(row["cost_rl"])
-    if _is_unchanged_cost_pair(old_baseline, old_rl, baseline_cost, optimized_cost):
-        return RowReconcileOutcome(row_id=row_id, eligible=True, status="unchanged")
-
-    return RowReconcileOutcome(
-        row_id=row_id,
-        eligible=True,
-        status="updated",
-        update_params={
-            "id": row_id,
-            "cost_baseline": baseline_cost,
-            "cost_rl": optimized_cost,
-            "reconciliation_note": note,
-        },
-    )
 
 
 def reconcile(days: int, limit: int, dry_run: bool, note: str) -> Dict[str, Any]:
@@ -192,7 +79,7 @@ def reconcile(days: int, limit: int, dry_run: bool, note: str) -> Dict[str, Any]
 
         for row in rows:
             stats.scanned += 1
-            outcome = _evaluate_row_for_reconciliation(row, note)
+            outcome = evaluate_row_for_reconciliation(row, note)
             if not outcome.eligible:
                 stats.skipped += 1
                 continue

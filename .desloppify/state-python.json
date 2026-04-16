@@ -3,16 +3,16 @@
   "created": "2026-03-02T19:34:53+00:00",
   "last_scan": "2026-03-06T14:30:44+00:00",
   "scan_count": 31,
-  "overall_score": 89.5,
-  "objective_score": 97.1,
-  "strict_score": 89.1,
+  "overall_score": 89.6,
+  "objective_score": 97.4,
+  "strict_score": 89.2,
   "verified_strict_score": 78.6,
   "stats": {
     "total": 755,
     "auto_resolved": 228,
     "false_positive": 0,
-    "fixed": 203,
-    "open": 177,
+    "fixed": 216,
+    "open": 164,
     "wontfix": 147,
     "by_tier": {
       "1": {
@@ -25,15 +25,15 @@
       "2": {
         "auto_resolved": 36,
         "false_positive": 0,
-        "fixed": 40,
-        "open": 11,
+        "fixed": 51,
+        "open": 0,
         "wontfix": 75
       },
       "3": {
         "auto_resolved": 79,
         "false_positive": 0,
-        "fixed": 140,
-        "open": 157,
+        "fixed": 142,
+        "open": 155,
         "wontfix": 72
       },
       "4": {
@@ -2330,11 +2330,11 @@
   },
   "dimension_scores": {
     "Code quality": {
-      "score": 92.3,
-      "strict": 86.7,
+      "score": 93.1,
+      "strict": 87.5,
       "verified_strict_score": 84.8,
       "checks": 1032,
-      "failing": 131,
+      "failing": 120,
       "tier": 3,
       "detectors": {
         "unused": {
@@ -2363,9 +2363,9 @@
         },
         "facade": {
           "potential": 143,
-          "pass_rate": 0.9419580419580419,
-          "failing": 11,
-          "weighted_failures": 8.3
+          "pass_rate": 1.0,
+          "failing": 0,
+          "weighted_failures": 0.0
         },
         "dict_keys": {
           "potential": 143,
@@ -2423,18 +2423,18 @@
       ]
     },
     "File health": {
-      "score": 94.5,
-      "strict": 94.5,
+      "score": 95.0,
+      "strict": 95.0,
       "verified_strict_score": 86.0,
       "checks": 143,
-      "failing": 26,
+      "failing": 24,
       "tier": 3,
       "detectors": {
         "structural": {
           "potential": 143,
-          "pass_rate": 0.9454545454545453,
-          "failing": 26,
-          "weighted_failures": 7.799999999999997
+          "pass_rate": 0.9496503496503498,
+          "failing": 24,
+          "weighted_failures": 7.1999999999999975
         }
       }
     },
@@ -4858,17 +4858,23 @@
         ],
         "loc": 168
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Extracted the oversized inline scaffolding payload and print sections in scripts/generate_nuxt_structure.py into named constants plus small helpers while preserving the script output, then validated with .venv\\\\Scripts\\\\python.exe scripts\\\\generate_nuxt_structure.py.",
       "first_seen": "2026-03-02T19:34:55+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:06:15+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Extracted the oversized inline scaffolding payload and print sections in scripts/generate_nuxt_structure.py into named constants plus small helpers while preserving the script output, then validated with .venv\\\\Scripts\\\\python.exe scripts\\\\generate_nuxt_structure.py. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:06:15+00:00",
+        "scan_verified": false
+      }
     },
     "structural::src/rl_environment.py": {
       "id": "structural::src/rl_environment.py",
@@ -6764,17 +6770,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "facade::src/assets/multi_tenant/__init__.py": {
       "id": "facade::src/assets/multi_tenant/__init__.py",
@@ -6791,17 +6803,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "facade::energy_ml/simulator/__init__.py": {
       "id": "facade::energy_ml/simulator/__init__.py",
@@ -6818,17 +6836,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "facade::energy_ml/control/__init__.py": {
       "id": "facade::energy_ml/control/__init__.py",
@@ -6845,17 +6869,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "facade::src/dagster_api/__init__.py": {
       "id": "facade::src/dagster_api/__init__.py",
@@ -6874,17 +6904,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "facade::src/assets/benchmarks/__init__.py": {
       "id": "facade::src/assets/benchmarks/__init__.py",
@@ -6901,17 +6937,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "facade::energy_ml/assets/__init__.py": {
       "id": "facade::energy_ml/assets/__init__.py",
@@ -6930,17 +6972,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "facade::energy_ml/mlops/__init__.py": {
       "id": "facade::energy_ml/mlops/__init__.py",
@@ -6959,17 +7007,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-02T19:34:59+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/generate_plots_mpl.py::untested_module": {
       "id": "test_coverage::src/generate_plots_mpl.py::untested_module",
@@ -23656,17 +23710,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-02T23:31:02+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "production",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "facade::src/engines/__init__.py": {
       "id": "facade::src/engines/__init__.py",
@@ -23683,17 +23743,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-02T23:31:02+00:00",
       "last_seen": "2026-03-06T10:41:59+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::src/assets/core/optimization_schedule.py::untested_module": {
       "id": "test_coverage::src/assets/core/optimization_schedule.py::untested_module",
@@ -24313,17 +24379,23 @@
         ],
         "loc": 207
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Moved the pure optimization history row-evaluation dataclasses and helpers into src.data_pipeline.optimization_history_reconciliation, kept scripts/reconcile_optimization_history.py focused on env resolution, SQL flow, and CLI handling, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_schedule_reconcile_and_test_runner_scripts.py::test_reconcile_optimization_history_computes_stats_and_main -q.",
       "first_seen": "2026-03-06T10:38:38+00:00",
       "last_seen": "2026-03-06T10:38:38+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:20:52+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "script",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Moved the pure optimization history row-evaluation dataclasses and helpers into src.data_pipeline.optimization_history_reconciliation, kept scripts/reconcile_optimization_history.py focused on env resolution, SQL flow, and CLI handling, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_schedule_reconcile_and_test_runner_scripts.py::test_reconcile_optimization_history_computes_stats_and_main -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:20:52+00:00",
+        "scan_verified": false
+      }
     },
     "flat_dirs::energy_ml": {
       "id": "flat_dirs::energy_ml",
@@ -24480,17 +24552,23 @@
         ],
         "kind": "file"
       },
-      "status": "open",
-      "note": null,
+      "status": "fixed",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
       "first_seen": "2026-03-06T10:41:51+00:00",
       "last_seen": "2026-03-06T10:41:51+00:00",
-      "resolved_at": null,
+      "resolved_at": "2026-04-16T07:17:14+00:00",
       "reopen_count": 0,
       "lang": "python",
       "zone": "production",
       "suppressed": false,
       "suppressed_at": null,
-      "suppression_pattern": null
+      "suppression_pattern": null,
+      "resolution_attestation": {
+        "kind": "manual",
+        "text": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score.",
+        "attested_at": "2026-04-16T07:17:14+00:00",
+        "scan_verified": false
+      }
     },
     "test_coverage::scripts/read_dagster_schedule.py::untested_module": {
       "id": "test_coverage::scripts/read_dagster_schedule.py::untested_module",

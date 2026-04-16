@@ -16,6 +16,11 @@ Before writing code, editing docs, or doing cleanup:
 4. Record discovered follow-up work with linked issues using `--deps discovered-from:<id>`.
 5. Close the issue with `bd close <id> --reason "..." --json` only after validation.
 
+For explicit broad cleanup, DRY, KISS, or architecture-refactor sessions:
+
+- Prefer one Beads task per coherent cleanup cluster, not one task per tiny helper move.
+- Use linked follow-up issues only when a cluster would otherwise become too risky or too large to validate cleanly.
+
 Do not track work in markdown TODO lists or external trackers.
 
 If `bd` or its Dolt backend is unavailable in the local environment, call out
@@ -69,6 +74,7 @@ Canonical local endpoints:
 - Prefer focused tests for the files you touch.
 - If changing runtime behavior, validate the smallest relevant local path first.
 - If a module is loaded directly by file path in tests, preserve that import pattern when refactoring.
+- For explicit cleanup/refactor sessions, prefer the narrowest shared validation suite that covers the whole cleanup cluster instead of validating every micro-edit in isolation.
 
 Useful commands:
 
@@ -87,6 +93,17 @@ dagster job execute -m src.definitions -j optimization_schedule_contract_checks
 - Surgical changes: touch only the requested surface, remove only the orphans created by your own change, and leave unrelated cleanup for separate work unless explicitly asked.
 - Goal-driven execution: define a concrete success check for each slice and validate the narrowest relevant path immediately after editing.
 - Use `desloppify` only for explicit code-health, technical-debt, dead-code, or cleanup work. It is not the default workflow for normal feature work, debugging, or runtime fixes.
+
+## Rapid Cleanup Mode
+
+When the user explicitly asks for broad refactor, DRY/KISS cleanup, or codebase simplification work:
+
+- Switch from micro-slices to hotspot clusters. Prioritize the largest mixed-responsibility modules, duplicate helper families, script-root drift, and dead compatibility layers first.
+- Batch related edits that share the same owning abstraction and the same validation path. Do not split a coherent cleanup cluster into many tiny turns unless risk forces it.
+- Prefer extracting or deleting several closely related helpers in one pass when ownership is already clear.
+- Keep progress updates short and cluster-level. Report what cluster is being landed, why it is the next highest-value slice, and what validation covers it.
+- Stop and split the work only when behavior becomes ambiguous, ownership is unclear, or the shared validation path stops being discriminating.
+- Keep `dashboard/` out of backend cleanup batches unless the user explicitly includes it.
 
 ## Key References
 

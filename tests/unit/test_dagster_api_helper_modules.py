@@ -87,14 +87,19 @@ def test_store_results_reads_latest_temp_storage(monkeypatch, tmp_path) -> None:
     src_pkg, dagster_api_pkg, _, _, _ = build_src_packages()
     stored = []
 
-    dagster_api_pkg.get_asset_service = lambda: types.SimpleNamespace(
+    asset_service_mod = types.ModuleType("src.dagster_api.asset_service")
+    asset_service_mod.get_asset_service = lambda: types.SimpleNamespace(
         store_asset_result=lambda **kwargs: stored.append(kwargs)
     )
 
     module = load_module(
         "store_results_under_test",
         "src/dagster_api/store_results.py",
-        injected_modules={"src": src_pkg, "src.dagster_api": dagster_api_pkg},
+        injected_modules={
+            "src": src_pkg,
+            "src.dagster_api": dagster_api_pkg,
+            "src.dagster_api.asset_service": asset_service_mod,
+        },
     )
 
     latest = tmp_path / ".tmp_dagster_home_latest" / "storage"

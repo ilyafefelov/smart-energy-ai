@@ -13,7 +13,7 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.dagster_api import get_asset_service
+from src.dagster_api.asset_service import get_asset_service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

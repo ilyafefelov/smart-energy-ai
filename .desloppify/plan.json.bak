@@ -1,7 +1,7 @@
 {
   "version": 8,
   "created": "2026-03-06T10:42:05+00:00",
-  "updated": "2026-04-14T04:44:44+00:00",
+  "updated": "2026-04-16T07:20:51+00:00",
   "queue_order": [],
   "deferred": [],
   "skipped": {},
@@ -442,68 +442,68 @@
     "facade::energy_ml/__init__.py": {
       "issue_id": "facade::energy_ml/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "facade::src/assets/multi_tenant/__init__.py": {
       "issue_id": "facade::src/assets/multi_tenant/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "facade::energy_ml/simulator/__init__.py": {
       "issue_id": "facade::energy_ml/simulator/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "facade::energy_ml/control/__init__.py": {
       "issue_id": "facade::energy_ml/control/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "facade::src/dagster_api/__init__.py": {
       "issue_id": "facade::src/dagster_api/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "facade::src/assets/benchmarks/__init__.py": {
       "issue_id": "facade::src/assets/benchmarks/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "facade::energy_ml/assets/__init__.py": {
       "issue_id": "facade::energy_ml/assets/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "facade::energy_ml/mlops/__init__.py": {
       "issue_id": "facade::energy_ml/mlops/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "facade::src/optimization/__init__.py": {
       "issue_id": "facade::src/optimization/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "facade::src/engines/__init__.py": {
       "issue_id": "facade::src/engines/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "facade::src/io_managers/__init__.py": {
       "issue_id": "facade::src/io_managers/__init__.py",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/facade-file",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-16T07:17:14+00:00"
     },
     "test_coverage::src/generate_plots_mpl.py::untested_module": {
       "issue_id": "test_coverage::src/generate_plots_mpl.py::untested_module",
@@ -1444,8 +1444,8 @@
     "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity": {
       "issue_id": "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity",
       "created_at": "2026-03-06T10:42:05+00:00",
-      "cluster": "auto/smells-high_cyclomatic_complexity",
-      "updated_at": "2026-03-06T10:42:05+00:00"
+      "cluster": null,
+      "updated_at": "2026-04-14T04:44:45+00:00"
     },
     "smells::src/optimizer_v2.py::high_cyclomatic_complexity": {
       "issue_id": "smells::src/optimizer_v2.py::high_cyclomatic_complexity",
@@ -2138,19 +2138,7 @@
     "auto/facade-file": {
       "name": "auto/facade-file",
       "description": "Fix 11 file issues",
-      "issue_ids": [
-        "facade::energy_ml/__init__.py",
-        "facade::src/assets/multi_tenant/__init__.py",
-        "facade::energy_ml/simulator/__init__.py",
-        "facade::energy_ml/control/__init__.py",
-        "facade::src/dagster_api/__init__.py",
-        "facade::src/assets/benchmarks/__init__.py",
-        "facade::energy_ml/assets/__init__.py",
-        "facade::energy_ml/mlops/__init__.py",
-        "facade::src/optimization/__init__.py",
-        "facade::src/engines/__init__.py",
-        "facade::src/io_managers/__init__.py"
-      ],
+      "issue_ids": [],
       "created_at": "2026-03-06T10:42:05+00:00",
       "updated_at": "2026-03-06T10:42:05+00:00",
       "auto": true,
@@ -2267,7 +2255,6 @@
         "smells::src/assets/core/client_state.py::high_cyclomatic_complexity",
         "smells::src/engines/selection.py::high_cyclomatic_complexity",
         "smells::src/enhanced_price_ingester.py::high_cyclomatic_complexity",
-        "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity",
         "smells::src/optimizer_v2.py::high_cyclomatic_complexity",
         "smells::src/oree_playwright_scraper.py::high_cyclomatic_complexity",
         "smells::src/oree_real_prices.py::high_cyclomatic_complexity",
@@ -9721,6 +9708,112 @@
       "actor": "user",
       "note": "Extracted the per-hour state expansion, schedule reconstruction, and result assembly helpers from BaselineDPOptimizer.optimize and validated the dedicated baseline optimizer tests under the repo venv.",
       "detail": {}
+    },
+    {
+      "timestamp": "2026-04-14T04:44:45+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the per-hour state expansion, schedule reconstruction, and result assembly helpers from BaselineDPOptimizer.optimize and validated the dedicated baseline optimizer tests under the repo venv.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted the per-hour state expansion, schedule reconstruction, and result assembly helpers from BaselineDPOptimizer.optimize and validated the dedicated baseline optimizer tests under the repo venv. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-16T07:06:13+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::scripts/generate_nuxt_structure.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the oversized inline scaffolding payload and print sections in scripts/generate_nuxt_structure.py into named constants plus small helpers while preserving the script output, then validated with .venv\\\\Scripts\\\\python.exe scripts\\\\generate_nuxt_structure.py.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-16T07:06:15+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "structural::scripts/generate_nuxt_structure.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Extracted the oversized inline scaffolding payload and print sections in scripts/generate_nuxt_structure.py into named constants plus small helpers while preserving the script output, then validated with .venv\\\\Scripts\\\\python.exe scripts\\\\generate_nuxt_structure.py.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Extracted the oversized inline scaffolding payload and print sections in scripts/generate_nuxt_structure.py into named constants plus small helpers while preserving the script output, then validated with .venv\\\\Scripts\\\\python.exe scripts\\\\generate_nuxt_structure.py. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-16T07:17:12+00:00",
+      "action": "done",
+      "issue_ids": [
+        "auto/facade-file"
+      ],
+      "cluster_name": "auto/facade-file",
+      "actor": "user",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-16T07:17:14+00:00",
+      "action": "resolve",
+      "issue_ids": [
+        "facade::energy_ml/__init__.py",
+        "facade::src/assets/multi_tenant/__init__.py",
+        "facade::energy_ml/simulator/__init__.py",
+        "facade::energy_ml/control/__init__.py",
+        "facade::src/dagster_api/__init__.py",
+        "facade::src/assets/benchmarks/__init__.py",
+        "facade::energy_ml/assets/__init__.py",
+        "facade::energy_ml/mlops/__init__.py",
+        "facade::src/optimization/__init__.py",
+        "facade::src/engines/__init__.py",
+        "facade::src/io_managers/__init__.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q.",
+      "detail": {
+        "status": "fixed",
+        "attestation": "I have actually Collapsed backend package facade __init__.py barrels into minimal package markers, rewrote the remaining runtime importer sites to direct submodules in src.dagster_api.store_results, src.data_pipeline.feature_matrix_builder, src.assets.core.optimization_schedule, and src.assets.core.optimization_schedule_milp, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_dagster_api_helper_modules.py tests\\\\unit\\\\test_feature_matrix_asset.py -q. and I am not gaming the score."
+      }
+    },
+    {
+      "timestamp": "2026-04-16T07:17:14+00:00",
+      "action": "cluster_done",
+      "issue_ids": [
+        "facade::energy_ml/__init__.py",
+        "facade::src/assets/multi_tenant/__init__.py",
+        "facade::energy_ml/simulator/__init__.py",
+        "facade::energy_ml/control/__init__.py",
+        "facade::src/dagster_api/__init__.py",
+        "facade::src/assets/benchmarks/__init__.py",
+        "facade::energy_ml/assets/__init__.py",
+        "facade::energy_ml/mlops/__init__.py",
+        "facade::src/optimization/__init__.py",
+        "facade::src/engines/__init__.py",
+        "facade::src/io_managers/__init__.py"
+      ],
+      "cluster_name": "auto/facade-file",
+      "actor": "user",
+      "note": null,
+      "detail": {}
+    },
+    {
+      "timestamp": "2026-04-16T07:20:51+00:00",
+      "action": "done",
+      "issue_ids": [
+        "structural::scripts/reconcile_optimization_history.py"
+      ],
+      "cluster_name": null,
+      "actor": "user",
+      "note": "Moved the pure optimization history row-evaluation dataclasses and helpers into src.data_pipeline.optimization_history_reconciliation, kept scripts/reconcile_optimization_history.py focused on env resolution, SQL flow, and CLI handling, and validated with .venv\\\\Scripts\\\\python.exe -m pytest tests\\\\unit\\\\test_schedule_reconcile_and_test_runner_scripts.py::test_reconcile_optimization_history_computes_stats_and_main -q.",
+      "detail": {}
     }
   ],
   "epic_triage_meta": {
@@ -10527,7 +10620,20 @@
     "smells::scripts/reconcile_optimization_history.py::high_cyclomatic_complexity",
     "smells::scripts/run_tests.py::high_cyclomatic_complexity",
     "smells::ml_integration_api.py::high_cyclomatic_complexity",
-    "smells::energy_ml/mlops/renewable_forecasting.py::high_cyclomatic_complexity"
+    "smells::energy_ml/mlops/renewable_forecasting.py::high_cyclomatic_complexity",
+    "smells::src/optimization/baseline_dp.py::high_cyclomatic_complexity",
+    "structural::scripts/generate_nuxt_structure.py",
+    "facade::energy_ml/__init__.py",
+    "facade::src/assets/multi_tenant/__init__.py",
+    "facade::energy_ml/simulator/__init__.py",
+    "facade::energy_ml/control/__init__.py",
+    "facade::src/dagster_api/__init__.py",
+    "facade::src/assets/benchmarks/__init__.py",
+    "facade::energy_ml/assets/__init__.py",
+    "facade::energy_ml/mlops/__init__.py",
+    "facade::src/optimization/__init__.py",
+    "facade::src/engines/__init__.py",
+    "facade::src/io_managers/__init__.py"
   ],
   "commit_tracking_branch": null,
   "scan_count_at_plan_start": 28

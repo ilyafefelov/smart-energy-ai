@@ -54,7 +54,6 @@ class PipelineOrchestrator:
 
 pipeline_stub.PipelineOrchestrator = PipelineOrchestrator
 
-UTILS = _load_module("nested_utils_under_test", "energy_ml/energy_ml/utils.py")
 FEATURES = _load_module(
     "feature_engineer_under_test",
     "energy_ml/features.py",
@@ -113,25 +112,6 @@ def _make_user_profile(profile_type: str = "standard") -> UserProfile:
         generation=GenerationConfig(solar_capacity_kw=5.0, wind_capacity_kw=0.0),
         tariff=UkraineTariffConfig(),
     )
-
-
-def test_get_solar_position_and_irradiance_handle_day_and_night():
-    midday = datetime(2026, 6, 21, 12, 0, 0)
-    midnight = datetime(2026, 6, 21, 0, 0, 0)
-
-    day_position = UTILS.get_solar_position(50.45, 30.52, midday)
-    night_position = UTILS.get_solar_position(50.45, 30.52, midnight)
-    night_irradiance = UTILS.calculate_irradiance(night_position, cloud_cover=10.0)
-
-    assert day_position["elevation"] > 0
-    assert night_position["is_night"] is True
-    assert night_irradiance == {"GHI": 0, "DNI": 0, "DHI": 0}
-
-
-def test_wind_and_solar_generation_utilities_follow_expected_thresholds():
-    assert UTILS.wind_power_curve(2.5) == 0
-    assert UTILS.wind_power_curve(20.0, rated_capacity=7.5) == 7.5
-    assert UTILS.solar_generation_from_irradiance(800.0, 10.0, panel_efficiency=0.2) == 1.6
 
 
 def test_feature_engineer_extracts_14_clamped_features():

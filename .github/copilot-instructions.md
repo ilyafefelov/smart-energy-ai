@@ -9,6 +9,45 @@ validation, landing, and execution style.
 - Default to normal repo work first: implementation, debugging, tests, and runtime validation should follow `AGENTS.md` without any special code-health workflow.
 - Use `desloppify` only when the task is explicitly about code health, technical debt, dead code, large files, duplication, coupling, or cleanup planning.
 - When a task is not explicitly code-health work, do not let `desloppify` drive prioritization or scope.
+- `src/definitions.py` is the only active Dagster code location for current runtime work.
+- `scripts/ml_integration_api.py` is the canonical backend Python ML bridge.
+- `scripts/generate_nuxt_structure.py` is a legacy scaffolding utility, not an active runtime entrypoint; keep cleanup there behavior-preserving and do not treat it as a frontend source of truth.
+- `ml_integration_api.py` and `energy_ml/ml_integration_api.py` are compatibility wrappers only; do not add new bridge logic there.
+- Avoid re-introducing backend package-barrel facades in `__init__.py` files; keep package markers minimal and prefer direct submodule imports for runtime code.
+- For explicit broad cleanup/refactor requests, prefer cluster-based batches over one-helper-at-a-time micro-slices. Group related moves by owner and shared validation path.
+- For explicit backend cleanup, keep `dashboard/` out of scope unless the user asks for it.
+- Reusable OREE fetch/parse helpers now live in `src/data_pipeline/oree_fetch.py`; keep `src/assets/core/market.py` focused on Dagster orchestration, fallback choice, and validation.
+- Reusable market DataFrame cleanup now lives in `src/data_pipeline/market_validation.py`; keep `src/assets/core/market.py` importing that validator rather than re-embedding validation rules in the asset module.
+- Reusable weather DataFrame cleanup now lives in `src/data_pipeline/weather_validation.py`; keep `src/assets/core/weather.py` importing that validator rather than re-embedding validation rules in the asset module.
+- Reusable Open-Meteo fetch/parsing helpers now live in `src/data_pipeline/openmeteo_fetch.py`; keep `src/assets/core/weather.py` focused on orchestration, fallback choice, validation, and derived solar features.
+- Reusable solar feature transformations now live in `src/data_pipeline/solar_features.py`; keep `src/assets/core/weather.py` importing that transformer rather than embedding Polars feature logic in the asset module.
+- Synthetic weather fallback generation now lives in `src/data_pipeline/synthetic_weather.py`; keep `src/assets/core/weather.py` responsible for fallback selection, not synthetic data generation details.
+- Synthetic market fallback generation now lives in `src/data_pipeline/synthetic_market.py`; keep `src/assets/core/market.py` responsible for fallback selection, not synthetic price generation details.
+- Reusable price forecast feature, split, fallback, and eval-metric helpers now live in `src/data_pipeline/price_forecast_features.py`; keep `src/assets/core/price_forecast.py` focused on orchestration and model-training flow.
+- Reusable feature-matrix build helpers now live in `src/data_pipeline/feature_matrix_builder.py`; keep `src/assets/core/feature_matrix.py` focused on orchestration and engine/resource selection.
+- Optimization client-profile loading helpers now live in `src/data_pipeline/optimization_profile_loader.py`; keep `src/assets/core/optimization_schedule.py` focused on orchestration and optimization configuration assembly.
+- Optimization price/load/solar horizon shaping helpers now live in `src/data_pipeline/optimization_schedule_inputs.py`; keep `src/assets/core/optimization_schedule.py` focused on orchestration and optimizer execution.
+- Reusable optimization schedule contract validators now live in `src/data_pipeline/optimization_schedule_validators.py`; keep `src/assets/core/optimization_schedule_checks.py` focused on Dagster asset-check wrappers rather than embedded validation logic.
+- Reusable client battery-state loading helpers now live in `src/data_pipeline/battery_state_loader.py`; keep `src/assets/core/client_state.py` focused on orchestration and simulation flow rather than file-system probing.
+- Reusable client configuration loading and normalization now live in `src/data_pipeline/client_config_loader.py`; keep `src/assets/core/client_state.py` importing that loader rather than embedding YAML/default-profile logic.
+- Reusable battery simulation helpers now live in `src/data_pipeline/battery_simulation.py`; keep `src/assets/core/client_state.py` importing charge/discharge, SoC, and voltage logic instead of expanding that asset module again.
+- Reusable client-state validation and fallback scaffolding now live in `src/data_pipeline/client_state_validation.py`; keep `src/assets/core/client_state.py` delegating DataFrame cleanup and asset fallback rows there.
+- Reusable client-state monitoring helpers now live in `src/data_pipeline/system_monitoring.py`; keep `src/assets/core/client_state.py` importing efficiency and inverter-status mapping logic instead of re-embedding it.
+- Reusable client-state load and solar simulation helpers now live in `src/data_pipeline/client_load_solar_simulation.py`; keep `src/assets/core/client_state.py` importing load/solar calculation logic rather than embedding profile and irradiance formulas there.
+- Reusable optimization economics helpers now live in `src/data_pipeline/optimization_economics.py`; keep `scripts/reconcile_optimization_history.py` focused on DB access and reconciliation flow rather than tariff/cost formulas.
+- Reusable optimization history row-evaluation helpers now live in `src/data_pipeline/optimization_history_reconciliation.py`; keep `scripts/reconcile_optimization_history.py` focused on DB access, SQL selection/update flow, and CLI handling.
+- Reusable Dagster schedule asset loading and normalization helpers now live in `src/data_pipeline/dagster_schedule_loader.py`; keep `scripts/read_dagster_schedule.py` focused on CLI argument handling and JSON emission rather than embedded asset-loader logic.
+- For Docker-ready backend organization, converge active reusable logic toward `src/` and `src/data_pipeline/`; treat `scripts/` as entrypoint wrappers and `energy_ml/` as domain/runtime compatibility surfaces during migration rather than adding new core logic across all three roots.
+
+## Rapid Cleanup Mode
+
+When the user explicitly asks to clean up, DRY, simplify, or refactor the codebase quickly:
+
+- Prefer the biggest safe hotspot clusters first instead of many small helper-only slices.
+- Land multiple related extractions, deletions, or wrapper-thinning changes together when they share one owner and one focused validation command.
+- Use existing package ownership directly. If the target owner is already clear, move code there instead of creating temporary intermediate surfaces.
+- Keep Beads tracking at the cleanup-cluster level and avoid creating a new issue for every trivial helper move.
+- Update repo memory and instruction notes after a validated cluster lands, not after every microscopic edit.
 
 ## Desloppify Tasks
 

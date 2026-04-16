@@ -226,7 +226,15 @@ def test_market_asset_helpers_and_flow(monkeypatch) -> None:
     assert rows[0]["price_uah_mwh"] == 1000.0
     assert rows[1]["timestamp"].hour == 1
 
-    monkeypatch.setattr(module, "_fetch_oree_prices", lambda target_date: [{"timestamp": datetime(2026, 3, 6, 0, 0), "price_eur_mwh": 25.0, "price_uah_mwh": 1000.0, "volume_mwh": 100.0, "source": "OREE"}] if target_date.day == 6 else [])
+    fetch_calls = {"count": 0}
+
+    def fake_fetch_oree_prices(target_date):
+        if fetch_calls["count"] == 0:
+            fetch_calls["count"] += 1
+            return [{"timestamp": datetime(2026, 3, 6, 0, 0), "price_eur_mwh": 25.0, "price_uah_mwh": 1000.0, "volume_mwh": 100.0, "source": "OREE"}]
+        return []
+
+    monkeypatch.setattr(module, "_fetch_oree_prices", fake_fetch_oree_prices)
     monkeypatch.setattr(module, "_validate_market_data", lambda df: df)
     df = module.market_data_asset()
     assert len(df) == 1

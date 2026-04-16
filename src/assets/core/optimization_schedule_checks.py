@@ -7,7 +7,7 @@ from typing import Any, Dict
 import polars as pl
 from dagster import AssetCheckResult, AssetCheckSeverity, asset_check
 
-from .optimization_schedule_contract import (
+from src.data_pipeline.optimization_schedule_validators import (
     evaluate_schedule_action_semantics,
     evaluate_schedule_completeness,
     evaluate_schedule_numeric_fields,

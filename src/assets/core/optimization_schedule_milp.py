@@ -7,7 +7,7 @@ from typing import List
 import polars as pl
 from dagster import AssetIn, asset
 
-from ...optimization import MilpBatteryScheduler, MilpSchedulerConfig
+from ...optimization.milp_scheduler import MilpBatteryScheduler, MilpSchedulerConfig
 from .optimization_schedule import (
     _extract_price_horizon,
     _get_client_series,

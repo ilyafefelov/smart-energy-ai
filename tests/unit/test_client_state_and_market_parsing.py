@@ -7,12 +7,14 @@ from bs4 import BeautifulSoup
 import polars as pl
 
 from src.assets.core import client_state as client_state_module
+from src.data_pipeline import battery_state_loader as battery_state_loader_module
+from src.data_pipeline import battery_simulation as battery_simulation_module
+from src.data_pipeline.client_config_loader import _normalize_client_config
 from src.assets.core.client_state import (
     CONFIG_STATE_SOURCE,
     SIMULATOR_STATE_SOURCE,
     _generate_client_state,
     _load_operational_battery_state,
-    _normalize_client_config,
 )
 from src.assets.core.market import (
     _extract_oree_price_rows,
@@ -126,7 +128,7 @@ def test_load_operational_battery_state_prefers_simulator_backed_file(tmp_path, 
         ),
         encoding="utf-8",
     )
-    monkeypatch.setattr(client_state_module, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(battery_state_loader_module, "REPO_ROOT", tmp_path)
 
     state = _load_operational_battery_state({"tenant_id": "client_nested"})
 
@@ -166,8 +168,8 @@ def test_generate_client_state_marks_config_fallback_when_simulator_state_missin
         }
     )
 
-    monkeypatch.setattr(client_state_module, "REPO_ROOT", tmp_path)
-    monkeypatch.setattr(client_state_module, "_simulate_battery_behavior", lambda *args, **kwargs: ("IDLE", 0.0))
+    monkeypatch.setattr(battery_state_loader_module, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(battery_simulation_module, "_simulate_battery_behavior", lambda *args, **kwargs: ("IDLE", 0.0))
 
     rows = _generate_client_state(config, weather, market)
 
