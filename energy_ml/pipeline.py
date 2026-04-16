@@ -208,26 +208,18 @@ class PipelineOrchestrator:
             cycles if cycles >= 0 else None,
         )
 
-    def set_live_context(self, live_context: Optional[LiveContextPayload]) -> None:
-        """Attach live signals and refresh the derived inference-time caches.
+    def _parse_live_price_signal(
+        self, price_signal: Any
+    ) -> Tuple[Optional[float], Dict[int, float]]:
+        signal: LivePriceSignal = price_signal if isinstance(price_signal, dict) else {}
+        current_price_kwh: Optional[float] = None
+        live_price_map_kwh: Dict[int, float] = {}
 
-        This method replaces the stored live context and recomputes the cached
-        price and battery signal snapshots consumed by recommendation logic.
-        Invalid or missing fields clear the corresponding cached values instead
-        of preserving stale state from previous calls.
-        """
-        context: LiveContextPayload = live_context if isinstance(live_context, dict) else {}
-        self._live_context = context
-
-        price_signal = context.get('price_signal') if isinstance(context.get('price_signal'), dict) else {}
-        self._live_current_price_kwh = None
-        self._live_price_map_kwh = {}
-
-        current_price = self._safe_float(price_signal.get('current_uah_kwh'), default=-1)
+        current_price = self._safe_float(signal.get('current_uah_kwh'), default=-1)
         if current_price > 0:
-            self._live_current_price_kwh = current_price
+            current_price_kwh = current_price
 
-        forecast_rows = price_signal.get('forecast_next24h') if isinstance(price_signal.get('forecast_next24h'), list) else []
+        forecast_rows = signal.get('forecast_next24h') if isinstance(signal.get('forecast_next24h'), list) else []
         for row in forecast_rows:
             if not isinstance(row, dict):
                 continue
@@ -241,7 +233,24 @@ class PipelineOrchestrator:
             price = self._safe_float(row.get('price'), default=-1)
             if price <= 0:
                 continue
-            self._live_price_map_kwh[hour] = price
+            live_price_map_kwh[hour] = price
+
+        return current_price_kwh, live_price_map_kwh
+
+    def set_live_context(self, live_context: Optional[LiveContextPayload]) -> None:
+        """Attach live signals and refresh the derived inference-time caches.
+
+        This method replaces the stored live context and recomputes the cached
+        price and battery signal snapshots consumed by recommendation logic.
+        Invalid or missing fields clear the corresponding cached values instead
+        of preserving stale state from previous calls.
+        """
+        context: LiveContextPayload = live_context if isinstance(live_context, dict) else {}
+        self._live_context = context
+
+        self._live_current_price_kwh, self._live_price_map_kwh = self._parse_live_price_signal(
+            context.get('price_signal')
+        )
 
         (
             self._live_soc_percent,
