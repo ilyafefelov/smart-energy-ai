@@ -352,6 +352,36 @@ class PipelineOrchestrator:
             thresholds['off_peak_hold_confidence'],
             'Off-peak but insufficient incentive for action.',
         )
+
+    def _price_source_for_hour(self, hour: int) -> str:
+        return 'live_market' if hour in self._live_price_map_kwh else 'tariff_model'
+
+    def _build_recommendation_details(
+        self,
+        current_hour: int,
+        load_kw: float,
+        tariff_rate: float,
+        battery_soc: float,
+        battery_health: float,
+        cycles_remaining: float,
+        is_peak_hour: bool,
+        charge_cost: float,
+        discharge_revenue: float,
+        battery_degradation_cost: float,
+    ) -> RecommendationDetails:
+        return {
+            'hour': current_hour,
+            'load_kw': load_kw,
+            'tariff_rate_uah_mwh': tariff_rate,
+            'battery_soc_percent': battery_soc,
+            'battery_health_percent': battery_health,
+            'battery_cycles_remaining': cycles_remaining,
+            'price_source': self._price_source_for_hour(current_hour),
+            'is_peak_hour': is_peak_hour,
+            'charge_cost_uah_kwh': charge_cost,
+            'discharge_revenue_uah_kwh': discharge_revenue,
+            'degradation_cost_uah_kwh': battery_degradation_cost,
+        }
     
     def _create_battery_config(self, user_config: UserConfigModel) -> BatteryConfig:
         """Convert UserConfigModel to BatteryConfig."""
@@ -467,19 +497,18 @@ class PipelineOrchestrator:
             'estimated_savings': estimated_savings,
             'battery_impact': battery_impact,
             'timestamp': timestamp,
-            'details': {
-                'hour': current_hour,
-                'load_kw': load_kw,
-                'tariff_rate_uah_mwh': tariff_rate,
-                'battery_soc_percent': battery_soc,
-                'battery_health_percent': battery_health,
-                'battery_cycles_remaining': cycles_remaining,
-                'price_source': 'live_market' if current_hour in self._live_price_map_kwh else 'tariff_model',
-                'is_peak_hour': is_peak_hour,
-                'charge_cost_uah_kwh': charge_cost,
-                'discharge_revenue_uah_kwh': discharge_revenue,
-                'degradation_cost_uah_kwh': battery_degradation_cost,
-            }
+            'details': self._build_recommendation_details(
+                current_hour=current_hour,
+                load_kw=load_kw,
+                tariff_rate=tariff_rate,
+                battery_soc=battery_soc,
+                battery_health=battery_health,
+                cycles_remaining=cycles_remaining,
+                is_peak_hour=is_peak_hour,
+                charge_cost=charge_cost,
+                discharge_revenue=discharge_revenue,
+                battery_degradation_cost=battery_degradation_cost,
+            ),
         }
         
         self._last_recommendation = recommendation

@@ -202,6 +202,46 @@ def test_pipeline_economic_helpers_remain_stable():
     assert orchestrator._calculate_battery_impact("HOLD") == 0.0
 
 
+def test_pipeline_recommendation_details_track_price_source():
+    orchestrator = pipeline_module.PipelineOrchestrator()
+    orchestrator.set_live_context(
+        {
+            "price_signal": {
+                "forecast_next24h": [{"hour": 8, "price": 13.0}],
+            },
+            "battery_signal": {"soc_percent": 74.0, "health_percent": 91.0, "cycles_remaining": 2800},
+        }
+    )
+
+    live_details = orchestrator._build_recommendation_details(
+        current_hour=8,
+        load_kw=10.0,
+        tariff_rate=13000.0,
+        battery_soc=74.0,
+        battery_health=91.0,
+        cycles_remaining=2800.0,
+        is_peak_hour=True,
+        charge_cost=2.0,
+        discharge_revenue=5.0,
+        battery_degradation_cost=0.2,
+    )
+    tariff_details = orchestrator._build_recommendation_details(
+        current_hour=7,
+        load_kw=10.0,
+        tariff_rate=12000.0,
+        battery_soc=74.0,
+        battery_health=91.0,
+        cycles_remaining=2800.0,
+        is_peak_hour=True,
+        charge_cost=2.0,
+        discharge_revenue=5.0,
+        battery_degradation_cost=0.2,
+    )
+
+    assert live_details["price_source"] == "live_market"
+    assert tariff_details["price_source"] == "tariff_model"
+
+
 def test_pipeline_validation_reports_invalid_config_values():
     orchestrator = pipeline_module.PipelineOrchestrator()
     orchestrator.config.battery_capacity_kwh = 0
