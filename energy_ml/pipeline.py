@@ -74,6 +74,36 @@ def _parse_live_battery_state(
     )
 
 
+def _parse_live_price_signal(
+    price_signal: Any,
+) -> Tuple[Optional[float], Dict[int, float]]:
+    signal: LivePriceSignal = price_signal if isinstance(price_signal, dict) else {}
+    current_price_kwh: Optional[float] = None
+    live_price_map_kwh: Dict[int, float] = {}
+
+    current_price = _safe_float(signal.get('current_uah_kwh'), default=-1)
+    if current_price > 0:
+        current_price_kwh = current_price
+
+    forecast_rows = signal.get('forecast_next24h') if isinstance(signal.get('forecast_next24h'), list) else []
+    for row in forecast_rows:
+        if not isinstance(row, dict):
+            continue
+        try:
+            hour = int(row.get('hour'))
+        except Exception:
+            logger.debug('Skipping live price row with invalid hour: %r', row.get('hour'))
+            continue
+        if hour < 0 or hour > 23:
+            continue
+        price = _safe_float(row.get('price'), default=-1)
+        if price <= 0:
+            continue
+        live_price_map_kwh[hour] = price
+
+    return current_price_kwh, live_price_map_kwh
+
+
 class RecommendationDetails(TypedDict):
     hour: int
     load_kw: float
@@ -209,35 +239,6 @@ class PipelineOrchestrator:
         self.battery = BatteryModel(self.battery_config)
         self.load_profile = StandardWorkSimulator(self.load_config)
 
-    def _parse_live_price_signal(
-        self, price_signal: Any
-    ) -> Tuple[Optional[float], Dict[int, float]]:
-        signal: LivePriceSignal = price_signal if isinstance(price_signal, dict) else {}
-        current_price_kwh: Optional[float] = None
-        live_price_map_kwh: Dict[int, float] = {}
-
-        current_price = _safe_float(signal.get('current_uah_kwh'), default=-1)
-        if current_price > 0:
-            current_price_kwh = current_price
-
-        forecast_rows = signal.get('forecast_next24h') if isinstance(signal.get('forecast_next24h'), list) else []
-        for row in forecast_rows:
-            if not isinstance(row, dict):
-                continue
-            try:
-                hour = int(row.get('hour'))
-            except Exception:
-                logger.debug('Skipping live price row with invalid hour: %r', row.get('hour'))
-                continue
-            if hour < 0 or hour > 23:
-                continue
-            price = _safe_float(row.get('price'), default=-1)
-            if price <= 0:
-                continue
-            live_price_map_kwh[hour] = price
-
-        return current_price_kwh, live_price_map_kwh
-
     def set_live_context(self, live_context: Optional[LiveContextPayload]) -> None:
         """Attach live signals and refresh the derived inference-time caches.
 
@@ -249,7 +250,7 @@ class PipelineOrchestrator:
         context: LiveContextPayload = live_context if isinstance(live_context, dict) else {}
         self._live_context = context
 
-        self._live_current_price_kwh, self._live_price_map_kwh = self._parse_live_price_signal(
+        self._live_current_price_kwh, self._live_price_map_kwh = _parse_live_price_signal(
             context.get('price_signal')
         )
 
