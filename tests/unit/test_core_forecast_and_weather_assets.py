@@ -185,6 +185,49 @@ def test_price_forecast_helpers_and_fallback_asset() -> None:
     assert set(forecast["model_name"].unique().to_list()) == {"persistence_fallback"}
 
 
+class _RegistryFakeModel:
+    def fit(self, rows, targets) -> None:
+        return None
+
+    def predict(self, rows):
+        return [55.0 for _ in range(len(rows))]
+
+
+def test_price_forecast_asset_resolves_model_from_registry(monkeypatch) -> None:
+    module = load_module(
+        "src.assets.core.price_forecast_registry_under_test",
+        "src/assets/core/price_forecast.py",
+        injected_modules={"dagster": build_dagster_module()},
+    )
+    monkeypatch.setattr(
+        module,
+        "get_forecast_model_spec",
+        lambda model_name=None: types.SimpleNamespace(
+            model_name="registry_stub_model",
+            model_family="registry_stub_family",
+            forecast_horizon_hours=24,
+            build_estimator=lambda: _RegistryFakeModel(),
+        ),
+    )
+
+    timestamps = [datetime(2026, 3, 1, 0, 0) + timedelta(hours=hour) for hour in range(120)]
+    market_data = pl.DataFrame(
+        {
+            "timestamp": timestamps,
+            "price_eur_mwh": [35.0 + float(hour % 24) for hour in range(120)],
+        }
+    )
+
+    forecast = module.price_forecast_asset(market_data)
+
+    assert len(forecast) == 24
+    assert set(forecast["model_name"].unique().to_list()) == {"registry_stub_model"}
+    assert set(forecast["model_family"].unique().to_list()) == {"registry_stub_family"}
+    assert set(forecast["forecast_horizon_hours"].unique().to_list()) == {24}
+    assert set(forecast["evaluation_folds"].unique().to_list()) == {1}
+    assert "eval_value_capture_ratio" in forecast.columns
+
+
 def test_weather_helpers_and_asset_flow(monkeypatch) -> None:
     module = load_module(
         "src.assets.core.weather_under_test",

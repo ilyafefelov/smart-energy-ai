@@ -108,6 +108,7 @@ def run_all():
         'optimization_schedule_milp_asset',
         'accuracy_benchmark_asset',
         'engine_benchmark_asset',
+        'forecast_value_benchmark_asset',
         'mlflow_tracking_asset'
     ]
     

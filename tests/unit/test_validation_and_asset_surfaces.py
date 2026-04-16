@@ -113,6 +113,7 @@ def build_repository_injected_modules():
         "src.assets.benchmarks.performance": [
             "engine_benchmark_asset",
             "accuracy_benchmark_asset",
+            "forecast_value_benchmark_asset",
             "mlflow_tracking_asset",
         ],
     }
@@ -138,7 +139,8 @@ def test_assets_repository_returns_expected_assets() -> None:
     assert "market_data_asset" in assets
     assert "optimization_schedule_asset" in assets
     assert "mlflow_tracking_asset" in assets
-    assert len(assets) == 10
+    assert "forecast_value_benchmark_asset" in assets
+    assert len(assets) == 11
 
 
 def test_benchmark_performance_helpers_and_tracking(monkeypatch, capsys) -> None:
@@ -227,13 +229,35 @@ def test_benchmark_performance_helpers_and_tracking(monkeypatch, capsys) -> None
             }
         ]
     )
-    tracking = module.mlflow_tracking_asset(engine_frame, accuracy_frame)
-    assert len(tracking) == 2
+    forecast_frame = module.pl.DataFrame(
+        [
+            {
+                "model_name": "random_forest_dam_24h",
+                "model_family": "random_forest_regressor",
+                "forecast_horizon_hours": 24,
+                "forecast_rows": 24,
+                "eval_rmse": 4.2,
+                "eval_mae": 3.1,
+                "eval_value_capture_ratio": 0.75,
+                "benchmark_rmse": 4.0,
+                "benchmark_mae": 3.0,
+                "benchmark_value_capture_ratio": 0.8,
+                "benchmark_timestamp": datetime(2026, 3, 6, 12, 0, 0),
+            }
+        ]
+    )
+    tracking = module.mlflow_tracking_asset(engine_frame, accuracy_frame, forecast_frame)
+    assert len(tracking) == 3
     assert module.mlflow._records["uri"] == "http://localhost:5000"
-    assert module.mlflow._records["runs"] == ["polars_size_100", "standard_lfp_system_lcos"]
+    assert module.mlflow._records["runs"] == [
+        "polars_size_100",
+        "standard_lfp_system_lcos",
+        "forecast_value_random_forest_dam_24h",
+    ]
 
     monkeypatch.setattr(module, "engine_benchmark_asset", lambda market, weather: [1, 2])
     monkeypatch.setattr(module, "accuracy_benchmark_asset", lambda market: [1])
+    monkeypatch.setattr(module, "forecast_value_benchmark_asset", lambda market, forecast: [1])
     module.test_benchmark_assets()
     output = capsys.readouterr().out
     assert "Benchmark tests complete" in output

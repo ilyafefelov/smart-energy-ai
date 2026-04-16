@@ -16,6 +16,182 @@ import re
 
 logger = logging.getLogger(__name__)
 
+PXE_API_URLS = [
+    'https://www.pxe.pl/api/graph',
+    'https://api.pxe.pl/prices',
+]
+
+UKRSTAT_URLS = [
+    'https://www.ukrstat.gov.ua/operativ/operativ2018/energ/ser_cin_el_energ/ser_cin_el_energ_u/arh_sc_elen2018_u.htm',
+    'https://www.ukrstat.gov.ua/operativ/operativ2018/energ/ser_cin_el_energ/arh_sc_elen_u.htm',
+]
+
+SUPPORTED_DATE_FORMATS = ('%Y-%m-%d', '%d.%m.%Y', '%d/%m/%Y')
+
+
+def _extract_hour_from_text(text: str) -> Optional[int]:
+    """Parse an hourly index from either HH:00 or plain digit text."""
+    if ':' in text:
+        try:
+            hour = int(text.split(':')[0])
+        except ValueError:
+            hour = None
+    else:
+        hour = None
+
+    if hour is None:
+        digits = re.findall(r'\d+', text)
+        if digits:
+            hour = int(digits[0])
+
+    if hour is None or not (0 <= hour <= 23):
+        return None
+
+    return hour
+
+
+def _extract_price_from_text(
+    text: str,
+    *,
+    strip_tokens: tuple[str, ...] = (),
+    minimum: float = 0.1,
+    maximum: float = 500,
+) -> Optional[float]:
+    """Return the first realistic price found in a text fragment."""
+    normalized = text.replace(',', '.')
+    for token in strip_tokens:
+        normalized = normalized.replace(token, '')
+
+    for number_text in re.findall(r'\d+\.?\d*', normalized):
+        try:
+            price = float(number_text)
+        except ValueError:
+            continue
+
+        if minimum < price < maximum:
+            return price
+
+    return None
+
+
+def _build_hourly_price_frame(prices_list: list[dict[str, float]], source: str) -> Optional[pd.DataFrame]:
+    """Convert hourly price pairs into the common 24-row price frame."""
+    if len(prices_list) < 24:
+        return None
+
+    sorted_prices = sorted(prices_list, key=lambda x: x['hour'])[:24]
+    now = datetime.now()
+    return pd.DataFrame(
+        [
+            {
+                'timestamp': now.replace(hour=price_row['hour'], minute=0, second=0, microsecond=0),
+                'price_eur_mwh': price_row['price'],
+                'price_uah_mwh': price_row['price'] * 35,
+                'source': source,
+            }
+            for price_row in sorted_prices
+        ]
+    )
+
+
+def _extract_oree_price_row(cell_texts: list[str]) -> Optional[dict[str, float]]:
+    """Parse one OREE-style hour/price row."""
+    hour = _extract_hour_from_text(cell_texts[0])
+    if hour is None:
+        return None
+
+    for price_cell in cell_texts[1:]:
+        price = _extract_price_from_text(price_cell, strip_tokens=('EUR/MWh', '€'))
+        if price is not None:
+            return {'hour': hour, 'price': price}
+
+    return None
+
+
+def _extract_generic_price_row(texts: list[str]) -> Optional[dict[str, float]]:
+    """Parse one generic table row by looking for any hour-like and price-like values."""
+    hour = None
+    price = None
+
+    for text in texts:
+        if hour is None:
+            hour = _extract_hour_from_text(text)
+        if price is None:
+            price = _extract_price_from_text(text)
+        if hour is not None and price is not None:
+            return {'hour': hour, 'price': price}
+
+    return None
+
+
+def _parse_pxe_price_row(item: object) -> Optional[dict[str, float]]:
+    """Parse one PXE API item into a normalized hour/price pair."""
+    if not isinstance(item, dict):
+        return None
+
+    price_value = item.get('price') or item.get('value')
+    hour_value = item.get('hour') or item.get('hh')
+    if not price_value or hour_value is None:
+        return None
+
+    try:
+        price = float(price_value)
+        hour = int(hour_value) % 24
+    except (ValueError, TypeError):
+        return None
+
+    if not 0.1 < price < 500:
+        return None
+
+    return {'hour': hour, 'price': price}
+
+
+def _parse_supported_date(text: str) -> Optional[datetime]:
+    """Parse a supported ukrstat date format."""
+    for date_format in SUPPORTED_DATE_FORMATS:
+        try:
+            return datetime.strptime(text, date_format)
+        except ValueError:
+            continue
+    return None
+
+
+def _parse_ukrstat_record(texts: list[str]) -> Optional[dict[str, object]]:
+    """Parse one ukrstat row into a date/price record."""
+    if not texts:
+        return None
+
+    date_obj = _parse_supported_date(texts[0])
+    if date_obj is None:
+        return None
+
+    price_text = texts[1] if len(texts) > 1 else ''
+    price = _extract_price_from_text(price_text)
+    if price is None:
+        return None
+
+    return {
+        'date': date_obj,
+        'price_uah_mwh': price,
+        'source': 'ukrstat_historical',
+    }
+
+
+def _extract_first_complete_table(
+    soup: BeautifulSoup,
+    table_parser,
+    *,
+    minimum_rows: int = 24,
+) -> tuple[Optional[int], Optional[pd.DataFrame]]:
+    """Return the first table index and parsed frame meeting the row threshold."""
+    for table_idx, table in enumerate(soup.find_all('table')):
+        df = table_parser(table)
+        if df is None or len(df) < minimum_rows:
+            continue
+        return table_idx, df
+
+    return None, None
+
 class EnhancedPriceIngester:
     """Fetch prices from multiple sources"""
     
@@ -24,6 +200,35 @@ class EnhancedPriceIngester:
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
+
+    def _fetch_first_frame_from_urls(
+        self,
+        urls: list[str],
+        *,
+        timeout: int,
+        response_to_frame,
+        minimum_rows: int,
+        success_message: str,
+        error_label: str,
+    ) -> Optional[pd.DataFrame]:
+        """Try URLs in order until a parser returns a sufficiently complete frame."""
+        for url in urls:
+            try:
+                logger.debug(f'  Trying {url}...')
+                response = self.session.get(url, timeout=timeout)
+                if response.status_code != 200:
+                    continue
+
+                df = response_to_frame(response)
+                if df is None or len(df) < minimum_rows:
+                    continue
+
+                logger.info(success_message.format(row_count=len(df)))
+                return df
+            except Exception as e:
+                logger.debug(f'  {error_label} error: {str(e)[:50]}')
+
+        return None
     
     # ==================== OREE SCRAPING ====================
     
@@ -54,12 +259,8 @@ class EnhancedPriceIngester:
                 return df
             
             # Alternative: Look for any table with price-like data
-            tables = soup.find_all('table')
-            for table_idx, table in enumerate(tables):
-                df = self._extract_price_from_table(table)
-                if df is None or len(df) < 24:
-                    continue
-
+            table_idx, df = _extract_first_complete_table(soup, self._extract_price_from_table)
+            if df is not None:
                 logger.info(f"✅ Got prices from table {table_idx}")
                 return df
             
@@ -87,61 +288,16 @@ class EnhancedPriceIngester:
                     
                     if len(cells) < 2:
                         continue
-                    
-                    try:
-                        cell_texts = [c.get_text(strip=True) for c in cells[:3]]
-                        
-                        # Try to find hour
-                        hour_text = cell_texts[0]
-                        hour = None
-                        
-                        # Parse hour from "HH:00" or "HH" format
-                        if ':' in hour_text:
-                            hour = int(hour_text.split(':')[0])
-                        else:
-                            digits = re.findall(r'\d+', hour_text)
-                            if digits:
-                                hour = int(digits[0])
-                        
-                        if hour is None or not (0 <= hour <= 23):
-                            continue
-                        
-                        # Try to find price
-                        for price_cell in cell_texts[1:]:
-                            price_str = price_cell.replace('EUR/MWh', '').replace('€', '').replace(',', '.').strip()
-                            
-                            # Extract first number
-                            price_match = re.findall(r'\d+\.?\d*', price_str)
-                            if price_match:
-                                price = float(price_match[0])
-                                
-                                if 0.1 < price < 500:
-                                    prices_list.append({'hour': hour, 'price': price})
-                                    break
-                    
-                    except (ValueError, IndexError):
-                        continue
+
+                    cell_texts = [c.get_text(strip=True) for c in cells[:3]]
+                    price_row = _extract_oree_price_row(cell_texts)
+                    if price_row is not None:
+                        prices_list.append(price_row)
                 
                 if len(prices_list) >= 24:
                     break
-            
-            if len(prices_list) >= 24:
-                prices_list = sorted(prices_list, key=lambda x: x['hour'])[:24]
-                
-                now = datetime.now()
-                df = pd.DataFrame([
-                    {
-                        'timestamp': now.replace(hour=p['hour'], minute=0, second=0, microsecond=0),
-                        'price_eur_mwh': p['price'],
-                        'price_uah_mwh': p['price'] * 35,  # EUR to UAH
-                        'source': 'oree'
-                    }
-                    for p in prices_list
-                ])
-                
-                return df
-            
-            return None
+
+            return _build_hourly_price_frame(prices_list, 'oree')
         
         except Exception as e:
             logger.debug(f"OREE table extraction error: {e}")
@@ -159,52 +315,12 @@ class EnhancedPriceIngester:
                     continue
                 
                 texts = [c.get_text(strip=True) for c in cells[:3]]
-                
-                try:
-                    # Look for hour-like and price-like values
-                    hour = None
-                    price = None
-                    
-                    for text in texts:
-                        # Try to parse as hour (0-23)
-                        if hour is None:
-                            digits = re.findall(r'\d+', text)
-                            if digits:
-                                num = int(digits[0])
-                                if 0 <= num <= 23:
-                                    hour = num
-                        
-                        # Try to parse as price
-                        if price is None:
-                            price_match = re.findall(r'\d+\.?\d*', text)
-                            if price_match:
-                                p = float(price_match[0])
-                                if 0.1 < p < 500:
-                                    price = p
-                    
-                    if hour is not None and price is not None:
-                        prices_list.append({'hour': hour, 'price': price})
-                
-                except (ValueError, IndexError):
-                    continue
-            
-            if len(prices_list) >= 24:
-                prices_list = sorted(prices_list, key=lambda x: x['hour'])[:24]
-                
-                now = datetime.now()
-                df = pd.DataFrame([
-                    {
-                        'timestamp': now.replace(hour=p['hour'], minute=0, second=0, microsecond=0),
-                        'price_eur_mwh': p['price'],
-                        'price_uah_mwh': p['price'] * 35,
-                        'source': 'oree_table'
-                    }
-                    for p in prices_list
-                ])
-                
-                return df
-            
-            return None
+
+                price_row = _extract_generic_price_row(texts)
+                if price_row is not None:
+                    prices_list.append(price_row)
+
+            return _build_hourly_price_frame(prices_list, 'oree_table')
         
         except Exception as e:
             logger.debug(f"Generic table extraction error: {e}")
@@ -222,35 +338,14 @@ class EnhancedPriceIngester:
         """
         try:
             logger.info("🌐 Fetching PXE (Polish) prices...")
-            
-            # PXE API endpoints
-            urls = [
-                "https://www.pxe.pl/api/graph",  # General API
-                "https://api.pxe.pl/prices",      # Alternative
-            ]
-            
-            for url in urls:
-                try:
-                    logger.debug(f"  Trying {url}...")
-                    response = self.session.get(url, timeout=10)
-
-                    if response.status_code != 200:
-                        continue
-
-                    data = response.json()
-                    df = self._parse_pxe_data(data)
-
-                    if df is None or len(df) < 24:
-                        continue
-
-                    logger.info(f"✅ Got PXE prices: {len(df)} hours")
-                    return df
-                
-                except Exception as e:
-                    logger.debug(f"  PXE error: {str(e)[:50]}")
-                    continue
-            
-            return None
+            return self._fetch_first_frame_from_urls(
+                PXE_API_URLS,
+                timeout=10,
+                response_to_frame=lambda response: self._parse_pxe_data(response.json()),
+                minimum_rows=24,
+                success_message='✅ Got PXE prices: {row_count} hours',
+                error_label='PXE',
+            )
         
         except Exception as e:
             logger.error(f"❌ PXE fetch error: {e}")
@@ -270,37 +365,11 @@ class EnhancedPriceIngester:
             
             if isinstance(data, list):
                 for item in data:
-                    if isinstance(item, dict):
-                        price = item.get('price') or item.get('value')
-                        hour = item.get('hour') or item.get('hh')
-                        
-                        if price and hour is not None:
-                            try:
-                                price = float(price)
-                                hour = int(hour) % 24
-                                
-                                if 0.1 < price < 500:
-                                    prices_list.append({'hour': hour, 'price': price})
-                            except (ValueError, TypeError):
-                                continue
-            
-            if len(prices_list) >= 24:
-                prices_list = sorted(prices_list, key=lambda x: x['hour'])[:24]
-                
-                now = datetime.now()
-                df = pd.DataFrame([
-                    {
-                        'timestamp': now.replace(hour=p['hour'], minute=0, second=0, microsecond=0),
-                        'price_eur_mwh': p['price'],
-                        'price_uah_mwh': p['price'] * 35,
-                        'source': 'pxe'
-                    }
-                    for p in prices_list
-                ])
-                
-                return df
-            
-            return None
+                    price_row = _parse_pxe_price_row(item)
+                    if price_row is not None:
+                        prices_list.append(price_row)
+
+            return _build_hourly_price_frame(prices_list, 'pxe')
         
         except Exception as e:
             logger.debug(f"PXE parsing error: {e}")
@@ -320,34 +389,14 @@ class EnhancedPriceIngester:
         """
         try:
             logger.info("📊 Fetching historical prices from ukrstat...")
-            
-            # Base URLs for historical data
-            urls = [
-                "https://www.ukrstat.gov.ua/operativ/operativ2018/energ/ser_cin_el_energ/ser_cin_el_energ_u/arh_sc_elen2018_u.htm",
-                "https://www.ukrstat.gov.ua/operativ/operativ2018/energ/ser_cin_el_energ/arh_sc_elen_u.htm",
-            ]
-            
-            for url in urls:
-                try:
-                    logger.debug(f"  Trying {url}...")
-                    response = self.session.get(url, timeout=15)
-
-                    if response.status_code != 200:
-                        continue
-
-                    df = self._parse_ukrstat_prices(response.content)
-
-                    if df is None or len(df) == 0:
-                        continue
-
-                    logger.info(f"✅ Got {len(df)} historical price records")
-                    return df
-                
-                except Exception as e:
-                    logger.debug(f"  ukrstat error: {str(e)[:50]}")
-                    continue
-            
-            return None
+            return self._fetch_first_frame_from_urls(
+                UKRSTAT_URLS,
+                timeout=15,
+                response_to_frame=lambda response: self._parse_ukrstat_prices(response.content),
+                minimum_rows=1,
+                success_message='✅ Got {row_count} historical price records',
+                error_label='ukrstat',
+            )
         
         except Exception as e:
             logger.error(f"❌ Historical data fetch error: {e}")
@@ -368,40 +417,11 @@ class EnhancedPriceIngester:
                     cells = row.find_all(['td', 'th'])
                     if len(cells) < 2:
                         continue
-                    
-                    try:
-                        texts = [c.get_text(strip=True) for c in cells[:3]]
-                        
-                        # Look for date and price
-                        date_text = texts[0]
-                        price_text = texts[1] if len(texts) > 1 else ""
-                        
-                        # Try to parse date
-                        date_obj = None
-                        for fmt in ['%Y-%m-%d', '%d.%m.%Y', '%d/%m/%Y']:
-                            try:
-                                date_obj = datetime.strptime(date_text, fmt)
-                                break
-                            except ValueError:
-                                continue
-                        
-                        if date_obj is None:
-                            continue
-                        
-                        # Parse price
-                        price_match = re.findall(r'\d+\.?\d*', price_text)
-                        if price_match:
-                            price = float(price_match[0])
-                            
-                            if 0.1 < price < 500:
-                                records.append({
-                                    'date': date_obj,
-                                    'price_uah_mwh': price,
-                                    'source': 'ukrstat_historical'
-                                })
-                    
-                    except (ValueError, IndexError):
-                        continue
+
+                    texts = [c.get_text(strip=True) for c in cells[:3]]
+                    record = _parse_ukrstat_record(texts)
+                    if record is not None:
+                        records.append(record)
             
             if len(records) > 0:
                 df = pd.DataFrame(records)

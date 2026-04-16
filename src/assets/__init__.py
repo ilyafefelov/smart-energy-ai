@@ -9,6 +9,7 @@ from .core.optimization_schedule_milp import optimization_schedule_milp_asset
 from .benchmarks.performance import (
     engine_benchmark_asset,
     accuracy_benchmark_asset,
+    forecast_value_benchmark_asset,
     mlflow_tracking_asset,
 )
 
@@ -25,5 +26,6 @@ def assets_repository():
         optimization_schedule_milp_asset,
         engine_benchmark_asset,
         accuracy_benchmark_asset,
+        forecast_value_benchmark_asset,
         mlflow_tracking_asset,
     ]

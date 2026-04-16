@@ -25,6 +25,7 @@ from .assets.core.optimization_schedule_checks import optimization_schedule_cont
 from .assets.benchmarks.performance import (
     engine_benchmark_asset, 
     accuracy_benchmark_asset, 
+    forecast_value_benchmark_asset,
     mlflow_tracking_asset
 )
 from .assets.multi_tenant.asset_factory import create_all_assets, multi_client_analytics
@@ -74,6 +75,7 @@ benchmark_job = define_asset_job(
     selection=AssetSelection.assets(
         engine_benchmark_asset,
         accuracy_benchmark_asset,
+        forecast_value_benchmark_asset,
         mlflow_tracking_asset
     ),
     description="Performance and accuracy benchmarking of processing engines"
@@ -128,6 +130,7 @@ all_assets = [
     # Benchmark assets
     engine_benchmark_asset,
     accuracy_benchmark_asset,
+    forecast_value_benchmark_asset,
     mlflow_tracking_asset,
     # Multi-tenant analytics
     multi_client_analytics

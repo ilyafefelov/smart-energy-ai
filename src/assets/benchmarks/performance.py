@@ -8,18 +8,16 @@ Thesis Relevance: Demonstrates systematic performance evaluation of different
 data processing approaches in production energy systems.
 """
 
+import importlib.util
 import sys
-import os
 from pathlib import Path
 
-from dagster import asset, AssetIn, MetadataValue
+from dagster import asset, AssetIn
 import polars as pl
 from datetime import datetime, timedelta
 import logging
-from typing import Dict, List, Tuple, Any, TypedDict
 import time
 import tracemalloc
-import numpy as np
 import mlflow
 
 
@@ -65,17 +63,34 @@ def _ensure_src_in_path():
 logger = logging.getLogger(__name__)
 
 
-class BenchmarkMetrics(TypedDict):
-    engine_name: str
-    data_size: int
-    processing_time_seconds: float
-    memory_peak_mb: float
-    memory_current_mb: float
-    throughput_records_per_second: float
-    success: bool
-    error_message: str | None
-    output_rows: int
-    benchmark_timestamp: datetime
+try:
+    from src.data_pipeline.benchmark_helpers import (
+        BenchmarkMetrics,
+        add_performance_analysis as _add_performance_analysis,
+        build_forecast_value_scorecard as _build_forecast_value_scorecard,
+        create_economic_test_scenarios as _create_economic_test_scenarios,
+        log_accuracy_benchmark_run as _log_accuracy_benchmark_run,
+        log_engine_benchmark_run as _log_engine_benchmark_run,
+        log_forecast_benchmark_run as _log_forecast_benchmark_run,
+    )
+except ImportError:
+    _HELPER_MODULE_NAME = "smart_energy_ai_benchmark_helpers"
+    _HELPER_PATH = Path(__file__).resolve().parents[2] / "data_pipeline" / "benchmark_helpers.py"
+    _HELPER_SPEC = importlib.util.spec_from_file_location(_HELPER_MODULE_NAME, _HELPER_PATH)
+    if _HELPER_SPEC is None or _HELPER_SPEC.loader is None:
+        raise ImportError(f"Unable to load benchmark helpers from {_HELPER_PATH}")
+    _HELPER_MODULE = sys.modules.get(_HELPER_MODULE_NAME)
+    if _HELPER_MODULE is None:
+        _HELPER_MODULE = importlib.util.module_from_spec(_HELPER_SPEC)
+        sys.modules[_HELPER_MODULE_NAME] = _HELPER_MODULE
+        _HELPER_SPEC.loader.exec_module(_HELPER_MODULE)
+    BenchmarkMetrics = _HELPER_MODULE.BenchmarkMetrics
+    _add_performance_analysis = _HELPER_MODULE.add_performance_analysis
+    _build_forecast_value_scorecard = _HELPER_MODULE.build_forecast_value_scorecard
+    _create_economic_test_scenarios = _HELPER_MODULE.create_economic_test_scenarios
+    _log_accuracy_benchmark_run = _HELPER_MODULE.log_accuracy_benchmark_run
+    _log_engine_benchmark_run = _HELPER_MODULE.log_engine_benchmark_run
+    _log_forecast_benchmark_run = _HELPER_MODULE.log_forecast_benchmark_run
 
 
 @asset(
@@ -241,73 +256,6 @@ def _benchmark_engine(
     }
 
 
-def _add_performance_analysis(df: pl.DataFrame) -> pl.DataFrame:
-    """Add performance analysis and rankings to benchmark results."""
-
-    # Add performance rankings within each data size
-    df = df.with_columns(
-        [
-            # Processing time ranking (lower is better)
-            pl.col("processing_time_seconds")
-            .rank()
-            .over("data_size")
-            .alias("time_rank"),
-            # Throughput ranking (higher is better)
-            pl.col("throughput_records_per_second")
-            .rank(descending=True)
-            .over("data_size")
-            .alias("throughput_rank"),
-            # Memory efficiency ranking (lower is better)
-            pl.col("memory_peak_mb").rank().over("data_size").alias("memory_rank"),
-            # Success rate
-            pl.col("success").cast(pl.Int32).alias("success_int"),
-        ]
-    )
-
-    # Calculate performance ratios (compared to best performer)
-    df = df.with_columns(
-        [
-            # Time ratio vs fastest
-            (
-                pl.col("processing_time_seconds")
-                / pl.col("processing_time_seconds").min().over("data_size")
-            ).alias("time_ratio"),
-            # Throughput ratio vs fastest
-            (
-                pl.col("throughput_records_per_second")
-                / pl.col("throughput_records_per_second").max().over("data_size")
-            ).alias("throughput_ratio"),
-            # Memory ratio vs most efficient
-            (
-                pl.col("memory_peak_mb")
-                / pl.col("memory_peak_mb").min().over("data_size")
-            ).alias("memory_ratio"),
-        ]
-    )
-
-    # Add performance categories
-    df = df.with_columns(
-        [
-            pl.when(pl.col("time_ratio") <= 1.2)
-            .then(pl.lit("excellent"))
-            .when(pl.col("time_ratio") <= 2.0)
-            .then(pl.lit("good"))
-            .when(pl.col("time_ratio") <= 5.0)
-            .then(pl.lit("acceptable"))
-            .otherwise(pl.lit("poor"))
-            .alias("performance_category"),
-            pl.when(pl.col("memory_ratio") <= 1.5)
-            .then(pl.lit("efficient"))
-            .when(pl.col("memory_ratio") <= 3.0)
-            .then(pl.lit("moderate"))
-            .otherwise(pl.lit("memory_intensive"))
-            .alias("memory_category"),
-        ]
-    )
-
-    return df
-
-
 @asset(
     group_name="benchmarks",
     description="Accuracy benchmark for economic calculations",
@@ -422,60 +370,32 @@ def accuracy_benchmark_asset(market_data: pl.DataFrame) -> pl.DataFrame:
     return accuracy_df
 
 
-def _create_economic_test_scenarios() -> List[Dict]:
-    """Create test scenarios with known ground truth for validation."""
+@asset(
+    group_name="benchmarks",
+    description="Forecast benchmark scorecard comparing point error and value capture",
+    ins={
+        "market_data": AssetIn("market_data_asset"),
+        "price_forecast": AssetIn("price_forecast_asset"),
+    },
+    metadata={
+        "benchmark_type": "forecast_value",
+        "focus": "dam_price_forecast",
+        "metrics": [
+            "benchmark_rmse",
+            "benchmark_mae",
+            "benchmark_value_capture_ratio",
+        ],
+    },
+)
+def forecast_value_benchmark_asset(
+    market_data: pl.DataFrame, price_forecast: pl.DataFrame
+) -> pl.DataFrame:
+    """Build a forecast scorecard from price forecast outputs and realized market prices."""
 
-    from physics.economics import BatteryTechnology, OperationProfile
-
-    scenarios = [
-        {
-            "name": "standard_lfp_system",
-            "expected_lcos": 0.080,
-            "expected_arbitrage": 50.0,
-            "technology": BatteryTechnology.LFP,
-            "capacity_kwh": 100.0,
-            "operation_profile": OperationProfile(
-                daily_cycles=1.0,
-                seasonal_variation=0.2,
-                capacity_factor=0.85,
-                grid_services_revenue=0.0,
-                energy_arbitrage_spread=40.0,
-            ),
-            "price_spreads": [30.0, 40.0, 50.0, 35.0, 45.0],
-        },
-        {
-            "name": "premium_nmc_system",
-            "expected_lcos": 0.120,
-            "expected_arbitrage": 75.0,
-            "technology": BatteryTechnology.NMC,
-            "capacity_kwh": 100.0,
-            "operation_profile": OperationProfile(
-                daily_cycles=1.5,
-                seasonal_variation=0.25,
-                capacity_factor=0.80,
-                grid_services_revenue=0.0,
-                energy_arbitrage_spread=60.0,
-            ),
-            "price_spreads": [50.0, 70.0, 90.0, 60.0, 80.0],
-        },
-        {
-            "name": "large_scale_system",
-            "expected_lcos": 0.060,
-            "expected_arbitrage": 200.0,
-            "technology": BatteryTechnology.LFP,
-            "capacity_kwh": 500.0,
-            "operation_profile": OperationProfile(
-                daily_cycles=2.0,
-                seasonal_variation=0.15,
-                capacity_factor=0.90,
-                grid_services_revenue=0.0,
-                energy_arbitrage_spread=50.0,
-            ),
-            "price_spreads": [40.0, 55.0, 65.0, 45.0, 60.0],
-        },
-    ]
-
-    return scenarios
+    logger.info("Building forecast benchmark scorecard...")
+    scorecard = _build_forecast_value_scorecard(market_data, price_forecast)
+    logger.info("Forecast benchmark complete: %s scorecard rows", len(scorecard))
+    return scorecard
 
 
 @asset(
@@ -484,10 +404,13 @@ def _create_economic_test_scenarios() -> List[Dict]:
     ins={
         "engine_benchmark": AssetIn("engine_benchmark_asset"),
         "accuracy_benchmark": AssetIn("accuracy_benchmark_asset"),
+        "forecast_value_benchmark": AssetIn("forecast_value_benchmark_asset"),
     },
 )
 def mlflow_tracking_asset(
-    engine_benchmark: pl.DataFrame, accuracy_benchmark: pl.DataFrame
+    engine_benchmark: pl.DataFrame,
+    accuracy_benchmark: pl.DataFrame,
+    forecast_value_benchmark: pl.DataFrame,
 ) -> pl.DataFrame:
     """
     Log benchmark results to MLflow for experiment tracking and comparison.
@@ -499,63 +422,15 @@ def mlflow_tracking_asset(
     mlflow_logs = []
 
     for row in engine_benchmark.to_dicts():
-        with mlflow.start_run(run_name=f"{row['engine_name']}_size_{row['data_size']}"):
-            mlflow.log_param("engine_name", row["engine_name"])
-            mlflow.log_param("data_size", row["data_size"])
-
-            mlflow.log_metric("processing_time_seconds", row["processing_time_seconds"])
-            mlflow.log_metric("memory_peak_mb", row["memory_peak_mb"])
-            mlflow.log_metric(
-                "throughput_records_per_second", row["throughput_records_per_second"]
-            )
-
-            mlflow.set_tag("benchmark_type", "engine_performance")
-            mlflow.set_tag("success", str(row["success"]))
-
-        log_entry = {
-            "experiment_name": "engine_benchmarks",
-            "run_name": f"{row['engine_name']}_size_{row['data_size']}",
-            "engine_name": row["engine_name"],
-            "data_size": row["data_size"],
-            "metric_processing_time": row["processing_time_seconds"],
-            "metric_memory_peak": row["memory_peak_mb"],
-            "metric_throughput": row["throughput_records_per_second"],
-            "param_success": row["success"],
-            "tag_benchmark_type": "engine_performance",
-            "timestamp": row["benchmark_timestamp"],
-        }
-        mlflow_logs.append(log_entry)
+        mlflow_logs.append(_log_engine_benchmark_run(row, tracking_module=mlflow))
 
     for row in accuracy_benchmark.to_dicts():
-        if row["success"]:
-            with mlflow.start_run(
-                run_name=f"{row['scenario_name']}_{row['metric_type']}"
-            ):
-                mlflow.log_param("scenario_name", row["scenario_name"])
-                mlflow.log_param("metric_type", row["metric_type"])
-                mlflow.log_param("expected_value", row["expected_value"])
-
-                mlflow.log_metric("absolute_error", row["absolute_error"])
-                mlflow.log_metric(
-                    "relative_error_percent", row["relative_error_percent"]
-                )
-
-                mlflow.set_tag("benchmark_type", "accuracy_validation")
-                mlflow.set_tag("success", str(row["success"]))
-
-            log_entry = {
-                "experiment_name": "accuracy_benchmarks",
-                "run_name": f"{row['scenario_name']}_{row['metric_type']}",
-                "scenario_name": row["scenario_name"],
-                "metric_type": row["metric_type"],
-                "metric_relative_error": row["relative_error_percent"],
-                "metric_absolute_error": row["absolute_error"],
-                "param_expected_value": row["expected_value"],
-                "param_calculated_value": row["calculated_value"],
-                "tag_benchmark_type": "accuracy_validation",
-                "timestamp": row["benchmark_timestamp"],
-            }
+        log_entry = _log_accuracy_benchmark_run(row, tracking_module=mlflow)
+        if log_entry is not None:
             mlflow_logs.append(log_entry)
+
+    for row in forecast_value_benchmark.to_dicts():
+        mlflow_logs.append(_log_forecast_benchmark_run(row, tracking_module=mlflow))
 
     tracking_df = pl.DataFrame(mlflow_logs)
 
@@ -569,22 +444,43 @@ def test_benchmark_assets():
     print("🧪 Testing Benchmark Assets...")
 
     # Create mock data
+    mock_timestamps = [datetime.now() + timedelta(hours=i) for i in range(24)]
+    mock_prices = [50 + i for i in range(24)]
     mock_market = pl.DataFrame(
         {
-            "timestamp": [datetime.now() + timedelta(hours=i) for i in range(24)],
-            "price_eur_mwh": [50 + i for i in range(24)],
+            "timestamp": mock_timestamps,
+            "price_eur_mwh": mock_prices,
             "volume_mwh": [1000 + i * 10 for i in range(24)],
         }
     )
 
     mock_weather = pl.DataFrame(
         {
-            "timestamp": [datetime.now() + timedelta(hours=i) for i in range(24)],
+            "timestamp": mock_timestamps,
             "temperature": [20 + i * 0.1 for i in range(24)],
             "solar_radiation": [
                 i * 50 if 6 <= (i % 24) <= 18 else 0 for i in range(24)
             ],
         }
+    )
+    mock_forecast = pl.DataFrame(
+        [
+            {
+                "forecast_timestamp": timestamp,
+                "predicted_price_eur_mwh": price,
+                "model_name": "demo_forecast",
+                "model_family": "demo_family",
+                "forecast_horizon_hours": 24,
+                "training_rows": 24,
+                "evaluation_folds": 1,
+                "eval_rmse": 0.0,
+                "eval_mae": 0.0,
+                "eval_value_capture_ratio": 1.0,
+                "eval_realized_spread_eur_mwh": 23.0,
+                "eval_optimal_spread_eur_mwh": 23.0,
+            }
+            for timestamp, price in zip(mock_timestamps, mock_prices)
+        ]
     )
 
     # Test engine benchmark
@@ -600,6 +496,13 @@ def test_benchmark_assets():
         print(f"✅ Accuracy Benchmark: {len(accuracy_result)} test results")
     except Exception as e:
         print(f"❌ Accuracy Benchmark: {e}")
+
+    # Test forecast benchmark
+    try:
+        forecast_result = forecast_value_benchmark_asset(mock_market, mock_forecast)
+        print(f"✅ Forecast Benchmark: {len(forecast_result)} test results")
+    except Exception as e:
+        print(f"❌ Forecast Benchmark: {e}")
 
     print("🎯 Benchmark tests complete!")
 

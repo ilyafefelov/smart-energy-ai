@@ -6,17 +6,21 @@ Builds a day-ahead (24h) baseline forecasting model from historical market data.
 
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 
-import numpy as np
 import polars as pl
 from dagster import AssetIn, asset
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, mean_squared_error
+from src.data_pipeline.forecast_model_registry import (
+    DEFAULT_FORECAST_MODEL_NAME,
+    PRICE_FORECAST_MODEL_ENV,
+    get_forecast_model_spec,
+)
 from src.data_pipeline.price_forecast_features import (
     _build_feature_frame,
     _build_persistence_forecast,
     _compute_eval_metrics,
+    _run_walk_forward_evaluation,
     _split_train_eval,
 )
 
@@ -27,7 +31,8 @@ from src.data_pipeline.price_forecast_features import (
     ins={"market_data": AssetIn("market_data_asset")},
     metadata={
         "forecast_horizon_hours": 24,
-        "model_family": "random_forest_regressor",
+        "default_model_name": DEFAULT_FORECAST_MODEL_NAME,
+        "model_registry_enabled": True,
         "target_market": "DAM Ukraine",
     },
 )
@@ -50,6 +55,9 @@ def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
     if len(labeled) < 48:
         return _build_persistence_forecast(market_data, len(labeled))
 
+    resolved_model_name = os.getenv(PRICE_FORECAST_MODEL_ENV, DEFAULT_FORECAST_MODEL_NAME)
+    model_spec = get_forecast_model_spec(resolved_model_name)
+
     train_df, eval_df = _split_train_eval(labeled)
     feature_cols = [
         "hour",
@@ -66,19 +74,33 @@ def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
     x_train = train_df.select(feature_cols).to_numpy()
     y_train = train_df.select("target_price_t_plus_24h").to_numpy().reshape(-1)
 
-    model = RandomForestRegressor(
-        n_estimators=300,
-        max_depth=14,
-        min_samples_leaf=2,
-        random_state=42,
-        n_jobs=-1,
-    )
+    model = model_spec.build_estimator()
     model.fit(x_train, y_train)
 
     eval_rmse = 0.0
     eval_mae = 0.0
     residual_std = 0.0
-    if len(eval_df) > 0:
+    eval_value_capture_ratio = 0.0
+    eval_realized_spread_eur_mwh = 0.0
+    eval_optimal_spread_eur_mwh = 0.0
+    evaluation_folds = 0
+    walk_forward_metrics = _run_walk_forward_evaluation(
+        labeled,
+        feature_cols,
+        model_spec.build_estimator,
+        min_train_size=48,
+        eval_size=24,
+        step_size=24,
+    )
+    if int(walk_forward_metrics["fold_count"]) > 0:
+        eval_rmse = walk_forward_metrics["eval_rmse"]
+        eval_mae = walk_forward_metrics["eval_mae"]
+        residual_std = walk_forward_metrics["residual_std"]
+        eval_value_capture_ratio = walk_forward_metrics["value_capture_ratio"]
+        eval_realized_spread_eur_mwh = walk_forward_metrics["realized_spread_eur_mwh"]
+        eval_optimal_spread_eur_mwh = walk_forward_metrics["optimal_spread_eur_mwh"]
+        evaluation_folds = int(walk_forward_metrics["fold_count"])
+    elif len(eval_df) > 0:
         eval_rmse, eval_mae, residual_std = _compute_eval_metrics(model, eval_df, feature_cols)
 
     # For 24h-ahead horizon, use the latest 24 feature rows as inference inputs.
@@ -93,16 +115,22 @@ def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
         ]
     ).with_columns(
         [
-            pl.Series("predicted_price_eur_mwh", predictions.tolist()).clip(0.0, 1000.0),
+            pl.Series("predicted_price_eur_mwh", list(predictions)).clip(0.0, 1000.0),
         ]
     ).with_columns(
         [
             (pl.col("predicted_price_eur_mwh") - spread).clip(0.0, 1000.0).alias("lower_bound_eur_mwh"),
             (pl.col("predicted_price_eur_mwh") + spread).clip(0.0, 1000.0).alias("upper_bound_eur_mwh"),
-            pl.lit("random_forest_dam_24h").alias("model_name"),
+            pl.lit(model_spec.model_name).alias("model_name"),
+            pl.lit(model_spec.model_family).alias("model_family"),
             pl.lit(datetime.now(timezone.utc)).alias("trained_at_utc"),
+            pl.lit(model_spec.forecast_horizon_hours).alias("forecast_horizon_hours"),
             pl.lit(eval_rmse).alias("eval_rmse"),
             pl.lit(eval_mae).alias("eval_mae"),
+            pl.lit(eval_value_capture_ratio).alias("eval_value_capture_ratio"),
+            pl.lit(eval_realized_spread_eur_mwh).alias("eval_realized_spread_eur_mwh"),
+            pl.lit(eval_optimal_spread_eur_mwh).alias("eval_optimal_spread_eur_mwh"),
+            pl.lit(evaluation_folds).alias("evaluation_folds"),
             pl.lit(len(train_df)).alias("training_rows"),
         ]
     )

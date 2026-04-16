@@ -170,6 +170,7 @@ def test_trigger_materializes_assets_and_handles_failure(monkeypatch, capsys) ->
     performance_mod = types.ModuleType("src.assets.benchmarks.performance")
     performance_mod.accuracy_benchmark_asset = object()
     performance_mod.engine_benchmark_asset = object()
+    performance_mod.forecast_value_benchmark_asset = object()
     performance_mod.mlflow_tracking_asset = object()
     assets_benchmarks_pkg.performance = performance_mod
 

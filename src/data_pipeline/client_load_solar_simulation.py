@@ -3,9 +3,58 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict
+from typing import Callable, Dict
 
 import numpy as np
+
+
+def _calculate_commercial_load_factor(hour: int, day_of_week: int) -> float:
+    if day_of_week < 5:
+        if 9 <= hour <= 21:
+            return 0.7 + 0.3 * np.sin((hour - 9) * np.pi / 12)
+        return 0.3
+
+    if 10 <= hour <= 22:
+        return 0.9 + 0.1 * np.sin((hour - 10) * np.pi / 12)
+    return 0.3
+
+
+def _calculate_office_load_factor(hour: int, day_of_week: int) -> float:
+    if day_of_week >= 5:
+        return 0.3
+    if 8 <= hour <= 18:
+        return 0.8
+    if 6 <= hour <= 8 or 18 <= hour <= 20:
+        return 0.4
+    return 0.2
+
+
+def _calculate_industrial_load_factor(hour: int, day_of_week: int) -> float:
+    if day_of_week >= 5:
+        return 0.5
+    if 6 <= hour <= 22:
+        return 0.85 + 0.1 * np.random.normal(0, 0.1)
+    return 0.4
+
+
+def _calculate_residential_load_factor(hour: int, _day_of_week: int) -> float:
+    if 7 <= hour <= 9 or 17 <= hour <= 22:
+        return 0.8
+    if hour >= 22 or hour <= 6:
+        return 0.3
+    return 0.5
+
+
+LOAD_FACTOR_CALCULATORS: dict[str, Callable[[int, int], float]] = {
+    "commercial": _calculate_commercial_load_factor,
+    "office": _calculate_office_load_factor,
+    "industrial": _calculate_industrial_load_factor,
+}
+
+
+def _calculate_profile_load_factor(load_profile: str, hour: int, day_of_week: int) -> float:
+    calculator = LOAD_FACTOR_CALCULATORS.get(load_profile, _calculate_residential_load_factor)
+    return calculator(hour, day_of_week)
 
 
 def _calculate_solar_generation(config: Dict, solar_radiation: float, cloudcover: float) -> float:
@@ -34,42 +83,7 @@ def _calculate_load_consumption(config: Dict, timestamp: datetime) -> float:
     hour = timestamp.hour
     day_of_week = timestamp.weekday()
 
-    if load_profile == "commercial":
-        if day_of_week < 5:
-            if 9 <= hour <= 21:
-                load_factor = 0.7 + 0.3 * np.sin((hour - 9) * np.pi / 12)
-            else:
-                load_factor = 0.3
-        else:
-            if 10 <= hour <= 22:
-                load_factor = 0.9 + 0.1 * np.sin((hour - 10) * np.pi / 12)
-            else:
-                load_factor = 0.3
-    elif load_profile == "office":
-        if day_of_week < 5:
-            if 8 <= hour <= 18:
-                load_factor = 0.8
-            elif 6 <= hour <= 8 or 18 <= hour <= 20:
-                load_factor = 0.4
-            else:
-                load_factor = 0.2
-        else:
-            load_factor = 0.3
-    elif load_profile == "industrial":
-        if day_of_week < 5:
-            if 6 <= hour <= 22:
-                load_factor = 0.85 + 0.1 * np.random.normal(0, 0.1)
-            else:
-                load_factor = 0.4
-        else:
-            load_factor = 0.5
-    else:
-        if 7 <= hour <= 9 or 17 <= hour <= 22:
-            load_factor = 0.8
-        elif 22 <= hour or hour <= 6:
-            load_factor = 0.3
-        else:
-            load_factor = 0.5
+    load_factor = _calculate_profile_load_factor(load_profile, hour, day_of_week)
 
     load_variation = base_load + (peak_load - base_load) * max(0.0, min(1.0, load_factor))
     load_actual = load_variation * (1 + np.random.normal(0, 0.05))

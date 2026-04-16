@@ -69,6 +69,21 @@ Canonical local endpoints:
 - Market and weather flows have synthetic fallbacks so local work can stay runnable when external services are unavailable.
 - AWS Free Tier deployment is planned and documented, but it is a later stage after local/runtime hardening.
 
+## Stage 2 Literature Workflow
+
+For thesis, diploma, and literature-audit work tied to this repository:
+
+- `docs/Stage 2/` is the canonical workspace for research notes, bibliography assets, and MVP literature planning.
+- Keep `docs/Stage 2/diploma_bibliography.bib` as the machine-friendly source of truth for citation tooling.
+- Keep `docs/Stage 2/diploma_literature_tracker.md` as the operational companion for ranking, read order, MVP mapping, and source workflow status.
+- Update both files in the same task when adding or curating sources; do not let the `.bib` file drift away from the tracker.
+- Use the tracker status fields `Read`, `Cited`, `Discussed`, and `Implemented` to reflect actual progress instead of keeping that state only in chat.
+- Keep the main bibliography academically strict: peer-reviewed academic sources belong in the main bibliography flow.
+- Treat preprints and weak-quality or unclear journals as provisional tracker appendix items until replaced by stronger peer-reviewed sources; do not promote them into the core academic list just because a research note cites them.
+- Move legal, regulatory, vendor, tooling, market-news, and other practical material into the tracker appendix/practical sections instead of mixing them into the core academic list.
+- If a PDF or report cannot be reliably parsed, record it in the tracker as a known gap rather than treating it as verified source evidence.
+- If Stage 2 folder contents change materially, refresh `docs/Stage 2/README.md` so the research artifacts stay discoverable.
+
 ## Validation Expectations
 
 - Prefer focused tests for the files you touch.
@@ -109,6 +124,8 @@ When the user explicitly asks for broad refactor, DRY/KISS cleanup, or codebase 
 
 - `README.md` - high-level system and deployment overview
 - `QUICK_START.md` - current local development flow
+- `docs/Stage 2/diploma_bibliography.bib` - canonical BibTeX bibliography for diploma literature work
+- `docs/Stage 2/diploma_literature_tracker.md` - ranked literature tracker with workflow status and MVP action mapping
 - `docs/technical/TEST_PIPELINE_GUIDE.md` - validation notes
 - `docs/API_DOCUMENTATION_IMPORT_EXPORT.md` - import/export API docs
 - `docs/deployment/EC2_DAGSTER_T3_MICRO_RUNBOOK.md` - EC2 Dagster service runbook

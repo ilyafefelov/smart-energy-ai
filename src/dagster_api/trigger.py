@@ -49,6 +49,7 @@ class DagsterTrigger:
             'optimization_schedule_milp_asset': optimization_schedule_milp.optimization_schedule_milp_asset,
             'accuracy_benchmark_asset': performance.accuracy_benchmark_asset,
             'engine_benchmark_asset': performance.engine_benchmark_asset,
+            'forecast_value_benchmark_asset': performance.forecast_value_benchmark_asset,
             'mlflow_tracking_asset': performance.mlflow_tracking_asset,
         }
         
@@ -110,6 +111,7 @@ class DagsterTrigger:
             'optimization_schedule_milp_asset',
             'accuracy_benchmark_asset',
             'engine_benchmark_asset',
+            'forecast_value_benchmark_asset',
             'mlflow_tracking_asset'
         ]
         

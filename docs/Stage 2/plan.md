@@ -4,7 +4,7 @@ Build Stage 2 as a deterministic, compliance-aware arbitrage MVP on top of the a
 
 ## Execution Status Snapshot
 
-This document remains the human-readable Stage 2 narrative plan. The active execution tracker for the current workstream now lives in [.copilot-tracking/plans/20260329-stage2-diploma-mvp-plan.instructions.md](../../.copilot-tracking/plans/20260329-stage2-diploma-mvp-plan.instructions.md), with supporting [details](../../.copilot-tracking/details/20260329-stage2-diploma-mvp-details.md) and [changes](../../.copilot-tracking/changes/20260329-stage2-diploma-mvp-changes.md). The March 7 learned-policy migration tracker remains precursor work, not the umbrella tracker for this Stage 2 MVP slice.
+This document remains the human-readable Stage 2 narrative plan and historical snapshot. The active code-facing roadmap for the current workspace now lives in [codebase_implementation_roadmap.md](codebase_implementation_roadmap.md), which maps the literature findings onto the actual forecast, optimization, bridge, and dashboard surfaces present in this repo. The older `.copilot-tracking` references mentioned here are not present in the current local workspace and should not be treated as the active planning surface for this slice.
 
 - Completed: steps 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, and 13
 - In progress: none

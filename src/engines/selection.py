@@ -38,6 +38,49 @@ def _normalize_mode(value: Optional[str]) -> str:
     return "auto"
 
 
+def _select_requested_nvtabular(cfg: Dict[str, Any], strict: bool) -> Tuple[Any, str, str]:
+    engine = create_nvtabular_engine(cfg)
+    if engine is not None:
+        return engine, "nvtabular", ""
+    if strict:
+        raise RuntimeError("NVTabular engine was requested, but GPU dependencies are unavailable")
+    return None, "", "nvtabular unavailable; falling back to polars"
+
+
+def _select_requested_polars(cfg: Dict[str, Any], polars_available: bool) -> Tuple[Any, str, str]:
+    if not polars_available:
+        raise RuntimeError("Polars engine was requested, but polars is not installed")
+    return create_polars_engine(cfg), "polars", ""
+
+
+def _select_auto_engine(
+    cfg: Dict[str, Any],
+    polars_available: bool,
+    nvtabular_available: bool,
+) -> Tuple[Any, str, str]:
+    fallback_reason = ""
+    if nvtabular_available:
+        engine = create_nvtabular_engine(cfg)
+        if engine is not None:
+            return engine, "nvtabular", fallback_reason
+        fallback_reason = "gpu detected but NVTabular initialization failed; falling back to polars"
+
+    if not polars_available:
+        raise RuntimeError("No supported feature engine available (NVTabular and Polars unavailable)")
+
+    return create_polars_engine(cfg), "polars", fallback_reason
+
+
+def _select_polars_fallback(cfg: Dict[str, Any], polars_available: bool, fallback_reason: str) -> Tuple[Any, str, str]:
+    if not polars_available:
+        raise RuntimeError("Engine selection failed and polars fallback is unavailable")
+
+    if not fallback_reason:
+        fallback_reason = "invalid or unavailable requested engine; defaulted to polars"
+
+    return create_polars_engine(cfg), "polars", fallback_reason
+
+
 def select_feature_engine(config: Optional[Dict[str, Any]] = None) -> Tuple[Any, Dict[str, Any]]:
     """
     Select and instantiate the feature engine.
@@ -52,47 +95,15 @@ def select_feature_engine(config: Optional[Dict[str, Any]] = None) -> Tuple[Any,
     polars_available = is_polars_available()
     nvtabular_available = is_nvtabular_available()
 
-    selected_name = ""
-    fallback_reason = ""
-    engine = None
-
     if requested == "nvtabular":
-        engine = create_nvtabular_engine(cfg)
-        if engine is not None:
-            selected_name = "nvtabular"
-        elif strict:
-            raise RuntimeError("NVTabular engine was requested, but GPU dependencies are unavailable")
-        else:
-            fallback_reason = "nvtabular unavailable; falling back to polars"
-
-    if engine is None and requested == "polars":
-        if not polars_available:
-            raise RuntimeError("Polars engine was requested, but polars is not installed")
-        engine = create_polars_engine(cfg)
-        selected_name = "polars"
-
-    if engine is None and requested == "auto":
-        if nvtabular_available:
-            engine = create_nvtabular_engine(cfg)
-            if engine is not None:
-                selected_name = "nvtabular"
-            else:
-                fallback_reason = "gpu detected but NVTabular initialization failed; falling back to polars"
-
-        if engine is None:
-            if not polars_available:
-                raise RuntimeError("No supported feature engine available (NVTabular and Polars unavailable)")
-            engine = create_polars_engine(cfg)
-            selected_name = "polars"
+        engine, selected_name, fallback_reason = _select_requested_nvtabular(cfg, strict)
+    elif requested == "polars":
+        engine, selected_name, fallback_reason = _select_requested_polars(cfg, polars_available)
+    else:
+        engine, selected_name, fallback_reason = _select_auto_engine(cfg, polars_available, nvtabular_available)
 
     if engine is None:
-        # Safety net for invalid input combinations.
-        if not polars_available:
-            raise RuntimeError("Engine selection failed and polars fallback is unavailable")
-        engine = create_polars_engine(cfg)
-        selected_name = "polars"
-        if not fallback_reason:
-            fallback_reason = "invalid or unavailable requested engine; defaulted to polars"
+        engine, selected_name, fallback_reason = _select_polars_fallback(cfg, polars_available, fallback_reason)
 
     metadata = {
         "requested_engine": requested,

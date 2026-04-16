@@ -10,7 +10,7 @@ import argparse
 import os
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Callable, Dict, Any, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -740,10 +740,7 @@ def get_renewable_forecast() -> Dict[str, Any]:
         }
 
 
-def main():
-    """Main entry point for CLI interface."""
-    setup_logging()
-    
+def _build_cli_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='ML Integration API Bridge')
     parser.add_argument('--action', 
                        choices=['get_recommendation', 'get_forecast', 'get_status',
@@ -755,42 +752,85 @@ def main():
                        help='Number of hours for forecast (default: 24)')
     parser.add_argument('--format', choices=['json', 'pretty'], default='json',
                        help='Output format')
-    parser.add_argument('--strategy', type=str, 
+    parser.add_argument('--strategy', type=str,
                        help='Optimization strategy (for set_optimization_strategy)')
     parser.add_argument('--custom_weights', type=str,
                        help='Custom optimization weights as JSON string')
     parser.add_argument('--enhanced', type=bool, default=False,
                        help='Use enhanced recommendation with optimization and physics')
-    
-    args = parser.parse_args()
-    
-    # Execute the requested action
-    if args.action == 'get_recommendation':
-        result = get_recommendation(enhanced=args.enhanced)
-    elif args.action == 'get_forecast':
-        result = get_forecast(args.hours)
-    elif args.action == 'get_status':
-        result = get_pipeline_status()
-    elif args.action == 'set_optimization_strategy':
-        if not args.strategy:
-            result = {'success': False, 'error': 'Strategy is required for set_optimization_strategy'}
-        else:
-            custom_weights = None
-            if args.custom_weights:
-                try:
-                    custom_weights = json.loads(args.custom_weights)
-                except json.JSONDecodeError:
-                    result = {'success': False, 'error': 'Invalid JSON for custom_weights'}
-                    return result
-            result = set_optimization_strategy(args.strategy, custom_weights)
-    elif args.action == 'get_optimization_strategy':
-        result = get_optimization_strategy()
-    elif args.action == 'get_battery_physics':
-        result = get_battery_physics()
-    elif args.action == 'get_renewable_forecast':
-        result = get_renewable_forecast()
-    else:
-        result = {'success': False, 'error': f'Unknown action: {args.action}'}
+    return parser
+
+
+def _parse_custom_weights(raw_custom_weights: Optional[str]) -> tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    if not raw_custom_weights:
+        return None, None
+
+    try:
+        parsed_weights = json.loads(raw_custom_weights)
+    except json.JSONDecodeError:
+        return None, {'success': False, 'error': 'Invalid JSON for custom_weights'}
+
+    return parsed_weights, None
+
+
+def _run_get_recommendation_action(args: argparse.Namespace) -> Dict[str, Any]:
+    return get_recommendation(enhanced=args.enhanced)
+
+
+def _run_get_forecast_action(args: argparse.Namespace) -> Dict[str, Any]:
+    return get_forecast(args.hours)
+
+
+def _run_get_status_action(_args: argparse.Namespace) -> Dict[str, Any]:
+    return get_pipeline_status()
+
+
+def _run_set_optimization_strategy_action(args: argparse.Namespace) -> Dict[str, Any]:
+    if not args.strategy:
+        return {'success': False, 'error': 'Strategy is required for set_optimization_strategy'}
+
+    custom_weights, error_result = _parse_custom_weights(args.custom_weights)
+    if error_result is not None:
+        return error_result
+
+    return set_optimization_strategy(args.strategy, custom_weights)
+
+
+def _run_get_optimization_strategy_action(_args: argparse.Namespace) -> Dict[str, Any]:
+    return get_optimization_strategy()
+
+
+def _run_get_battery_physics_action(_args: argparse.Namespace) -> Dict[str, Any]:
+    return get_battery_physics()
+
+
+def _run_get_renewable_forecast_action(_args: argparse.Namespace) -> Dict[str, Any]:
+    return get_renewable_forecast()
+
+
+CLI_ACTION_HANDLERS: dict[str, Callable[[argparse.Namespace], Dict[str, Any]]] = {
+    'get_recommendation': _run_get_recommendation_action,
+    'get_forecast': _run_get_forecast_action,
+    'get_status': _run_get_status_action,
+    'set_optimization_strategy': _run_set_optimization_strategy_action,
+    'get_optimization_strategy': _run_get_optimization_strategy_action,
+    'get_battery_physics': _run_get_battery_physics_action,
+    'get_renewable_forecast': _run_get_renewable_forecast_action,
+}
+
+
+def _run_cli_action(args: argparse.Namespace) -> Dict[str, Any]:
+    handler = CLI_ACTION_HANDLERS.get(args.action)
+    if handler is None:
+        return {'success': False, 'error': f'Unknown action: {args.action}'}
+    return handler(args)
+
+
+def main():
+    """Main entry point for CLI interface."""
+    setup_logging()
+    args = _build_cli_parser().parse_args()
+    result = _run_cli_action(args)
     
     # Output result
     if args.format == 'pretty':

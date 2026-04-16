@@ -5,13 +5,107 @@ Scrapes actual prices from OREE Ukraine
 
 import requests
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from bs4 import BeautifulSoup
 import logging
 import re
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+OREE_PRICES_URL = "https://www.oree.com.ua/index.php/pricectr?lang=english"
+UAH_PER_EUR = 35.0
+
+
+def _parse_hour(text: str) -> Optional[int]:
+    """Parse an hour value from OREE table text."""
+    if not text:
+        return None
+
+    if ":" in text:
+        try:
+            hour = int(text.split(":", 1)[0])
+        except ValueError:
+            hour = None
+        if hour is not None and 0 <= hour <= 23:
+            return hour
+
+    for digit in re.findall(r"\d+", text):
+        try:
+            hour = int(digit)
+        except ValueError:
+            continue
+        if 0 <= hour <= 23:
+            return hour
+
+    return None
+
+
+def _parse_realistic_price(cell_texts: list[str]) -> Optional[float]:
+    """Return the first realistic EUR/MWh price found in table cells."""
+    for cell_text in cell_texts:
+        if not cell_text:
+            continue
+
+        clean = (
+            cell_text.replace("EUR/MWh", "")
+            .replace("€", "")
+            .replace("UAH", "")
+            .replace(",", ".")
+        )
+
+        for number_text in re.findall(r"\d+\.?\d*", clean):
+            try:
+                price = float(number_text)
+            except ValueError:
+                continue
+
+            if 0.1 < price < 500:
+                return price
+
+    return None
+
+
+def _extract_table_prices(table) -> list[dict[str, float]]:
+    """Parse hour-price rows from one OREE HTML table."""
+    prices_list = []
+
+    for row in table.find_all("tr"):
+        cells = row.find_all(["td", "th"])
+        if len(cells) < 2:
+            continue
+
+        texts = [cell.get_text(strip=True) for cell in cells[:5]]
+        hour = _parse_hour(texts[0])
+        if hour is None:
+            continue
+
+        price = _parse_realistic_price(texts[1:])
+        if price is None:
+            continue
+
+        prices_list.append({"hour": hour, "price": price})
+
+    return prices_list
+
+
+def _build_prices_frame(prices_list: list[dict[str, float]]) -> pd.DataFrame:
+    """Convert parsed hourly prices into the public OREE DataFrame format."""
+    now = datetime.now()
+    ordered_prices = sorted(prices_list, key=lambda row: row["hour"])[:24]
+    return pd.DataFrame(
+        [
+            {
+                "timestamp": now.replace(
+                    hour=price_row["hour"], minute=0, second=0, microsecond=0
+                ),
+                "price_eur_mwh": price_row["price"],
+                "price_uah_mwh": price_row["price"] * UAH_PER_EUR,
+                "source": "oree_real",
+            }
+            for price_row in ordered_prices
+        ]
+    )
 
 class OREERealPriceFetcher:
     """
@@ -41,127 +135,38 @@ class OREERealPriceFetcher:
         """
         try:
             logger.info("🌐 Fetching REAL OREE prices...")
-            
-            # Main OREE URL for prices
-            url = "https://www.oree.com.ua/index.php/pricectr?lang=english"
-            
-            logger.info(f"  Requesting: {url}")
-            response = self.session.get(url, timeout=20)
+
+            logger.info(f"  Requesting: {OREE_PRICES_URL}")
+            response = self.session.get(OREE_PRICES_URL, timeout=20)
             response.raise_for_status()
-            
+
             logger.info(f"  ✓ Status: {response.status_code}")
             logger.info(f"  ✓ Content length: {len(response.text)} bytes")
-            
-            # Parse HTML
+
             soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Look for all tables
             tables = soup.find_all('table')
             logger.info(f"  Found {len(tables)} tables on page")
-            
-            # Try to extract prices from each table
+
             for table_idx, table in enumerate(tables):
                 rows = table.find_all('tr')
-                
+
                 if len(rows) < 20:
                     logger.debug(f"  Table {table_idx}: {len(rows)} rows (skip)")
                     continue
-                
+
                 logger.info(f"  Checking table {table_idx} ({len(rows)} rows)...")
-                
-                prices_list = []
-                
-                for row_idx, row in enumerate(rows):
-                    cells = row.find_all(['td', 'th'])
-                    
-                    if len(cells) < 2:
-                        continue
-                    
-                    try:
-                        # Get text from cells
-                        texts = [c.get_text(strip=True) for c in cells[:5]]
-                        
-                        # Look for hour (0-23)
-                        hour = None
-                        price = None
-                        
-                        # First cell might be hour
-                        if texts[0]:
-                            # Try parsing as time
-                            if ':' in texts[0]:
-                                try:
-                                    hour = int(texts[0].split(':')[0])
-                                except:
-                                    pass
-                            
-                            # Or as number 0-23
-                            if hour is None:
-                                digits = re.findall(r'\d+', texts[0])
-                                if digits:
-                                    try:
-                                        num = int(digits[0])
-                                        if 0 <= num <= 23:
-                                            hour = num
-                                    except:
-                                        pass
-                        
-                        # Look for price in any of the cells
-                        if hour is not None:
-                            for cell_text in texts[1:]:
-                                if not cell_text:
-                                    continue
-                                
-                                # Remove currency symbols
-                                clean = cell_text.replace('EUR/MWh', '').replace('€', '').replace('UAH', '').replace(',', '.')
-                                
-                                # Extract numbers
-                                numbers = re.findall(r'\d+\.?\d*', clean)
-                                
-                                for num_str in numbers:
-                                    try:
-                                        p = float(num_str)
-                                        if 0.1 < p < 500:  # Realistic range
-                                            price = p
-                                            break
-                                    except:
-                                        pass
-                                
-                                if price is not None:
-                                    break
-                        
-                        # If we found both hour and price
-                        if hour is not None and price is not None:
-                            prices_list.append({'hour': hour, 'price': price})
-                            logger.debug(f"    ✓ Hour {hour}: {price} EUR/MWh")
-                    
-                    except Exception as e:
-                        logger.debug(f"    Row {row_idx} parse error: {str(e)[:30]}")
-                        continue
-                
-                # If we got enough prices, return this table
+
+                prices_list = _extract_table_prices(table)
                 if len(prices_list) >= 20:
                     logger.info(f"  ✅ Found {len(prices_list)} prices in table {table_idx}")
-                    
-                    # Sort by hour
-                    prices_list = sorted(prices_list, key=lambda x: x['hour'])
-                    
-                    # Create DataFrame
-                    now = datetime.now()
-                    df = pd.DataFrame([
-                        {
-                            'timestamp': now.replace(hour=p['hour'], minute=0, second=0, microsecond=0),
-                            'price_eur_mwh': p['price'],
-                            'price_uah_mwh': p['price'] * 35,  # EUR to UAH
-                            'source': 'oree_real'
-                        }
-                        for p in prices_list[:24]  # Take first 24
-                    ])
-                    
+
+                    df = _build_prices_frame(prices_list)
+
                     logger.info(f"✅ SUCCESS: Got REAL OREE prices!")
                     logger.info(f"   Prices: {df['price_eur_mwh'].min():.2f} to {df['price_eur_mwh'].max():.2f} EUR/MWh")
-                    
+
                     return df
-            
+
             logger.warning("⚠️  No price table found on OREE page")
             return None
         
