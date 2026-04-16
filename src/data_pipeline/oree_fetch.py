@@ -11,6 +11,7 @@ import logging
 import re
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
@@ -20,6 +21,9 @@ logger = logging.getLogger(__name__)
 UAH_PER_EUR = 40.0
 OREE_PRICES_URL = "https://www.oree.com.ua/index.php/pricectr?lang=english"
 OREE_DATA_VIEW_URL = "https://www.oree.com.ua/index.php/pricectr/data_view"
+HOUR_COLUMN_TOKENS = ("hour", "hod", "година")
+PRICE_COLUMN_TOKENS = ("price", "eur", "грн")
+PLAYWRIGHT_UAH_PER_EUR = 35.0
 
 
 def _build_market_row(
@@ -36,6 +40,131 @@ def _build_market_row(
         "volume_mwh": float(max(0.0, volume_mwh)),
         "source": source,
     }
+
+
+def _is_missing_value(value: object) -> bool:
+    try:
+        return bool(pd.isna(value))
+    except TypeError:
+        return False
+
+
+def _extract_hour_from_text(text: object) -> Optional[int]:
+    if _is_missing_value(text):
+        return None
+
+    normalized_text = str(text).strip()
+    if not normalized_text:
+        return None
+
+    if ":" in normalized_text:
+        try:
+            hour = int(normalized_text.split(":", 1)[0])
+        except ValueError:
+            hour = None
+        if hour is not None and 0 <= hour <= 23:
+            return hour
+
+    for digit in re.findall(r"\d+", normalized_text):
+        try:
+            hour = int(digit)
+        except ValueError:
+            continue
+        if 0 <= hour <= 23:
+            return hour
+
+    return None
+
+
+def _extract_price_from_value(value: object, *, maximum: float = 1000) -> Optional[float]:
+    if _is_missing_value(value):
+        return None
+
+    text = str(value).replace(",", ".")
+    for number_text in re.findall(r"\d+\.?\d*", text):
+        try:
+            price = float(number_text)
+        except ValueError:
+            continue
+        if 0.1 < price < maximum:
+            return price
+
+    return None
+
+
+def _column_matches(column: object, tokens: tuple[str, ...]) -> bool:
+    normalized = str(column).lower()
+    return any(token in normalized for token in tokens)
+
+
+def _first_matching_value(row, columns, tokens: tuple[str, ...], parser) -> object | None:
+    for column in columns:
+        if not _column_matches(column, tokens):
+            continue
+        parsed_value = parser(row[column])
+        if parsed_value is not None:
+            return parsed_value
+    return None
+
+
+def _parse_xls_price_row(row, columns) -> Optional[dict[str, float]]:
+    hour = _first_matching_value(row, columns, HOUR_COLUMN_TOKENS, _extract_hour_from_text)
+    price = _first_matching_value(row, columns, PRICE_COLUMN_TOKENS, _extract_price_from_value)
+
+    if hour is None or price is None:
+        return None
+
+    return {"hour": hour, "price": price}
+
+
+def _parse_table_price_row(cells) -> Optional[dict[str, float]]:
+    if len(cells) < 2:
+        return None
+
+    texts = [((cell.text_content() or "").strip()) for cell in cells[:5]]
+    hour = _extract_hour_from_text(texts[0])
+    if hour is None:
+        return None
+
+    price = None
+    for text in texts[1:]:
+        price = _extract_price_from_value(text)
+        if price is not None:
+            break
+
+    if price is None:
+        return None
+
+    return {"hour": hour, "price": price}
+
+
+def _build_prices_frame(
+    prices_list: list[dict[str, float]],
+    source: str,
+    *,
+    now: datetime | None = None,
+) -> Optional[pd.DataFrame]:
+    if len(prices_list) < 20:
+        return None
+
+    current_time = now or datetime.now()
+    return pd.DataFrame.from_records(
+        [
+            {
+                "timestamp": current_time.replace(
+                    hour=price_row["hour"], minute=0, second=0, microsecond=0
+                ),
+                "price_eur_mwh": price_row["price"],
+                "price_uah_mwh": (
+                    price_row["price"] * PLAYWRIGHT_UAH_PER_EUR
+                    if price_row["price"] < 100
+                    else price_row["price"]
+                ),
+                "source": source,
+            }
+            for price_row in sorted(prices_list, key=lambda row: row["hour"])[:24]
+        ]
+    )
 
 
 def _fetch_oree_prices(target_date: datetime.date) -> Optional[List[Dict[str, Any]]]:
@@ -234,11 +363,16 @@ def _parse_decimal(text: str) -> Optional[float]:
 __all__ = [
     "UAH_PER_EUR",
     "_build_market_row",
+    "_build_prices_frame",
+    "_extract_hour_from_text",
     "_extract_oree_price_rows",
+    "_extract_price_from_value",
     "_extract_prices_from_data_view_content",
     "_fetch_oree_data_view_prices",
     "_fetch_oree_prices",
+    "_parse_table_price_row",
     "_parse_decimal",
     "_parse_hour_value",
+    "_parse_xls_price_row",
     "_parse_table_rows",
 ]

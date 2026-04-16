@@ -5,10 +5,11 @@ Handles JavaScript-rendered content and downloads XLS files
 
 import logging
 import pandas as pd
-from datetime import datetime
 from typing import Optional
 import tempfile
 import os
+
+from src.data_pipeline.oree_fetch import _build_prices_frame, _parse_table_price_row, _parse_xls_price_row
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,56 @@ class OREEPlaywrightScraper:
         self.playwright = None
         self.browser = None
         self.page = None
+
+    def _wait_for_price_content(self, page) -> None:
+        logger.info("  → Page loaded, looking for price table...")
+        try:
+            page.wait_for_selector("table, [data-price]", timeout=10000)
+            logger.info("  ✓ Content loaded")
+        except Exception:
+            logger.warning("  ⚠️  Content selector not found")
+
+    def _find_download_url(self, links) -> Optional[str]:
+        logger.info("  → Looking for download links...")
+        for link in links:
+            href = link.get_attribute("href")
+            text = link.text_content() or ""
+            if href and ('xls' in href.lower() or 'download' in text.lower()):
+                logger.info(f"  ✓ Found download: {text} → {href}")
+                return href
+        return None
+
+    def _extract_prices_from_rendered_tables(self, tables) -> Optional[pd.DataFrame]:
+        logger.info("  → Extracting table from page...")
+        logger.info(f"  Found {len(tables)} tables")
+
+        for table_idx, table in enumerate(tables):
+            prices_df = self._extract_prices_from_table(table)
+            if prices_df is None:
+                continue
+            logger.info(f"  ✅ Got prices from table {table_idx}")
+            return prices_df
+
+        logger.warning("  ❌ Could not extract prices")
+        return None
+
+    def _fetch_prices_from_page(self, browser, page) -> Optional[pd.DataFrame]:
+        try:
+            logger.info(f"  → Opening {self.page_url}...")
+            page.goto(self.page_url, wait_until="networkidle")
+
+            self._wait_for_price_content(page)
+
+            download_url = self._find_download_url(page.query_selector_all("a"))
+            if download_url:
+                logger.info(f"  → Downloading file: {download_url}")
+                prices_df = self._download_and_parse_xls(download_url)
+                if prices_df is not None:
+                    return prices_df
+
+            return self._extract_prices_from_rendered_tables(page.query_selector_all("table"))
+        finally:
+            browser.close()
     
     def fetch_prices(self) -> Optional[pd.DataFrame]:
         """
@@ -109,74 +160,21 @@ class OREEPlaywrightScraper:
         6. Return DataFrame
         """
         try:
-            logger.info("🎯 Fetching REAL OREE prices with Playwright...")
-            
             from playwright.sync_api import sync_playwright
-            
-            with sync_playwright() as p:
-                logger.info("  → Launching browser...")
-                browser = p.chromium.launch()
-                page = browser.new_page()
-                
-                logger.info(f"  → Opening {self.page_url}...")
-                page.goto(self.page_url, wait_until="networkidle")
-                
-                logger.info("  → Page loaded, looking for price table...")
-                
-                # Wait for content to load
-                try:
-                    page.wait_for_selector("table, [data-price]", timeout=10000)
-                    logger.info("  ✓ Content loaded")
-                except:
-                    logger.warning("  ⚠️  Content selector not found")
-                
-                # Try to find download button for XLS
-                logger.info("  → Looking for download links...")
-                
-                links = page.query_selector_all("a")
-                download_url = None
-                
-                for link in links:
-                    href = link.get_attribute("href")
-                    text = link.text_content()
-                    
-                    if href and ('xls' in href.lower() or 'download' in text.lower()):
-                        logger.info(f"  ✓ Found download: {text} → {href}")
-                        download_url = href
-                        break
-                
-                if download_url:
-                    logger.info(f"  → Downloading file: {download_url}")
-                    # Download the file
-                    prices_df = self._download_and_parse_xls(download_url)
-                    if prices_df is not None:
-                        browser.close()
-                        return prices_df
-                
-                # Fallback: Try to extract table from rendered page
-                logger.info("  → Extracting table from page...")
-                
-                tables = page.query_selector_all("table")
-                logger.info(f"  Found {len(tables)} tables")
-                
-                for table_idx, table in enumerate(tables):
-                    prices_df = self._extract_prices_from_table(table)
-                    if prices_df is not None and len(prices_df) >= 20:
-                        logger.info(f"  ✅ Got prices from table {table_idx}")
-                        browser.close()
-                        return prices_df
-                
-                browser.close()
-                logger.warning("  ❌ Could not extract prices")
-                return None
-        
         except ImportError:
             logger.warning("⚠️  Playwright not installed")
             logger.warning("   Install: pip install playwright")
             logger.warning("   Setup: playwright install chromium")
             setup_playwright_instructions()
             return None
-        
+
+        try:
+            logger.info("🎯 Fetching REAL OREE prices with Playwright...")
+            with sync_playwright() as p:
+                logger.info("  → Launching browser...")
+                browser = p.chromium.launch()
+                page = browser.new_page()
+                return self._fetch_prices_from_page(browser, page)
         except Exception as e:
             logger.error(f"❌ Playwright error: {e}")
             return None
@@ -191,7 +189,7 @@ class OREEPlaywrightScraper:
             response = requests.get(url, timeout=30)
             
             if response.status_code == 200:
-                # Save temporarily
+                tmp_path = None
                 with tempfile.NamedTemporaryFile(suffix='.xls', delete=False) as tmp:
                     tmp.write(response.content)
                     tmp_path = tmp.name
@@ -199,19 +197,13 @@ class OREEPlaywrightScraper:
                 logger.info(f"  → Parsing XLS file...")
                 
                 try:
-                    # Try to read XLS
                     df = pd.read_excel(tmp_path)
-                    prices_df = self._parse_xls_prices(df)
-                    
-                    # Clean up
-                    os.unlink(tmp_path)
-                    
-                    if prices_df is not None:
-                        logger.info(f"  ✅ Got {len(prices_df)} prices from XLS")
-                        return prices_df
+                    return self._parse_xls_prices(df)
                 except Exception as e:
                     logger.error(f"  ❌ Error parsing XLS: {e}")
-                    os.unlink(tmp_path)
+                finally:
+                    if tmp_path is not None:
+                        os.unlink(tmp_path)
         
         except Exception as e:
             logger.error(f"❌ Download error: {e}")
@@ -221,53 +213,18 @@ class OREEPlaywrightScraper:
     def _parse_xls_prices(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
         """Parse prices from XLS DataFrame"""
         try:
-            # XLS likely has columns like: Hour, Price (EUR), Price (UAH), etc.
             prices_list = []
-            
-            for idx, row in df.iterrows():
-                try:
-                    # Look for hour column
-                    hour = None
-                    price = None
-                    
-                    for col in df.columns:
-                        col_str = str(col).lower()
-                        val = row[col]
-                        
-                        # Find hour
-                        if hour is None and ('hour' in col_str or 'hod' in col_str or 'година' in col_str):
-                            try:
-                                hour = int(val)
-                            except:
-                                pass
-                        
-                        # Find price
-                        if price is None and ('price' in col_str or 'eur' in col_str or 'грн' in col_str):
-                            try:
-                                price = float(val)
-                            except:
-                                pass
-                    
-                    if hour is not None and price is not None and 0 <= hour <= 23:
-                        if 0.1 < price < 1000:  # Realistic bounds
-                            prices_list.append({'hour': hour, 'price': price})
-                
-                except:
-                    continue
-            
-            if len(prices_list) >= 20:
-                now = datetime.now()
-                result_df = pd.DataFrame([
-                    {
-                        'timestamp': now.replace(hour=p['hour'], minute=0, second=0, microsecond=0),
-                        'price_eur_mwh': p['price'],
-                        'price_uah_mwh': p['price'] * 35 if p['price'] < 100 else p['price'],
-                        'source': 'oree_xls'
-                    }
-                    for p in sorted(prices_list, key=lambda x: x['hour'])[:24]
-                ])
-                
-                return result_df
+            columns = list(df.columns)
+
+            for _, row in df.iterrows():
+                price_row = _parse_xls_price_row(row, columns)
+                if price_row is not None:
+                    prices_list.append(price_row)
+
+            result_df = _build_prices_frame(prices_list, 'oree_xls')
+            if result_df is not None:
+                logger.info(f"  ✅ Got {len(result_df)} prices from XLS")
+            return result_df
         
         except Exception as e:
             logger.error(f"XLS parsing error: {e}")
@@ -277,71 +234,17 @@ class OREEPlaywrightScraper:
     def _extract_prices_from_table(self, table_element) -> Optional[pd.DataFrame]:
         """Extract prices from rendered HTML table"""
         try:
-            import re
-            
             prices_list = []
-            
-            # Get table rows
             rows = table_element.query_selector_all("tr")
-            
+
             for row in rows:
                 cells = row.query_selector_all("td, th")
-                
-                if len(cells) < 2:
-                    continue
-                
-                try:
-                    texts = [c.text_content().strip() for c in cells[:5]]
-                    
-                    # Parse hour
-                    hour = None
-                    price = None
-                    
-                    # Try first cell as hour
-                    if texts[0]:
-                        if ':' in texts[0]:
-                            hour = int(texts[0].split(':')[0])
-                        else:
-                            digits = re.findall(r'\d+', texts[0])
-                            if digits:
-                                h = int(digits[0])
-                                if 0 <= h <= 23:
-                                    hour = h
-                    
-                    # Look for price in other cells
-                    if hour is not None:
-                        for text in texts[1:]:
-                            numbers = re.findall(r'\d+\.?\d*', text)
-                            for num_str in numbers:
-                                try:
-                                    p = float(num_str)
-                                    if 0.1 < p < 1000:
-                                        price = p
-                                        break
-                                except:
-                                    pass
-                            if price:
-                                break
-                    
-                    if hour is not None and price is not None:
-                        prices_list.append({'hour': hour, 'price': price})
-                
-                except:
-                    continue
-            
-            if len(prices_list) >= 20:
-                now = datetime.now()
-                result_df = pd.DataFrame([
-                    {
-                        'timestamp': now.replace(hour=p['hour'], minute=0, second=0, microsecond=0),
-                        'price_eur_mwh': p['price'],
-                        'price_uah_mwh': p['price'] * 35 if p['price'] < 100 else p['price'],
-                        'source': 'oree_table'
-                    }
-                    for p in sorted(prices_list, key=lambda x: x['hour'])[:24]
-                ])
-                
-                return result_df
+
+                price_row = _parse_table_price_row(cells)
+                if price_row is not None:
+                    prices_list.append(price_row)
+
+            return _build_prices_frame(prices_list, 'oree_table')
         
         except Exception as e:
             logger.error(f"Table extraction error: {e}")
