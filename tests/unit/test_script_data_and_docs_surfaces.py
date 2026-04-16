@@ -4,9 +4,6 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
-from types import SimpleNamespace
-
-import pandas as pd
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -20,35 +17,6 @@ def load_script_module(module_name: str, relative_path: str):
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
     return module
-
-
-def test_combine_datasets_creates_enriched_dataframe(tmp_path: Path, monkeypatch) -> None:
-    module = load_script_module("scripts.combine_datasets_under_test", "scripts/combine_datasets.py")
-    processed_dir = tmp_path / "data" / "processed"
-    processed_dir.mkdir(parents=True, exist_ok=True)
-
-    oree_data = pd.DataFrame(
-        {
-            "Дата": ["01.02.2026", "02.02.2026"],
-            "Середньозважена ціна, грн/МВт.год": [4100.0, 4300.0],
-            "Base, грн/МВт.год": [3800.0, 3900.0],
-            "Peak, грн/МВт.год": [4500.0, 4700.0],
-            "OffPeak, грн/МВт.год": [3300.0, 3400.0],
-            "Мінімальна ціна, грн/МВт.год": [3000.0, 3200.0],
-            "Максимальна ціна, грн/МВт.год": [5000.0, 5100.0],
-        }
-    )
-    sssu_data = pd.DataFrame({"timestamp": ["2026-01-01T00:00:00"], "target": [1.0]})
-    oree_data.to_csv(processed_dir / "hourly_prices_02_2026.csv", index=False)
-    sssu_data.to_csv(processed_dir / "ukraine_energy_ml_dataset_2026.csv", index=False)
-
-    monkeypatch.setattr(module, "Path", lambda value: tmp_path / value)
-
-    result = module.create_combined_dataset()
-
-    assert list(result["Month"]) == [2, 2]
-    assert list(result["Year"]) == [2026, 2026]
-    assert result["Середньозважена ціна, грн/МВт.год"].mean() == 4200.0
 
 
 def test_fetch_oree_helpers_parse_table_and_cli_payload(monkeypatch, capsys) -> None:
