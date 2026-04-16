@@ -3,9 +3,11 @@
 Orchestrates the full ML pipeline through Dagster assets with proper
 data lineage from user config through features to predictions.
 """
+import importlib.util
 import logging
-from datetime import datetime
-from typing import Any, Dict, Optional, TypedDict
+from pathlib import Path
+import sys
+from typing import Any, Dict, Optional
 
 import polars as pl
 from dagster import asset, AssetIn
@@ -18,110 +20,47 @@ from energy_ml.mlops.optimization_engine import OptimizationEngine
 from energy_ml.mlops.battery_physics import BatteryPhysicsEngine
 from energy_ml.mlops.renewable_forecasting import RenewableForecaster
 
+try:
+    from energy_ml.assets.pipeline_support import (
+        AssetEnvelope,
+        BatteryPhysicsAssetPayload,
+        EnhancedPredictionAssetPayload,
+        IntegratedPipelineAssetPayload,
+        MLPredictionAssetPayload,
+        OptimizationPreferencesAssetPayload,
+        PipelineStatusAssetPayload,
+        RenewableGenerationAssetPayload,
+        _config_error_text,
+        _load_asset_config_or_error,
+        _resolve_asset_config,
+        _with_asset_envelope,
+    )
+except ImportError:
+    _SUPPORT_MODULE_NAME = "energy_ml.assets.pipeline_support"
+    _SUPPORT_PATH = Path(__file__).with_name("pipeline_support.py")
+    _SUPPORT_SPEC = importlib.util.spec_from_file_location(_SUPPORT_MODULE_NAME, _SUPPORT_PATH)
+    if _SUPPORT_SPEC is None or _SUPPORT_SPEC.loader is None:
+        raise ImportError(f"Unable to load pipeline support module from {_SUPPORT_PATH}")
+    _SUPPORT_MODULE = sys.modules.get(_SUPPORT_MODULE_NAME)
+    if _SUPPORT_MODULE is None:
+        _SUPPORT_MODULE = importlib.util.module_from_spec(_SUPPORT_SPEC)
+        sys.modules[_SUPPORT_MODULE_NAME] = _SUPPORT_MODULE
+        _SUPPORT_SPEC.loader.exec_module(_SUPPORT_MODULE)
+    AssetEnvelope = _SUPPORT_MODULE.AssetEnvelope
+    BatteryPhysicsAssetPayload = _SUPPORT_MODULE.BatteryPhysicsAssetPayload
+    EnhancedPredictionAssetPayload = _SUPPORT_MODULE.EnhancedPredictionAssetPayload
+    IntegratedPipelineAssetPayload = _SUPPORT_MODULE.IntegratedPipelineAssetPayload
+    MLPredictionAssetPayload = _SUPPORT_MODULE.MLPredictionAssetPayload
+    OptimizationPreferencesAssetPayload = _SUPPORT_MODULE.OptimizationPreferencesAssetPayload
+    PipelineStatusAssetPayload = _SUPPORT_MODULE.PipelineStatusAssetPayload
+    RenewableGenerationAssetPayload = _SUPPORT_MODULE.RenewableGenerationAssetPayload
+    _config_error_text = _SUPPORT_MODULE._config_error_text
+    _load_asset_config_or_error = _SUPPORT_MODULE._load_asset_config_or_error
+    _resolve_asset_config = _SUPPORT_MODULE._resolve_asset_config
+    _with_asset_envelope = _SUPPORT_MODULE._with_asset_envelope
+
 
 logger = logging.getLogger(__name__)
-
-
-class AssetEnvelope(TypedDict, total=False):
-    status: str
-    timestamp: str
-    error: str
-
-
-class IntegratedPipelineAssetPayload(AssetEnvelope, total=False):
-    action: str
-    reasoning: str
-    confidence: float
-    estimated_savings: float
-    battery_impact: float
-    details: Dict[str, Any]
-
-
-class MLPredictionAssetPayload(AssetEnvelope, total=False):
-    action: str
-    confidence: float
-    reasoning: str
-    model_version: str
-    feature_importance: Dict[str, Any]
-
-
-class PipelineStatusAssetPayload(AssetEnvelope, total=False):
-    pipeline_status: str
-    pipeline_action: str
-    pipeline_confidence: float
-    features_count: int
-    features_valid: bool
-    ml_status: str
-    ml_action: str
-    ml_confidence: float
-    agreement: float
-
-
-class OptimizationPreferencesAssetPayload(AssetEnvelope, total=False):
-    strategy: str
-    weights: Dict[str, Any]
-    constraints: Dict[str, Any]
-    preferences: Dict[str, Any]
-
-
-class BatteryPhysicsAssetPayload(AssetEnvelope, total=False):
-    chemistry: str
-    simulation_results: Dict[str, Any]
-    charging_curves: Dict[str, Any]
-    degradation_model: Dict[str, Any]
-    efficiency_model: Dict[str, Any]
-
-
-class RenewableGenerationAssetPayload(AssetEnvelope, total=False):
-    solar_forecast: Dict[str, Any]
-    wind_forecast: Dict[str, Any]
-    total_renewable: Dict[str, Any]
-    weather_data: Dict[str, Any]
-    capacity_factors: Dict[str, Any]
-    integration: Dict[str, Any]
-
-
-class EnhancedPredictionAssetPayload(MLPredictionAssetPayload, total=False):
-    base_prediction: Dict[str, Any]
-    optimization_applied: str
-    physics_constraints: Dict[str, Any]
-    renewable_integration: Dict[str, Any]
-    enhancement_confidence: float
-
-
-def _resolve_asset_config(user_config_data: Optional[UserConfigPayload]) -> ConfigLoadResult:
-    """Resolve asset config without relying on exception-based control flow."""
-    config_manager = ConfigurationManager()
-    return config_manager.resolve_config(user_config_data)
-
-
-def _config_error_text(config_result: ConfigLoadResult) -> str:
-    return "; ".join(config_result.errors) if config_result.errors else "Configuration could not be loaded"
-
-
-def _asset_timestamp() -> str:
-    return datetime.now().isoformat()
-
-
-def _with_asset_envelope(payload: Dict[str, Any], *, status: str, error: Optional[str] = None) -> Dict[str, Any]:
-    envelope = {**payload, 'timestamp': _asset_timestamp(), 'status': status}
-    if error is not None:
-        envelope['error'] = error
-    return envelope
-
-
-def _load_asset_config_or_error(
-    user_config_data: Optional[UserConfigPayload],
-    *,
-    error_context: str,
-    fallback_payload: Dict[str, Any],
-) -> tuple[Optional[Any], Optional[Dict[str, Any]]]:
-    config_result = _resolve_asset_config(user_config_data)
-    if not config_result.success or config_result.config is None:
-        error_text = _config_error_text(config_result)
-        logger.error(f"{error_context} configuration failed: {error_text}")
-        return None, _with_asset_envelope(fallback_payload, status='error', error=error_text)
-    return config_result.config, None
 
 
 @asset(
