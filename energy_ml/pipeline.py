@@ -136,7 +136,9 @@ class PipelineOrchestrator:
         self._live_context: LiveContextPayload = {}
         self._live_price_map_kwh: Dict[int, float] = {}
         self._live_current_price_kwh: Optional[float] = None
-        self._live_battery_state: Dict[str, float] = {}
+        self._live_soc_percent: Optional[float] = None
+        self._live_health_percent: Optional[float] = None
+        self._live_cycles_remaining: Optional[float] = None
 
     def _apply_user_config(self, user_config: UserConfigModel) -> None:
         self.config = user_config
@@ -154,6 +156,20 @@ class PipelineOrchestrator:
             return numeric
         except Exception:
             return default
+
+    def _parse_live_battery_state(
+        self, battery_signal: Any
+    ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+        signal: LiveBatterySignal = battery_signal if isinstance(battery_signal, dict) else {}
+        soc = self._safe_float(signal.get('soc_percent', signal.get('soc')), default=-1)
+        health = self._safe_float(signal.get('health_percent', signal.get('health')), default=-1)
+        cycles = self._safe_float(signal.get('cycles_remaining'), default=-1)
+
+        return (
+            soc if soc >= 0 else None,
+            health if health >= 0 else None,
+            cycles if cycles >= 0 else None,
+        )
 
     def set_live_context(self, live_context: Optional[LiveContextPayload]) -> None:
         """Attach live signals and refresh the derived inference-time caches.
@@ -190,22 +206,11 @@ class PipelineOrchestrator:
                 continue
             self._live_price_map_kwh[hour] = price
 
-        battery_signal = context.get('battery_signal') if isinstance(context.get('battery_signal'), dict) else {}
-        soc_percent = self._safe_float(
-            battery_signal.get('soc_percent', battery_signal.get('soc')),
-            default=-1,
-        )
-        health_percent = self._safe_float(
-            battery_signal.get('health_percent', battery_signal.get('health')),
-            default=-1,
-        )
-        cycles_remaining = self._safe_float(battery_signal.get('cycles_remaining'), default=-1)
-
-        self._live_battery_state = {
-            'soc_percent': soc_percent,
-            'health_percent': health_percent,
-            'cycles_remaining': cycles_remaining,
-        }
+        (
+            self._live_soc_percent,
+            self._live_health_percent,
+            self._live_cycles_remaining,
+        ) = self._parse_live_battery_state(context.get('battery_signal'))
 
     def _resolve_tariff_rate_uah_mwh(self, hour: int) -> float:
         if hour in self._live_price_map_kwh:
@@ -222,13 +227,21 @@ class PipelineOrchestrator:
         default_health = 95.0
         default_cycles_remaining = float(max(self.config.battery_cycles_max * 0.8, 1))
 
-        soc = self._live_battery_state.get('soc_percent', -1)
-        health = self._live_battery_state.get('health_percent', -1)
-        cycles = self._live_battery_state.get('cycles_remaining', -1)
-
-        soc_percent = soc if soc >= 0 else default_soc
-        health_percent = health if health >= 0 else default_health
-        cycles_remaining = cycles if cycles >= 0 else default_cycles_remaining
+        soc_percent = (
+            self._live_soc_percent
+            if self._live_soc_percent is not None
+            else default_soc
+        )
+        health_percent = (
+            self._live_health_percent
+            if self._live_health_percent is not None
+            else default_health
+        )
+        cycles_remaining = (
+            self._live_cycles_remaining
+            if self._live_cycles_remaining is not None
+            else default_cycles_remaining
+        )
 
         return (
             max(0.0, min(100.0, soc_percent)),

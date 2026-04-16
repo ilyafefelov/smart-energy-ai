@@ -139,6 +139,25 @@ def test_pipeline_live_context_overrides_tariff_and_battery_state():
     assert default_cycles == 6400.0
 
 
+def test_pipeline_live_battery_alias_keys_and_invalid_cycles_fall_back():
+    orchestrator = pipeline_module.PipelineOrchestrator()
+    orchestrator.set_live_context(
+        {
+            "battery_signal": {
+                "soc": 42.0,
+                "health": 87.0,
+                "cycles_remaining": -10.0,
+            }
+        }
+    )
+
+    battery_soc, battery_health, cycles_remaining = orchestrator._resolve_battery_state()
+
+    assert battery_soc == 42.0
+    assert battery_health == 87.0
+    assert cycles_remaining == 6400.0
+
+
 def test_pipeline_decision_and_status_surfaces_remain_stable():
     config = pipeline_module.UserConfigModel(load_peak_kw=12.0)
     orchestrator = pipeline_module.PipelineOrchestrator(user_config=config)
