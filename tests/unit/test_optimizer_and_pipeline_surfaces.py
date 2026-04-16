@@ -190,6 +190,18 @@ def test_pipeline_decision_and_status_surfaces_remain_stable():
     assert status["tariff"]["current_rate_uah_mwh"] in {11500.0, 12000}
 
 
+def test_pipeline_economic_helpers_remain_stable():
+    orchestrator = pipeline_module.PipelineOrchestrator()
+
+    assert orchestrator._calculate_degradation_cost() == pytest.approx(1.25)
+    assert orchestrator._calculate_savings("SELL", 2.0, 5.0, 10.0) == pytest.approx(50.0)
+    assert orchestrator._calculate_savings("BUY", 2.0, 5.0, 10.0) == pytest.approx(15.0)
+    assert orchestrator._calculate_savings("HOLD", 2.0, 5.0, 10.0) == 0.0
+    assert orchestrator._calculate_battery_impact("BUY") == pytest.approx(0.01)
+    assert orchestrator._calculate_battery_impact("SELL") == pytest.approx(0.05)
+    assert orchestrator._calculate_battery_impact("HOLD") == 0.0
+
+
 def test_pipeline_validation_reports_invalid_config_values():
     orchestrator = pipeline_module.PipelineOrchestrator()
     orchestrator.config.battery_capacity_kwh = 0

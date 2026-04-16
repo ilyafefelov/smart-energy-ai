@@ -101,6 +101,43 @@ class PipelineStatusPayload(TypedDict):
     timestamp: str
 
 
+class DecisionThresholds(TypedDict):
+    critical_health_floor: float
+    buy_rate_divisor: float
+    peak_sell_soc_floor: float
+    peak_buy_soc_ceiling: float
+    peak_sell_profit_ratio: float
+    peak_sell_confidence: float
+    peak_buy_confidence: float
+    peak_hold_confidence: float
+    off_peak_buy_soc_ceiling: float
+    off_peak_sell_soc_floor: float
+    off_peak_buy_discount_ratio: float
+    off_peak_buy_confidence: float
+    off_peak_sell_confidence: float
+    off_peak_hold_confidence: float
+    critical_health_confidence: float
+
+
+DECISION_THRESHOLDS: DecisionThresholds = {
+    'critical_health_floor': 20.0,
+    'buy_rate_divisor': 1500.0,
+    'peak_sell_soc_floor': 30.0,
+    'peak_buy_soc_ceiling': 50.0,
+    'peak_sell_profit_ratio': 1.3,
+    'peak_sell_confidence': 0.85,
+    'peak_buy_confidence': 0.75,
+    'peak_hold_confidence': 0.80,
+    'off_peak_buy_soc_ceiling': 80.0,
+    'off_peak_sell_soc_floor': 70.0,
+    'off_peak_buy_discount_ratio': 0.9,
+    'off_peak_buy_confidence': 0.80,
+    'off_peak_sell_confidence': 0.70,
+    'off_peak_hold_confidence': 0.75,
+    'critical_health_confidence': 0.9,
+}
+
+
 class PipelineOrchestrator:
     """Orchestrates all Phase 4 components into integrated pipeline.
     
@@ -247,6 +284,73 @@ class PipelineOrchestrator:
             max(0.0, min(100.0, soc_percent)),
             max(0.0, min(100.0, health_percent)),
             max(1.0, cycles_remaining),
+        )
+
+    def _make_peak_hour_decision(
+        self,
+        current_hour: int,
+        battery_soc: float,
+        charge_cost: float,
+        discharge_revenue: float,
+        tariff_rate: float,
+    ) -> Tuple[str, float, str]:
+        thresholds = DECISION_THRESHOLDS
+        if (
+            battery_soc > thresholds['peak_sell_soc_floor']
+            and discharge_revenue > charge_cost * thresholds['peak_sell_profit_ratio']
+        ):
+            return (
+                'SELL',
+                thresholds['peak_sell_confidence'],
+                f"Peak hour ({current_hour}h) and profitable discharge opportunity.",
+            )
+        if (
+            battery_soc < thresholds['peak_buy_soc_ceiling']
+            and charge_cost < tariff_rate / thresholds['buy_rate_divisor']
+        ):
+            return (
+                'BUY',
+                thresholds['peak_buy_confidence'],
+                'Charge battery during peak for off-peak discharge revenue.',
+            )
+        return (
+            'HOLD',
+            thresholds['peak_hold_confidence'],
+            'Peak hour but conditions not favorable for action.',
+        )
+
+    def _make_off_peak_decision(
+        self,
+        tariff_rate: float,
+        battery_soc: float,
+        charge_cost: float,
+        discharge_revenue: float,
+    ) -> Tuple[str, float, str]:
+        thresholds = DECISION_THRESHOLDS
+        if (
+            battery_soc < thresholds['off_peak_buy_soc_ceiling']
+            and charge_cost
+            < (tariff_rate / thresholds['buy_rate_divisor'])
+            * thresholds['off_peak_buy_discount_ratio']
+        ):
+            return (
+                'BUY',
+                thresholds['off_peak_buy_confidence'],
+                f"Off-peak charging opportunity at {tariff_rate:.0f} UAH/MWh.",
+            )
+        if (
+            battery_soc > thresholds['off_peak_sell_soc_floor']
+            and discharge_revenue > charge_cost
+        ):
+            return (
+                'SELL',
+                thresholds['off_peak_sell_confidence'],
+                'Discharge battery during low-demand off-peak period.',
+            )
+        return (
+            'HOLD',
+            thresholds['off_peak_hold_confidence'],
+            'Off-peak but insufficient incentive for action.',
         )
     
     def _create_battery_config(self, user_config: UserConfigModel) -> BatteryConfig:
@@ -409,29 +513,31 @@ class PipelineOrchestrator:
         Returns:
             Tuple of (action, confidence, reasoning)
         """
+        thresholds = DECISION_THRESHOLDS
+
         # Don't discharge if health is degrading
-        if battery_health < 20:
-            return 'HOLD', 0.9, f"Battery health critical ({battery_health:.1f}%). Cannot discharge."
-        
-        # Peak hour logic
+        if battery_health < thresholds['critical_health_floor']:
+            return (
+                'HOLD',
+                thresholds['critical_health_confidence'],
+                f"Battery health critical ({battery_health:.1f}%). Cannot discharge.",
+            )
+
         if is_peak_hour:
-            # During peak, discharge is most profitable
-            if battery_soc > 30 and discharge_revenue > charge_cost * 1.3:
-                return 'SELL', 0.85, f"Peak hour ({current_hour}h) and profitable discharge opportunity."
-            elif battery_soc < 50 and charge_cost < tariff_rate / 1500:
-                return 'BUY', 0.75, f"Charge battery during peak for off-peak discharge revenue."
-            else:
-                return 'HOLD', 0.80, f"Peak hour but conditions not favorable for action."
-        
-        # Off-peak logic (0-6, 23-24)
-        else:
-            # Off-peak charging
-            if battery_soc < 80 and charge_cost < tariff_rate / 1500 * 0.9:
-                return 'BUY', 0.80, f"Off-peak charging opportunity at {tariff_rate:.0f} UAH/MWh."
-            elif battery_soc > 70 and discharge_revenue > charge_cost:
-                return 'SELL', 0.70, f"Discharge battery during low-demand off-peak period."
-            else:
-                return 'HOLD', 0.75, f"Off-peak but insufficient incentive for action."
+            return self._make_peak_hour_decision(
+                current_hour=current_hour,
+                battery_soc=battery_soc,
+                charge_cost=charge_cost,
+                discharge_revenue=discharge_revenue,
+                tariff_rate=tariff_rate,
+            )
+
+        return self._make_off_peak_decision(
+            tariff_rate=tariff_rate,
+            battery_soc=battery_soc,
+            charge_cost=charge_cost,
+            discharge_revenue=discharge_revenue,
+        )
         
     def _calculate_degradation_cost(self) -> float:
         """Calculate battery degradation cost per kWh cycled.
