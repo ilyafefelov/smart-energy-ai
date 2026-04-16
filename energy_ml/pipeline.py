@@ -104,6 +104,10 @@ def _parse_live_price_signal(
     return current_price_kwh, live_price_map_kwh
 
 
+def _price_source_for_hour(live_price_map_kwh: Dict[int, float], hour: int) -> str:
+    return 'live_market' if hour in live_price_map_kwh else 'tariff_model'
+
+
 class RecommendationDetails(TypedDict):
     hour: int
     load_kw: float
@@ -364,9 +368,6 @@ class PipelineOrchestrator:
             'Off-peak but insufficient incentive for action.',
         )
 
-    def _price_source_for_hour(self, hour: int) -> str:
-        return 'live_market' if hour in self._live_price_map_kwh else 'tariff_model'
-
     def _build_recommendation_details(
         self,
         current_hour: int,
@@ -387,7 +388,7 @@ class PipelineOrchestrator:
             'battery_soc_percent': battery_soc,
             'battery_health_percent': battery_health,
             'battery_cycles_remaining': cycles_remaining,
-            'price_source': self._price_source_for_hour(current_hour),
+            'price_source': _price_source_for_hour(self._live_price_map_kwh, current_hour),
             'is_peak_hour': is_peak_hour,
             'charge_cost_uah_kwh': charge_cost,
             'discharge_revenue_uah_kwh': discharge_revenue,
