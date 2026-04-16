@@ -693,16 +693,17 @@ class PipelineOrchestrator:
             })
         
         return pl.DataFrame(forecasts)
-    def get_status(self) -> PipelineStatusPayload:
-        """Get current pipeline status and state.
-        
-        Returns:
-            Dictionary with all component states
-        """
-        current_hour = datetime.now().hour
-        load_kw = self.load_profile.get_hourly_coefficient(current_hour, 0) * self.config.load_peak_kw
-        soc_percent, health_percent, cycles_remaining = self._resolve_battery_state()
-        
+
+    def _build_status_payload(
+        self,
+        current_hour: int,
+        load_kw: float,
+        soc_percent: float,
+        health_percent: float,
+        cycles_remaining: float,
+        tariff_rate: float,
+        is_peak_hour: bool,
+    ) -> PipelineStatusPayload:
         return {
             'config': self.config.model_dump() if hasattr(self.config, 'model_dump') else self.config.dict(),
             'battery_state': {
@@ -718,9 +719,31 @@ class PipelineOrchestrator:
             },
             'tariff': {
                 'region': self.config.tariff_region,
-                'current_rate_uah_mwh': self._resolve_tariff_rate_uah_mwh(current_hour),
-                'is_peak_hour': 6 <= current_hour < 23,
+                'current_rate_uah_mwh': tariff_rate,
+                'is_peak_hour': is_peak_hour,
             },
             'last_recommendation': self._last_recommendation,
             'timestamp': datetime.now().isoformat(),
         }
+
+    def get_status(self) -> PipelineStatusPayload:
+        """Get current pipeline status and state.
+        
+        Returns:
+            Dictionary with all component states
+        """
+        current_hour = datetime.now().hour
+        load_kw = self.load_profile.get_hourly_coefficient(current_hour, 0) * self.config.load_peak_kw
+        soc_percent, health_percent, cycles_remaining = self._resolve_battery_state()
+        tariff_rate = self._resolve_tariff_rate_uah_mwh(current_hour)
+        is_peak_hour = 6 <= current_hour < 23
+
+        return self._build_status_payload(
+            current_hour=current_hour,
+            load_kw=load_kw,
+            soc_percent=soc_percent,
+            health_percent=health_percent,
+            cycles_remaining=cycles_remaining,
+            tariff_rate=tariff_rate,
+            is_peak_hour=is_peak_hour,
+        )
