@@ -59,6 +59,21 @@ class LiveContextPayload(TypedDict, total=False):
     weather_signal: Dict[str, Any]
 
 
+def _parse_live_battery_state(
+    battery_signal: Any,
+) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+    signal: LiveBatterySignal = battery_signal if isinstance(battery_signal, dict) else {}
+    soc = _safe_float(signal.get('soc_percent', signal.get('soc')), default=-1)
+    health = _safe_float(signal.get('health_percent', signal.get('health')), default=-1)
+    cycles = _safe_float(signal.get('cycles_remaining'), default=-1)
+
+    return (
+        soc if soc >= 0 else None,
+        health if health >= 0 else None,
+        cycles if cycles >= 0 else None,
+    )
+
+
 class RecommendationDetails(TypedDict):
     hour: int
     load_kw: float
@@ -194,20 +209,6 @@ class PipelineOrchestrator:
         self.battery = BatteryModel(self.battery_config)
         self.load_profile = StandardWorkSimulator(self.load_config)
 
-    def _parse_live_battery_state(
-        self, battery_signal: Any
-    ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
-        signal: LiveBatterySignal = battery_signal if isinstance(battery_signal, dict) else {}
-        soc = _safe_float(signal.get('soc_percent', signal.get('soc')), default=-1)
-        health = _safe_float(signal.get('health_percent', signal.get('health')), default=-1)
-        cycles = _safe_float(signal.get('cycles_remaining'), default=-1)
-
-        return (
-            soc if soc >= 0 else None,
-            health if health >= 0 else None,
-            cycles if cycles >= 0 else None,
-        )
-
     def _parse_live_price_signal(
         self, price_signal: Any
     ) -> Tuple[Optional[float], Dict[int, float]]:
@@ -256,7 +257,7 @@ class PipelineOrchestrator:
             self._live_soc_percent,
             self._live_health_percent,
             self._live_cycles_remaining,
-        ) = self._parse_live_battery_state(context.get('battery_signal'))
+        ) = _parse_live_battery_state(context.get('battery_signal'))
 
     def _resolve_tariff_rate_uah_mwh(self, hour: int) -> float:
         if hour in self._live_price_map_kwh:
