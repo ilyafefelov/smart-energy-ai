@@ -25,6 +25,16 @@ from energy_ml.mlops.renewable_forecasting import RenewableForecaster
 logger = logging.getLogger(__name__)
 
 
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        numeric = float(value)
+        if numeric != numeric:
+            return default
+        return numeric
+    except Exception:
+        return default
+
+
 class LivePriceForecastRow(TypedDict, total=False):
     hour: int
     price: float
@@ -184,23 +194,13 @@ class PipelineOrchestrator:
         self.battery = BatteryModel(self.battery_config)
         self.load_profile = StandardWorkSimulator(self.load_config)
 
-    @staticmethod
-    def _safe_float(value: Any, default: float = 0.0) -> float:
-        try:
-            numeric = float(value)
-            if numeric != numeric:
-                return default
-            return numeric
-        except Exception:
-            return default
-
     def _parse_live_battery_state(
         self, battery_signal: Any
     ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
         signal: LiveBatterySignal = battery_signal if isinstance(battery_signal, dict) else {}
-        soc = self._safe_float(signal.get('soc_percent', signal.get('soc')), default=-1)
-        health = self._safe_float(signal.get('health_percent', signal.get('health')), default=-1)
-        cycles = self._safe_float(signal.get('cycles_remaining'), default=-1)
+        soc = _safe_float(signal.get('soc_percent', signal.get('soc')), default=-1)
+        health = _safe_float(signal.get('health_percent', signal.get('health')), default=-1)
+        cycles = _safe_float(signal.get('cycles_remaining'), default=-1)
 
         return (
             soc if soc >= 0 else None,
@@ -215,7 +215,7 @@ class PipelineOrchestrator:
         current_price_kwh: Optional[float] = None
         live_price_map_kwh: Dict[int, float] = {}
 
-        current_price = self._safe_float(signal.get('current_uah_kwh'), default=-1)
+        current_price = _safe_float(signal.get('current_uah_kwh'), default=-1)
         if current_price > 0:
             current_price_kwh = current_price
 
@@ -230,7 +230,7 @@ class PipelineOrchestrator:
                 continue
             if hour < 0 or hour > 23:
                 continue
-            price = self._safe_float(row.get('price'), default=-1)
+            price = _safe_float(row.get('price'), default=-1)
             if price <= 0:
                 continue
             live_price_map_kwh[hour] = price
