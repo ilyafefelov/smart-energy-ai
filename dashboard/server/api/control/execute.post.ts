@@ -21,6 +21,7 @@ import {
   type LoadProfileType,
   type StrategyWeights,
 } from '../../utils/auto-strategy'
+import { getCommandHistory, getErrorMessage, hasStatusCode, setCommandHistory, setControlModeState, type CommandHistoryRecord } from '../../utils/control-memory'
 import { normalizeDecisionSource } from '../../utils/recommendation-contract'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
@@ -140,15 +141,14 @@ export default defineEventHandler(async (event) => {
 
         recordBillingForExecutedCommand(executableCommand, pythonResult, 'python_controller', executionPlan.requestedCommand)
 
-        ;(globalThis as any).__controlModeByTenant = (globalThis as any).__controlModeByTenant || {}
-        ;(globalThis as any).__controlModeByTenant[tenant.id] = {
+        setControlModeState(tenant.id, {
           mode: executionPlan.modeTo,
           requested_command: executionPlan.requestedCommand,
           active_command: executionPlan.command,
           decision_source: executionPlan.decisionSource,
           reason: executableCommand.reason,
           updated_at: new Date().toISOString(),
-        }
+        })
 
         await updateBatteryControlState({
           powerCommand: Number(executableCommand.power_kw || 0),
@@ -210,7 +210,7 @@ export default defineEventHandler(async (event) => {
         }
         
       } catch (pythonError) {
-        console.warn('Python controller execution failed:', pythonError.message)
+        console.warn('Python controller execution failed:', getErrorMessage(pythonError, 'Python controller execution failed'))
         fallbackReasonCode = 'python_execution_failed'
       }
     } else {
@@ -259,7 +259,12 @@ export default defineEventHandler(async (event) => {
       }
     }
     
-    const historyEntry = {
+    const historyEntry: CommandHistoryRecord & {
+      execution_key: string | null
+      execution_status: string
+      is_reconciled: boolean
+      reconciliation_note: string | null
+    } = {
       ...executableCommand,
       requested_command: executionPlan.requestedCommand,
       resolved_command: executionPlan.command,
@@ -303,15 +308,14 @@ export default defineEventHandler(async (event) => {
 
     recordBillingForExecutedCommand(executableCommand, simulationResult, 'simulation', executionPlan.requestedCommand)
 
-    ;(globalThis as any).__controlModeByTenant = (globalThis as any).__controlModeByTenant || {}
-    ;(globalThis as any).__controlModeByTenant[tenant.id] = {
+    setControlModeState(tenant.id, {
       mode: executionPlan.modeTo,
       requested_command: executionPlan.requestedCommand,
       active_command: executionPlan.command,
       decision_source: executionPlan.decisionSource,
       reason: executableCommand.reason,
       updated_at: new Date().toISOString(),
-    }
+    })
 
     await updateBatteryControlState({
       powerCommand: Number(executableCommand.power_kw || 0),
@@ -351,13 +355,13 @@ export default defineEventHandler(async (event) => {
 
     console.error('Command execution error:', error)
     
-    if (error.statusCode) {
+    if (hasStatusCode(error)) {
       throw error
     }
     
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Command execution failed'
+      statusMessage: getErrorMessage(error, 'Command execution failed')
     })
   }
 })
@@ -400,8 +404,7 @@ function toFiniteNumber(value: unknown): number | null {
 }
 
 function resolvePreviousActionForTenant(tenantId: string): 'BUY' | 'SELL' | 'HOLD' | null {
-  const history = Array.isArray(globalThis.commandHistory) ? globalThis.commandHistory : []
-  const previousEntry = history.find((entry: any) => {
+  const previousEntry = getCommandHistory().find((entry) => {
     const entryTenantId = String(entry?.tenant_id || entry?.tenantId || '')
     return entryTenantId === tenantId
   })
@@ -410,7 +413,16 @@ function resolvePreviousActionForTenant(tenantId: string): 'BUY' | 'SELL' | 'HOL
     return null
   }
 
-  return mapExecutionCommandToRecommendationAction(previousEntry.resolved_command || previousEntry.command || 'hold')
+  return mapExecutionCommandToRecommendationAction(
+    normalizeExecutableCommand(previousEntry.resolved_command || previousEntry.command),
+  )
+}
+
+function normalizeExecutableCommand(value: unknown): ExecutableCommand {
+  if (value === 'charge' || value === 'discharge') {
+    return value
+  }
+  return 'hold'
 }
 
 function resolveSnapshotDecisionSource(value: string): string {
@@ -1026,14 +1038,7 @@ async function persistBatterySignalForCommand(command: CommandPayload, tenantId:
   }
 }
 
-function appendCommandHistory(entry: any): void {
-  if (!globalThis.commandHistory) {
-    globalThis.commandHistory = []
-  }
-
-  globalThis.commandHistory.unshift(entry)
-
-  if (globalThis.commandHistory.length > 200) {
-    globalThis.commandHistory = globalThis.commandHistory.slice(0, 200)
-  }
+function appendCommandHistory(entry: CommandHistoryRecord): void {
+  const nextHistory = [entry, ...getCommandHistory()].slice(0, 200)
+  setCommandHistory(nextHistory)
 }

@@ -76,11 +76,22 @@ export function getCommandHistory(): CommandHistoryRecord[] {
   return Array.isArray(globalControlState.commandHistory) ? globalControlState.commandHistory : []
 }
 
+export function setCommandHistory(history: CommandHistoryRecord[]): void {
+  globalControlState.commandHistory = history
+}
+
 export function getControlModeState(tenantId: string): ControlModeState | null {
   if (!globalControlState.__controlModeByTenant) {
     return null
   }
   return globalControlState.__controlModeByTenant[tenantId] ?? null
+}
+
+export function setControlModeState(tenantId: string, state: ControlModeState): void {
+  if (!globalControlState.__controlModeByTenant) {
+    globalControlState.__controlModeByTenant = {}
+  }
+  globalControlState.__controlModeByTenant[tenantId] = state
 }
 
 export function getErrorMessage(error: unknown, fallback: string): string {
