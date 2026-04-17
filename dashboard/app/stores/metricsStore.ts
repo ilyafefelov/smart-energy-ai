@@ -201,9 +201,9 @@ export const useMetricsStore = defineStore('metrics', () => {
     return `Source: ${sourceLabel} (fallback)`
   })
 
-  const getTooltip = (key: string) => {
+  const getTooltip = (key: string): TooltipInfo[string] | undefined => {
     const base = TOOLTIPS[key]
-    if (!base) return null
+    if (!base) return undefined
 
     if (key === 'savingsToday' || key === 'savingsThisMonth') {
       const sourceLine = sourceMetadata.value.realizedMetricsAvailable

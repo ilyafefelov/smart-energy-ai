@@ -569,7 +569,6 @@ const selectedTenantId = computed({
   set: (tenantId: string) => tenantContext.setTenant(tenantId),
 })
 
-const showRetrainingComplete = ref(false)
 const chartZoom = ref(1)
 const chartPanX = ref(0)
 const hoverPrice = ref<{ hour: number; price: number } | null>(null)
@@ -763,12 +762,13 @@ const weeklySavingsSeries = computed(() => {
     : (() => {
         const base = parseCurrencyValue(metricsStore.savingsToday.value)
         const trend = metricsStore.savingsToday.trend || 'stable'
-        const factorsByTrend: Record<string, number[]> = {
+        const factorsByTrend = {
           up: [0.78, 0.84, 0.92, 1.0, 1.08, 1.14, 1.2],
           down: [1.2, 1.14, 1.08, 1.0, 0.92, 0.86, 0.8],
           stable: [0.94, 0.98, 1.01, 1.0, 1.03, 0.99, 1.02],
-        }
-        const factors = factorsByTrend[trend] || factorsByTrend.stable
+        } satisfies Record<'up' | 'down' | 'stable', number[]>
+        const trendKey: keyof typeof factorsByTrend = trend === 'up' || trend === 'down' ? trend : 'stable'
+        const factors = factorsByTrend[trendKey]
         return factors.map((factor) => Number((base * factor).toFixed(2)))
       })()
 
@@ -803,14 +803,15 @@ const weeklyAverageSavings = computed(() => {
   return total / weeklySavingsSeries.value.length
 })
 
-const weeklyPeakDay = computed(() => {
-  if (weeklySavingsSeries.value.length === 0) {
+const weeklyPeakDay = computed<{ label: string; value: number }>(() => {
+  const [firstDay] = weeklySavingsSeries.value
+  if (!firstDay) {
     return { label: '—', value: 0 }
   }
 
   return weeklySavingsSeries.value.reduce((peak, current) => {
     return current.value > peak.value ? current : peak
-  }, weeklySavingsSeries.value[0])
+  }, firstDay)
 })
 
 const savingsBreakdownRows = computed(() => {
@@ -920,6 +921,10 @@ const chartPoints = computed(() => {
 
 const cancelRetraining = async () => {
   await retrainingStore.cancelRetraining()
+}
+
+const dismissRetrainingComplete = () => {
+  retrainingStore.resetJob()
 }
 
 // Scroll to price history table
