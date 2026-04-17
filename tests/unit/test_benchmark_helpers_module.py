@@ -429,3 +429,35 @@ def test_forecast_value_benchmark_asset_persists_promoted_winner(monkeypatch) ->
     assert captured_metadata["value"]["benchmark_uncertainty_source"] == "walk_forward_residual_std"
     assert captured_metadata["value"]["benchmark_avg_uncertainty_spread_eur_mwh"] == 9.0
     assert captured_metadata["value"]["benchmark_max_uncertainty_spread_eur_mwh"] == 12.0
+
+
+def test_log_forecast_benchmark_run_preserves_uncertainty_summaries() -> None:
+    helper_module = load_module(
+        "src.data_pipeline.benchmark_helpers_mlflow_uncertainty_under_test",
+        "src/data_pipeline/benchmark_helpers.py",
+        injected_modules={"mlflow": build_mlflow_module()},
+    )
+
+    row = {
+        "model_name": "random_forest_dam_24h",
+        "model_family": "random_forest_regressor",
+        "forecast_horizon_hours": 24,
+        "forecast_rows": 24,
+        "benchmark_rmse": 4.0,
+        "benchmark_mae": 3.0,
+        "benchmark_value_capture_ratio": 0.8,
+        "benchmark_uncertainty_source": "walk_forward_residual_std",
+        "benchmark_avg_uncertainty_spread_eur_mwh": 9.0,
+        "benchmark_max_uncertainty_spread_eur_mwh": 12.0,
+        "eval_rmse": 4.2,
+        "eval_mae": 3.1,
+        "eval_value_capture_ratio": 0.75,
+        "benchmark_timestamp": datetime(2026, 3, 6, 12, 0, 0),
+    }
+
+    log_row = helper_module.log_forecast_benchmark_run(row, tracking_module=build_mlflow_module())
+
+    assert log_row["run_name"] == "forecast_value_random_forest_dam_24h"
+    assert log_row["param_benchmark_uncertainty_source"] == "walk_forward_residual_std"
+    assert log_row["metric_benchmark_avg_uncertainty_spread_eur_mwh"] == 9.0
+    assert log_row["metric_benchmark_max_uncertainty_spread_eur_mwh"] == 12.0

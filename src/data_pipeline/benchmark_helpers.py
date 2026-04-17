@@ -445,17 +445,38 @@ def log_forecast_benchmark_run(
     """Log one forecast benchmark row to MLflow and return tracking metadata."""
 
     tracking_module = tracking_module or mlflow
+    benchmark_uncertainty_source = row.get("benchmark_uncertainty_source")
+    benchmark_avg_uncertainty_spread = row.get(
+        "benchmark_avg_uncertainty_spread_eur_mwh"
+    )
+    benchmark_max_uncertainty_spread = row.get(
+        "benchmark_max_uncertainty_spread_eur_mwh"
+    )
 
     with tracking_module.start_run(run_name=f"forecast_value_{row['model_name']}"):
         tracking_module.log_param("model_name", row["model_name"])
         tracking_module.log_param("model_family", row["model_family"])
         tracking_module.log_param("forecast_horizon_hours", row["forecast_horizon_hours"])
         tracking_module.log_param("forecast_rows", row["forecast_rows"])
+        if benchmark_uncertainty_source is not None:
+            tracking_module.log_param(
+                "benchmark_uncertainty_source", str(benchmark_uncertainty_source)
+            )
         tracking_module.log_metric("benchmark_rmse", row["benchmark_rmse"])
         tracking_module.log_metric("benchmark_mae", row["benchmark_mae"])
         tracking_module.log_metric(
             "benchmark_value_capture_ratio", row["benchmark_value_capture_ratio"]
         )
+        if benchmark_avg_uncertainty_spread is not None:
+            tracking_module.log_metric(
+                "benchmark_avg_uncertainty_spread_eur_mwh",
+                float(benchmark_avg_uncertainty_spread),
+            )
+        if benchmark_max_uncertainty_spread is not None:
+            tracking_module.log_metric(
+                "benchmark_max_uncertainty_spread_eur_mwh",
+                float(benchmark_max_uncertainty_spread),
+            )
         tracking_module.log_metric("eval_rmse", row["eval_rmse"])
         tracking_module.log_metric("eval_mae", row["eval_mae"])
         tracking_module.log_metric("eval_value_capture_ratio", row["eval_value_capture_ratio"])
@@ -471,6 +492,21 @@ def log_forecast_benchmark_run(
         "metric_benchmark_rmse": row["benchmark_rmse"],
         "metric_benchmark_mae": row["benchmark_mae"],
         "metric_benchmark_value_capture_ratio": row["benchmark_value_capture_ratio"],
+        "param_benchmark_uncertainty_source": (
+            str(benchmark_uncertainty_source)
+            if benchmark_uncertainty_source is not None
+            else None
+        ),
+        "metric_benchmark_avg_uncertainty_spread_eur_mwh": (
+            float(benchmark_avg_uncertainty_spread)
+            if benchmark_avg_uncertainty_spread is not None
+            else None
+        ),
+        "metric_benchmark_max_uncertainty_spread_eur_mwh": (
+            float(benchmark_max_uncertainty_spread)
+            if benchmark_max_uncertainty_spread is not None
+            else None
+        ),
         "metric_eval_rmse": row["eval_rmse"],
         "metric_eval_mae": row["eval_mae"],
         "metric_eval_value_capture_ratio": row["eval_value_capture_ratio"],
