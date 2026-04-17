@@ -242,7 +242,10 @@ const form = reactive({
   battery_soc_max: 1,
 })
 
-const selectedBatteryMeta = computed(() => batteryOptions.find((item) => item.id === form.battery_type) || batteryOptions[0])
+const selectedBatteryMeta = computed(() => {
+  const selected = batteryOptions.find((item) => item.id === form.battery_type)
+  return selected ?? batteryOptions[0]!
+})
 
 const efficiencyPercent = computed({
   get: () => Number((form.battery_efficiency * 100).toFixed(1)),

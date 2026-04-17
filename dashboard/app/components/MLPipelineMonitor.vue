@@ -156,7 +156,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useMLPipelineStore } from '~/app/stores/mlPipelineStore'
+import { useMLPipelineStore } from '~/stores/mlPipelineStore'
 
 const mlStore = useMLPipelineStore()
 
@@ -174,7 +174,7 @@ const refresh = async () => {
     await mlStore.fetchRecommendation()
     await mlStore.fetchMLflowStatus()
   } catch (e) {
-    error.value = e.message
+    error.value = e instanceof Error ? e.message : 'Unknown error'
   } finally {
     loading.value = false
   }
@@ -182,27 +182,23 @@ const refresh = async () => {
 
 const recommendation = computed(() => mlStore.recommendation)
 const modelInfo = computed(() => ({
-  name: mlStore.mlflowStatus.active_model?.name || 'Unknown',
+  name: 'Active model',
   version: mlStore.mlflowStatus.active_model?.version || '1.0.0',
-  accuracy: mlStore.mlflowStatus.active_model?.metrics?.test_accuracy || 0,
-  profit: mlStore.mlflowStatus.active_model?.metrics?.backtesting_profit || 0,
+  accuracy: mlStore.mlflowStatus.active_model?.accuracy || 0,
+  profit: mlStore.mlflowStatus.active_model?.backtesting_profit || 0,
 }))
 
 const driftDetected = computed(() => mlStore.driftDetected)
 const accuracyTrend = computed(() => mlStore.accuracyTrend)
 
 const topFactors = computed(() => {
-  const factors = mlStore.mlflowStatus.active_model?.feature_importance || []
-  return factors.slice(0, 5)
+  return [] as Array<{ name: string; importance: number }>
 })
 
 const getActionColor = (action: string) => {
-  const colors = {
-    'BUY': 'bg-green-600',
-    'SELL': 'bg-yellow-600',
-    'DISCHARGE': 'bg-orange-600',
-    'HOLD': 'bg-slate-600',
-  }
-  return colors[action] || 'bg-slate-600'
+  if (action === 'BUY') return 'bg-green-600'
+  if (action === 'SELL') return 'bg-yellow-600'
+  if (action === 'DISCHARGE') return 'bg-orange-600'
+  return 'bg-slate-600'
 }
 </script>

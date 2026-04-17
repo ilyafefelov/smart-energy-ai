@@ -90,17 +90,22 @@ const dagsterScheduleRows = computed<ForecastRow[]>(() => {
   }
 
   return source.map((point, idx) => {
-    const action = String(point.recommended_action || 'HOLD').toUpperCase() as ForecastRow['action']
+    const rawAction = String(point.recommended_action || 'HOLD').toUpperCase()
+    const action: ForecastRow['action'] = rawAction === 'BUY'
+      ? 'BUY'
+      : rawAction === 'SELL' || rawAction === 'DISCHARGE'
+        ? 'SELL'
+        : 'HOLD'
     const status: ForecastRow['status'] = action === 'BUY'
       ? 'Off-Peak'
-      : action === 'SELL' || action === 'DISCHARGE'
+      : action === 'SELL'
         ? 'Peak'
         : 'Normal'
 
     return {
       key: `dagster-${idx}-${point.hour}`,
       time: Number(point.hour) % 24,
-      action: action === 'DISCHARGE' ? 'SELL' : action,
+      action,
       price: Number(point.price_uah_kwh || 0),
       status,
     }

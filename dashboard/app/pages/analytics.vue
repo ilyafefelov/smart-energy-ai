@@ -164,7 +164,7 @@
           <p class="text-sm text-slate-400 mb-3">Forecast Confidence</p>
           <div class="space-y-2">
             <div v-for="(forecast, idx) in pricesStore.forecast.slice(0, 6)" :key="idx" class="flex items-center justify-between">
-              <span class="text-xs text-slate-400">Hour {{ forecast.hour }}:00</span>
+              <span class="text-xs text-slate-400">Hour {{ forecast.timestamp.getHours() }}:00</span>
               <div class="flex items-center gap-2 flex-1 ml-4">
                 <div class="flex-1 bg-slate-700 rounded-full h-1">
                   <div class="h-full bg-energy-400 rounded-full" :style="{ width: (forecast.confidence * 100) + '%' }"></div>
