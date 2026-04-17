@@ -3,6 +3,55 @@
  * Phase 5: Complete renewable energy modeling integration
  */
 
+interface ForecastEntry {
+  timestamp: string
+  hour: number
+  temperature_celsius: number
+  wind_speed_ms: number
+  ghi_wm2: number
+  cloud_cover_percent: number
+  solar_generation_kw: number
+  wind_generation_kw: number
+  total_generation_kw: number
+}
+
+interface OptimizationResult {
+  solar_capacity_kw: number
+  wind_capacity_kw: number
+  solar_ratio_percent: number
+  wind_ratio_percent: number
+  estimated_daily_kwh: number
+  target_achievement_percent: number
+  total_cost_usd: number
+  cost_per_daily_kwh: number
+  payback_years: number
+}
+
+function getErrorStatusCode(error: unknown): number {
+  if (typeof error === 'object' && error !== null && 'statusCode' in error) {
+    const statusCode = (error as { statusCode?: unknown }).statusCode
+    if (typeof statusCode === 'number') {
+      return statusCode
+    }
+  }
+  return 500
+}
+
+function getErrorStatusMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'statusMessage' in error) {
+    const statusMessage = (error as { statusMessage?: unknown }).statusMessage
+    if (typeof statusMessage === 'string' && statusMessage.length > 0) {
+      return statusMessage
+    }
+  }
+
+  if (error instanceof Error) {
+    return `Renewable energy forecast failed: ${error.message}`
+  }
+
+  return 'Renewable energy forecast failed'
+}
+
 export default defineEventHandler(async (event) => {
   const method = getMethod(event)
   const query = getQuery(event)
@@ -46,7 +95,7 @@ export default defineEventHandler(async (event) => {
       
       // Generate realistic weather and generation data for Ukraine
       const generateWeatherForecast = (hours: number) => {
-        const forecast = []
+        const forecast: ForecastEntry[] = []
         
         for (let h = 0; h < hours; h++) {
           const timestamp = new Date(now.getTime() + h * 3600000)
@@ -118,6 +167,12 @@ export default defineEventHandler(async (event) => {
       if (type === 'current') {
         // Current generation only
         const currentWeather = generateWeatherForecast(1)[0]
+        if (!currentWeather) {
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Unable to generate current renewable forecast'
+          })
+        }
         
         return {
           timestamp: currentWeather.timestamp,
@@ -201,7 +256,7 @@ export default defineEventHandler(async (event) => {
         const solarCostPerKw = 1200 // USD/kW
         const windCostPerKw = 2000  // USD/kW
         
-        let bestConfig = null
+        let bestConfig: OptimizationResult | null = null
         let bestScore = 0
         
         // Test different solar/wind combinations
@@ -239,6 +294,13 @@ export default defineEventHandler(async (event) => {
             }
           }
         }
+
+        if (!bestConfig) {
+          throw createError({
+            statusCode: 500,
+            statusMessage: 'Unable to derive renewable optimization result'
+          })
+        }
         
         return {
           optimization_result: bestConfig,
@@ -255,9 +317,9 @@ export default defineEventHandler(async (event) => {
             electricity_price_usd_per_kwh: 0.1
           },
           recommendations: {
-            prioritize_solar: bestConfig?.solar_ratio_percent > 70 ? 'High solar ratio recommended due to cost efficiency' : null,
-            prioritize_wind: bestConfig?.wind_ratio_percent > 70 ? 'High wind ratio recommended for steady generation' : null,
-            balanced_approach: bestConfig && bestConfig.solar_ratio_percent >= 30 && bestConfig.wind_ratio_percent >= 30 ? 'Balanced solar/wind approach recommended' : null
+            prioritize_solar: bestConfig.solar_ratio_percent > 70 ? 'High solar ratio recommended due to cost efficiency' : null,
+            prioritize_wind: bestConfig.wind_ratio_percent > 70 ? 'High wind ratio recommended for steady generation' : null,
+            balanced_approach: bestConfig.solar_ratio_percent >= 30 && bestConfig.wind_ratio_percent >= 30 ? 'Balanced solar/wind approach recommended' : null
           }
         }
         
@@ -272,8 +334,8 @@ export default defineEventHandler(async (event) => {
       console.error('Renewable energy API error:', error)
       
       throw createError({
-        statusCode: error.statusCode || 500,
-        statusMessage: error.statusMessage || `Renewable energy forecast failed: ${error.message}`
+        statusCode: getErrorStatusCode(error),
+        statusMessage: getErrorStatusMessage(error)
       })
     }
   }

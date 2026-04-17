@@ -137,7 +137,12 @@ export default defineEventHandler(async (): Promise<RenewableForecastResponse> =
       }
     }
 
-    console.log(`[Renewable API] ML forecast completed: ${response.data.total_renewable.current_generation_kw} kW current generation`)
+    const responseData = response.data
+    if (!responseData) {
+      throw new Error('Renewable forecast response missing data')
+    }
+
+    console.log(`[Renewable API] ML forecast completed: ${responseData.total_renewable.current_generation_kw} kW current generation`)
     return response
   } catch (error) {
     console.error('[Renewable API] Error:', error)
