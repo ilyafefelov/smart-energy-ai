@@ -139,8 +139,13 @@ export default defineEventHandler(async (event): Promise<BatteryPhysicsResponse>
         }
       }
     }
+
+    const responseData = response.data
+    if (!responseData) {
+      throw new Error('Battery physics response missing data')
+    }
     
-    console.log(`[Battery Physics API] Simulation completed for ${response.data.chemistry} battery`)
+    console.log(`[Battery Physics API] Simulation completed for ${responseData.chemistry} battery`)
     return response
     
   } catch (error) {

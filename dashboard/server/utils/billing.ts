@@ -182,7 +182,12 @@ function resolvePlanForTenant(tenantId: string): BillingPlan {
     return PLAN_CATALOG[overridePlanId]
   }
 
-  return PLAN_CATALOG.starter
+  const starterPlan = PLAN_CATALOG.starter
+  if (starterPlan) {
+    return starterPlan
+  }
+
+  throw new Error('Starter billing plan is not configured')
 }
 
 function readTenantUsageEvents(tenantId: string): BillingUsageEvent[] {

@@ -95,7 +95,10 @@ function parseCustomersYamlTenantRecords(yamlContent: string): TenantRecord[] {
 
     const idMatch = rawLine.match(/^\s*-\s*id\s*:\s*(.+?)\s*$/)
     if (idMatch) {
-      const id = normalizeTenantId(normalizeFieldValue(idMatch[1]))
+      const idValue = idMatch[1]
+      if (typeof idValue !== 'string') continue
+
+      const id = normalizeTenantId(normalizeFieldValue(idValue))
       if (!id) continue
       current = { id, name: null }
       tenants.push(current)
@@ -106,7 +109,10 @@ function parseCustomersYamlTenantRecords(yamlContent: string): TenantRecord[] {
 
     const nameMatch = rawLine.match(/^\s*name\s*:\s*(.+?)\s*$/)
     if (nameMatch) {
-      const nameValue = normalizeFieldValue(nameMatch[1])
+      const rawNameValue = nameMatch[1]
+      if (typeof rawNameValue !== 'string') continue
+
+      const nameValue = normalizeFieldValue(rawNameValue)
       current.name = nameValue || null
     }
   }
@@ -287,6 +293,12 @@ export async function resolveTenantContext(
   const tenants = loadTenantRegistry()
   const availableTenantIds = tenants.map((tenant) => tenant.id)
   const defaultTenant = tenants[0]
+  if (!defaultTenant) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'No customer tenants were found in customers.yaml',
+    })
+  }
 
   const { source, value } = extractTenantCandidate(event, options?.body || null)
   const resolvedTenantId = value || defaultTenant.id

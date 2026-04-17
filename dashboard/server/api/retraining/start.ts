@@ -166,7 +166,13 @@ function simulateTraining(
 
   const interval = setInterval(() => {
     if (stepIndex < steps.length) {
-      progress = steps[stepIndex]
+      const nextProgress = steps[stepIndex]
+      if (typeof nextProgress !== 'number') {
+        clearInterval(interval)
+        return
+      }
+
+      progress = nextProgress
       stepIndex++
 
       const progressData = {
