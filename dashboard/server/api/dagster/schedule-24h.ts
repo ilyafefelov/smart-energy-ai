@@ -21,6 +21,10 @@ export default eventHandler(async (event) => {
     ])
 
     const schedule = recommendationPayload?.schedule_24h?.schedule || []
+    const recommendationSourceMetadata = recommendationPayload?.source_metadata
+      && typeof recommendationPayload.source_metadata === 'object'
+      ? recommendationPayload.source_metadata
+      : {}
     const totalProfit = schedule.reduce((sum: number, row: any) => sum + Number(row?.expected_profit_uah || 0), 0)
 
     return {
@@ -44,6 +48,7 @@ export default eventHandler(async (event) => {
         hold_hours: schedule.filter((s: any) => s.recommended_action === 'HOLD').length,
       },
       source_metadata: {
+        ...recommendationSourceMetadata,
         tenant_filter_applied: true,
         mlflow_registry_diagnostics_available: mlflowStatus?.mlflow_connected === true,
       },
