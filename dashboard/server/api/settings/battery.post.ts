@@ -17,6 +17,23 @@ interface BatteryConfig {
   battery_soc_max?: number
 }
 
+type BatteryDefaults = {
+  c_rate_charge: number
+  c_rate_discharge: number
+  dod_max: number
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return fallback
+}
+
+function isHttpErrorLike(error: unknown): error is { statusCode: number } {
+  return typeof error === 'object' && error !== null && 'statusCode' in error
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event) as BatteryConfig
@@ -100,7 +117,7 @@ export default defineEventHandler(async (event) => {
   } catch (error) {
     console.error('Battery config update error:', error)
     
-    if (error.statusCode) {
+    if (isHttpErrorLike(error)) {
       throw error
     }
     
@@ -111,8 +128,8 @@ export default defineEventHandler(async (event) => {
   }
 })
 
-function getBatteryDefaults(batteryType: string) {
-  const defaults = {
+function getBatteryDefaults(batteryType: BatteryConfig['battery_type']): BatteryDefaults {
+  const defaults: Record<BatteryConfig['battery_type'], BatteryDefaults> = {
     'LFP': {
       c_rate_charge: 0.5,
       c_rate_discharge: 1.0,
@@ -160,7 +177,7 @@ async function triggerPipelineRecalculation(config: any) {
             timeout: 5000     // 5 second timeout
           })
         } catch (e) {
-          console.warn('Background recalculation failed:', e.message)
+          console.warn('Background recalculation failed:', getErrorMessage(e, 'unknown error'))
         }
       }, 100)
       
@@ -172,14 +189,14 @@ async function triggerPipelineRecalculation(config: any) {
     } catch (e) {
       return {
         success: false,
-        error: 'Failed to trigger recalculation: ' + e.message,
+        error: 'Failed to trigger recalculation: ' + getErrorMessage(e, 'unknown error'),
         status: 'failed'
       }
     }
   } catch (e) {
     return {
       success: false,
-      error: 'Failed to create trigger: ' + e.message,
+      error: 'Failed to create trigger: ' + getErrorMessage(e, 'unknown error'),
       status: 'failed'
     }
   }
