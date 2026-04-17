@@ -107,6 +107,88 @@ def test_build_forecast_value_scorecard_computes_realized_metrics() -> None:
     assert row["eval_value_capture_ratio"] == 0.75
 
 
+def test_build_forecast_value_scorecard_falls_back_to_eval_metrics_without_actual_overlap() -> None:
+    helper_module = load_module(
+        "src.data_pipeline.benchmark_helpers_eval_fallback_under_test",
+        "src/data_pipeline/benchmark_helpers.py",
+        injected_modules={"mlflow": build_mlflow_module()},
+    )
+
+    start = datetime(2026, 3, 1, 0, 0)
+    market_timestamps = [start + timedelta(hours=hour) for hour in range(48)]
+    forecast_timestamps = [start + timedelta(hours=48 + hour) for hour in range(24)]
+    market_data = pl.DataFrame(
+        {
+            "timestamp": market_timestamps,
+            "price_eur_mwh": [50.0 + float(hour % 6) for hour in range(48)],
+        }
+    )
+    price_forecast = pl.DataFrame(
+        {
+            "forecast_timestamp": forecast_timestamps,
+            "predicted_price_eur_mwh": [48.0 + float(hour % 4) for hour in range(24)],
+            "model_name": ["random_forest_dam_24h"] * 24,
+            "model_family": ["random_forest_regressor"] * 24,
+            "forecast_horizon_hours": [24] * 24,
+            "training_rows": [96] * 24,
+            "evaluation_folds": [3] * 24,
+            "eval_rmse": [4.2] * 24,
+            "eval_mae": [3.1] * 24,
+            "eval_value_capture_ratio": [0.75] * 24,
+            "eval_realized_spread_eur_mwh": [37.5] * 24,
+            "eval_optimal_spread_eur_mwh": [50.0] * 24,
+        }
+    )
+
+    scorecard = helper_module.build_forecast_value_scorecard(market_data, price_forecast)
+
+    assert len(scorecard) == 1
+    row = scorecard.to_dicts()[0]
+    assert row["model_name"] == "random_forest_dam_24h"
+    assert row["benchmark_rmse"] == 4.2
+    assert row["benchmark_mae"] == 3.1
+    assert row["benchmark_value_capture_ratio"] == 0.75
+    assert row["evaluation_folds"] == 3
+
+
+def test_build_forecast_value_scorecard_keeps_empty_result_without_evaluated_folds() -> None:
+    helper_module = load_module(
+        "src.data_pipeline.benchmark_helpers_empty_eval_fallback_under_test",
+        "src/data_pipeline/benchmark_helpers.py",
+        injected_modules={"mlflow": build_mlflow_module()},
+    )
+
+    start = datetime(2026, 3, 1, 0, 0)
+    market_timestamps = [start + timedelta(hours=hour) for hour in range(48)]
+    forecast_timestamps = [start + timedelta(hours=48 + hour) for hour in range(24)]
+    market_data = pl.DataFrame(
+        {
+            "timestamp": market_timestamps,
+            "price_eur_mwh": [50.0 + float(hour % 6) for hour in range(48)],
+        }
+    )
+    price_forecast = pl.DataFrame(
+        {
+            "forecast_timestamp": forecast_timestamps,
+            "predicted_price_eur_mwh": [48.0 + float(hour % 4) for hour in range(24)],
+            "model_name": ["persistence_fallback"] * 24,
+            "model_family": ["persistence"] * 24,
+            "forecast_horizon_hours": [24] * 24,
+            "training_rows": [0] * 24,
+            "evaluation_folds": [0] * 24,
+            "eval_rmse": [0.0] * 24,
+            "eval_mae": [0.0] * 24,
+            "eval_value_capture_ratio": [0.0] * 24,
+            "eval_realized_spread_eur_mwh": [0.0] * 24,
+            "eval_optimal_spread_eur_mwh": [0.0] * 24,
+        }
+    )
+
+    scorecard = helper_module.build_forecast_value_scorecard(market_data, price_forecast)
+
+    assert len(scorecard) == 0
+
+
 def test_forecast_value_benchmark_asset_builds_scorecard() -> None:
     module = load_module(
         "src.assets.benchmarks.performance_forecast_under_test",
@@ -141,6 +223,7 @@ def test_forecast_value_benchmark_asset_builds_scorecard() -> None:
             "eval_optimal_spread_eur_mwh": [50.0] * 4,
         }
     )
+    module.write_promoted_forecast_model_metadata = lambda metadata: metadata
 
     result = module.forecast_value_benchmark_asset(market_data, price_forecast)
 
@@ -149,3 +232,181 @@ def test_forecast_value_benchmark_asset_builds_scorecard() -> None:
     assert row["model_name"] == "demo_model"
     assert row["benchmark_rmse"] > 0.0
     assert 0.0 <= row["benchmark_value_capture_ratio"] <= 1.0
+
+
+def test_forecast_value_benchmark_asset_appends_registry_candidates(monkeypatch) -> None:
+    module = load_module(
+        "src.assets.benchmarks.performance_multi_candidate_under_test",
+        "src/assets/benchmarks/performance.py",
+        injected_modules={
+            "dagster": build_dagster_module(),
+            "mlflow": build_mlflow_module(),
+        },
+    )
+
+    start = datetime(2026, 3, 1, 0, 0)
+    timestamps = [start + timedelta(hours=hour) for hour in range(4)]
+    market_data = pl.DataFrame(
+        {
+            "timestamp": timestamps,
+            "price_eur_mwh": [50.0, 20.0, 70.0, 65.0],
+        }
+    )
+    price_forecast = pl.DataFrame(
+        {
+            "forecast_timestamp": timestamps,
+            "predicted_price_eur_mwh": [48.0, 22.0, 66.0, 67.0],
+            "model_name": ["demo_model"] * 4,
+            "model_family": ["demo_family"] * 4,
+            "forecast_horizon_hours": [24] * 4,
+            "training_rows": [72] * 4,
+            "evaluation_folds": [1] * 4,
+            "eval_rmse": [5.0] * 4,
+            "eval_mae": [4.0] * 4,
+            "eval_value_capture_ratio": [0.6] * 4,
+            "eval_realized_spread_eur_mwh": [30.0] * 4,
+            "eval_optimal_spread_eur_mwh": [50.0] * 4,
+        }
+    )
+
+    monkeypatch.setattr(
+        module,
+        "list_forecast_model_specs",
+        lambda: [types.SimpleNamespace(model_name="demo_model"), types.SimpleNamespace(model_name="alt_model")],
+    )
+    monkeypatch.setattr(
+        module,
+        "_build_forecast_with_model_spec",
+        lambda market_df, model_spec: pl.DataFrame(
+            {
+                "forecast_timestamp": market_df["timestamp"],
+                "predicted_price_eur_mwh": [52.0, 18.0, 74.0, 60.0],
+                "model_name": [model_spec.model_name] * len(market_df),
+                "model_family": ["alt_family"] * len(market_df),
+                "forecast_horizon_hours": [24] * len(market_df),
+                "training_rows": [96] * len(market_df),
+                "evaluation_folds": [2] * len(market_df),
+                "eval_rmse": [3.0] * len(market_df),
+                "eval_mae": [2.0] * len(market_df),
+                "eval_value_capture_ratio": [0.8] * len(market_df),
+                "eval_realized_spread_eur_mwh": [40.0] * len(market_df),
+                "eval_optimal_spread_eur_mwh": [50.0] * len(market_df),
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        module,
+        "write_promoted_forecast_model_metadata",
+        lambda metadata: metadata,
+    )
+
+    result = module.forecast_value_benchmark_asset(market_data, price_forecast)
+
+    assert len(result) == 2
+    assert set(result["model_name"].to_list()) == {"demo_model", "alt_model"}
+
+
+def test_forecast_value_benchmark_asset_skips_unavailable_optional_candidates(monkeypatch) -> None:
+    module = load_module(
+        "src.assets.benchmarks.performance_optional_candidate_under_test",
+        "src/assets/benchmarks/performance.py",
+        injected_modules={
+            "dagster": build_dagster_module(),
+            "mlflow": build_mlflow_module(),
+        },
+    )
+
+    start = datetime(2026, 3, 1, 0, 0)
+    timestamps = [start + timedelta(hours=hour) for hour in range(4)]
+    market_data = pl.DataFrame(
+        {
+            "timestamp": timestamps,
+            "price_eur_mwh": [50.0, 20.0, 70.0, 65.0],
+        }
+    )
+    price_forecast = pl.DataFrame(
+        {
+            "forecast_timestamp": timestamps,
+            "predicted_price_eur_mwh": [48.0, 22.0, 66.0, 67.0],
+            "model_name": ["demo_model"] * 4,
+            "model_family": ["demo_family"] * 4,
+            "forecast_horizon_hours": [24] * 4,
+            "training_rows": [72] * 4,
+            "evaluation_folds": [1] * 4,
+            "eval_rmse": [5.0] * 4,
+            "eval_mae": [4.0] * 4,
+            "eval_value_capture_ratio": [0.6] * 4,
+            "eval_realized_spread_eur_mwh": [30.0] * 4,
+            "eval_optimal_spread_eur_mwh": [50.0] * 4,
+        }
+    )
+
+    monkeypatch.setattr(
+        module,
+        "list_forecast_model_specs",
+        lambda: [types.SimpleNamespace(model_name="demo_model"), types.SimpleNamespace(model_name="nbeatsx_dam_24h")],
+    )
+    monkeypatch.setattr(
+        module,
+        "_build_forecast_with_model_spec",
+        lambda market_df, model_spec: (_ for _ in ()).throw(ModuleNotFoundError("missing neuralforecast")),
+    )
+    monkeypatch.setattr(
+        module,
+        "write_promoted_forecast_model_metadata",
+        lambda metadata: metadata,
+    )
+
+    result = module.forecast_value_benchmark_asset(market_data, price_forecast)
+
+    assert len(result) == 1
+    assert result["model_name"].to_list() == ["demo_model"]
+
+
+def test_forecast_value_benchmark_asset_persists_promoted_winner(monkeypatch) -> None:
+    module = load_module(
+        "src.assets.benchmarks.performance_promotion_under_test",
+        "src/assets/benchmarks/performance.py",
+        injected_modules={
+            "dagster": build_dagster_module(),
+            "mlflow": build_mlflow_module(),
+        },
+    )
+
+    start = datetime(2026, 3, 1, 0, 0)
+    timestamps = [start + timedelta(hours=hour) for hour in range(4)]
+    market_data = pl.DataFrame(
+        {
+            "timestamp": timestamps,
+            "price_eur_mwh": [50.0, 20.0, 70.0, 65.0],
+        }
+    )
+    price_forecast = pl.DataFrame(
+        {
+            "forecast_timestamp": timestamps,
+            "predicted_price_eur_mwh": [48.0, 22.0, 66.0, 67.0],
+            "model_name": ["random_forest_dam_24h"] * 4,
+            "model_family": ["random_forest_regressor"] * 4,
+            "forecast_horizon_hours": [24] * 4,
+            "training_rows": [72] * 4,
+            "evaluation_folds": [1] * 4,
+            "eval_rmse": [5.0] * 4,
+            "eval_mae": [4.0] * 4,
+            "eval_value_capture_ratio": [0.6] * 4,
+            "eval_realized_spread_eur_mwh": [30.0] * 4,
+            "eval_optimal_spread_eur_mwh": [50.0] * 4,
+        }
+    )
+    captured_metadata = {}
+
+    monkeypatch.setattr(
+        module,
+        "write_promoted_forecast_model_metadata",
+        lambda metadata: captured_metadata.setdefault("value", dict(metadata)),
+    )
+
+    result = module.forecast_value_benchmark_asset(market_data, price_forecast)
+
+    assert len(result) == 1
+    assert captured_metadata["value"]["model_name"] == "random_forest_dam_24h"
+    assert captured_metadata["value"]["promotion_source"] == "forecast_value_benchmark_asset"

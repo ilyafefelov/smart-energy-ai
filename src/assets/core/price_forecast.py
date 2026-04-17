@@ -6,40 +6,29 @@ Builds a day-ahead (24h) baseline forecasting model from historical market data.
 
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 
 import polars as pl
 from dagster import AssetIn, asset
 from src.data_pipeline.forecast_model_registry import (
     DEFAULT_FORECAST_MODEL_NAME,
-    PRICE_FORECAST_MODEL_ENV,
     get_forecast_model_spec,
+    resolve_active_forecast_model_name,
 )
 from src.data_pipeline.price_forecast_features import (
     _build_feature_frame,
     _build_persistence_forecast,
     _compute_eval_metrics,
+    _fit_forecast_model,
+    _predict_forecast_model,
     _run_walk_forward_evaluation,
     _split_train_eval,
 )
 
 
-@asset(
-    group_name="market_data",
-    description="24-hour day-ahead market (DAM) price forecast baseline model",
-    ins={"market_data": AssetIn("market_data_asset")},
-    metadata={
-        "forecast_horizon_hours": 24,
-        "default_model_name": DEFAULT_FORECAST_MODEL_NAME,
-        "model_registry_enabled": True,
-        "target_market": "DAM Ukraine",
-    },
-)
-def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
-    """
-    Train a baseline DAM forecaster and return the next 24 hourly predictions.
-    """
+def _build_forecast_with_model_spec(
+    market_data: pl.DataFrame, model_spec
+) -> pl.DataFrame:
     feature_df = _build_feature_frame(market_data)
 
     labeled = feature_df.drop_nulls(
@@ -54,9 +43,6 @@ def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
 
     if len(labeled) < 48:
         return _build_persistence_forecast(market_data, len(labeled))
-
-    resolved_model_name = os.getenv(PRICE_FORECAST_MODEL_ENV, DEFAULT_FORECAST_MODEL_NAME)
-    model_spec = get_forecast_model_spec(resolved_model_name)
 
     train_df, eval_df = _split_train_eval(labeled)
     feature_cols = [
@@ -75,7 +61,7 @@ def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
     y_train = train_df.select("target_price_t_plus_24h").to_numpy().reshape(-1)
 
     model = model_spec.build_estimator()
-    model.fit(x_train, y_train)
+    _fit_forecast_model(model, train_df, feature_cols)
 
     eval_rmse = 0.0
     eval_mae = 0.0
@@ -106,7 +92,7 @@ def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
     # For 24h-ahead horizon, use the latest 24 feature rows as inference inputs.
     infer_features = feature_df.drop_nulls(["lag_1h", "lag_24h", "roll_mean_24h", "roll_std_24h"]).tail(24)
     x_infer = infer_features.select(feature_cols).to_numpy()
-    predictions = model.predict(x_infer)
+    predictions = _predict_forecast_model(model, infer_features, feature_cols)
 
     spread = residual_std if residual_std > 0 else max(eval_rmse, 5.0)
     forecast_df = infer_features.select(
@@ -136,3 +122,23 @@ def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
     )
 
     return forecast_df.sort("forecast_timestamp")
+
+
+@asset(
+    group_name="market_data",
+    description="24-hour day-ahead market (DAM) price forecast baseline model",
+    ins={"market_data": AssetIn("market_data_asset")},
+    metadata={
+        "forecast_horizon_hours": 24,
+        "default_model_name": DEFAULT_FORECAST_MODEL_NAME,
+        "model_registry_enabled": True,
+        "target_market": "DAM Ukraine",
+    },
+)
+def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
+    """
+    Train a baseline DAM forecaster and return the next 24 hourly predictions.
+    """
+    resolved_model_name = resolve_active_forecast_model_name()
+    model_spec = get_forecast_model_spec(resolved_model_name)
+    return _build_forecast_with_model_spec(market_data, model_spec)

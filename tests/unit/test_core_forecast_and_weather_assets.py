@@ -193,6 +193,19 @@ class _RegistryFakeModel:
         return [55.0 for _ in range(len(rows))]
 
 
+class _RegistryFrameAdapter:
+    def __init__(self) -> None:
+        self.mean_target = 0.0
+
+    def fit_frame(self, train_df, feature_cols, target_col) -> None:
+        del feature_cols
+        self.mean_target = float(train_df.select(target_col).mean().item())
+
+    def predict_frame(self, df, feature_cols):
+        del feature_cols
+        return [self.mean_target for _ in range(len(df))]
+
+
 def test_price_forecast_asset_resolves_model_from_registry(monkeypatch) -> None:
     module = load_module(
         "src.assets.core.price_forecast_registry_under_test",
@@ -226,6 +239,71 @@ def test_price_forecast_asset_resolves_model_from_registry(monkeypatch) -> None:
     assert set(forecast["forecast_horizon_hours"].unique().to_list()) == {24}
     assert set(forecast["evaluation_folds"].unique().to_list()) == {1}
     assert "eval_value_capture_ratio" in forecast.columns
+
+
+def test_price_forecast_asset_supports_frame_adapter_registry_models(monkeypatch) -> None:
+    module = load_module(
+        "src.assets.core.price_forecast_frame_adapter_under_test",
+        "src/assets/core/price_forecast.py",
+        injected_modules={"dagster": build_dagster_module()},
+    )
+    monkeypatch.setattr(
+        module,
+        "get_forecast_model_spec",
+        lambda model_name=None: types.SimpleNamespace(
+            model_name="frame_adapter_model",
+            model_family="frame_adapter_family",
+            forecast_horizon_hours=24,
+            build_estimator=lambda: _RegistryFrameAdapter(),
+        ),
+    )
+
+    timestamps = [datetime(2026, 3, 1, 0, 0) + timedelta(hours=hour) for hour in range(120)]
+    market_data = pl.DataFrame(
+        {
+            "timestamp": timestamps,
+            "price_eur_mwh": [35.0 + float(hour % 24) for hour in range(120)],
+        }
+    )
+
+    forecast = module.price_forecast_asset(market_data)
+
+    assert len(forecast) == 24
+    assert set(forecast["model_name"].unique().to_list()) == {"frame_adapter_model"}
+    assert set(forecast["model_family"].unique().to_list()) == {"frame_adapter_family"}
+    assert set(forecast["forecast_horizon_hours"].unique().to_list()) == {24}
+
+
+def test_price_forecast_asset_resolves_promoted_model_when_env_is_unset(monkeypatch) -> None:
+    module = load_module(
+        "src.assets.core.price_forecast_promoted_model_under_test",
+        "src/assets/core/price_forecast.py",
+        injected_modules={"dagster": build_dagster_module()},
+    )
+    monkeypatch.setattr(module, "resolve_active_forecast_model_name", lambda: "promoted_model")
+    monkeypatch.setattr(
+        module,
+        "get_forecast_model_spec",
+        lambda model_name=None: types.SimpleNamespace(
+            model_name=model_name,
+            model_family="promoted_family",
+            forecast_horizon_hours=24,
+            build_estimator=lambda: _RegistryFakeModel(),
+        ),
+    )
+
+    timestamps = [datetime(2026, 3, 1, 0, 0) + timedelta(hours=hour) for hour in range(120)]
+    market_data = pl.DataFrame(
+        {
+            "timestamp": timestamps,
+            "price_eur_mwh": [35.0 + float(hour % 24) for hour in range(120)],
+        }
+    )
+
+    forecast = module.price_forecast_asset(market_data)
+
+    assert len(forecast) == 24
+    assert set(forecast["model_name"].unique().to_list()) == {"promoted_model"}
 
 
 def test_weather_helpers_and_asset_flow(monkeypatch) -> None:

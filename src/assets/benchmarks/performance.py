@@ -14,7 +14,7 @@ from pathlib import Path
 
 from dagster import asset, AssetIn
 import polars as pl
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 import time
 import tracemalloc
@@ -63,7 +63,27 @@ def _ensure_src_in_path():
 logger = logging.getLogger(__name__)
 
 
+def _load_price_forecast_module():
+    module_name = "smart_energy_ai_price_forecast_asset"
+    module_path = Path(__file__).resolve().parents[1] / "core" / "price_forecast.py"
+    module_spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if module_spec is None or module_spec.loader is None:
+        raise ImportError(f"Unable to load price forecast helpers from {module_path}")
+
+    module = sys.modules.get(module_name)
+    if module is None:
+        module = importlib.util.module_from_spec(module_spec)
+        sys.modules[module_name] = module
+        module_spec.loader.exec_module(module)
+    return module
+
+
 try:
+    from src.assets.core.price_forecast import _build_forecast_with_model_spec
+    from src.data_pipeline.forecast_model_registry import (
+        list_forecast_model_specs,
+        write_promoted_forecast_model_metadata,
+    )
     from src.data_pipeline.benchmark_helpers import (
         BenchmarkMetrics,
         add_performance_analysis as _add_performance_analysis,
@@ -74,6 +94,12 @@ try:
         log_forecast_benchmark_run as _log_forecast_benchmark_run,
     )
 except ImportError:
+    _PRICE_FORECAST_MODULE = _load_price_forecast_module()
+    _build_forecast_with_model_spec = _PRICE_FORECAST_MODULE._build_forecast_with_model_spec
+    from src.data_pipeline.forecast_model_registry import (
+        list_forecast_model_specs,
+        write_promoted_forecast_model_metadata,
+    )
     _HELPER_MODULE_NAME = "smart_energy_ai_benchmark_helpers"
     _HELPER_PATH = Path(__file__).resolve().parents[2] / "data_pipeline" / "benchmark_helpers.py"
     _HELPER_SPEC = importlib.util.spec_from_file_location(_HELPER_MODULE_NAME, _HELPER_PATH)
@@ -91,6 +117,26 @@ except ImportError:
     _log_accuracy_benchmark_run = _HELPER_MODULE.log_accuracy_benchmark_run
     _log_engine_benchmark_run = _HELPER_MODULE.log_engine_benchmark_run
     _log_forecast_benchmark_run = _HELPER_MODULE.log_forecast_benchmark_run
+
+
+def _select_promoted_forecast_row(scorecard: pl.DataFrame) -> dict | None:
+    if len(scorecard) == 0:
+        return None
+
+    promoted = scorecard.sort(
+        by=[
+            "benchmark_value_capture_ratio",
+            "benchmark_rmse",
+            "benchmark_mae",
+            "model_name",
+        ],
+        descending=[True, False, False, False],
+    ).row(0, named=True)
+    return promoted
+
+
+def _is_registry_forecast_model(model_name: str) -> bool:
+    return model_name in {model_spec.model_name for model_spec in list_forecast_model_specs()}
 
 
 @asset(
@@ -393,7 +439,50 @@ def forecast_value_benchmark_asset(
     """Build a forecast scorecard from price forecast outputs and realized market prices."""
 
     logger.info("Building forecast benchmark scorecard...")
-    scorecard = _build_forecast_value_scorecard(market_data, price_forecast)
+    existing_models = set(price_forecast.get_column("model_name").unique().to_list()) if len(price_forecast) > 0 else set()
+    candidate_forecasts = [price_forecast] if len(price_forecast) > 0 else []
+
+    for model_spec in list_forecast_model_specs():
+        if model_spec.model_name in existing_models:
+            continue
+        try:
+            candidate_forecasts.append(_build_forecast_with_model_spec(market_data, model_spec))
+        except ModuleNotFoundError as exc:
+            logger.warning(
+                "Skipping forecast benchmark candidate %s because an optional dependency is unavailable: %s",
+                model_spec.model_name,
+                exc,
+            )
+
+    benchmark_forecasts = (
+        pl.concat(candidate_forecasts, how="diagonal_relaxed")
+        if candidate_forecasts
+        else price_forecast
+    )
+    scorecard = _build_forecast_value_scorecard(market_data, benchmark_forecasts)
+    promoted_row = _select_promoted_forecast_row(scorecard)
+    if promoted_row is not None and _is_registry_forecast_model(promoted_row["model_name"]):
+        promotion_metadata = {
+            "model_name": promoted_row["model_name"],
+            "model_family": promoted_row["model_family"],
+            "forecast_horizon_hours": promoted_row["forecast_horizon_hours"],
+            "benchmark_value_capture_ratio": promoted_row["benchmark_value_capture_ratio"],
+            "benchmark_rmse": promoted_row["benchmark_rmse"],
+            "benchmark_mae": promoted_row["benchmark_mae"],
+            "promoted_at_utc": datetime.now(timezone.utc).isoformat(),
+            "promotion_source": "forecast_value_benchmark_asset",
+        }
+        promotion_path = write_promoted_forecast_model_metadata(promotion_metadata)
+        logger.info(
+            "Promoted forecast model %s via benchmark scorecard and wrote metadata to %s",
+            promoted_row["model_name"],
+            promotion_path,
+        )
+    elif promoted_row is not None:
+        logger.warning(
+            "Skipping forecast promotion write for unknown model %s",
+            promoted_row["model_name"],
+        )
     logger.info("Forecast benchmark complete: %s scorecard rows", len(scorecard))
     return scorecard
 

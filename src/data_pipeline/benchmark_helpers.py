@@ -201,6 +201,61 @@ def _compute_forecast_value_metrics(
     }
 
 
+def _build_eval_only_scorecard(price_forecast: pl.DataFrame) -> pl.DataFrame:
+    grouped_rows: dict[tuple[str, str, int], list[dict[str, Any]]] = {}
+    for row in price_forecast.to_dicts():
+        model_name = str(row.get("model_name") or "unknown_model")
+        model_family = str(row.get("model_family") or "unknown_family")
+        forecast_horizon_hours = int(row.get("forecast_horizon_hours") or 0)
+        grouped_rows.setdefault((model_name, model_family, forecast_horizon_hours), []).append(dict(row))
+
+    if not grouped_rows:
+        return pl.DataFrame(schema=FORECAST_VALUE_SCORECARD_SCHEMA)
+
+    benchmark_rows = []
+    benchmark_timestamp = datetime.now()
+    for (model_name, model_family, forecast_horizon_hours), rows in grouped_rows.items():
+        first_row = rows[0]
+        evaluation_folds = int(first_row.get("evaluation_folds") or 0)
+        if evaluation_folds <= 0:
+            continue
+
+        eval_rmse = float(first_row.get("eval_rmse") or 0.0)
+        eval_mae = float(first_row.get("eval_mae") or 0.0)
+        eval_value_capture_ratio = float(first_row.get("eval_value_capture_ratio") or 0.0)
+        eval_realized_spread_eur_mwh = float(first_row.get("eval_realized_spread_eur_mwh") or 0.0)
+        eval_optimal_spread_eur_mwh = float(first_row.get("eval_optimal_spread_eur_mwh") or 0.0)
+
+        benchmark_rows.append(
+            {
+                "model_name": model_name,
+                "model_family": model_family,
+                "forecast_horizon_hours": forecast_horizon_hours,
+                "forecast_rows": len(rows),
+                "training_rows": int(first_row.get("training_rows") or 0),
+                "evaluation_folds": evaluation_folds,
+                "eval_rmse": eval_rmse,
+                "eval_mae": eval_mae,
+                "eval_value_capture_ratio": eval_value_capture_ratio,
+                "eval_realized_spread_eur_mwh": eval_realized_spread_eur_mwh,
+                "eval_optimal_spread_eur_mwh": eval_optimal_spread_eur_mwh,
+                "benchmark_rmse": eval_rmse,
+                "benchmark_mae": eval_mae,
+                "benchmark_value_capture_ratio": eval_value_capture_ratio,
+                "benchmark_realized_spread_eur_mwh": eval_realized_spread_eur_mwh,
+                "benchmark_optimal_spread_eur_mwh": eval_optimal_spread_eur_mwh,
+                "benchmark_window_start": min(row["forecast_timestamp"] for row in rows),
+                "benchmark_window_end": max(row["forecast_timestamp"] for row in rows),
+                "benchmark_timestamp": benchmark_timestamp,
+            }
+        )
+
+    if not benchmark_rows:
+        return pl.DataFrame(schema=FORECAST_VALUE_SCORECARD_SCHEMA)
+
+    return pl.DataFrame(benchmark_rows, schema=FORECAST_VALUE_SCORECARD_SCHEMA)
+
+
 def build_forecast_value_scorecard(
     market_data: pl.DataFrame, price_forecast: pl.DataFrame
 ) -> pl.DataFrame:
@@ -233,7 +288,7 @@ def build_forecast_value_scorecard(
         grouped_rows.setdefault(key, []).append(enriched_row)
 
     if not grouped_rows:
-        return pl.DataFrame(schema=FORECAST_VALUE_SCORECARD_SCHEMA)
+        return _build_eval_only_scorecard(price_forecast)
 
     benchmark_rows = []
     benchmark_timestamp = datetime.now()
