@@ -4,13 +4,88 @@ import fs from 'fs'
 import path from 'path'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
-function loadLatestRetrainingArtifacts(tenantId: string) {
+type RetrainingArtifacts = {
+  trainingStatus: string
+  lastTrainedAt: string | null
+  latestMetrics: Record<string, unknown> | null
+}
+
+type DashboardTenantRequest = {
+  headers: {
+    'x-tenant-id': string
+  }
+  query: {
+    tenantId: string
+  }
+}
+
+type DashboardBaseMetricsPayload = {
+  savings?: {
+    daily_avg?: unknown
+  } | null
+  forecast?: {
+    monthly?: unknown
+  } | null
+  breakdown?: {
+    battery_arbitrage?: unknown
+    load_shifting?: unknown
+    demand_response?: unknown
+  } | null
+  realized?: {
+    revenue_total?: unknown
+    cost_total?: unknown
+    net_total?: unknown
+    net_daily_avg?: unknown
+    auto_transitions?: unknown
+  } | null
+} | null
+
+type DashboardPricePayload = {
+  prices?: {
+    today?: {
+      avg?: unknown
+    } | null
+    forecast?: {
+      peak?: unknown
+      offPeak?: unknown
+    } | null
+  } | null
+} | null
+
+type DashboardBatteryPayload = {
+  battery?: {
+    health?: unknown
+    availableToCharge?: unknown
+  } | null
+} | null
+
+type DashboardMlPayload = {
+  data?: {
+    confidence?: unknown
+    model_info?: {
+      version?: unknown
+    } | null
+    savings_estimate?: {
+      daily_uah?: unknown
+      monthly_uah?: unknown
+    } | null
+  } | null
+} | null
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return fallback
+}
+
+function loadLatestRetrainingArtifacts(tenantId: string): RetrainingArtifacts {
   const retrainingDir = path.join(process.cwd(), 'data', 'tenants', tenantId, 'retraining')
   if (!fs.existsSync(retrainingDir)) {
     return {
       trainingStatus: 'idle',
       lastTrainedAt: null as string | null,
-      latestMetrics: null as any,
+      latestMetrics: null,
     }
   }
 
@@ -28,35 +103,52 @@ function loadLatestRetrainingArtifacts(tenantId: string) {
     return {
       trainingStatus: 'idle',
       lastTrainedAt: null as string | null,
-      latestMetrics: null as any,
+      latestMetrics: null,
     }
   }
 
-  const latestProgress = JSON.parse(fs.readFileSync(progressFiles[0].absolutePath, 'utf-8'))
+  const latestProgressFile = progressFiles[0]
+  if (!latestProgressFile) {
+    return {
+      trainingStatus: 'idle',
+      lastTrainedAt: null,
+      latestMetrics: null,
+    }
+  }
+
+  const latestProgress = JSON.parse(fs.readFileSync(latestProgressFile.absolutePath, 'utf-8')) as Record<string, unknown>
   const metricsPath = path.join(retrainingDir, `${latestProgress.jobId}-metrics.json`)
   const latestMetrics = fs.existsSync(metricsPath)
-    ? JSON.parse(fs.readFileSync(metricsPath, 'utf-8'))
+    ? JSON.parse(fs.readFileSync(metricsPath, 'utf-8')) as Record<string, unknown>
     : null
 
-  const rawLastTrained = latestMetrics?.completedAt || latestProgress?.endTime || latestProgress?.timestamp || null
+  const rawLastTrained = typeof latestMetrics?.completedAt === 'string' || typeof latestMetrics?.completedAt === 'number'
+    ? latestMetrics.completedAt
+    : typeof latestProgress?.endTime === 'string' || typeof latestProgress?.endTime === 'number'
+      ? latestProgress.endTime
+      : typeof latestProgress?.timestamp === 'string' || typeof latestProgress?.timestamp === 'number'
+        ? latestProgress.timestamp
+        : null
   const lastTrainedAt = typeof rawLastTrained === 'number'
     ? new Date(rawLastTrained).toISOString()
-    : rawLastTrained
+    : typeof rawLastTrained === 'string'
+      ? rawLastTrained
+      : null
 
   return {
-    trainingStatus: latestProgress.status || 'idle',
+    trainingStatus: typeof latestProgress.status === 'string' ? latestProgress.status : 'idle',
     lastTrainedAt,
     latestMetrics,
   }
 }
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event): Promise<Record<string, unknown>> => {
   // GET /api/metrics/dashboard
   // STANDARDIZED RESPONSE: { success, metrics: { ... } }
 
   try {
     const tenant = await resolveTenantContext(event)
-    const tenantRequest = {
+    const tenantRequest: DashboardTenantRequest = {
       headers: {
         'x-tenant-id': tenant.id,
       },
@@ -65,11 +157,16 @@ export default defineEventHandler(async (event) => {
       },
     }
 
-    const [baseMetrics, pricePayload, batteryPayload, mlPayload] = await Promise.all([
-      $fetch<any>('/api/metrics', tenantRequest).catch(() => null),
-      $fetch<any>('/api/prices/current', tenantRequest).catch(() => null),
-      $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
-      $fetch<any>('/api/ml/recommendation', tenantRequest).catch(() => null),
+    const [baseMetrics, pricePayload, batteryPayload, mlPayload]: [
+      DashboardBaseMetricsPayload,
+      DashboardPricePayload,
+      DashboardBatteryPayload,
+      DashboardMlPayload,
+    ] = await Promise.all([
+      $fetch<DashboardBaseMetricsPayload>('/api/metrics', tenantRequest).catch(() => null),
+      $fetch<DashboardPricePayload>('/api/prices/current', tenantRequest).catch(() => null),
+      $fetch<DashboardBatteryPayload>('/api/battery/status', tenantRequest).catch(() => null),
+      $fetch<DashboardMlPayload>('/api/ml/recommendation', tenantRequest).catch(() => null),
     ])
 
     const now = new Date()
@@ -152,8 +249,10 @@ export default defineEventHandler(async (event) => {
         tenant_filter_applied: true,
       },
     }
-  } catch (error: any) {
-    const errorData = error?.data
+  } catch (error) {
+    const errorData = typeof error === 'object' && error !== null && 'data' in error
+      ? (error as { data?: { error?: { code?: string } } }).data
+      : undefined
     if (errorData?.error?.code === 'INVALID_TENANT') {
       return errorData
     }
@@ -161,7 +260,7 @@ export default defineEventHandler(async (event) => {
     console.error('Failed to fetch metrics:', error)
     return {
       success: false,
-      error: error.message || 'Failed to fetch metrics',
+      error: getErrorMessage(error, 'Failed to fetch metrics'),
       metrics: null,
     }
   }

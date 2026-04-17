@@ -23,11 +23,56 @@ function readJsonIfExists(filePath: string): any | null {
   }
 }
 
-export default defineEventHandler(async (event) => {
+type MetricsTenantRequest = {
+  headers: {
+    'x-tenant-id': string
+  }
+  query: {
+    tenantId: string
+  }
+}
+
+type MetricsHistoryPayload = {
+  data?: Array<Record<string, unknown>>
+  source?: {
+    economics_source?: string
+    fallback_reason_code?: string
+    reconciliation?: Record<string, unknown>
+  } | null
+} | null
+
+type MetricsPricesPayload = {
+  source?: string | null
+} | null
+
+type MetricsMlRecommendationPayload = {
+  data?: {
+    confidence?: unknown
+    savings_estimate?: {
+      monthly_uah?: unknown
+      annual_uah?: unknown
+    } | null
+  } | null
+} | null
+
+type MetricsBatteryStatusPayload = {
+  battery?: {
+    capacity?: unknown
+  } | null
+} | null
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return fallback
+}
+
+export default defineEventHandler(async (event): Promise<Record<string, unknown>> => {
   // GET /api/metrics - Legacy metrics contract mapped to backend data sources.
   try {
     const tenant = await resolveTenantContext(event)
-    const tenantRequest = {
+    const tenantRequest: MetricsTenantRequest = {
       headers: {
         'x-tenant-id': tenant.id,
       },
@@ -40,19 +85,29 @@ export default defineEventHandler(async (event) => {
     const analyticsPath = join(projectRoot, 'energy_ml', 'outputs', 'analytics_cache.json')
     const ppoValidationPath = join(projectRoot, 'data', 'results', 'ppo_validation_feb2026.json')
 
-    const [historyPayload, pricesPayload, mlRecommendation, batteryStatus] = await Promise.all([
-      $fetch<any>('/api/history', tenantRequest).catch(() => null),
-      $fetch<any>('/api/prices', tenantRequest).catch(() => null),
-      $fetch<any>('/api/ml/recommendation', tenantRequest).catch(() => null),
-      $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
+    const [historyPayload, pricesPayload, mlRecommendation, batteryStatus]: [
+      MetricsHistoryPayload,
+      MetricsPricesPayload,
+      MetricsMlRecommendationPayload,
+      MetricsBatteryStatusPayload,
+    ] = await Promise.all([
+      $fetch<MetricsHistoryPayload>('/api/history', tenantRequest).catch(() => null),
+      $fetch<MetricsPricesPayload>('/api/prices', tenantRequest).catch(() => null),
+      $fetch<MetricsMlRecommendationPayload>('/api/ml/recommendation', tenantRequest).catch(() => null),
+      $fetch<MetricsBatteryStatusPayload>('/api/battery/status', tenantRequest).catch(() => null),
     ])
 
     const analytics = readJsonIfExists(analyticsPath)
     const ppoValidation = readJsonIfExists(ppoValidationPath)
 
-    const rows = Array.isArray(historyPayload?.data) ? historyPayload.data : []
+    const rows: Array<Record<string, unknown>> = Array.isArray(historyPayload?.data) ? historyPayload.data : []
     const ppoDays = Math.max(1, Math.round(asNumber(ppoValidation?.days_analyzed, 7)))
     const days = Math.max(1, rows.length || ppoDays)
+
+    const historySource = historyPayload?.source || null
+    const reconciliation = historySource?.reconciliation && typeof historySource.reconciliation === 'object'
+      ? historySource.reconciliation
+      : null
 
     let baselineTotal = rows.reduce((sum: number, row: any) => sum + asNumber(row?.cost_baseline), 0)
     let optimizedTotal = rows.reduce((sum: number, row: any) => sum + asNumber(row?.cost_optimized), 0)
@@ -176,10 +231,10 @@ export default defineEventHandler(async (event) => {
           '/api/battery/status',
           '/api/prices',
         ],
-        history_source: historyPayload?.source || 'unavailable',
-        economics_source: historyPayload?.source?.economics_source || (ppoBaselineTotal > 0 ? 'ppo_validation_artifact' : 'analytics_cache_fallback'),
-        fallback_reason_code: historyPayload?.source?.fallback_reason_code || 'unknown',
-        reconciliation: historyPayload?.source?.reconciliation || {
+        history_source: historySource || 'unavailable',
+        economics_source: historySource?.economics_source || (ppoBaselineTotal > 0 ? 'ppo_validation_artifact' : 'analytics_cache_fallback'),
+        fallback_reason_code: historySource?.fallback_reason_code || 'unknown',
+        reconciliation: reconciliation || {
           reconciled_rows: 0,
           heuristic_rows_remaining: 0,
           realized_revenue_uah: 0,
@@ -192,8 +247,10 @@ export default defineEventHandler(async (event) => {
         tenant_filter_applied: true,
       },
     }
-  } catch (error: any) {
-    const errorData = error?.data
+  } catch (error) {
+    const errorData = typeof error === 'object' && error !== null && 'data' in error
+      ? (error as { data?: { error?: { code?: string } } }).data
+      : undefined
     if (errorData?.error?.code === 'INVALID_TENANT') {
       return errorData
     }
@@ -202,7 +259,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: false,
       timestamp: new Date().toISOString(),
-      error: error?.message || 'Failed to fetch metrics data',
+      error: getErrorMessage(error, 'Failed to fetch metrics data'),
     }
   }
 })

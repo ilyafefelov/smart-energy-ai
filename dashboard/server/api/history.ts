@@ -68,6 +68,43 @@ type Stage2FinancialSummary = {
   }
 }
 
+type HistoryTenantRequest = {
+  headers: {
+    'x-tenant-id': string
+  }
+  query: {
+    tenantId: string
+  }
+}
+
+type ControlHistoryPayload = {
+  history?: Array<Record<string, unknown>>
+  source?: string | null
+} | null
+
+type CurrentPricesPayload = {
+  prices?: {
+    today?: {
+      min?: unknown
+      max?: unknown
+    } | null
+    source?: string | null
+  } | null
+} | null
+
+type CurrentConfigPayload = {
+  data?: (Record<string, unknown> & {
+    market_regime_override?: unknown
+  }) | null
+} | null
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return fallback
+}
+
 function buildFinancialModeSummary(marketRegime: string): { label: string; summary: string } {
   if (marketRegime === 'market_premium') {
     return {
@@ -295,7 +332,7 @@ function resolveProjectRoot(): string {
   return resolve(cwd, '..')
 }
 
-export default eventHandler(async (event) => {
+export default eventHandler(async (event): Promise<Record<string, unknown>> => {
   // GET /api/history - Legacy optimization history mapped to backend telemetry.
   try {
     const tenant = await resolveTenantContext(event)
@@ -305,7 +342,7 @@ export default eventHandler(async (event) => {
     const latestResultsPath = join(projectRoot, 'energy_ml', 'outputs', 'latest_ml_results.json')
     const ppoValidationPath = join(projectRoot, 'data', 'results', 'ppo_validation_feb2026.json')
 
-    const tenantRequest = {
+    const tenantRequest: HistoryTenantRequest = {
       headers: {
         'x-tenant-id': tenant.id,
       },
@@ -314,16 +351,20 @@ export default eventHandler(async (event) => {
       },
     }
 
-    const [controlHistoryPayload, pricesPayload, configPayload] = await Promise.all([
-      $fetch<any>('/api/control/history', {
+    const [controlHistoryPayload, pricesPayload, configPayload]: [
+      ControlHistoryPayload,
+      CurrentPricesPayload,
+      CurrentConfigPayload,
+    ] = await Promise.all([
+      $fetch<ControlHistoryPayload>('/api/control/history', {
         ...tenantRequest,
         query: {
           ...tenantRequest.query,
           limit: 400,
         },
       }).catch(() => null),
-      $fetch<any>('/api/prices/current', tenantRequest).catch(() => null),
-      $fetch<any>('/api/config/current', tenantRequest).catch(() => null),
+      $fetch<CurrentPricesPayload>('/api/prices/current', tenantRequest).catch(() => null),
+      $fetch<CurrentConfigPayload>('/api/config/current', tenantRequest).catch(() => null),
     ])
 
     const analytics = readJsonIfExists(analyticsPath)
@@ -338,12 +379,17 @@ export default eventHandler(async (event) => {
 
     const actionBuckets = new Map<string, number>()
 
-    const entries = Array.isArray(controlHistoryPayload?.history)
+    const entries: Array<Record<string, unknown>> = Array.isArray(controlHistoryPayload?.history)
       ? controlHistoryPayload.history
       : []
 
     for (const entry of entries) {
-      const key = toDateKey(entry?.timestamp || entry?.executed_at || '')
+      const rawTimestamp = typeof entry?.timestamp === 'string'
+        ? entry.timestamp
+        : typeof entry?.executed_at === 'string'
+          ? entry.executed_at
+          : ''
+      const key = toDateKey(rawTimestamp)
       if (!key) continue
       const command = String(entry?.command || '').toLowerCase()
       const isAction = command === 'charge' || command === 'discharge'
@@ -508,8 +554,10 @@ export default eventHandler(async (event) => {
         tenant_filter_applied: true,
       },
     }
-  } catch (error: any) {
-    const errorData = error?.data
+  } catch (error) {
+    const errorData = typeof error === 'object' && error !== null && 'data' in error
+      ? (error as { data?: { error?: { code?: string } } }).data
+      : undefined
     if (errorData?.error?.code === 'INVALID_TENANT') {
       return errorData
     }
@@ -518,7 +566,7 @@ export default eventHandler(async (event) => {
     return {
       success: false,
       timestamp: new Date().toISOString(),
-      error: error?.message || 'Failed to fetch history data',
+      error: getErrorMessage(error, 'Failed to fetch history data'),
       data: [],
     }
   }
