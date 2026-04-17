@@ -130,6 +130,8 @@ def build_schedule_injected_modules():
     core_pkg = types.ModuleType("src.assets.core")
     core_pkg.__path__ = [str(REPO_ROOT / "src" / "assets" / "core")]
     optimization_mod = types.ModuleType("src.optimization")
+    optimization_mod.__path__ = [str(REPO_ROOT / "src" / "optimization")]
+    baseline_dp_mod = types.ModuleType("src.optimization.baseline_dp")
 
     class BaselineOptimizationConfig:
         def __init__(self, **kwargs):
@@ -171,6 +173,8 @@ def build_schedule_injected_modules():
 
     optimization_mod.BaselineDPOptimizer = BaselineDPOptimizer
     optimization_mod.BaselineOptimizationConfig = BaselineOptimizationConfig
+    baseline_dp_mod.BaselineDPOptimizer = BaselineDPOptimizer
+    baseline_dp_mod.BaselineOptimizationConfig = BaselineOptimizationConfig
 
     milp_mod = types.ModuleType("src.assets.core.optimization_schedule_milp")
     milp_mod.optimization_schedule_milp_asset = "optimization_schedule_milp_asset"
@@ -181,6 +185,7 @@ def build_schedule_injected_modules():
             "src.assets": assets_pkg,
             "src.assets.core": core_pkg,
             "src.optimization": optimization_mod,
+            "src.optimization.baseline_dp": baseline_dp_mod,
             "src.assets.core.optimization_schedule_milp": milp_mod,
         }
     )
@@ -271,8 +276,18 @@ def test_optimization_schedule_helpers_and_asset(monkeypatch, tmp_path: Path) ->
     assert schedule_df.rows[0]["hour"] == 0
 
     price_forecast = FakePolarsFrame([
-        {"predicted_price_eur_mwh": 50.0},
-        {"predicted_price_eur_mwh": 55.0},
+        {
+            "predicted_price_eur_mwh": 50.0,
+            "scenario_low_price_eur_mwh": 45.0,
+            "scenario_base_price_eur_mwh": 50.0,
+            "scenario_high_price_eur_mwh": 60.0,
+        },
+        {
+            "predicted_price_eur_mwh": 55.0,
+            "scenario_low_price_eur_mwh": 50.0,
+            "scenario_base_price_eur_mwh": 55.0,
+            "scenario_high_price_eur_mwh": 65.0,
+        },
     ])
     client_state = FakePolarsFrame([
         {"client_id": "tenant-a", "timestamp": 1, "battery_soc": 60.0, "load_actual": 40.0, "solar_gen_actual": 5.0},
@@ -284,6 +299,8 @@ def test_optimization_schedule_helpers_and_asset(monkeypatch, tmp_path: Path) ->
     assert len(output) == 2
     assert output.rows[0]["client_id"] == "tenant-a"
     assert output.rows[0]["algorithm"] == "baseline_dp"
+    assert output.rows[0]["price_eur_mwh"] == 45.0
+    assert output.rows[1]["price_eur_mwh"] == 50.0
 
 
 def test_optimization_schedule_asset_uses_stage2_client_inputs(monkeypatch, tmp_path: Path) -> None:
@@ -349,8 +366,14 @@ def test_optimization_schedule_asset_uses_stage2_client_inputs(monkeypatch, tmp_
     )
 
     price_forecast = FakePolarsFrame([
-        {"predicted_price_eur_mwh": 50.0},
-        {"predicted_price_eur_mwh": 55.0},
+        {
+            "predicted_price_eur_mwh": 50.0,
+            "scenario_low_price_eur_mwh": 45.0,
+        },
+        {
+            "predicted_price_eur_mwh": 55.0,
+            "scenario_low_price_eur_mwh": 50.0,
+        },
     ])
     client_state = FakePolarsFrame([
         {"client_id": "tenant-a", "timestamp": 1, "battery_soc": 60.0, "load_actual": 40.0, "solar_gen_actual": 5.0},
@@ -367,6 +390,34 @@ def test_optimization_schedule_asset_uses_stage2_client_inputs(monkeypatch, tmp_
     assert config.max_discharge_kw == 20.0
     assert config.export_price_factor == 1.0
     assert config.degradation_cost_per_kwh > 0.01
+    assert captured["config"] is config
+
+
+def test_extract_price_horizon_prefers_requested_uncertainty_mode() -> None:
+    module = load_module(
+        "src.data_pipeline.optimization_schedule_inputs_under_test",
+        "src/data_pipeline/optimization_schedule_inputs.py",
+        injected_modules={"polars": build_polars_module()},
+    )
+
+    price_forecast = FakePolarsFrame([
+        {
+            "predicted_price_eur_mwh": 50.0,
+            "scenario_low_price_eur_mwh": 45.0,
+            "scenario_base_price_eur_mwh": 50.0,
+            "scenario_high_price_eur_mwh": 60.0,
+        },
+        {
+            "predicted_price_eur_mwh": 55.0,
+            "scenario_low_price_eur_mwh": 50.0,
+            "scenario_base_price_eur_mwh": 55.0,
+            "scenario_high_price_eur_mwh": 65.0,
+        },
+    ])
+
+    assert module._extract_price_horizon(price_forecast, horizon_mode="conservative") == [45.0, 50.0]
+    assert module._extract_price_horizon(price_forecast, horizon_mode="base") == [50.0, 55.0]
+    assert module._extract_price_horizon(price_forecast, horizon_mode="optimistic") == [60.0, 65.0]
 
 
 def test_optimization_schedule_checks_evaluate_contracts() -> None:

@@ -155,7 +155,7 @@ def _resolve_client_optimization_inputs(client_profile: Mapping[str, Any], capac
     },
 )
 def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_state: pl.DataFrame) -> pl.DataFrame:
-    prices = _extract_price_horizon(price_forecast)
+    prices = _extract_price_horizon(price_forecast, horizon_mode="conservative")
     if not prices:
         context.log.warning("No forecast price column found; returning empty optimization schedule")
         return build_empty_optimization_schedule()

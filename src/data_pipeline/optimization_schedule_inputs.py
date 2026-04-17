@@ -7,11 +7,36 @@ from typing import List
 import polars as pl
 
 
-def _extract_price_horizon(price_forecast: pl.DataFrame) -> List[float]:
-    if "predicted_price_eur_mwh" in price_forecast.columns:
-        return price_forecast.select("predicted_price_eur_mwh").to_series().to_list()
-    if "price_eur_mwh" in price_forecast.columns:
-        return price_forecast.select("price_eur_mwh").to_series().to_list()
+def _extract_price_horizon(
+    price_forecast: pl.DataFrame,
+    *,
+    horizon_mode: str = "base",
+) -> List[float]:
+    column_candidates = {
+        "base": [
+            "scenario_base_price_eur_mwh",
+            "predicted_price_eur_mwh",
+            "price_eur_mwh",
+        ],
+        "conservative": [
+            "scenario_low_price_eur_mwh",
+            "lower_bound_eur_mwh",
+            "scenario_base_price_eur_mwh",
+            "predicted_price_eur_mwh",
+            "price_eur_mwh",
+        ],
+        "optimistic": [
+            "scenario_high_price_eur_mwh",
+            "upper_bound_eur_mwh",
+            "scenario_base_price_eur_mwh",
+            "predicted_price_eur_mwh",
+            "price_eur_mwh",
+        ],
+    }
+
+    for column in column_candidates.get(horizon_mode, column_candidates["base"]):
+        if column in price_forecast.columns:
+            return [float(value) for value in price_forecast.select(column).to_series().to_list()]
     return []
 
 
