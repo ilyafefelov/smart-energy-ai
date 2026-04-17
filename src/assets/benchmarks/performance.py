@@ -469,6 +469,13 @@ def forecast_value_benchmark_asset(
             "benchmark_value_capture_ratio": promoted_row["benchmark_value_capture_ratio"],
             "benchmark_rmse": promoted_row["benchmark_rmse"],
             "benchmark_mae": promoted_row["benchmark_mae"],
+            "benchmark_uncertainty_source": promoted_row["benchmark_uncertainty_source"],
+            "benchmark_avg_uncertainty_spread_eur_mwh": promoted_row[
+                "benchmark_avg_uncertainty_spread_eur_mwh"
+            ],
+            "benchmark_max_uncertainty_spread_eur_mwh": promoted_row[
+                "benchmark_max_uncertainty_spread_eur_mwh"
+            ],
             "promoted_at_utc": datetime.now(timezone.utc).isoformat(),
             "promotion_source": "forecast_value_benchmark_asset",
         }

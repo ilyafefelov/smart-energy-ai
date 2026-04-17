@@ -38,6 +38,9 @@ FORECAST_VALUE_SCORECARD_SCHEMA = {
     "benchmark_value_capture_ratio": pl.Float64,
     "benchmark_realized_spread_eur_mwh": pl.Float64,
     "benchmark_optimal_spread_eur_mwh": pl.Float64,
+    "benchmark_uncertainty_source": pl.Utf8,
+    "benchmark_avg_uncertainty_spread_eur_mwh": pl.Float64,
+    "benchmark_max_uncertainty_spread_eur_mwh": pl.Float64,
     "benchmark_window_start": pl.Datetime,
     "benchmark_window_end": pl.Datetime,
     "benchmark_timestamp": pl.Datetime,
@@ -201,6 +204,39 @@ def _compute_forecast_value_metrics(
     }
 
 
+def _summarize_uncertainty_contract(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    sources = sorted(
+        {
+            str(source)
+            for source in (row.get("uncertainty_source") for row in rows)
+            if source is not None and str(source)
+        }
+    )
+    spreads = [
+        float(spread)
+        for spread in (row.get("uncertainty_spread_eur_mwh") for row in rows)
+        if spread is not None
+    ]
+
+    benchmark_uncertainty_source = None
+    if len(sources) == 1:
+        benchmark_uncertainty_source = sources[0]
+    elif len(sources) > 1:
+        benchmark_uncertainty_source = "mixed"
+
+    benchmark_avg_uncertainty_spread_eur_mwh = None
+    benchmark_max_uncertainty_spread_eur_mwh = None
+    if spreads:
+        benchmark_avg_uncertainty_spread_eur_mwh = float(sum(spreads) / len(spreads))
+        benchmark_max_uncertainty_spread_eur_mwh = float(max(spreads))
+
+    return {
+        "benchmark_uncertainty_source": benchmark_uncertainty_source,
+        "benchmark_avg_uncertainty_spread_eur_mwh": benchmark_avg_uncertainty_spread_eur_mwh,
+        "benchmark_max_uncertainty_spread_eur_mwh": benchmark_max_uncertainty_spread_eur_mwh,
+    }
+
+
 def _build_eval_only_scorecard(price_forecast: pl.DataFrame) -> pl.DataFrame:
     grouped_rows: dict[tuple[str, str, int], list[dict[str, Any]]] = {}
     for row in price_forecast.to_dicts():
@@ -225,6 +261,7 @@ def _build_eval_only_scorecard(price_forecast: pl.DataFrame) -> pl.DataFrame:
         eval_value_capture_ratio = float(first_row.get("eval_value_capture_ratio") or 0.0)
         eval_realized_spread_eur_mwh = float(first_row.get("eval_realized_spread_eur_mwh") or 0.0)
         eval_optimal_spread_eur_mwh = float(first_row.get("eval_optimal_spread_eur_mwh") or 0.0)
+        uncertainty_summary = _summarize_uncertainty_contract(rows)
 
         benchmark_rows.append(
             {
@@ -244,6 +281,7 @@ def _build_eval_only_scorecard(price_forecast: pl.DataFrame) -> pl.DataFrame:
                 "benchmark_value_capture_ratio": eval_value_capture_ratio,
                 "benchmark_realized_spread_eur_mwh": eval_realized_spread_eur_mwh,
                 "benchmark_optimal_spread_eur_mwh": eval_optimal_spread_eur_mwh,
+                **uncertainty_summary,
                 "benchmark_window_start": min(row["forecast_timestamp"] for row in rows),
                 "benchmark_window_end": max(row["forecast_timestamp"] for row in rows),
                 "benchmark_timestamp": benchmark_timestamp,
@@ -304,6 +342,7 @@ def build_forecast_value_scorecard(
         ) / len(rows)
         value_metrics = _compute_forecast_value_metrics(actual_prices, predicted_prices)
         first_row = rows[0]
+        uncertainty_summary = _summarize_uncertainty_contract(rows)
 
         benchmark_rows.append(
             {
@@ -325,6 +364,7 @@ def build_forecast_value_scorecard(
                 "benchmark_rmse": float(benchmark_rmse),
                 "benchmark_mae": float(benchmark_mae),
                 **value_metrics,
+                **uncertainty_summary,
                 "benchmark_window_start": min(row["forecast_timestamp"] for row in rows),
                 "benchmark_window_end": max(row["forecast_timestamp"] for row in rows),
                 "benchmark_timestamp": benchmark_timestamp,

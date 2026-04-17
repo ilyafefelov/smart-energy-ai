@@ -90,6 +90,8 @@ def test_build_forecast_value_scorecard_computes_realized_metrics() -> None:
             "eval_value_capture_ratio": [0.75] * 4,
             "eval_realized_spread_eur_mwh": [37.5] * 4,
             "eval_optimal_spread_eur_mwh": [50.0] * 4,
+            "uncertainty_source": ["walk_forward_residual_std"] * 4,
+            "uncertainty_spread_eur_mwh": [6.0, 8.0, 10.0, 12.0],
         }
     )
 
@@ -105,6 +107,9 @@ def test_build_forecast_value_scorecard_computes_realized_metrics() -> None:
     assert row["benchmark_optimal_spread_eur_mwh"] == 50.0
     assert row["benchmark_value_capture_ratio"] == 1.0
     assert row["eval_value_capture_ratio"] == 0.75
+    assert row["benchmark_uncertainty_source"] == "walk_forward_residual_std"
+    assert row["benchmark_avg_uncertainty_spread_eur_mwh"] == 9.0
+    assert row["benchmark_max_uncertainty_spread_eur_mwh"] == 12.0
 
 
 def test_build_forecast_value_scorecard_falls_back_to_eval_metrics_without_actual_overlap() -> None:
@@ -137,6 +142,8 @@ def test_build_forecast_value_scorecard_falls_back_to_eval_metrics_without_actua
             "eval_value_capture_ratio": [0.75] * 24,
             "eval_realized_spread_eur_mwh": [37.5] * 24,
             "eval_optimal_spread_eur_mwh": [50.0] * 24,
+            "uncertainty_source": ["eval_rmse_floor"] * 24,
+            "uncertainty_spread_eur_mwh": [5.0] * 24,
         }
     )
 
@@ -149,6 +156,9 @@ def test_build_forecast_value_scorecard_falls_back_to_eval_metrics_without_actua
     assert row["benchmark_mae"] == 3.1
     assert row["benchmark_value_capture_ratio"] == 0.75
     assert row["evaluation_folds"] == 3
+    assert row["benchmark_uncertainty_source"] == "eval_rmse_floor"
+    assert row["benchmark_avg_uncertainty_spread_eur_mwh"] == 5.0
+    assert row["benchmark_max_uncertainty_spread_eur_mwh"] == 5.0
 
 
 def test_build_forecast_value_scorecard_keeps_empty_result_without_evaluated_folds() -> None:
@@ -221,6 +231,8 @@ def test_forecast_value_benchmark_asset_builds_scorecard() -> None:
             "eval_value_capture_ratio": [0.6] * 4,
             "eval_realized_spread_eur_mwh": [30.0] * 4,
             "eval_optimal_spread_eur_mwh": [50.0] * 4,
+            "uncertainty_source": ["walk_forward_residual_std"] * 4,
+            "uncertainty_spread_eur_mwh": [7.0, 7.0, 7.0, 7.0],
         }
     )
     module.write_promoted_forecast_model_metadata = lambda metadata: metadata
@@ -232,6 +244,8 @@ def test_forecast_value_benchmark_asset_builds_scorecard() -> None:
     assert row["model_name"] == "demo_model"
     assert row["benchmark_rmse"] > 0.0
     assert 0.0 <= row["benchmark_value_capture_ratio"] <= 1.0
+    assert row["benchmark_uncertainty_source"] == "walk_forward_residual_std"
+    assert row["benchmark_avg_uncertainty_spread_eur_mwh"] == 7.0
 
 
 def test_forecast_value_benchmark_asset_appends_registry_candidates(monkeypatch) -> None:
@@ -395,6 +409,8 @@ def test_forecast_value_benchmark_asset_persists_promoted_winner(monkeypatch) ->
             "eval_value_capture_ratio": [0.6] * 4,
             "eval_realized_spread_eur_mwh": [30.0] * 4,
             "eval_optimal_spread_eur_mwh": [50.0] * 4,
+            "uncertainty_source": ["walk_forward_residual_std"] * 4,
+            "uncertainty_spread_eur_mwh": [6.0, 8.0, 10.0, 12.0],
         }
     )
     captured_metadata = {}
@@ -410,3 +426,6 @@ def test_forecast_value_benchmark_asset_persists_promoted_winner(monkeypatch) ->
     assert len(result) == 1
     assert captured_metadata["value"]["model_name"] == "random_forest_dam_24h"
     assert captured_metadata["value"]["promotion_source"] == "forecast_value_benchmark_asset"
+    assert captured_metadata["value"]["benchmark_uncertainty_source"] == "walk_forward_residual_std"
+    assert captured_metadata["value"]["benchmark_avg_uncertainty_spread_eur_mwh"] == 9.0
+    assert captured_metadata["value"]["benchmark_max_uncertainty_spread_eur_mwh"] == 12.0
