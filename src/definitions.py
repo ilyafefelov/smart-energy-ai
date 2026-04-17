@@ -31,9 +31,9 @@ from .assets.benchmarks.performance import (
 from .assets.multi_tenant.asset_factory import create_all_assets, multi_client_analytics
 
 # Import engines for feature processing
-from .engines import select_feature_engine
+from .engines.selection import select_feature_engine
 from .engines.polars_engine import create_polars_engine
-from .io_managers import build_asset_io_manager_from_env
+from .io_managers.s3_pickle_io_manager import build_asset_io_manager_from_env
 
 logger = logging.getLogger(__name__)
 
