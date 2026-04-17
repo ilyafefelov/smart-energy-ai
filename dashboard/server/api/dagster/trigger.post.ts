@@ -61,6 +61,41 @@ type DagsterScheduleSnapshot = {
   error?: string
 }
 
+type ExecFailure = {
+  message?: string
+  stdout?: string | Buffer | null
+  stderr?: string | Buffer | null
+}
+
+function getUnknownErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  if (typeof error === 'string' && error.trim()) {
+    return error
+  }
+  return fallback
+}
+
+function normalizeExecOutput(value: unknown): string {
+  if (typeof value === 'string') {
+    return value
+  }
+  if (Buffer.isBuffer(value)) {
+    return value.toString('utf-8')
+  }
+  return ''
+}
+
+function getExecFailureDetails(error: unknown): { message: string; stdout: string; stderr: string } {
+  const candidate = (typeof error === 'object' && error !== null ? error : {}) as ExecFailure
+  return {
+    message: getUnknownErrorMessage(error, 'Dagster materialization command failed'),
+    stdout: normalizeExecOutput(candidate.stdout),
+    stderr: normalizeExecOutput(candidate.stderr),
+  }
+}
+
 async function persistDagsterSnapshot(snapshot: DagsterScheduleSnapshot, executionTimeMs: number) {
   let pool: any = null
 
@@ -227,9 +262,7 @@ export default defineEventHandler(async (event) => {
         timestamp: new Date().toISOString()
       }
     } catch (execError) {
-      const errorText = execError?.message || 'Dagster materialization command failed'
-      const stdout = typeof execError?.stdout === 'string' ? execError.stdout : String(execError?.stdout || '')
-      const stderr = typeof execError?.stderr === 'string' ? execError.stderr : String(execError?.stderr || '')
+      const execFailure = getExecFailureDetails(execError)
 
       return {
         success: false,
@@ -238,8 +271,8 @@ export default defineEventHandler(async (event) => {
         selection: assetSelection,
         include_upstream: includeUpstream,
         requested_asset: requestedAsset,
-        error: errorText,
-        output: (stdout || stderr).slice(-4000),
+        error: execFailure.message,
+        output: (execFailure.stdout || execFailure.stderr).slice(-4000),
         available_assets: AVAILABLE_ASSETS,
       }
     }
