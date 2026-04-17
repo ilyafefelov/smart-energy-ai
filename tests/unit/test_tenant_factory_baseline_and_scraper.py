@@ -131,7 +131,7 @@ def test_baseline_calculator_compares_naive_and_optimized_costs(tmp_path, monkey
 
 
 def test_comprehensive_scraper_builds_excel_network_and_report_paths(monkeypatch) -> None:
-    module = load_module("comprehensive_scraper_under_test", "src/comprehensive_energy_scraper.py")
+    module = load_module("comprehensive_scraper_under_test", "src/data_pipeline/comprehensive_energy_scraper.py")
     scraper = module.UkrainianEnergyDataScraper()
 
     february_df = pd.DataFrame(

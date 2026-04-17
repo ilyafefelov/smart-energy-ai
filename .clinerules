@@ -1,0 +1,85 @@
+# Cline Rules for Smart Energy AI
+
+This project uses **Beads (`bd`)** as the source of truth for task tracking.
+Cline's Kanban board can be synced with Beads for a visual task management experience.
+
+## Task Workflow
+
+### 1. Before Starting Work
+
+```powershell
+# Export Beads tasks to Cline format
+.\scripts\local\cline-beads-sync.ps1 -Action Export
+
+# View available tasks
+.\scripts\local\cline-beads-sync.ps1 -Action Status
+```
+
+### 2. Claim a Task
+
+```powershell
+# Claim a task in Beads (marks you as owner)
+.\scripts\local\cline-beads-sync.ps1 -Action Claim -TaskId "smart-energy-ai-XXXX"
+```
+
+### 3. During Development
+
+- Use Cline's Kanban board to track progress visually
+- Update task status in Cline as you work
+- Keep the `task_progress` parameter updated in tool calls
+
+### 4. After Completing Work
+
+```powershell
+# Close the task in Beads with a reason
+.\scripts\local\cline-beads-sync.ps1 -Action Close -TaskId "smart-energy-ai-XXXX" -Reason "Completed: refactored optimizer modules"
+
+# Validate your changes
+pytest tests/ -v
+
+# Sync git and Beads
+git pull --rebase
+pwsh ./scripts/local/bd-dolt-sync-safe.ps1
+git push
+```
+
+## Sync Script Commands
+
+| Command | Description |
+|---------|-------------|
+| `-Action Export` | Export Beads tasks to `.cline/beads-tasks.json` |
+| `-Action Import` | Import new Cline tasks to Beads |
+| `-Action Status` | Show sync status between Cline and Beads |
+| `-Action Create -Title "..." -Description "..."` | Create a new Beads task |
+| `-Action Claim -TaskId "..."` | Claim a task in Beads |
+| `-Action Close -TaskId "..." -Reason "..."` | Close a task in Beads |
+
+## Quick Start
+
+```powershell
+# 1. See what tasks are available
+.\scripts\local\cline-beads-sync.ps1 -Action Status
+
+# 2. Export tasks for Cline
+.\scripts\local\cline-beads-sync.ps1 -Action Export
+
+# 3. Claim a task
+.\scripts\local\cline-beads-sync.ps1 -Action Claim -TaskId "smart-energy-ai-XXXX"
+
+# 4. Do your work...
+
+# 5. Close the task when done
+.\scripts\local\cline-beads-sync.ps1 -Action Close -TaskId "smart-energy-ai-XXXX" -Reason "Completed"
+```
+
+## Important Notes
+
+1. **Beads is the source of truth** - Always sync back to Beads after completing work
+2. **One task per coherent cluster** - Don't create tasks for tiny changes
+3. **Validate before closing** - Run tests before marking a task complete
+4. **Keep git clean** - Use `bd-dolt-sync-safe.ps1` before pushing
+
+## Sync Files
+
+- `.cline/beads-tasks.json` - Exported Beads tasks (read by Cline)
+- `.cline/cline-tasks.json` - Cline tasks with Beads ID references

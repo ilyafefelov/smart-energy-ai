@@ -1,0 +1,63 @@
+[
+  {
+    "created_at": "2026-04-15T19:47:35Z",
+    "updated_at": "2026-04-15T19:47:35Z",
+    "status": "todo",
+    "id": "smart-energy-ai-3lcq",
+    "title": "[E005] Backend Modular Monolith Refactor",
+    "priority": 1,
+    "labels": [
+      "phase-p2",
+      "roadmap-2026q2"
+    ],
+    "issue_type": "epic",
+    "owner": "ilyafefelov@gmail.com",
+    "description": "Consolidate backend entrypoints, remove legacy packaging, enforce orchestration/domain boundaries, normalize configuration, and harden the backend for Docker Compose and later Helm packaging.",
+    "beads_id": "smart-energy-ai-3lcq"
+  },
+  {
+    "created_at": "2026-04-17T10:43:19Z",
+    "updated_at": "2026-04-17T10:43:19Z",
+    "status": "todo",
+    "id": "smart-energy-ai-06wp",
+    "title": "Type tenant request store fetches",
+    "priority": 2,
+    "labels": null,
+    "issue_type": "task",
+    "owner": "ilyafefelov@gmail.com",
+    "description": "Tighten the tenant request object shape used by frontend stores so typed  calls in batteryStore, metricsStore, and pricesStore no longer pass undefined header values.",
+    "beads_id": "smart-energy-ai-06wp"
+  },
+  {
+    "created_at": "2026-03-02T20:04:44Z",
+    "updated_at": "2026-03-02T21:24:15Z",
+    "status": "todo",
+    "id": "smart-energy-ai-4e9",
+    "title": "[P3][T017] Implement AWS Lambda workers with 15-min partitioning",
+    "priority": 2,
+    "labels": [
+      "phase-p3",
+      "roadmap-2026q1"
+    ],
+    "issue_type": "task",
+    "owner": "ilyafefelov@gmail.com",
+    "description": "Implement partitioned Lambda execution strategy that respects runtime limits while preserving full pipeline correctness.",
+    "beads_id": "smart-energy-ai-4e9"
+  },
+  {
+    "created_at": "2026-03-02T20:04:43Z",
+    "updated_at": "2026-03-02T21:14:58Z",
+    "status": "todo",
+    "id": "smart-energy-ai-t9s",
+    "title": "[E004] AWS Free Tier Deployment",
+    "priority": 2,
+    "labels": [
+      "phase-p3",
+      "roadmap-2026q1"
+    ],
+    "issue_type": "epic",
+    "owner": "ilyafefelov@gmail.com",
+    "description": "Define a deployable, cost-aware architecture across EC2, Lambda, S3, and PostgreSQL with reproducible infra configuration.",
+    "beads_id": "smart-energy-ai-t9s"
+  }
+]
