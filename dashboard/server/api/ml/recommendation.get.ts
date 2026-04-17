@@ -135,6 +135,10 @@ interface MLRecommendationResponse {
     model_info: {
       version: string
       confidence_level: string
+      serving_mode?: string
+      requested_serving_mode?: string
+      serving_adapter?: string
+      resolved_model_uri?: string | null
     }
     feature_provenance?: Record<string, any>
     model_inputs?: Record<string, any>
@@ -338,6 +342,7 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
         battery_capacity_kwh: configPayload?.data?.battery_capacity_kwh,
         battery_soc_min: configPayload?.data?.battery_soc_min,
         battery_soc_max: configPayload?.data?.battery_soc_max,
+        market_regime_override: configPayload?.data?.market_regime_override,
         optimization_strategy: configPayload?.data?.optimization_strategy,
         load_profile_type: configPayload?.data?.load_profile_type,
         load_peak_kw: configPayload?.data?.load_peak_kw,
@@ -586,7 +591,12 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
       }
     }
     
-    console.log(`[ML API] Returning recommendation: ${response.data.action} (${response.data.confidence})`)
+    const responseData = response.data
+    if (!responseData) {
+      throw new Error('ML recommendation response missing data payload')
+    }
+
+    console.log(`[ML API] Returning recommendation: ${responseData.action} (${responseData.confidence})`)
     return response
     
   } catch (error) {

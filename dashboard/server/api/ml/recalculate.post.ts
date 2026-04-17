@@ -6,6 +6,13 @@ import { exec } from 'child_process'
 import { writeFileSync, readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return fallback
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
@@ -55,8 +62,8 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       jobId,
+      ...result,
       message: 'ML pipeline recalculation started',
-      ...result
     }
     
   } catch (error) {
@@ -116,12 +123,13 @@ async function startRecalculationProcess(jobId: string, statusPath: string) {
     }
     
   } catch (error) {
+    const errorMessage = getErrorMessage(error, 'Unknown recalculation startup failure')
     updateStatus(statusPath, {
       status: 'failed',
       progress: 0,
       stage: 'Error',
-      details: `Failed to start recalculation: ${error.message}`,
-      error: error.message
+      details: `Failed to start recalculation: ${errorMessage}`,
+      error: errorMessage
     })
     
     throw error
