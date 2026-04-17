@@ -100,17 +100,19 @@ export default defineEventHandler(async (event) => {
     }> = {}
 
     for (const row of result.rows) {
-      if (!assets[row.asset_name]) {
-        assets[row.asset_name] = {
+      let asset = assets[row.asset_name]
+      if (!asset) {
+        asset = {
           name: row.asset_name,
           last_run: row.materialization_time,
           status: row.status,
           execution_time_ms: row.execution_time_ms,
           runs: []
         }
+        assets[row.asset_name] = asset
       }
 
-      assets[row.asset_name].runs.push({
+      asset.runs.push({
         run_id: row.run_id,
         time: row.materialization_time,
         status: row.status,
