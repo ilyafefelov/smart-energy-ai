@@ -1,15 +1,92 @@
 // Control API - Battery Physics Status Endpoint
 // GET /api/control/physics
 
-export default defineEventHandler(async (event) => {
+import { getErrorMessage } from '../../utils/control-memory'
+
+type BatteryStatusPayload = {
+  battery?: {
+    capacity?: number | null
+    soc?: number | null
+    health?: number | null
+    temperature?: number | null
+    cycles?: number | null
+    power?: number | null
+    voltage?: number | null
+  } | null
+}
+
+type PhysicsPayload = {
+  data?: {
+    chemistry?: string | null
+    capacity_kwh?: number | null
+    current_state?: {
+      soc_percent?: number | null
+      temperature?: number | null
+      cycles_completed?: number | null
+      voltage?: number | null
+    } | null
+    degradation_model?: {
+      remaining_capacity_fraction?: number | null
+      cycle_impact?: number | null
+      expected_eol_cycles?: number | null
+    } | null
+    efficiency_model?: {
+      round_trip_efficiency?: number | null
+      charge_efficiency?: number | null
+    } | null
+    power_limits?: {
+      max_charge_power_kw?: number | null
+      max_discharge_power_kw?: number | null
+    } | null
+    physics_constraints?: {
+      recommended_soc_range?: Array<number | null | undefined> | null
+    } | null
+  } | null
+}
+
+type ControlPhysicsResponse = {
+  success: boolean
+  battery_type: string
+  capacity_kwh: number
+  max_power_kw: number
+  state: {
+    soc: number
+    soh: number
+    temperature_c: number
+    cycles_completed: number
+    current_power_kw: number
+    voltage: number
+    internal_resistance: number
+  }
+  current_efficiency: number
+  max_charge_power: number
+  max_discharge_power: number
+  degradation_model?: {
+    nominal_cycles: number
+    degradation_per_cycle: number
+    optimal_soc_range: [number, number]
+    temperature_coefficient: number
+  }
+  performance_metrics?: {
+    round_trip_efficiency: number
+    power_fade_factor: number
+    capacity_fade_factor: number
+    internal_resistance_growth: number
+  }
+  source: string
+  last_updated?: string
+  error?: string
+}
+
+export default defineEventHandler(async (_event): Promise<ControlPhysicsResponse> => {
   try {
-    const [physicsPayload, batteryStatus] = await Promise.all([
-      $fetch<any>('/api/physics/battery').catch(() => null),
-      $fetch<any>('/api/battery/status').catch(() => null),
+    const [physicsPayload, batteryStatus]: [PhysicsPayload | null, BatteryStatusPayload | null] = await Promise.all([
+      $fetch<PhysicsPayload>('/api/physics/battery').catch(() => null),
+      $fetch<BatteryStatusPayload>('/api/battery/status').catch(() => null),
     ])
 
-    const physics = physicsPayload?.data || null
-    const battery = batteryStatus?.battery || {}
+    const physics = physicsPayload?.data ?? null
+    const battery = batteryStatus?.battery ?? {}
 
     if (physics) {
       const remainingCapacity = Number(physics?.degradation_model?.remaining_capacity_fraction ?? 0.95)
@@ -90,7 +167,7 @@ export default defineEventHandler(async (event) => {
     
     return {
       success: false,
-      error: error.message,
+      error: getErrorMessage(error, 'Physics endpoint error'),
       // Minimal fallback
       battery_type: 'LFP',
       capacity_kwh: 10.0,
@@ -105,6 +182,8 @@ export default defineEventHandler(async (event) => {
         internal_resistance: 0.02
       },
       current_efficiency: 0.95,
+      max_charge_power: 5.0,
+      max_discharge_power: 5.0,
       source: 'error_fallback'
     }
   }
