@@ -16,6 +16,7 @@ Local stack launchers and workstation automation helpers.
 ### Files
 
 - [bd-dolt-sync-safe.ps1](bd-dolt-sync-safe.ps1) - PowerShell automation script for bd dolt sync safe.
+- [new-stage2-weekly-report.ps1](new-stage2-weekly-report.ps1) - PowerShell automation script to bootstrap a new Stage 2 weekly report and artifact folder from the template.
 - [README.md](README.md) - Folder guide and local index.
 - [run-local-mvp-smoke.ps1](run-local-mvp-smoke.ps1) - PowerShell automation script for run local mvp smoke.
 - [stack-common.ps1](stack-common.ps1) - PowerShell automation script for stack common.
