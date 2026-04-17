@@ -11,6 +11,7 @@ from src.data_pipeline.forecast_model_registry import (
     PRICE_FORECAST_MODEL_ENV,
     get_forecast_model_spec,
     get_forecast_promotion_metadata_path,
+    load_promoted_forecast_metadata,
     list_forecast_model_specs,
     load_promoted_forecast_model_name,
     resolve_active_forecast_model_name,
@@ -82,10 +83,20 @@ def test_forecast_model_registry_loads_promoted_model_name(tmp_path, monkeypatch
         {
             "model_name": GRADIENT_BOOSTING_FORECAST_MODEL_NAME,
             "model_family": "gradient_boosting_regressor",
+            "benchmark_value_capture_ratio": 0.81,
+            "benchmark_uncertainty_source": "walk_forward_residual_std",
+            "benchmark_avg_uncertainty_spread_eur_mwh": 9.0,
         }
     )
 
     assert metadata_path == tmp_path / registry.FORECAST_PROMOTION_METADATA_NAME
+    assert load_promoted_forecast_metadata() == {
+        "model_name": GRADIENT_BOOSTING_FORECAST_MODEL_NAME,
+        "model_family": "gradient_boosting_regressor",
+        "benchmark_value_capture_ratio": 0.81,
+        "benchmark_uncertainty_source": "walk_forward_residual_std",
+        "benchmark_avg_uncertainty_spread_eur_mwh": 9.0,
+    }
     assert load_promoted_forecast_model_name() == GRADIENT_BOOSTING_FORECAST_MODEL_NAME
 
 
@@ -107,5 +118,6 @@ def test_forecast_model_registry_ignores_unknown_promoted_model(tmp_path, monkey
     promotion_path.parent.mkdir(parents=True, exist_ok=True)
     promotion_path.write_text(json.dumps({"model_name": "missing-model"}), encoding="utf-8")
 
+    assert load_promoted_forecast_metadata() is None
     assert load_promoted_forecast_model_name() is None
     assert resolve_active_forecast_model_name() == DEFAULT_FORECAST_MODEL_NAME

@@ -162,18 +162,29 @@ def get_forecast_promotion_metadata_path() -> Path:
     return FORECAST_MODEL_OUTPUT_DIR / FORECAST_PROMOTION_METADATA_NAME
 
 
-def load_promoted_forecast_model_name() -> str | None:
+def load_promoted_forecast_metadata() -> dict[str, object] | None:
     metadata_path = get_forecast_promotion_metadata_path()
     if not metadata_path.exists():
         return None
 
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    if not isinstance(metadata, dict):
+        return None
+
     promoted_model_name = metadata.get("model_name")
     if not isinstance(promoted_model_name, str):
         return None
     if promoted_model_name not in _FORECAST_MODEL_REGISTRY:
         return None
-    return promoted_model_name
+
+    return dict(metadata)
+
+
+def load_promoted_forecast_model_name() -> str | None:
+    metadata = load_promoted_forecast_metadata()
+    if metadata is None:
+        return None
+    return str(metadata["model_name"])
 
 
 def resolve_active_forecast_model_name() -> str:
@@ -206,6 +217,7 @@ __all__ = [
     "ForecastModelSpec",
     "get_forecast_promotion_metadata_path",
     "get_forecast_model_spec",
+    "load_promoted_forecast_metadata",
     "list_forecast_model_specs",
     "load_promoted_forecast_model_name",
     "resolve_active_forecast_model_name",
