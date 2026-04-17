@@ -6,6 +6,69 @@
 
 The system is built on the **Software-Defined Assets (SDA)** principle using Dagster. It solves the multi-objective optimization problem: maximizing profit from buying/selling electricity while accounting for physical degradation of Lithium-Ion (LFP) batteries.
 
+## Primary Entry Points
+
+- `QUICK_START.md`: Operator-facing local startup and verification flow
+- `AGENTS.md`: Repository workflow, validation expectations, and Beads task-tracking rules
+- `docs/README.md`: Active documentation index for technical, deployment, and Stage 2 materials
+- `docs/technical/DAGSTER_PIPELINE_DEPENDENCY_MAP.md`: Current Dagster asset graph, job boundaries, and dependency map
+- `docs/technical/ML_TRADING_DECISION_FRAMEWORK.md`: Current trading-decision path and data provenance rules
+- `docs/technical/TEST_PIPELINE_GUIDE.md`: Validation and testing notes for pipeline/runtime work
+- `docs/deployment/EC2_DAGSTER_T3_MICRO_RUNBOOK.md`: Deployment and Dagster service operations runbook
+- `docs/API_DOCUMENTATION_IMPORT_EXPORT.md`: Dashboard settings import/export API behavior
+- `docs/POSTGRES_SETUP.md` and `docs/S3_PICKLE_IO_MANAGER.md`: Supporting infrastructure notes for database and storage setup
+
+## Common Operator Commands
+
+Start the local stack from the repository root:
+
+```powershell
+Set-Location D:\OpenClaw-Backup\clawd\projects\smart-energy-ai
+.\scripts\local\start-local-stack.ps1 -Start both
+```
+
+Stop the local stack:
+
+```powershell
+.\scripts\local\start-local-stack.ps1 -Stop both
+```
+
+Run focused optimization contract tests:
+
+```powershell
+pytest tests/unit/test_baseline_dp_optimizer.py tests/unit/test_optimization_schedule_asset_checks.py -q
+```
+
+Materialize the optimization chain:
+
+```powershell
+dagster asset materialize -m src.definitions --select "*optimization_schedule_asset"
+```
+
+Run the optimization schedule contract-check job:
+
+```powershell
+dagster job execute -m src.definitions -j optimization_schedule_contract_checks
+```
+
+Run the local MVP smoke path:
+
+```powershell
+.\scripts\local\run-local-mvp-smoke.ps1
+```
+
+Run the Stage 2 evidence smoke against a running dashboard:
+
+```powershell
+node dashboard/scripts/stage2_demo_evidence.mjs
+```
+
+## Workflow Notes
+
+- `dashboard/` is the canonical Nuxt application and `src/definitions.py` is the active Dagster code location.
+- `archive/` and `docs/archive/` are reference-only surfaces and should not be treated as active runtime code.
+- The repository uses Beads for task tracking; check `AGENTS.md` for the required `bd ready`, `bd create`, `bd update --claim`, and `bd close` workflow.
+
 Current Dagster dependency and job map:
 
 - `docs/technical/DAGSTER_PIPELINE_DEPENDENCY_MAP.md`
@@ -212,7 +275,7 @@ The current implementation focus is runtime hardening and architectural honesty 
 
 ---
 
-## Current Runtime Snapshot (March 2026)
+## Current Runtime Snapshot (April 2026)
 
 **What is active today:**
 
