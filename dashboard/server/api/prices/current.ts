@@ -4,6 +4,14 @@ import { promisify } from 'util'
 
 type Trend = 'up' | 'down' | 'stable'
 
+type ForecastRow = {
+  hour: number
+  timestamp: string
+  price: number
+  confidence: number
+  trend: Trend
+}
+
 function resolveTariffWindow(hour: number): 'peak' | 'offpeak' | 'shoulder' | 'unknown' {
   if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
     return 'unknown'
@@ -136,7 +144,7 @@ async function fetchOreeDayPricesViaPython(targetDate: Date): Promise<Map<number
   return result
 }
 
-function buildFallbackPrices(now: Date) {
+function buildFallbackPrices(now: Date): { forecast: ForecastRow[]; source: string } {
   const hour = now.getHours()
   const basePrice = 9.85
 
@@ -160,7 +168,7 @@ function buildFallbackPrices(now: Date) {
   }
 }
 
-function summarizePrices(now: Date, series: Array<{ hour: number; timestamp: string; price: number; confidence: number; trend: Trend }>, source: string) {
+function summarizePrices(now: Date, series: ForecastRow[], source: string) {
   const minPrice = Math.min(...series.map((p) => p.price))
   const maxPrice = Math.max(...series.map((p) => p.price))
   const avgPrice = series.reduce((sum, p) => sum + p.price, 0) / series.length
@@ -240,7 +248,7 @@ export default defineEventHandler(async () => {
     }
 
     const hasRealData = todayMap.size > 0 || tomorrowMap.size > 0
-    let forecast: Array<{ hour: number; timestamp: string; price: number; confidence: number; trend: Trend }> = []
+    let forecast: ForecastRow[] = []
 
     if (hasRealData) {
       for (let i = 0; i < 24; i += 1) {
@@ -253,7 +261,13 @@ export default defineEventHandler(async () => {
         if (price == null) {
           source = 'PARTIAL_OREE_WITH_FALLBACK'
           const fallback = buildFallbackPrices(now).forecast[i]
-          forecast.push({ ...fallback, hour, timestamp: ts.toISOString() })
+          forecast.push({
+            hour,
+            timestamp: ts.toISOString(),
+            price: Number((fallback?.price ?? 0).toFixed(2)),
+            confidence: fallback?.confidence ?? 0.75,
+            trend: fallback?.trend ?? 'stable',
+          })
           continue
         }
 

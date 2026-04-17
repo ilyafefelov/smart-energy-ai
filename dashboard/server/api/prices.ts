@@ -1,5 +1,44 @@
 type Trend = 'up' | 'down' | 'stable'
 
+type PriceForecastRow = {
+  price?: unknown
+  confidence?: unknown
+  timestamp?: unknown
+}
+
+type CurrentPricesPayload = {
+  prices?: {
+    current?: {
+      trend?: Trend
+    } | null
+    today?: {
+      avg?: unknown
+      weighted?: unknown
+      min?: unknown
+      max?: unknown
+    } | null
+    forecast?: {
+      next24h?: PriceForecastRow[]
+      peak?: unknown
+      offPeak?: unknown
+    } | null
+    source?: string | null
+  } | null
+} | null
+
+type MlRecommendationPayload = {
+  data?: {
+    confidence?: unknown
+  } | null
+} | null
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return fallback
+}
+
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
 const asNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value)
@@ -22,18 +61,21 @@ function toDateKey(value: string): string {
   return `${y}-${m}-${d}`
 }
 
-export default defineEventHandler(async () => {
+export default defineEventHandler(async (): Promise<Record<string, unknown>> => {
   // GET /api/prices - Legacy contract mapped from backend prices endpoint.
   try {
-    const [currentPricesPayload, mlRecommendationPayload] = await Promise.all([
-      $fetch<any>('/api/prices/current').catch(() => null),
-      $fetch<any>('/api/ml/recommendation').catch(() => null),
+    const [currentPricesPayload, mlRecommendationPayload]: [
+      CurrentPricesPayload,
+      MlRecommendationPayload,
+    ] = await Promise.all([
+      $fetch<CurrentPricesPayload>('/api/prices/current').catch(() => null),
+      $fetch<MlRecommendationPayload>('/api/ml/recommendation').catch(() => null),
     ])
 
     const prices = currentPricesPayload?.prices || null
-    const next24h = Array.isArray(prices?.forecast?.next24h) ? prices.forecast.next24h : []
+    const next24h: PriceForecastRow[] = Array.isArray(prices?.forecast?.next24h) ? prices.forecast.next24h : []
     const hourlyPrices = next24h
-      .map((row: any) => asNumber(row?.price, NaN))
+      .map((row) => asNumber(row?.price, NaN))
       .filter((value: number) => Number.isFinite(value) && value > 0)
 
     const avgKwh = asNumber(
@@ -52,17 +94,17 @@ export default defineEventHandler(async () => {
       : Math.max(0, maxKwh - minKwh) / 2
 
     const todayKey = toDateKey(new Date().toISOString())
-    const tomorrowRows = next24h.filter((row: any) => {
+    const tomorrowRows = next24h.filter((row) => {
       const ts = typeof row?.timestamp === 'string' ? row.timestamp : ''
       return ts && toDateKey(ts) !== todayKey
     })
 
     const tomorrowAvgKwh = tomorrowRows.length > 0
-      ? tomorrowRows.reduce((sum: number, row: any) => sum + asNumber(row?.price), 0) / tomorrowRows.length
+      ? tomorrowRows.reduce((sum: number, row) => sum + asNumber(row?.price), 0) / tomorrowRows.length
       : avgKwh
 
     const confidenceFromForecast = tomorrowRows.length > 0
-      ? tomorrowRows.reduce((sum: number, row: any) => sum + asNumber(row?.confidence, 0.7), 0) / tomorrowRows.length
+      ? tomorrowRows.reduce((sum: number, row) => sum + asNumber(row?.confidence, 0.7), 0) / tomorrowRows.length
       : NaN
 
     const confidence = Number.isFinite(confidenceFromForecast)
@@ -114,12 +156,12 @@ export default defineEventHandler(async () => {
         prices_current_source: prices?.source || 'unavailable',
       },
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('[prices] Failed to build backend-derived payload:', error)
     return {
       success: false,
       timestamp: new Date().toISOString(),
-      error: error?.message || 'Failed to fetch price data',
+      error: getErrorMessage(error, 'Failed to fetch price data'),
     }
   }
 })
