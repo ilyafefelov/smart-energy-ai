@@ -17,8 +17,30 @@ import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/ten
 const execAsync = promisify(exec)
 const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === 'win32' ? 'python' : 'python3')
 
+type StrategyName = 'max_earn' | 'max_battery_health' | 'max_charge' | 'balanced'
+
+type StrategyWeights = {
+  earnings: number
+  battery_health: number
+  charge_availability: number
+}
+
+type TenantErrorResponse = {
+  success: false
+  error: {
+    code?: string
+    message?: string
+  }
+  tenant?: {
+    id: string | null
+    validated: boolean
+  }
+  available_tenants?: string[]
+  default_tenant_id?: string
+}
+
 interface OptimizationStrategyRequest {
-  strategy: "max_earn" | "max_battery_health" | "max_charge" | "balanced"
+  strategy: StrategyName
   custom_weights?: {
     earnings?: number
     battery_health?: number
@@ -44,6 +66,10 @@ interface OptimizationStrategyResponse {
   }
   error?: string
 }
+
+type StrategyPostHandlerResponse =
+  | (OptimizationStrategyResponse & { tenant?: ReturnType<typeof getTenantResponseMetadata> })
+  | TenantErrorResponse
 
 function resolveProjectRoot(): string {
   const cwd = process.cwd()
@@ -87,7 +113,7 @@ function parseJsonFromPythonStdout(stdout: string): any {
   throw new Error('Unable to parse Python JSON response')
 }
 
-export default eventHandler(async (event): Promise<OptimizationStrategyResponse & { tenant?: ReturnType<typeof getTenantResponseMetadata> }> => {
+export default eventHandler(async (event): Promise<StrategyPostHandlerResponse> => {
   try {
     const body = await readBody(event) as OptimizationStrategyRequest
     const tenant = await resolveTenantContext(event, {
@@ -163,7 +189,9 @@ export default eventHandler(async (event): Promise<OptimizationStrategyResponse 
   } catch (error) {
     console.error('[Optimization API] Error:', error)
 
-    const errorData = (error as { data?: { error?: { code?: string } } })?.data
+    const errorData = typeof error === 'object' && error !== null && 'data' in error
+      ? (error as { data?: TenantErrorResponse }).data
+      : undefined
     if (errorData?.error?.code === 'INVALID_TENANT' || errorData?.error?.code === 'TENANT_AUTH_REQUIRED') {
       return errorData
     }

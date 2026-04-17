@@ -11,6 +11,30 @@ import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/ten
 const execAsync = promisify(exec)
 const pythonCommand = process.env.PYTHON_COMMAND || (process.platform === 'win32' ? 'python' : 'python3')
 
+const STRATEGY_NAMES = ['max_earn', 'max_battery_health', 'max_charge', 'balanced'] as const
+
+type StrategyName = (typeof STRATEGY_NAMES)[number]
+
+type StrategyWeights = {
+  earnings: number
+  battery_health: number
+  charge_availability: number
+}
+
+type TenantErrorResponse = {
+  success: false
+  error: {
+    code?: string
+    message?: string
+  }
+  tenant?: {
+    id: string | null
+    validated: boolean
+  }
+  available_tenants?: string[]
+  default_tenant_id?: string
+}
+
 interface OptimizationStrategyResponse {
   success: boolean
   data?: {
@@ -31,6 +55,10 @@ interface OptimizationStrategyResponse {
   }
   error?: string
 }
+
+type StrategyGetHandlerResponse =
+  | (OptimizationStrategyResponse & { tenant?: ReturnType<typeof getTenantResponseMetadata> })
+  | TenantErrorResponse
 
 function resolveProjectRoot(): string {
   const cwd = process.cwd()
@@ -86,22 +114,25 @@ function fallbackStrategyFromConfig(projectRoot: string, tenantId: string, defau
   try {
     const config = JSON.parse(readFileSync(configPath, 'utf-8'))
     const strategy = String(config?.optimization_strategy || 'balanced')
-    const weightsByStrategy: Record<string, { earnings: number; battery_health: number; charge_availability: number }> = {
+    const weightsByStrategy: Record<StrategyName, StrategyWeights> = {
       max_earn: { earnings: 0.7, battery_health: 0.15, charge_availability: 0.15 },
       max_battery_health: { earnings: 0.15, battery_health: 0.7, charge_availability: 0.15 },
       max_charge: { earnings: 0.15, battery_health: 0.15, charge_availability: 0.7 },
       balanced: { earnings: 0.4, battery_health: 0.4, charge_availability: 0.2 },
     }
+    const strategyKey: StrategyName = strategy in weightsByStrategy
+      ? strategy as StrategyName
+      : 'balanced'
 
     return {
       strategy,
       description: `Strategy from user config: ${strategy}`,
-      weights: weightsByStrategy[strategy] || weightsByStrategy.balanced,
+      weights: weightsByStrategy[strategyKey],
       constraints: {
         min_soc: Number(config?.battery_soc_min ?? 0.1) * 100,
         max_cycles_per_day: 6,
       },
-      available_strategies: ['max_earn', 'max_battery_health', 'max_charge', 'balanced'],
+      available_strategies: [...STRATEGY_NAMES],
       current_cycles: 0,
       source: 'user_config_fallback',
     }
@@ -110,7 +141,7 @@ function fallbackStrategyFromConfig(projectRoot: string, tenantId: string, defau
   }
 }
 
-export default eventHandler(async (event): Promise<OptimizationStrategyResponse & { tenant?: ReturnType<typeof getTenantResponseMetadata> }> => {
+export default eventHandler(async (event): Promise<StrategyGetHandlerResponse> => {
   const projectRoot = resolveProjectRoot()
 
   try {
@@ -159,7 +190,7 @@ export default eventHandler(async (event): Promise<OptimizationStrategyResponse 
         description: mlResponse.description || 'Balanced optimization strategy',
         weights: mlResponse.weights || { earnings: 0.4, battery_health: 0.4, charge_availability: 0.2 },
         constraints: mlResponse.constraints || { min_soc: 30, max_cycles_per_day: 6 },
-        available_strategies: mlResponse.available_strategies || ['max_earn', 'max_battery_health', 'max_charge', 'balanced'],
+        available_strategies: mlResponse.available_strategies || [...STRATEGY_NAMES],
         current_cycles: Number(mlResponse.current_cycles || 0),
         source: 'ml_integration_api',
       }
@@ -174,7 +205,9 @@ export default eventHandler(async (event): Promise<OptimizationStrategyResponse 
   } catch (error) {
     console.error('[Optimization API] Error:', error)
 
-    const errorData = (error as { data?: { error?: { code?: string } } })?.data
+    const errorData = typeof error === 'object' && error !== null && 'data' in error
+      ? (error as { data?: TenantErrorResponse }).data
+      : undefined
     if (errorData?.error?.code === 'INVALID_TENANT' || errorData?.error?.code === 'TENANT_AUTH_REQUIRED') {
       return errorData
     }
