@@ -8,6 +8,57 @@ const DEFAULT_MLFLOW_URI = process.env.MLFLOW_API_URL || 'http://localhost:5000'
 
 type HealthStatus = 'healthy' | 'degraded' | 'down'
 
+type TenantRequest = {
+  query: {
+    tenantId: string
+  }
+  headers: {
+    'x-tenant-id': string
+  }
+}
+
+type MlflowStatusPayload = {
+  mlflow_connected?: boolean | null
+  service_role?: string | null
+  runtime_serving_source?: string | null
+  active_model?: {
+    name?: string | null
+  } | null
+} | null
+
+type MlRecommendationPayload = {
+  success?: boolean | null
+  serving?: {
+    adapter?: string | null
+    requested_mode?: string | null
+    active_mode?: string | null
+  } | null
+  data?: {
+    action?: string | null
+    drift_diagnostics?: {
+      status?: string | null
+      score?: unknown
+    } | null
+  } | null
+} | null
+
+type MonitoringPayload = {
+  system_health?: unknown
+} | null
+
+type DagsterRecommendationPayload = {
+  status?: string | null
+  serving?: NonNullable<MlRecommendationPayload>['serving']
+  source_metadata?: {
+    recommendation_source?: string | null
+    dagster_snapshot_age_minutes?: unknown
+    dagster_snapshot_is_fresh?: boolean | null
+  } | null
+} | null
+
+type MlflowReachabilityPayload = Awaited<ReturnType<typeof checkMlflowReachability>>
+type DagsterAssetChecksPayload = Awaited<ReturnType<typeof readDagsterAssetChecks>>
+
 function deriveStatus(ok: boolean): HealthStatus {
   return ok ? 'healthy' : 'down'
 }
@@ -73,12 +124,12 @@ async function checkMlflowReachability(mlflowUri: string) {
   }
 }
 
-export default defineEventHandler(async (event: any) => {
+export default defineEventHandler(async (event: any): Promise<Record<string, unknown>> => {
   const startedAt = Date.now()
 
   try {
     const tenant = await resolveTenantContext(event)
-    const tenantRequest = {
+    const tenantRequest: TenantRequest = {
       query: { tenantId: tenant.id },
       headers: { 'x-tenant-id': tenant.id },
     }
@@ -86,11 +137,18 @@ export default defineEventHandler(async (event: any) => {
     const projectRoot = path.resolve(process.cwd(), '..')
     const bridgeScriptPath = path.join(projectRoot, 'scripts', 'ml_integration_api.py')
 
-    const [mlflowStatus, recommendation, monitoring, dagsterRecommendation, mlflowReachability, dagsterAssetChecks] = await Promise.all([
-      $fetch<any>('/api/mlflow/status', tenantRequest).catch(() => null),
-      $fetch<any>('/api/ml/recommendation', tenantRequest).catch(() => null),
-      $fetch<any>('/api/ml/monitoring', tenantRequest).catch(() => null),
-      $fetch<any>('/api/dagster/recommendation', tenantRequest).catch(() => null),
+    const [mlflowStatus, recommendation, monitoring, dagsterRecommendation, mlflowReachability, dagsterAssetChecks]: [
+      MlflowStatusPayload,
+      MlRecommendationPayload,
+      MonitoringPayload,
+      DagsterRecommendationPayload,
+      MlflowReachabilityPayload,
+      DagsterAssetChecksPayload,
+    ] = await Promise.all([
+      $fetch<MlflowStatusPayload>('/api/mlflow/status', tenantRequest).catch(() => null),
+      $fetch<MlRecommendationPayload>('/api/ml/recommendation', tenantRequest).catch(() => null),
+      $fetch<MonitoringPayload>('/api/ml/monitoring', tenantRequest).catch(() => null),
+      $fetch<DagsterRecommendationPayload>('/api/dagster/recommendation', tenantRequest).catch(() => null),
       checkMlflowReachability(DEFAULT_MLFLOW_URI),
       readDagsterAssetChecks(projectRoot),
     ])

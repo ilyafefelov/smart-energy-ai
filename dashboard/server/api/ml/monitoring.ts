@@ -9,6 +9,92 @@ import { readDagsterAssetChecks } from '../../utils/dagster-asset-checks'
 import { readMlflowDiagnosticEvents } from '../../utils/mlflow-diagnostics'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
+type TenantRequest = {
+  query: {
+    tenantId: string
+  }
+  headers: {
+    'x-tenant-id': string
+  }
+}
+
+type MlflowStatusPayload = {
+  mlflow_connected?: boolean | null
+  service_role?: string | null
+  registry_summary?: {
+    recent_runs_count?: unknown
+  } | null
+  active_model?: {
+    name?: string | null
+    last_updated?: string | null
+    feature_importance?: unknown
+    metrics?: Record<string, unknown> | null
+  } | null
+} | null
+
+type MlRecommendationPayload = {
+  serving?: {
+    active_mode?: string | null
+    adapter?: string | null
+    requested_mode?: string | null
+    model_info?: {
+      resolved_model_uri?: string | null
+      model_name?: string | null
+    } | null
+  } | null
+  data?: {
+    provenance?: {
+      decision_source?: string | null
+    } | null
+    drift_diagnostics?: {
+      score?: unknown
+      status?: string | null
+    } | null
+    inference_lineage?: {
+      training_reference?: Record<string, unknown> | null
+      inference_context_id?: string | null
+      captured_at?: string | null
+      inference_sources?: unknown
+    } | null
+    feature_provenance?: unknown
+  } | null
+} | null
+
+type PricesPayload = {
+  prices?: {
+    current?: {
+      price?: unknown
+    } | null
+    today?: {
+      avg?: unknown
+    } | null
+  } | null
+} | null
+
+type BatteryStatusPayload = {
+  battery?: {
+    soc?: unknown
+    health?: unknown
+  } | null
+} | null
+
+type DagsterRecommendationPayload = {
+  serving?: NonNullable<MlRecommendationPayload>['serving']
+  provenance?: {
+    decision_source?: string | null
+  } | null
+  source_metadata?: {
+    dagster_snapshot_is_fresh?: boolean | null
+    dagster_snapshot_age_minutes?: unknown
+    recommendation_source?: string | null
+    dagster_snapshot_max_age_minutes?: unknown
+    dagster_snapshot_freshness_reason?: string | null
+  } | null
+} | null
+
+type DagsterAssetChecksPayload = Awaited<ReturnType<typeof readDagsterAssetChecks>>
+type MlflowDiagnosticsPayload = Awaited<ReturnType<typeof readMlflowDiagnosticEvents>>
+
 function toFiniteNumber(value: unknown): number | null {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : null
@@ -74,13 +160,13 @@ function buildPerformanceHistory(events: Array<Record<string, any>>) {
     }))
 }
 
-export default eventHandler(async (event: any) => {
+export default eventHandler(async (event: any): Promise<Record<string, unknown>> => {
   const method = getMethod(event)
 
   if (method === 'GET') {
     try {
       const tenant = await resolveTenantContext(event)
-      const tenantRequest = {
+      const tenantRequest: TenantRequest = {
         query: { tenantId: tenant.id },
         headers: { 'x-tenant-id': tenant.id },
       }
@@ -89,15 +175,22 @@ export default eventHandler(async (event: any) => {
       const currentHour = now.getHours()
       const projectRoot = resolve(process.cwd(), '..')
 
-      const [mlflowStatus, mlRecommendation, pricesPayload, batteryStatus, dagsterRecommendation, dagsterAssetChecks] = await Promise.all([
-        $fetch<any>('/api/mlflow/status').catch(() => null),
-        $fetch<any>('/api/ml/recommendation', tenantRequest).catch(() => null),
-        $fetch<any>('/api/prices/current', tenantRequest).catch(() => null),
-        $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
-        $fetch<any>('/api/dagster/recommendation', tenantRequest).catch(() => null),
+      const [mlflowStatus, mlRecommendation, pricesPayload, batteryStatus, dagsterRecommendation, dagsterAssetChecks]: [
+        MlflowStatusPayload,
+        MlRecommendationPayload,
+        PricesPayload,
+        BatteryStatusPayload,
+        DagsterRecommendationPayload,
+        DagsterAssetChecksPayload,
+      ] = await Promise.all([
+        $fetch<MlflowStatusPayload>('/api/mlflow/status').catch(() => null),
+        $fetch<MlRecommendationPayload>('/api/ml/recommendation', tenantRequest).catch(() => null),
+        $fetch<PricesPayload>('/api/prices/current', tenantRequest).catch(() => null),
+        $fetch<BatteryStatusPayload>('/api/battery/status', tenantRequest).catch(() => null),
+        $fetch<DagsterRecommendationPayload>('/api/dagster/recommendation', tenantRequest).catch(() => null),
         readDagsterAssetChecks(projectRoot),
       ])
-      const diagnostics = await readMlflowDiagnosticEvents(projectRoot, timestamp)
+      const diagnostics: MlflowDiagnosticsPayload = await readMlflowDiagnosticEvents(projectRoot, timestamp)
 
       const latencySamples = diagnostics.events
         .map((event) => toFiniteNumber((event.metrics as any)?.latency_ms))
@@ -114,9 +207,11 @@ export default eventHandler(async (event: any) => {
 
       const recommendationDriftScore = Number(mlRecommendation?.data?.drift_diagnostics?.score)
       const recommendationDriftStatus = String(mlRecommendation?.data?.drift_diagnostics?.status || 'stable')
+      const activeModel = mlflowStatus?.active_model || null
+      const modelMape = toFiniteNumber(activeModel?.metrics?.mape ?? activeModel?.metrics?.validation_mape)
       const driftScore = Number.isFinite(recommendationDriftScore)
         ? recommendationDriftScore
-        : Number(Math.min(0.35, Math.abs(mape - 10) / 80).toFixed(4))
+        : Number(Math.min(0.35, Math.abs((modelMape ?? 10) - 10) / 80).toFixed(4))
       const featureDrifts = {
         battery_soc: Number(Math.min(0.2, Math.abs(batterySocPercent - 50) / 500).toFixed(4)),
         grid_price_uah_kwh: Number(Math.min(0.2, Math.abs(currentPrice - avgPrice) / 50).toFixed(4)),
@@ -171,7 +266,6 @@ export default eventHandler(async (event: any) => {
         })
       }
 
-      const activeModel = mlflowStatus?.active_model || null
       const serving = mlRecommendation?.serving || dagsterRecommendation?.serving || null
       const modelCreatedAt = activeModel?.last_updated || timestamp
       const runtimeDecisionSource = dagsterRecommendation?.provenance?.decision_source
