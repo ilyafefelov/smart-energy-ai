@@ -40,12 +40,12 @@ Field meaning:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `Lago2021ForecastingDayAhead` | 1 | P1 | earlier sweep | partial | done | planned | planned | Best benchmark and evaluation discipline anchor | Build leakage-safe walk-forward benchmark harness |
 | `OConnor2025ElectricityPriceForecastingReview` | 2 | P1 | earlier sweep | partial | done | planned | planned | Best recent cross-market review for day-ahead, intraday, and balancing | Keep day-ahead scope now, but design data/model interfaces so intraday and balancing can be added |
-| `Smets2025ValueOrientedPriceForecasting` | 3 | P1 | earlier sweep | partial | done | planned | planned | Strongest paper for judging forecasts by arbitrage value instead of only RMSE | Add value-based model selection or weighted loss tuning |
-| `Finhold2023OptimizingMarketingFlexibility` | 4 | P1 | earlier sweep | partial | done | planned | planned | Best optimizer-side paper in the current set | Replace one-shot deterministic schedule with rolling-horizon re-optimization |
+| `Smets2025ValueOrientedPriceForecasting` | 3 | P1 | earlier sweep | partial | done | done | partial | Strongest paper for judging forecasts by arbitrage value instead of only RMSE | Add value-based model selection or weighted loss tuning |
+| `Finhold2023OptimizingMarketingFlexibility` | 4 | P1 | earlier sweep | partial | done | done | planned | Best optimizer-side paper in the current set | Replace one-shot deterministic schedule with rolling-horizon re-optimization |
 | `Olivares2023NBEATSx` | 5 | P1 | earlier sweep | partial | done | planned | planned | Strong near-term candidate to replace RF without overcomplicating the stack | Implement LEAR and NBEATSx as the first two serious RF replacements |
 | `Jiang2024ProbabilisticTFT` | 6 | P2 | earlier sweep | partial | done | planned | planned | Best uncertainty-aware forecasting source in the set | Add quantile outputs such as P10, P50, and P90 |
 | `Alghumayjan2024TwoSettlementArbitrage` | 7 | P2 | earlier sweep | partial | done | planned | planned | Direct bridge between transformer forecasting and storage dispatch economics | Add a later two-settlement market branch after the rolling-horizon scheduler lands |
-| `Weber2024OpenSourceEnergyArbitrage` | 8 | P2 | Stage 2 market note | partial | done | planned | planned | Open and implementable risk-aware arbitrage model | Add conservative forecast bands or scenario bands around price forecasts |
+| `Weber2024OpenSourceEnergyArbitrage` | 8 | P2 | Stage 2 market note | partial | done | done | partial | Open and implementable risk-aware arbitrage model | Add conservative forecast bands or scenario bands around price forecasts |
 | `Kampker2025BatteryEnergyStorageModelling` | 9 | P2 | Stage 2 finance and EPRI notes | partial | done | planned | planned | Best battery-realism paper carried into the audit | Add degradation penalties for high SOC windows, deep cycles, and throughput |
 | `Zhang2025BatteryStateEstimationReview` | 10 | P3 | Stage 2 EPRI note | partial | done | planned | planned | Battery-state context source, useful for credibility rather than first implementation | Add richer battery state proxies after degradation penalties are in place |
 
@@ -53,8 +53,8 @@ Field meaning:
 
 | Key | Priority | Read | Cited | Discussed | Implemented | Why keep it | MVP action |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `Sang2022DecisionFocusedArbitrage` | P1 | partial | done | planned | planned | Directly ties forecast training to storage arbitrage decisions | Evaluate models on schedule value, not only forecast error |
-| `ElmachtoubGrigas2022SmartPredictThenOptimize` | P1 | partial | done | planned | planned | Formal predict-then-optimize foundation for the thesis argument | Use as the theoretical justification for decision-aware model selection |
+| `Sang2022DecisionFocusedArbitrage` | P1 | partial | done | done | partial | Directly ties forecast training to storage arbitrage decisions | Evaluate models on schedule value, not only forecast error |
+| `ElmachtoubGrigas2022SmartPredictThenOptimize` | P1 | partial | done | done | planned | Formal predict-then-optimize foundation for the thesis argument | Use as the theoretical justification for decision-aware model selection |
 
 ## Supporting Academic Context
 
