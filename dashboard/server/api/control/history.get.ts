@@ -1,10 +1,11 @@
 // Control API - Command History Endpoint
 // GET /api/control/history
 
+import { getCommandHistory, getErrorMessage } from '../../utils/control-memory'
 import { buildOptimizationExecutionKey, persistOptimizationHistory } from '../../utils/optimization-history'
 import { getTenantResponseMetadata, isRecordVisibleForTenant, resolveTenantContext, type TenantContext } from '../../utils/tenant-context'
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event): Promise<Record<string, unknown>> => {
   try {
     const tenant = await resolveTenantContext(event)
     const query = getQuery(event)
@@ -54,7 +55,7 @@ export default defineEventHandler(async (event) => {
         }
         
       } catch (pythonError) {
-        console.warn('Python controller history not available:', pythonError.message)
+        console.warn('Python controller history not available:', getErrorMessage(pythonError, 'Python controller history unavailable'))
         fallbackReasonCode = 'python_execution_failed'
       }
     } else {
@@ -62,7 +63,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Deterministic fallback to in-memory history.
-    const history = Array.isArray(globalThis.commandHistory) ? globalThis.commandHistory : []
+    const history = getCommandHistory()
     
     // Apply limit
     const filteredHistory = history.filter((entry: any) => {
@@ -98,7 +99,7 @@ export default defineEventHandler(async (event) => {
     
     return {
       success: false,
-      error: error.message,
+      error: getErrorMessage(error, 'History endpoint error'),
       history: [],
       count: 0,
       source: 'error_fallback'
