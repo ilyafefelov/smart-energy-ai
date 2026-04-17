@@ -172,8 +172,12 @@ function getBatterySpecs(batteryType: string) {
       efficiency_typical: 0.75
     }
   }
-  
-  return specs[batteryType] || specs['LFP']
+
+  if (batteryType in specs) {
+    return specs[batteryType as keyof typeof specs]
+  }
+
+  return specs['LFP']
 }
 
 function calculateArbitrageMetrics(config: any, batterySpecs: any) {

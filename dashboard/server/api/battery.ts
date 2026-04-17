@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { eventHandler } from 'h3'
-import { getBatteryState } from '~/server/utils/battery'
+import { getBatteryState } from '../utils/battery'
 import { getTenantResponseMetadata, isRecordVisibleForTenant, resolveTenantContext } from '../utils/tenant-context'
 
 type CommandRecord = {

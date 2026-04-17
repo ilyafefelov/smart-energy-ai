@@ -12,11 +12,6 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss'
   ],
-
-  pinia: {
-    storesDirs: ['./app/stores/**']
-  },
-
   // Dev server defaults to 3600 to avoid collisions with Dagster on 3000.
   devServer: {
     port: 3600,
@@ -29,8 +24,6 @@ export default defineNuxtConfig({
       crawlLinks: false,
       routes: [],
     },
-    port: 3600,
-    host: '0.0.0.0'
   },
 
   runtimeConfig: {
