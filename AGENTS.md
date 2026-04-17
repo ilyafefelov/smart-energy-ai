@@ -74,10 +74,15 @@ Canonical local endpoints:
 For thesis, diploma, and literature-audit work tied to this repository:
 
 - `docs/Stage 2/` is the canonical workspace for research notes, bibliography assets, and MVP literature planning.
+- `docs/Stage 2/weekly_reports/` is the canonical workspace for recurring weekly progress reports and their supporting artifacts.
 - Keep `docs/Stage 2/diploma_bibliography.bib` as the machine-friendly source of truth for citation tooling.
 - Keep `docs/Stage 2/diploma_literature_tracker.md` as the operational companion for ranking, read order, MVP mapping, and source workflow status.
 - Update both files in the same task when adding or curating sources; do not let the `.bib` file drift away from the tracker.
 - Use the tracker status fields `Read`, `Cited`, `Discussed`, and `Implemented` to reflect actual progress instead of keeping that state only in chat.
+- Treat weekly reports as one report per calendar week and update the active week's report in place as more work lands during that same week.
+- When a user asks to create, refresh, or extend a weekly report and the target week is not already explicit in the current conversation, task context, or referenced report file, ask which week should be updated before editing `docs/Stage 2/weekly_reports/`.
+- Once the target week is explicit, keep all related report updates within that same week unless the user clearly switches to a different reporting week.
+- Do not pre-create future weekly reports by default; only start the next week's report when the user explicitly asks for that week or the conversation clearly transitions into the next reporting period.
 - Keep the main bibliography academically strict: peer-reviewed academic sources belong in the main bibliography flow.
 - Treat preprints and weak-quality or unclear journals as provisional tracker appendix items until replaced by stronger peer-reviewed sources; do not promote them into the core academic list just because a research note cites them.
 - Move legal, regulatory, vendor, tooling, market-news, and other practical material into the tracker appendix/practical sections instead of mixing them into the core academic list.
