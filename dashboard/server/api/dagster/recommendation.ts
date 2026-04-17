@@ -23,7 +23,7 @@ import {
   formatClockHour,
   normalizeClockHour,
   normalizeScheduleAction,
-} from '../../utils/dagster-schedule-policy.ts'
+} from '../../utils/dagster-schedule-policy'
 import { assessStage2MarketPolicy, inferReserveFloorPercent, inferSitePowerKw } from '../../utils/market-policy'
 import { buildDecisionProvenance, buildNormalizedAction, normalizeDecisionSource } from '../../utils/recommendation-contract'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
@@ -96,6 +96,65 @@ type ServingMetadata = {
   fallback_used: boolean
   fallback_reason_code: string
   model_info: Record<string, any> | null
+}
+
+type MlRecommendationPayload = {
+  serving?: unknown
+  data?: {
+    action?: string | null
+    confidence?: number | null
+    reasoning?: string | null
+    daily_forecast?: Array<{ hour: number; action?: string; reasoning?: string }> | null
+    model_info?: {
+      version?: string | null
+    } | null
+    provenance?: {
+      decision_source?: string | null
+      state_source?: string | null
+      state_source_detail?: string | null
+    } | null
+  } | null
+}
+
+type PricesPayload = {
+  prices?: {
+    current?: {
+      price?: number | null
+    } | null
+    today?: {
+      avg?: number | null
+    } | null
+    forecast?: {
+      next24h?: Array<{ hour: number; timestamp: string; price: number }> | null
+    } | null
+  } | null
+}
+
+type BatteryPayload = {
+  battery?: {
+    soc?: number | null
+    capacity?: number | null
+  } | null
+  source_metadata?: {
+    state_source?: string | null
+    state_source_detail?: string | null
+  } | null
+  source?: string | null
+}
+
+type MlflowStatusPayload = {
+  active_model?: {
+    last_updated?: string | null
+  } | null
+  mlflow_connected?: boolean | null
+  monitoring?: {
+    drift_detected?: boolean | null
+  } | null
+  service_role?: string | null
+}
+
+type ConfigPayload = {
+  data?: Record<string, any> | null
 }
 
 function toFiniteNumber(value: unknown): number | null {
@@ -434,7 +493,7 @@ async function readDagsterRecommendationFromPostgres(tenantId: string): Promise<
   }
 }
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event): Promise<Record<string, unknown>> => {
   try {
     const tenant = await resolveTenantContext(event)
     const projectRoot = path.resolve(process.cwd(), '..')
@@ -447,15 +506,24 @@ export default defineEventHandler(async (event) => {
       },
     }
 
-    const [postgresDagster, fileDagster, mlRecommendation, pricesPayload, batteryPayload, mlflowStatus, dagsterStatus, configPayload] = await Promise.all([
+    const [postgresDagster, fileDagster, mlRecommendation, pricesPayload, batteryPayload, mlflowStatus, dagsterStatus, configPayload]: [
+      DagsterMaterializedRecommendation | null,
+      DagsterMaterializedRecommendation | null,
+      MlRecommendationPayload | null,
+      PricesPayload | null,
+      BatteryPayload | null,
+      MlflowStatusPayload | null,
+      Awaited<ReturnType<typeof queryDagsterStatus>>,
+      ConfigPayload | null,
+    ] = await Promise.all([
       readDagsterRecommendationFromPostgres(tenant.id),
       readMaterializedDagsterRecommendation(projectRoot, tenant.id),
-      $fetch<any>('/api/ml/recommendation', tenantRequest).catch(() => null),
-      $fetch<any>('/api/prices/current', tenantRequest).catch(() => null),
-      $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
-      $fetch<any>('/api/mlflow/status', tenantRequest).catch(() => null),
+      $fetch<MlRecommendationPayload>('/api/ml/recommendation', tenantRequest).catch(() => null),
+      $fetch<PricesPayload>('/api/prices/current', tenantRequest).catch(() => null),
+      $fetch<BatteryPayload>('/api/battery/status', tenantRequest).catch(() => null),
+      $fetch<MlflowStatusPayload>('/api/mlflow/status', tenantRequest).catch(() => null),
       queryDagsterStatus(),
-      $fetch<any>('/api/config/current', tenantRequest).catch(() => null),
+      $fetch<ConfigPayload>('/api/config/current', tenantRequest).catch(() => null),
     ])
 
     const latestDagsterSnapshot = postgresDagster || fileDagster
@@ -889,7 +957,7 @@ function buildScheduleFromDagsterAsset(
     total_expected_profit: Number(totalProfit.toFixed(2)),
     buy_hours: rows.filter((row) => row.recommended_action === 'BUY').length,
     sell_hours: rows.filter((row) => row.recommended_action === 'SELL').length,
-    discharge_hours: rows.filter((row) => row.recommended_action === 'DISCHARGE').length,
+    discharge_hours: rows.filter((row) => row.recommended_action === 'SELL').length,
   }
 }
 
@@ -931,9 +999,7 @@ function buildDeterministicSchedule(
       ? -price
       : action === 'SELL'
         ? price * 0.75
-        : action === 'DISCHARGE'
-          ? price * 0.85
-          : 0
+        : 0
 
     const requestedAction = action
     const policyCompliance = assessStage2MarketPolicy({
@@ -978,6 +1044,6 @@ function buildDeterministicSchedule(
     total_expected_profit: Number(totalProfit.toFixed(2)),
     buy_hours: schedule.filter(s => s.recommended_action === 'BUY').length,
     sell_hours: schedule.filter(s => s.recommended_action === 'SELL').length,
-    discharge_hours: schedule.filter(s => s.recommended_action === 'DISCHARGE').length,
+    discharge_hours: schedule.filter(s => s.recommended_action === 'SELL').length,
   }
 }

@@ -1,4 +1,4 @@
-import { assessStage2MarketPolicy, inferReserveFloorPercent, inferSitePowerKw } from './market-policy.ts'
+import { assessStage2MarketPolicy, inferReserveFloorPercent, inferSitePowerKw } from './market-policy'
 
 export type DagsterSchedulePolicyInputRow = {
   hour?: unknown

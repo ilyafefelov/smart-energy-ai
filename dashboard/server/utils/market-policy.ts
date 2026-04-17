@@ -1,4 +1,4 @@
-import { normalizeRecommendationAction } from './recommendation-contract.ts'
+import { normalizeRecommendationAction } from './recommendation-contract'
 
 export type Stage2MarketRegime = 'net_billing' | 'market_premium' | 'unclassified'
 export type Stage2MarketRegimeOverride = 'auto' | 'net_billing' | 'market_premium'
