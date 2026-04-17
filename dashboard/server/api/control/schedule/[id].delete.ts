@@ -1,6 +1,8 @@
 // Control API - Remove Scheduled Command Endpoint
 // DELETE /api/control/schedule/[id]
 
+import { createError } from 'h3'
+import { ensureScheduledCommands, getErrorMessage, hasStatusCode, setScheduledCommands } from '../../../utils/control-memory'
 import { getTenantResponseMetadata, isRecordVisibleForTenant, resolveTenantContext } from '../../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
@@ -53,7 +55,7 @@ export default defineEventHandler(async (event) => {
         }
         
       } catch (pythonError) {
-        console.warn('Python controller cancellation failed:', pythonError.message)
+        console.warn('Python controller cancellation failed:', getErrorMessage(pythonError, 'Cancellation failed'))
         fallbackReasonCode = 'python_execution_failed'
       }
     } else {
@@ -61,18 +63,16 @@ export default defineEventHandler(async (event) => {
     }
     
     // Fallback to in-memory removal
-    if (!globalThis.scheduledCommands) {
-      globalThis.scheduledCommands = []
-    }
-    
-    const initialCount = globalThis.scheduledCommands.length
+    const schedules = ensureScheduledCommands()
+    const initialCount = schedules.length
     
     // Remove the schedule
-    globalThis.scheduledCommands = globalThis.scheduledCommands.filter(
+    const remainingSchedules = schedules.filter(
       cmd => !(cmd.id === scheduleId && isRecordVisibleForTenant(cmd?.tenant_id ?? cmd?.tenantId, tenant))
     )
+    setScheduledCommands(remainingSchedules)
     
-    const finalCount = globalThis.scheduledCommands.length
+    const finalCount = remainingSchedules.length
     
     if (initialCount === finalCount) {
       throw createError({
@@ -103,13 +103,13 @@ export default defineEventHandler(async (event) => {
 
     console.error('Schedule removal error:', error)
     
-    if (error.statusCode) {
+    if (hasStatusCode(error)) {
       throw error
     }
     
     throw createError({
       statusCode: 500,
-      statusMessage: error.message || 'Schedule removal failed'
+      statusMessage: getErrorMessage(error, 'Schedule removal failed')
     })
   }
 })

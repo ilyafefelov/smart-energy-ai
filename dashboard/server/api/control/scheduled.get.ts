@@ -1,6 +1,7 @@
 // Control API - Get Scheduled Commands Endpoint
 // GET /api/control/scheduled
 
+import { getErrorMessage, getScheduledCommands, type ScheduledCommandRecord } from '../../utils/control-memory'
 import { getTenantResponseMetadata, isRecordVisibleForTenant, resolveTenantContext } from '../../utils/tenant-context'
 
 export default defineEventHandler(async (event) => {
@@ -42,7 +43,7 @@ export default defineEventHandler(async (event) => {
         }
         
       } catch (pythonError) {
-        console.warn('Python controller schedules not available:', pythonError.message)
+        console.warn('Python controller schedules not available:', getErrorMessage(pythonError, 'Schedules not available'))
         fallbackReasonCode = 'python_execution_failed'
       }
     } else {
@@ -50,20 +51,20 @@ export default defineEventHandler(async (event) => {
     }
     
     // Deterministic fallback to in-memory schedules.
-    const schedules = Array.isArray(globalThis.scheduledCommands) ? globalThis.scheduledCommands : []
-    const scopedSchedules = schedules.filter((cmd: any) =>
+    const schedules = getScheduledCommands()
+    const scopedSchedules = schedules.filter(cmd =>
       isRecordVisibleForTenant(cmd?.tenant_id ?? cmd?.tenantId, tenant),
     )
     
     // Filter to only pending and future schedules
-    const now = new Date()
+    const now = Date.now()
     const activeSchedules = scopedSchedules.filter(cmd => 
-      cmd.status === 'pending' && new Date(cmd.scheduled_time) > now
+      cmd.status === 'pending' && resolveScheduledTimeMs(cmd) > now
     )
     
     // Sort by scheduled time
     activeSchedules.sort((a, b) => 
-      new Date(a.scheduled_time).getTime() - new Date(b.scheduled_time).getTime()
+      resolveScheduledTimeMs(a) - resolveScheduledTimeMs(b)
     )
     
     // Apply limit
@@ -93,10 +94,15 @@ export default defineEventHandler(async (event) => {
     
     return {
       success: false,
-      error: error.message,
+      error: getErrorMessage(error, 'Scheduled commands endpoint error'),
       scheduled_commands: [],
       count: 0,
       source: 'error_fallback'
     }
   }
 })
+
+function resolveScheduledTimeMs(command: ScheduledCommandRecord): number {
+  const parsed = new Date(command.scheduled_time || 0).getTime()
+  return Number.isFinite(parsed) ? parsed : 0
+}

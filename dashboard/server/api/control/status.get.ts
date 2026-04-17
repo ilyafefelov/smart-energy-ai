@@ -2,8 +2,18 @@
 // GET /api/control/status
 
 import { buildDecisionProvenance, normalizeDecisionSource } from '../../utils/recommendation-contract'
+import { getCommandHistory, getControlModeState, getErrorMessage, getScheduledCommands, type CommandHistoryRecord } from '../../utils/control-memory'
 import { getTenantResponseMetadata, isRecordVisibleForTenant, resolveTenantContext } from '../../utils/tenant-context'
 import { getBatteryControlState } from '../../utils/battery-control-state'
+
+type BatteryStatusPayload = {
+  battery?: {
+    soc?: number | null
+    power?: number | null
+    capacity?: number | null
+    lastUpdated?: string | null
+  } | null
+}
 
 function deriveCommandFromPower(powerKw: number): 'charge' | 'discharge' | 'hold' {
   if (powerKw > 0.05) return 'charge'
@@ -11,7 +21,7 @@ function deriveCommandFromPower(powerKw: number): 'charge' | 'discharge' | 'hold
   return 'hold'
 }
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event): Promise<Record<string, unknown>> => {
   try {
     const tenant = await resolveTenantContext(event, { requireTrustedOverride: true })
     const pythonScript = 'get_control_status.py'
@@ -21,8 +31,7 @@ export default defineEventHandler(async (event) => {
     const execPython = pythonRunner?.execPython
     const hasPythonScript = pythonRunner?.hasPythonScript
     const pythonScriptAvailable = Boolean(execPython && hasPythonScript && hasPythonScript(pythonScript))
-    const controlModeByTenant = (globalThis as any).__controlModeByTenant || {}
-    const controlModeState = controlModeByTenant[tenant.id] || null
+    const controlModeState = getControlModeState(tenant.id)
     const persistedControl = await getBatteryControlState(tenant.id).catch(() => null)
     const persistedModeState = persistedControl
       ? {
@@ -76,7 +85,7 @@ export default defineEventHandler(async (event) => {
           source: 'python_controller'
         }
       } catch (pythonError) {
-        console.warn('Python controller not available:', pythonError.message)
+        console.warn('Python controller not available:', getErrorMessage(pythonError, 'Python controller not available'))
         fallbackReasonCode = 'python_execution_failed'
       }
     } else {
@@ -84,36 +93,35 @@ export default defineEventHandler(async (event) => {
     }
 
     // Deterministic fallback from persisted battery state and command memory.
-    const [batteryStatus] = await Promise.all([
-      $fetch<any>('/api/battery/status', {
-        headers: {
-          'x-tenant-id': tenant.id,
-        },
-        query: {
-          tenantId: tenant.id,
-        },
-      }).catch(() => null),
-    ])
+    const batteryStatus = await $fetch<BatteryStatusPayload>('/api/battery/status', {
+      headers: {
+        'x-tenant-id': tenant.id,
+      },
+      query: {
+        tenantId: tenant.id,
+      },
+    }).catch(() => null)
 
-    const battery = batteryStatus?.battery || {}
-    const schedules = (Array.isArray(globalThis.scheduledCommands) ? globalThis.scheduledCommands : [])
-      .filter((cmd: any) => isRecordVisibleForTenant(cmd?.tenant_id ?? cmd?.tenantId, tenant))
+    const battery = batteryStatus?.battery ?? {}
+    const schedules = getScheduledCommands()
+      .filter(cmd => isRecordVisibleForTenant(cmd?.tenant_id ?? cmd?.tenantId, tenant))
     const now = Date.now()
-    const pendingSchedules = schedules.filter((cmd: any) => {
-      return cmd?.status === 'pending' && new Date(cmd?.scheduled_time).getTime() > now
+    const pendingSchedules = schedules.filter(cmd => {
+      return cmd?.status === 'pending' && resolveScheduledTimeMs(cmd?.scheduled_time) > now
     })
 
-    const history = (Array.isArray(globalThis.commandHistory) ? globalThis.commandHistory : [])
-      .filter((entry: any) => isRecordVisibleForTenant(entry?.tenant_id ?? entry?.tenantId, tenant))
+    const history = getCommandHistory()
+      .filter(entry => isRecordVisibleForTenant(entry?.tenant_id ?? entry?.tenantId, tenant))
     const lastCommand = history[0] || null
-    const lastCommandTs = lastCommand ? new Date(lastCommand.executed_at || lastCommand.timestamp).getTime() : 0
+    const lastCommandTs = resolveCommandTimestamp(lastCommand)
     const isRecentCommand = lastCommandTs > 0 && now - lastCommandTs <= 6 * 60 * 60 * 1000
+    const recentCommand = isRecentCommand ? lastCommand : null
 
-    const activeCommand = effectiveModeState?.active_command || (isRecentCommand ? (lastCommand.command || null) : null)
-    const requestedCommand = effectiveModeState?.requested_command || (isRecentCommand ? (lastCommand.requested_command || lastCommand.command || null) : null)
+    const activeCommand = effectiveModeState?.active_command || recentCommand?.command || null
+    const requestedCommand = effectiveModeState?.requested_command || recentCommand?.requested_command || recentCommand?.command || null
     const mode = effectiveModeState?.mode || (activeCommand ? 'manual' : 'automatic')
     const decisionSource = normalizeDecisionSource(
-      effectiveModeState?.decision_source || (isRecentCommand ? (lastCommand.decision_source || null) : null),
+      effectiveModeState?.decision_source || recentCommand?.decision_source || null,
       'heuristic_fallback',
     )
     const provenance = buildDecisionProvenance({
@@ -132,11 +140,11 @@ export default defineEventHandler(async (event) => {
       active_command: activeCommand,
       requested_command: requestedCommand,
       decision_source: provenance.decision_source,
-      command_reason: effectiveModeState?.reason || (isRecentCommand ? (lastCommand.reason || null) : null),
+      command_reason: effectiveModeState?.reason || recentCommand?.reason || null,
       battery_capacity_kwh: Number(battery.capacity ?? 150),
       max_power_kw: 5.0,
       last_update: effectiveModeState?.updated_at || battery.lastUpdated || new Date().toISOString(),
-      estimated_completion: isRecentCommand ? (lastCommand.result?.estimated_completion || null) : null,
+      estimated_completion: recentCommand?.result?.estimated_completion || null,
       scheduled_commands_count: pendingSchedules.length,
       provenance,
       source_metadata: {
@@ -161,7 +169,7 @@ export default defineEventHandler(async (event) => {
     
     return {
       success: false,
-      error: error.message,
+      error: getErrorMessage(error, 'Status endpoint error'),
       // Minimal fallback
       soc: 50,
       power_kw: 0,
@@ -174,3 +182,17 @@ export default defineEventHandler(async (event) => {
     }
   }
 })
+
+function resolveCommandTimestamp(command: CommandHistoryRecord | null): number {
+  if (!command) {
+    return 0
+  }
+  const rawTimestamp = command.executed_at || command.timestamp || 0
+  const parsed = new Date(rawTimestamp).getTime()
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function resolveScheduledTimeMs(value: string | null | undefined): number {
+  const parsed = new Date(value || 0).getTime()
+  return Number.isFinite(parsed) ? parsed : 0
+}

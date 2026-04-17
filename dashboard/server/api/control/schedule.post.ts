@@ -9,7 +9,22 @@ import {
   type DecisionSnapshot,
   persistOptimizationHistory,
 } from '../../utils/optimization-history'
+import { ensureScheduledCommands, getCommandHistory, getErrorMessage, hasStatusCode, setScheduledCommands, type ScheduledCommandRecord } from '../../utils/control-memory'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
+
+type ScheduledIntent = ScheduledCommandRecord & {
+  id: string
+  command_id: string
+  tenant_id: string
+  command: string
+  power_kw: number
+  scheduled_time: string
+  reason: string
+  user_id: string
+  created_at: string
+  status: 'pending'
+  decision_snapshot?: DecisionSnapshot | null
+}
 
 export default defineEventHandler(async (event: any) => {
   try {
@@ -52,7 +67,7 @@ export default defineEventHandler(async (event: any) => {
     }
     
     const scheduleId = resolveScheduleId(body)
-    const schedule = {
+    const schedule: ScheduledIntent = {
       id: scheduleId,
       command_id: normalizeOptionalString(body.command_id) || `cmd_for_${scheduleId}`,
       tenant_id: tenant.id,
@@ -118,16 +133,13 @@ export default defineEventHandler(async (event: any) => {
     }
     
     // Fallback to in-memory storage
-    if (!(globalThis as any).scheduledCommands) {
-      ;(globalThis as any).scheduledCommands = []
-    }
-    
-    ;(globalThis as any).scheduledCommands.push(schedule)
+    const schedules = ensureScheduledCommands()
+    schedules.push(schedule)
     
     // Keep only future schedules (cleanup old ones)
-    ;(globalThis as any).scheduledCommands = (globalThis as any).scheduledCommands.filter(
-      (cmd: any) => new Date(cmd.scheduled_time) > new Date() || cmd.status === 'pending'
-    )
+    setScheduledCommands(schedules.filter(
+      cmd => resolveScheduledTimeMs(cmd.scheduled_time) > Date.now() || cmd.status === 'pending'
+    ))
     
     await persistScheduledIntent(schedule, 'memory_storage')
     recordBillingForScheduledIntent(schedule, 'memory_storage')
@@ -209,8 +221,8 @@ function mapCommandToSnapshotAction(command: string): 'BUY' | 'SELL' | 'HOLD' {
 }
 
 function resolvePreviousActionForTenant(tenantId: string): 'BUY' | 'SELL' | 'HOLD' | null {
-  const history = Array.isArray(globalThis.commandHistory) ? globalThis.commandHistory : []
-  const previousEntry = history.find((entry: any) => {
+  const history = getCommandHistory()
+  const previousEntry = history.find(entry => {
     const entryTenantId = String(entry?.tenant_id || entry?.tenantId || '')
     return entryTenantId === tenantId
   })
@@ -220,6 +232,11 @@ function resolvePreviousActionForTenant(tenantId: string): 'BUY' | 'SELL' | 'HOL
   }
 
   return mapCommandToSnapshotAction(previousEntry.resolved_command || previousEntry.command || 'hold')
+}
+
+function resolveScheduledTimeMs(value: string | null | undefined): number {
+  const parsed = new Date(value || 0).getTime()
+  return Number.isFinite(parsed) ? parsed : 0
 }
 
 function mapCommandToAction(command: string): number {
