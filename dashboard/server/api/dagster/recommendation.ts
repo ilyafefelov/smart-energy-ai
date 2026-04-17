@@ -36,6 +36,15 @@ const HYBRID_REFRESH_COOLDOWN_MS = 5 * 60 * 1000
 const hybridRefreshLastAttemptByTenant = new Map<string, number>()
 const hybridRefreshInFlightTenants = new Set<string>()
 
+type DagsterForecastProvenance = {
+  forecast_model_name: string | null
+  forecast_model_family: string | null
+  forecast_horizon_mode: string | null
+  forecast_uncertainty_source: string | null
+  forecast_promotion_active: boolean | null
+  forecast_promotion_source: string | null
+}
+
 type DagsterMaterializedRecommendation = {
   success: boolean
   source?: string
@@ -68,7 +77,7 @@ type DagsterMaterializedRecommendation = {
     load_kwh?: number | null
     solar_kwh?: number | null
     solver?: string
-  }>
+  } & DagsterForecastProvenance>
   schedule_start_utc?: string
   generated_at?: string
   recommendation?: {
@@ -92,6 +101,60 @@ type ServingMetadata = {
 function toFiniteNumber(value: unknown): number | null {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? numeric : null
+}
+
+function toNullableText(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.trim()
+  return normalized.length > 0 ? normalized : null
+}
+
+function toNullableBoolean(value: unknown): boolean | null {
+  if (typeof value === 'boolean') return value
+  if (value == null) return null
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (normalized === 'true') return true
+    if (normalized === 'false') return false
+  }
+  return Boolean(value)
+}
+
+function resolveDagsterForecastProvenance(value: unknown): DagsterForecastProvenance {
+  const row = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  return {
+    forecast_model_name: toNullableText(row.forecast_model_name),
+    forecast_model_family: toNullableText(row.forecast_model_family),
+    forecast_horizon_mode: toNullableText(row.forecast_horizon_mode),
+    forecast_uncertainty_source: toNullableText(row.forecast_uncertainty_source),
+    forecast_promotion_active: toNullableBoolean(row.forecast_promotion_active),
+    forecast_promotion_source: toNullableText(row.forecast_promotion_source),
+  }
+}
+
+function summarizeDagsterForecastProvenance(rows: Array<Record<string, unknown>> | null | undefined): DagsterForecastProvenance {
+  for (const row of rows || []) {
+    const provenance = resolveDagsterForecastProvenance(row)
+    if (
+      provenance.forecast_model_name != null
+      || provenance.forecast_model_family != null
+      || provenance.forecast_horizon_mode != null
+      || provenance.forecast_uncertainty_source != null
+      || provenance.forecast_promotion_active != null
+      || provenance.forecast_promotion_source != null
+    ) {
+      return provenance
+    }
+  }
+
+  return {
+    forecast_model_name: null,
+    forecast_model_family: null,
+    forecast_horizon_mode: null,
+    forecast_uncertainty_source: null,
+    forecast_promotion_active: null,
+    forecast_promotion_source: null,
+  }
 }
 
 function normalizeServingMetadata(value: unknown): ServingMetadata {
@@ -552,6 +615,10 @@ export default defineEventHandler(async (event) => {
           configPayload?.data || null,
         )
 
+    const dagsterForecastProvenance = materializedDagster
+      ? summarizeDagsterForecastProvenance(materializedDagster.schedule as Array<Record<string, unknown>> | undefined)
+      : summarizeDagsterForecastProvenance(undefined)
+
     const activeModel = mlflowStatus?.active_model || null
     const modelInfo = {
       type: materializedDagster ? 'dagster_schedule' : provenance.decision_source,
@@ -617,6 +684,12 @@ export default defineEventHandler(async (event) => {
         dagster_snapshot_materialized_at: snapshotFreshness.materializedAtIso,
         dagster_asset_file: latestDagsterSnapshot?.asset_file || null,
         dagster_selected_client_id: latestDagsterSnapshot?.selected_client_id || null,
+        dagster_forecast_model_name: dagsterForecastProvenance.forecast_model_name,
+        dagster_forecast_model_family: dagsterForecastProvenance.forecast_model_family,
+        dagster_forecast_horizon_mode: dagsterForecastProvenance.forecast_horizon_mode,
+        dagster_forecast_uncertainty_source: dagsterForecastProvenance.forecast_uncertainty_source,
+        dagster_forecast_promotion_active: dagsterForecastProvenance.forecast_promotion_active,
+        dagster_forecast_promotion_source: dagsterForecastProvenance.forecast_promotion_source,
         dagster_snapshot_is_fresh: snapshotFreshness.isFresh,
         dagster_snapshot_age_minutes: snapshotFreshness.ageMinutes,
         dagster_snapshot_max_age_minutes: MAX_SNAPSHOT_AGE_MINUTES,
@@ -679,7 +752,7 @@ function buildScheduleFromDagsterAsset(
     degradation_penalty_eur?: number | null
     load_kwh?: number | null
     solar_kwh?: number | null
-  }>,
+  } & DagsterForecastProvenance>,
   baseConfidence: number,
   scheduleStartUtc?: string | null,
   configData?: Record<string, any> | null,
@@ -709,6 +782,7 @@ function buildScheduleFromDagsterAsset(
       degradation_penalty_eur: toFiniteNumber((row as any)?.degradation_penalty_eur),
       load_kwh: toFiniteNumber((row as any)?.load_kwh),
       solar_kwh: toFiniteNumber((row as any)?.solar_kwh),
+      ...resolveDagsterForecastProvenance(row),
     }))
     .sort((a, b) => a.offset - b.offset)
 
@@ -753,6 +827,12 @@ function buildScheduleFromDagsterAsset(
           soc_after_kwh: dagsterRow?.soc_after_kwh ?? null,
           grid_export_kwh: dagsterRow?.grid_export_kwh ?? null,
           grid_import_kwh: dagsterRow?.grid_import_kwh ?? null,
+          forecast_model_name: dagsterRow?.forecast_model_name ?? null,
+          forecast_model_family: dagsterRow?.forecast_model_family ?? null,
+          forecast_horizon_mode: dagsterRow?.forecast_horizon_mode ?? null,
+          forecast_uncertainty_source: dagsterRow?.forecast_uncertainty_source ?? null,
+          forecast_promotion_active: dagsterRow?.forecast_promotion_active ?? null,
+          forecast_promotion_source: dagsterRow?.forecast_promotion_source ?? null,
         }
       })
     : normalizedDagster.map((row, index) => {
@@ -794,6 +874,12 @@ function buildScheduleFromDagsterAsset(
           soc_after_kwh: row.soc_after_kwh ?? null,
           grid_export_kwh: row.grid_export_kwh ?? null,
           grid_import_kwh: row.grid_import_kwh ?? null,
+          forecast_model_name: row.forecast_model_name ?? null,
+          forecast_model_family: row.forecast_model_family ?? null,
+          forecast_horizon_mode: row.forecast_horizon_mode ?? null,
+          forecast_uncertainty_source: row.forecast_uncertainty_source ?? null,
+          forecast_promotion_active: row.forecast_promotion_active ?? null,
+          forecast_promotion_source: row.forecast_promotion_source ?? null,
         }
       })
 
