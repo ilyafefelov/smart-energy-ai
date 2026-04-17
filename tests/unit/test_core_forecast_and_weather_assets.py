@@ -298,6 +298,21 @@ def test_price_forecast_asset_resolves_promoted_model_when_env_is_unset(monkeypa
     monkeypatch.setattr(module, "resolve_active_forecast_model_name", lambda: "promoted_model")
     monkeypatch.setattr(
         module,
+        "load_promoted_forecast_metadata",
+        lambda: {
+            "model_name": "promoted_model",
+            "promotion_source": "forecast_value_benchmark_asset",
+            "promoted_at_utc": "2026-04-17T07:40:00+00:00",
+            "benchmark_value_capture_ratio": 0.84,
+            "benchmark_rmse": 3.5,
+            "benchmark_mae": 2.5,
+            "benchmark_uncertainty_source": "walk_forward_residual_std",
+            "benchmark_avg_uncertainty_spread_eur_mwh": 9.0,
+            "benchmark_max_uncertainty_spread_eur_mwh": 12.0,
+        },
+    )
+    monkeypatch.setattr(
+        module,
         "get_forecast_model_spec",
         lambda model_name=None: types.SimpleNamespace(
             model_name=model_name,
@@ -319,6 +334,88 @@ def test_price_forecast_asset_resolves_promoted_model_when_env_is_unset(monkeypa
 
     assert len(forecast) == 24
     assert set(forecast["model_name"].unique().to_list()) == {"promoted_model"}
+    assert set(forecast["promotion_active"].unique().to_list()) == {True}
+    assert set(forecast["promotion_source"].unique().to_list()) == {
+        "forecast_value_benchmark_asset"
+    }
+    assert set(forecast["promotion_promoted_at_utc"].unique().to_list()) == {
+        "2026-04-17T07:40:00+00:00"
+    }
+    assert set(
+        forecast["promotion_benchmark_value_capture_ratio"].unique().to_list()
+    ) == {0.84}
+    assert set(forecast["promotion_benchmark_rmse"].unique().to_list()) == {3.5}
+    assert set(forecast["promotion_benchmark_mae"].unique().to_list()) == {2.5}
+    assert set(
+        forecast["promotion_benchmark_uncertainty_source"].unique().to_list()
+    ) == {"walk_forward_residual_std"}
+    assert set(
+        forecast[
+            "promotion_benchmark_avg_uncertainty_spread_eur_mwh"
+        ].unique().to_list()
+    ) == {9.0}
+    assert set(
+        forecast[
+            "promotion_benchmark_max_uncertainty_spread_eur_mwh"
+        ].unique().to_list()
+    ) == {12.0}
+
+
+def test_price_forecast_asset_exposes_null_promotion_contract_for_non_promoted_model(
+    monkeypatch,
+) -> None:
+    module = load_module(
+        "src.assets.core.price_forecast_non_promoted_model_under_test",
+        "src/assets/core/price_forecast.py",
+        injected_modules={"dagster": build_dagster_module()},
+    )
+    monkeypatch.setattr(module, "resolve_active_forecast_model_name", lambda: "default_model")
+    monkeypatch.setattr(
+        module,
+        "load_promoted_forecast_metadata",
+        lambda: {"model_name": "other_promoted_model", "promotion_source": "forecast_value_benchmark_asset"},
+    )
+    monkeypatch.setattr(
+        module,
+        "get_forecast_model_spec",
+        lambda model_name=None: types.SimpleNamespace(
+            model_name=model_name,
+            model_family="default_family",
+            forecast_horizon_hours=24,
+            build_estimator=lambda: _RegistryFakeModel(),
+        ),
+    )
+
+    timestamps = [datetime(2026, 3, 1, 0, 0) + timedelta(hours=hour) for hour in range(120)]
+    market_data = pl.DataFrame(
+        {
+            "timestamp": timestamps,
+            "price_eur_mwh": [35.0 + float(hour % 24) for hour in range(120)],
+        }
+    )
+
+    forecast = module.price_forecast_asset(market_data)
+
+    assert len(forecast) == 24
+    assert set(forecast["promotion_active"].unique().to_list()) == {False}
+    assert forecast["promotion_source"].null_count() == 24
+    assert forecast["promotion_promoted_at_utc"].null_count() == 24
+    assert forecast["promotion_benchmark_value_capture_ratio"].null_count() == 24
+    assert forecast["promotion_benchmark_rmse"].null_count() == 24
+    assert forecast["promotion_benchmark_mae"].null_count() == 24
+    assert forecast["promotion_benchmark_uncertainty_source"].null_count() == 24
+    assert (
+        forecast[
+            "promotion_benchmark_avg_uncertainty_spread_eur_mwh"
+        ].null_count()
+        == 24
+    )
+    assert (
+        forecast[
+            "promotion_benchmark_max_uncertainty_spread_eur_mwh"
+        ].null_count()
+        == 24
+    )
 
 
 def test_weather_helpers_and_asset_flow(monkeypatch) -> None:

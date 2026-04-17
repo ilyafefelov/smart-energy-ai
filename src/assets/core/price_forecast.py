@@ -13,6 +13,7 @@ from dagster import AssetIn, asset
 from src.data_pipeline.forecast_model_registry import (
     DEFAULT_FORECAST_MODEL_NAME,
     get_forecast_model_spec,
+    load_promoted_forecast_metadata,
     resolve_active_forecast_model_name,
 )
 from src.data_pipeline.price_forecast_features import (
@@ -136,6 +137,68 @@ def _build_forecast_with_model_spec(
     return forecast_df.sort("forecast_timestamp")
 
 
+def _attach_promotion_provenance(
+    forecast_df: pl.DataFrame,
+    *,
+    resolved_model_name: str,
+    promoted_metadata: dict[str, object] | None,
+) -> pl.DataFrame:
+    active_promotion = None
+    if (
+        promoted_metadata is not None
+        and promoted_metadata.get("model_name") == resolved_model_name
+    ):
+        active_promotion = promoted_metadata
+
+    return forecast_df.with_columns(
+        [
+            pl.lit(active_promotion is not None, dtype=pl.Boolean).alias(
+                "promotion_active"
+            ),
+            pl.lit(
+                active_promotion.get("promotion_source") if active_promotion else None,
+                dtype=pl.Utf8,
+            ).alias("promotion_source"),
+            pl.lit(
+                active_promotion.get("promoted_at_utc") if active_promotion else None,
+                dtype=pl.Utf8,
+            ).alias("promotion_promoted_at_utc"),
+            pl.lit(
+                active_promotion.get("benchmark_value_capture_ratio")
+                if active_promotion
+                else None,
+                dtype=pl.Float64,
+            ).alias("promotion_benchmark_value_capture_ratio"),
+            pl.lit(
+                active_promotion.get("benchmark_rmse") if active_promotion else None,
+                dtype=pl.Float64,
+            ).alias("promotion_benchmark_rmse"),
+            pl.lit(
+                active_promotion.get("benchmark_mae") if active_promotion else None,
+                dtype=pl.Float64,
+            ).alias("promotion_benchmark_mae"),
+            pl.lit(
+                active_promotion.get("benchmark_uncertainty_source")
+                if active_promotion
+                else None,
+                dtype=pl.Utf8,
+            ).alias("promotion_benchmark_uncertainty_source"),
+            pl.lit(
+                active_promotion.get("benchmark_avg_uncertainty_spread_eur_mwh")
+                if active_promotion
+                else None,
+                dtype=pl.Float64,
+            ).alias("promotion_benchmark_avg_uncertainty_spread_eur_mwh"),
+            pl.lit(
+                active_promotion.get("benchmark_max_uncertainty_spread_eur_mwh")
+                if active_promotion
+                else None,
+                dtype=pl.Float64,
+            ).alias("promotion_benchmark_max_uncertainty_spread_eur_mwh"),
+        ]
+    )
+
+
 @asset(
     group_name="market_data",
     description="24-hour day-ahead market (DAM) price forecast baseline model",
@@ -153,4 +216,9 @@ def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
     """
     resolved_model_name = resolve_active_forecast_model_name()
     model_spec = get_forecast_model_spec(resolved_model_name)
-    return _build_forecast_with_model_spec(market_data, model_spec)
+    forecast_df = _build_forecast_with_model_spec(market_data, model_spec)
+    return _attach_promotion_provenance(
+        forecast_df,
+        resolved_model_name=resolved_model_name,
+        promoted_metadata=load_promoted_forecast_metadata(),
+    )
