@@ -98,7 +98,7 @@
                 ₴{{ currentPrice.toFixed(1) }}
               </p>
               <p class="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                {{ isPeakHour ? '🔴 Peak' : '🟢 Off-peak' }} • {{ priceSpread.toFixed(1)} spread
+                {{ isPeakHour ? '🔴 Peak' : '🟢 Off-peak' }} • {{ priceSpread.toFixed(1) }} spread
               </p>
             </div>
             <div class="p-3 bg-orange-200 dark:bg-orange-800 rounded-full">
