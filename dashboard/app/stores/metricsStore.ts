@@ -227,7 +227,7 @@ export const useMetricsStore = defineStore('metrics', () => {
 
     try {
       await tenantContext.loadTenants()
-      const tenantRequest = tenantContext.tenantRequest.value
+      const tenantRequest = tenantContext.getTenantRequest()
       const [dashboardResponse, metricsResponse] = await Promise.all([
         $fetch('/api/metrics/dashboard', tenantRequest).catch(() => null),
         $fetch('/api/metrics', tenantRequest).catch(() => null),

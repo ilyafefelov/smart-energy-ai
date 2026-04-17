@@ -86,8 +86,12 @@ export const usePricesStore = defineStore('prices', () => {
   const arbitrageOpportunity = computed(() => {
     if (forecast.value.length === 0) return null
     const sortedByPrice = [...forecast.value].sort((a, b) => a.price - b.price)
-    const lowestPrice = sortedByPrice[0].price
-    const highestPrice = sortedByPrice[sortedByPrice.length - 1].price
+    const lowest = sortedByPrice[0]
+    const highest = sortedByPrice[sortedByPrice.length - 1]
+    if (!lowest || !highest) return null
+
+    const lowestPrice = lowest.price
+    const highestPrice = highest.price
     const spread = highestPrice - lowestPrice
     const spreadPercent = (spread / lowestPrice) * 100
 
@@ -105,7 +109,8 @@ export const usePricesStore = defineStore('prices', () => {
 
     try {
       await tenantContext.loadTenants()
-      const response = await $fetch('/api/prices/current', tenantContext.tenantRequest.value) as any
+      const tenantRequest = tenantContext.getTenantRequest()
+      const response = await $fetch('/api/prices/current', tenantRequest) as any
 
       if (response.success && response.prices) {
         // Standardize response format

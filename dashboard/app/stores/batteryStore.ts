@@ -87,7 +87,8 @@ export const useBatteryStore = defineStore('battery', () => {
 
     try {
       await tenantContext.loadTenants()
-      const response = await $fetch('/api/battery/status', tenantContext.tenantRequest.value) as any
+      const tenantRequest = tenantContext.getTenantRequest()
+      const response = await $fetch('/api/battery/status', tenantRequest) as any
 
       if (response.success && response.battery) {
         state.value = {

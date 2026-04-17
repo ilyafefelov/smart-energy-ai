@@ -5,6 +5,15 @@ type TenantOption = {
   name: string | null
 }
 
+export type TenantRequestOptions = {
+  query: {
+    tenantId: string
+  }
+  headers: {
+    'x-tenant-id': string
+  }
+}
+
 const STORAGE_KEY = 'selected_tenant_id_v1'
 let initialized = false
 let loadPromise: Promise<void> | null = null
@@ -82,10 +91,10 @@ export function useTenantContext() {
     return tenants.value.find((tenant) => tenant.id === currentTenantId.value) || null
   })
 
-  const tenantRequest = computed(() => {
-    const tenantId = currentTenantId.value
+  const tenantRequest = computed<TenantRequestOptions | undefined>(() => {
+    const tenantId = currentTenantId.value || defaultTenantId.value || ''
     if (!tenantId) {
-      return { query: {}, headers: {} }
+      return undefined
     }
 
     return {
@@ -93,6 +102,14 @@ export function useTenantContext() {
       headers: { 'x-tenant-id': tenantId },
     }
   })
+
+  const getTenantRequest = (): TenantRequestOptions => {
+    const request = tenantRequest.value
+    if (!request) {
+      throw new Error('Tenant request unavailable')
+    }
+    return request
+  }
 
   return {
     tenants,
@@ -102,6 +119,7 @@ export function useTenantContext() {
     currentTenant,
     isLoaded,
     tenantRequest,
+    getTenantRequest,
     loadTenants,
     setTenant,
   }
