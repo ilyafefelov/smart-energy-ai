@@ -82,6 +82,21 @@ export interface PowerFlowData {
   timestamp: Date
 }
 
+type BatterySimulationPayload = Omit<BatteryPhysicsState, 'lastUpdated'> & {
+  lastUpdated: string | null
+}
+
+type BatterySimulationResponse =
+  | {
+      success: true
+      battery: BatterySimulationPayload
+      specs?: BatterySpecs
+    }
+  | {
+      success: false
+      error?: string
+    }
+
 const DEFAULT_STATE: BatteryPhysicsState = {
   soc: 0.5,
   socPercentage: 50,
@@ -204,12 +219,13 @@ export const useBatteryPhysicsStore = defineStore('batteryPhysics', () => {
 
     try {
       const { request } = await resolveTenantRequest()
-      const response = await $fetch('/api/battery/simulate', request)
+      const response = await $fetch<BatterySimulationResponse>('/api/battery/simulate', request)
       
-      if (response.success && response.battery) {
+      if (response.success) {
+        const battery = response.battery
         state.value = {
-          ...response.battery,
-          lastUpdated: new Date(response.battery.lastUpdated)
+          ...battery,
+          lastUpdated: battery.lastUpdated ? new Date(battery.lastUpdated) : null,
         }
         
         if (response.specs) {

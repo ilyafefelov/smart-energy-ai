@@ -27,8 +27,57 @@ type TenantControlMirror = {
   updatedAt: string
 }
 
+type BatteryStatePayload = Awaited<ReturnType<typeof getBatteryState>>
+
+type ControlStatusResponse = {
+  source?: string
+  active_command?: string | null
+  requested_command?: string | null
+  decision_source?: string | null
+  command_reason?: string | null
+  mode?: string | null
+  source_metadata?: {
+    fallback_reason_code?: string | null
+  } | null
+}
+
+type ControlHistoryItem = {
+  command?: string | null
+  power_kw?: number | string | null
+}
+
+type ControlHistoryResponse = {
+  source?: string
+  history?: ControlHistoryItem[]
+}
+
+type ControlExecuteResponse = {
+  success?: boolean
+  error?: string
+  requested_command?: string | null
+  resolved_command?: string | null
+  decision_source?: string | null
+  source?: string | null
+  source_metadata?: Record<string, unknown> | null
+}
+
 const round = (value: number, digits = 2) => Number(value.toFixed(digits))
 const SIMULATION_TIME_SCALE = 120
+
+function getRequestErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'object' && error !== null && 'data' in error) {
+    const data = (error as { data?: { error?: unknown } }).data
+    if (typeof data?.error === 'string' && data.error.length > 0) {
+      return data.error
+    }
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return fallback
+}
 
 const DEFAULT_ENERGY_CONFIG = {
   battery_type: 'LFP',
@@ -351,7 +400,7 @@ function resolveCommandedPower(params: {
   return 0
 }
 
-export default eventHandler(async (event) => {
+export default eventHandler(async (event): Promise<Record<string, unknown>> => {
   const tenant = await resolveTenantContext(event)
   const method = getMethod(event)
   const tenantRequest = {
@@ -364,10 +413,14 @@ export default eventHandler(async (event) => {
   }
 
   if (method === 'GET') {
-    const [state, controlStatus, controlHistory] = await Promise.all([
+    const [state, controlStatus, controlHistory]: [
+      BatteryStatePayload,
+      ControlStatusResponse | null,
+      ControlHistoryResponse | null,
+    ] = await Promise.all([
       getBatteryState(tenant.id),
-      $fetch<any>('/api/control/status', tenantRequest).catch(() => null),
-      $fetch<any>('/api/control/history', {
+      $fetch<ControlStatusResponse>('/api/control/status', tenantRequest).catch(() => null),
+      $fetch<ControlHistoryResponse>('/api/control/history', {
         ...tenantRequest,
         query: {
           ...tenantRequest.query,
@@ -422,7 +475,7 @@ export default eventHandler(async (event) => {
       autoOptimization,
     })
 
-    const progressedState = await applyCommandProgression({
+    const progressedState: Awaited<ReturnType<typeof applyCommandProgression>> = await applyCommandProgression({
       tenantId: tenant.id,
       state,
       spec,
@@ -500,7 +553,7 @@ export default eventHandler(async (event) => {
 
   if (method === 'POST') {
     const body = await readBody(event)
-    const state = await getBatteryState(tenant.id)
+    const state: BatteryStatePayload = await getBatteryState(tenant.id)
     const tenantConfig = loadTenantEnergyConfig(tenant.id)
     const spec = loadBatterySimulationSpec(Number(state?.voltage ?? 400), tenantConfig)
 
@@ -509,7 +562,7 @@ export default eventHandler(async (event) => {
       const clampedPowerKw = round(clampPower(requestedPowerKw, spec), 3)
       const resolved = resolveManualCommand(clampedPowerKw)
 
-      const executeResponse = await $fetch<any>('/api/control/execute', {
+      const executeResponse: ControlExecuteResponse = await $fetch<ControlExecuteResponse>('/api/control/execute', {
         ...tenantRequest,
         method: 'POST',
         body: {
@@ -519,10 +572,10 @@ export default eventHandler(async (event) => {
           reason: body.reason || 'Battery simulator manual power command',
           user_id: body.user_id || 'battery_simulator',
         },
-      }).catch((error) => {
+      }).catch((error: unknown) => {
         throw createError({
           statusCode: 500,
-          statusMessage: error?.data?.error || error?.message || 'Control execute request failed',
+          statusMessage: getRequestErrorMessage(error, 'Control execute request failed'),
         })
       })
 
@@ -557,7 +610,7 @@ export default eventHandler(async (event) => {
 
     if (body.action === 'setAutoMode') {
       const enabled = body.enabled ?? true
-      const executeResponse = await $fetch<any>('/api/control/execute', {
+      const executeResponse: ControlExecuteResponse = await $fetch<ControlExecuteResponse>('/api/control/execute', {
         ...tenantRequest,
         method: 'POST',
         body: {
@@ -567,10 +620,10 @@ export default eventHandler(async (event) => {
           reason: enabled ? 'Battery simulator: enable auto mode' : 'Battery simulator: disable auto mode',
           user_id: body.user_id || 'battery_simulator',
         },
-      }).catch((error) => {
+      }).catch((error: unknown) => {
         throw createError({
           statusCode: 500,
-          statusMessage: error?.data?.error || error?.message || 'Failed to set control mode',
+          statusMessage: getRequestErrorMessage(error, 'Failed to set control mode'),
         })
       })
 
@@ -606,7 +659,7 @@ export default eventHandler(async (event) => {
     }
 
     if (body.action === 'reset') {
-      await $fetch<any>('/api/control/execute', {
+      await $fetch<ControlExecuteResponse>('/api/control/execute', {
         ...tenantRequest,
         method: 'POST',
         body: {
