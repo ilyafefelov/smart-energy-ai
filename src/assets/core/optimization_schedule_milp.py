@@ -7,7 +7,16 @@ from typing import List
 import polars as pl
 from dagster import AssetIn, asset
 
-from ...optimization.milp_scheduler import MilpBatteryScheduler, MilpSchedulerConfig
+try:
+    from ... import optimization as _optimization_module
+except ImportError:
+    _optimization_module = None
+
+if _optimization_module is not None and hasattr(_optimization_module, "MilpBatteryScheduler") and hasattr(_optimization_module, "MilpSchedulerConfig"):
+    MilpBatteryScheduler = _optimization_module.MilpBatteryScheduler
+    MilpSchedulerConfig = _optimization_module.MilpSchedulerConfig
+else:
+    from ...optimization.milp_scheduler import MilpBatteryScheduler, MilpSchedulerConfig
 from .optimization_schedule import (
     _extract_price_horizon,
     _get_client_series,

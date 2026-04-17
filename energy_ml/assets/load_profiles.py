@@ -3,13 +3,39 @@
 Provides simulate_load_profile asset which accepts a UserProfile and
 produces a JSON file with hourly series and statistics.
 """
+import importlib.util
 from dagster import asset, AssetIn
 import os
 import json
 from datetime import datetime, timezone
+from pathlib import Path
+import sys
 
-from energy_ml.load_simulation import generate_yearly_load, simple_generation_hourly, estimate_self_consumption
 from energy_ml.config_models import UserProfile
+
+
+def _load_load_simulation_module():
+    module_name = "smart_energy_ai_load_simulation"
+    module_path = Path(__file__).resolve().parents[1] / "load_simulation.py"
+    module_spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if module_spec is None or module_spec.loader is None:
+        raise ImportError(f"Unable to load load simulation helpers from {module_path}")
+
+    module = sys.modules.get(module_name)
+    if module is None:
+        module = importlib.util.module_from_spec(module_spec)
+        sys.modules[module_name] = module
+        module_spec.loader.exec_module(module)
+    return module
+
+
+try:
+    from energy_ml.load_simulation import generate_yearly_load, simple_generation_hourly, estimate_self_consumption
+except ImportError:
+    _LOAD_SIMULATION = _load_load_simulation_module()
+    generate_yearly_load = _LOAD_SIMULATION.generate_yearly_load
+    simple_generation_hourly = _LOAD_SIMULATION.simple_generation_hourly
+    estimate_self_consumption = _LOAD_SIMULATION.estimate_self_consumption
 
 
 @asset(ins={'user_profile': AssetIn()})

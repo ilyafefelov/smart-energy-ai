@@ -2,11 +2,59 @@
 
 Produces tariff cost calculations integrating load profiles and battery models.
 """
+import importlib.util
 from dagster import asset
 import json
 from pathlib import Path
+import sys
 from energy_ml.config_models import UserProfile
-from energy_ml.tariff_models import UkraineTariffModel
+
+
+def _load_load_simulation_module():
+    module_name = "smart_energy_ai_tariff_load_simulation"
+    module_path = Path(__file__).resolve().parents[1] / "load_simulation.py"
+    module_spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if module_spec is None or module_spec.loader is None:
+        raise ImportError(f"Unable to load load simulation helpers from {module_path}")
+
+    module = sys.modules.get(module_name)
+    if module is None:
+        module = importlib.util.module_from_spec(module_spec)
+        sys.modules[module_name] = module
+        module_spec.loader.exec_module(module)
+    return module
+
+
+def _load_tariff_models_module():
+    module_name = "smart_energy_ai_tariff_models"
+    module_path = Path(__file__).resolve().parents[1] / "tariff_models.py"
+    module_spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if module_spec is None or module_spec.loader is None:
+        raise ImportError(f"Unable to load tariff models from {module_path}")
+
+    module = sys.modules.get(module_name)
+    if module is None:
+        module = importlib.util.module_from_spec(module_spec)
+        sys.modules[module_name] = module
+        module_spec.loader.exec_module(module)
+    return module
+
+
+try:
+    from energy_ml.load_simulation import generate_yearly_load
+except ImportError:
+    generate_yearly_load = _load_load_simulation_module().generate_yearly_load
+
+
+try:
+    from energy_ml.tariff_models import UkraineTariffModel as _UkraineTariffModel
+except ImportError:
+    _UkraineTariffModel = None
+
+if _UkraineTariffModel is None or not hasattr(_UkraineTariffModel, "calculate_365day_cost") or not hasattr(_UkraineTariffModel, "estimate_savings_with_battery"):
+    UkraineTariffModel = _load_tariff_models_module().UkraineTariffModel
+else:
+    UkraineTariffModel = _UkraineTariffModel
 
 
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "outputs"
@@ -24,8 +72,6 @@ def tariff_optimization_analysis(user_profile: UserProfile) -> dict:
     """
     # Get load profile - for now use synthetic if not available
     # In full integration, load_profiles asset would provide this
-    from energy_ml.load_simulation import generate_yearly_load
-    
     load_result = generate_yearly_load(user_profile.load_profile)
     hourly_loads_8760 = load_result['hourly']
     

@@ -61,10 +61,9 @@ def _find_latest_asset_file(project_root: Path, asset_name: str) -> Optional[Tup
     roots = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
 
     dagster_home_env = os.getenv("DAGSTER_HOME")
-    persistent_roots = []
+    persistent_roots = [project_root / "data" / "dagster_home"]
     if dagster_home_env:
         persistent_roots.append(Path(dagster_home_env))
-    persistent_roots.append(project_root / "data" / "dagster_home")
 
     seen_roots = set()
     candidate_roots = []

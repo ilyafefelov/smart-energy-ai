@@ -2,11 +2,36 @@
 
 Produces degradation_costs.json per battery type and integrates with UserProfile.
 """
+import importlib.util
 from dagster import asset
 import json
+import sys
 from energy_ml.config_models import UserProfile, BatteryConfig
-from energy_ml.battery_degradation import LFPModel, LeadAcidModel, VRFBModel
 from pathlib import Path
+
+
+def _load_battery_degradation_module():
+    module_name = "smart_energy_ai_battery_degradation"
+    module_path = Path(__file__).resolve().parents[1] / "battery_degradation.py"
+    module_spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if module_spec is None or module_spec.loader is None:
+        raise ImportError(f"Unable to load battery degradation models from {module_path}")
+
+    module = sys.modules.get(module_name)
+    if module is None:
+        module = importlib.util.module_from_spec(module_spec)
+        sys.modules[module_name] = module
+        module_spec.loader.exec_module(module)
+    return module
+
+
+try:
+    from energy_ml.battery_degradation import LFPModel, LeadAcidModel, VRFBModel
+except ImportError:
+    _BATTERY_DEGRADATION = _load_battery_degradation_module()
+    LFPModel = _BATTERY_DEGRADATION.LFPModel
+    LeadAcidModel = _BATTERY_DEGRADATION.LeadAcidModel
+    VRFBModel = _BATTERY_DEGRADATION.VRFBModel
 
 OUTPUT_DIR = Path(__file__).resolve().parents[1] / "outputs"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

@@ -4,27 +4,27 @@
     "power_kw": 2.5,
     "mode": "automatic",
     "active_command": "charge",
-    "command_reason": "Integration test",
+    "command_reason": "Performance test",
     "battery_capacity_kwh": 10.0,
     "max_power_kw": 5.0,
-    "last_update": "2026-02-28T18:33:22.895606",
-    "estimated_completion": "2026-02-28T20:09:22.894606",
+    "last_update": "2026-04-17T18:19:39.032977",
+    "estimated_completion": "2026-04-17T19:55:39.032977",
     "scheduled_commands_count": 0
   },
   "command_history": [
     {
-      "timestamp": "2026-02-28T18:33:22.894606",
+      "timestamp": "2026-04-17T18:19:39.032977",
       "command": "charge",
       "power_kw": 2.5,
-      "reason": "Integration test",
+      "reason": "Performance test",
       "user_id": "test",
       "soc_before": 0.5,
       "power_before": 0.0,
       "soc_after": 0.5,
       "power_after": 2.5,
-      "estimated_completion": "2026-02-28T20:09:22.894606"
+      "estimated_completion": "2026-04-17T19:55:39.032977"
     }
   ],
   "scheduled_commands": [],
-  "last_saved": "2026-02-28T18:33:22.895606"
+  "last_saved": "2026-04-17T18:19:39.032977"
 }

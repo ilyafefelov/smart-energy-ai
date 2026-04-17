@@ -1,119 +1,71 @@
-# tests/integration/test_api_integration.py
-import pytest
-import httpx
 import asyncio
-import sys
+import json
 import os
-import time
-from threading import Thread
 import subprocess
+import sys
+from pathlib import Path
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
+import pytest
 
 
-class TestControlAPIIntegration:
-    @pytest.fixture(scope="session")
-    def api_server(self):
-        """Start ML API server for testing."""
-        try:
-            # Start the ML integration API server
-            import subprocess
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
-            api_process = subprocess.Popen(
-                [sys.executable, "ml_integration_api.py"], cwd="energy_ml"
-            )
 
-            # Wait for server to start
-            time.sleep(5)
+def _run_bridge_cli(script_path: str, *args: str, cwd: Path | None = None) -> dict:
+    completed = subprocess.run(
+        [sys.executable, script_path, *args],
+        cwd=str(cwd or REPO_ROOT),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
-            yield "http://localhost:8000"
+    assert completed.returncode == 0, completed.stderr or completed.stdout
+    return json.loads(completed.stdout)
 
-            # Cleanup
-            api_process.terminate()
-            api_process.wait()
-        except Exception as e:
-            pytest.skip(f"Could not start API server: {e}")
 
-    @pytest.fixture
-    def client(self, api_server):
-        return httpx.AsyncClient(base_url=api_server)
+class TestMlIntegrationCliCompatibility:
+    def test_root_bridge_status_action(self):
+        payload = _run_bridge_cli(
+            "ml_integration_api.py",
+            "--action",
+            "get_status",
+            cwd=REPO_ROOT,
+        )
 
-    @pytest.mark.asyncio
-    async def test_control_status_endpoint(self, client):
-        """Test control status API."""
-        try:
-            response = await client.get("/api/control/status")
-            assert response.status_code == 200
+        assert payload["success"] is True
+        assert "status" in payload
+        assert "battery_state" in payload["status"]
+        assert "soc_percent" in payload["status"]["battery_state"]
 
-            data = response.json()
-            assert "soc" in data
-            assert "power_kw" in data
-            assert "mode" in data
-            assert 0.0 <= data["soc"] <= 1.0
-        except httpx.ConnectError:
-            pytest.skip("API server not available")
-        finally:
-            await client.aclose()
+    def test_canonical_bridge_forecast_action(self):
+        payload = _run_bridge_cli(
+            "scripts/ml_integration_api.py",
+            "--action",
+            "get_forecast",
+            "--hours",
+            "6",
+            cwd=REPO_ROOT,
+        )
 
-    @pytest.mark.asyncio
-    async def test_execute_command_endpoint(self, client):
-        """Test command execution API."""
-        command = {"command": "charge", "power_kw": 2.5, "reason": "Integration test"}
+        assert payload["success"] is True
+        assert payload["hours"] == 6
+        assert len(payload["forecast"]) == 6
+        assert {"hour", "action", "confidence"}.issubset(payload["forecast"][0])
 
-        try:
-            response = await client.post("/api/control/execute", json=command)
-            assert response.status_code in [200, 201]
+    def test_energy_ml_wrapper_auxiliary_action(self):
+        payload = _run_bridge_cli(
+            "ml_integration_api.py",
+            "--action",
+            "get_battery_physics",
+            cwd=REPO_ROOT / "energy_ml",
+        )
 
-            data = response.json()
-            assert data["success"] is True
-            assert "command_id" in data
-        except httpx.ConnectError:
-            pytest.skip("API server not available")
-        finally:
-            await client.aclose()
-
-    @pytest.mark.asyncio
-    async def test_optimization_endpoint(self, client):
-        """Test optimization schedule API."""
-        request = {"user_preference": "balance", "hours_ahead": 12}
-
-        try:
-            response = await client.post("/api/control/schedule", json=request)
-            assert response.status_code in [200, 201]
-
-            data = response.json()
-            assert data["success"] is True
-            assert "schedule" in data
-            assert len(data["schedule"]) == 12
-        except httpx.ConnectError:
-            pytest.skip("API server not available")
-        finally:
-            await client.aclose()
-
-    @pytest.mark.asyncio
-    async def test_settings_integration(self, client):
-        """Test settings affect optimization."""
-        # Change battery settings
-        battery_config = {"type": "VRFB", "capacity_kwh": 20.0, "efficiency": 0.80}
-
-        try:
-            await client.post("/api/settings/battery", json=battery_config)
-
-            # Get optimization schedule
-            request = {"user_preference": "max_earn", "hours_ahead": 6}
-            response = await client.post("/api/control/schedule", json=request)
-
-            if response.status_code in [200, 201]:
-                schedule = response.json()["schedule"]
-
-                # VRFB should allow more aggressive trading due to low degradation
-                power_levels = [abs(s["power_kw"]) for s in schedule]
-                avg_power = sum(power_levels) / len(power_levels)
-                assert avg_power >= 0  # Basic validation - server responded
-        except httpx.ConnectError:
-            pytest.skip("API server not available")
-        finally:
-            await client.aclose()
+        assert payload["success"] is True
+        assert "physics_data" in payload
+        assert "power_limits" in payload["physics_data"]
+        assert "max_charge_power_kw" in payload["physics_data"]["power_limits"]
+        assert payload["physics_data"]["power_limits"]["max_charge_power_kw"] > 0
 
 
 class TestSystemIntegration:

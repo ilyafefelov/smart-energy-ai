@@ -186,7 +186,7 @@ function Test-Environment {
 
 function Invoke-UnitTests {
     Write-SubHeader "Running Unit Tests"
-    return Invoke-TestCommand -Command @("python", "-m", "pytest", "tests/unit/", "-v", "--tb=short", "-m", "not slow") -Description "Unit Tests"
+    return Invoke-TestCommand -Command @("python", "-m", "pytest", "tests/unit/", "-v", "--tb=short", "-m", '"not slow"') -Description "Unit Tests"
 }
 
 function Invoke-IntegrationTests {

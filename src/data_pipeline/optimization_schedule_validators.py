@@ -43,6 +43,24 @@ def _coerce_hour(value: Any) -> int | None:
     return int(numeric)
 
 
+def _filter_client_frame(schedule: pl.DataFrame, client_id: Any) -> pl.DataFrame:
+    try:
+        if client_id is None:
+            return schedule.filter(pl.col("client_id").is_null())
+        return schedule.filter(pl.col("client_id") == client_id)
+    except TypeError:
+        rows = []
+        for row in schedule.iter_rows(named=True):
+            if row.get("client_id") == client_id:
+                rows.append(row)
+
+        frame_type = type(schedule)
+        try:
+            return frame_type(rows, schema=getattr(schedule, "schema", None))
+        except TypeError:
+            return frame_type(rows)
+
+
 def _iter_client_frames(schedule: pl.DataFrame) -> Iterable[Tuple[str, pl.DataFrame]]:
     if "client_id" not in schedule.columns:
         yield "default", schedule
@@ -54,10 +72,7 @@ def _iter_client_frames(schedule: pl.DataFrame) -> Iterable[Tuple[str, pl.DataFr
         if key in seen:
             continue
         seen.add(key)
-        if client_id is None:
-            yield key, schedule.filter(pl.col("client_id").is_null())
-        else:
-            yield key, schedule.filter(pl.col("client_id") == client_id)
+        yield key, _filter_client_frame(schedule, client_id)
 
 
 def evaluate_schedule_completeness(schedule: pl.DataFrame) -> Dict[str, Any]:

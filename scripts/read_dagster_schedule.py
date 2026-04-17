@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from datetime import datetime, timezone
@@ -14,15 +15,41 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.data_pipeline.dagster_schedule_loader import (
-    _build_recommendation,
-    _find_latest_asset_file,
-    _load_pickled_asset,
-    _normalize_schedule,
-    _safe_float,
-    _select_client_rows,
-    _to_rows,
-)
+
+def _load_schedule_loader_module():
+    module_name = "smart_energy_ai_dagster_schedule_loader"
+    module_path = PROJECT_ROOT / "src" / "data_pipeline" / "dagster_schedule_loader.py"
+    module_spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if module_spec is None or module_spec.loader is None:
+        raise ImportError(f"Unable to load Dagster schedule helpers from {module_path}")
+
+    module = sys.modules.get(module_name)
+    if module is None:
+        module = importlib.util.module_from_spec(module_spec)
+        sys.modules[module_name] = module
+        module_spec.loader.exec_module(module)
+    return module
+
+
+try:
+    from src.data_pipeline.dagster_schedule_loader import (
+        _build_recommendation,
+        _find_latest_asset_file,
+        _load_pickled_asset,
+        _normalize_schedule,
+        _safe_float,
+        _select_client_rows,
+        _to_rows,
+    )
+except (ImportError, KeyError):
+    _SCHEDULE_LOADER = _load_schedule_loader_module()
+    _build_recommendation = _SCHEDULE_LOADER._build_recommendation
+    _find_latest_asset_file = _SCHEDULE_LOADER._find_latest_asset_file
+    _load_pickled_asset = _SCHEDULE_LOADER._load_pickled_asset
+    _normalize_schedule = _SCHEDULE_LOADER._normalize_schedule
+    _safe_float = _SCHEDULE_LOADER._safe_float
+    _select_client_rows = _SCHEDULE_LOADER._select_client_rows
+    _to_rows = _SCHEDULE_LOADER._to_rows
 
 ASSET_PRIORITY = [
     "optimization_schedule_milp_asset",
