@@ -31,13 +31,51 @@ def _optional_float(value: Any) -> Optional[float]:
         return None
 
 
+def _optional_bool(value: Any) -> Optional[bool]:
+    """Convert a value to bool while preserving missing values as None."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    normalized = str(value).strip().lower()
+    if normalized in {"true", "1", "yes"}:
+        return True
+    if normalized in {"false", "0", "no"}:
+        return False
+    return None
+
+
+def _optional_text(value: Any) -> Optional[str]:
+    """Convert a value to text while preserving missing or blank values as None."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 def _find_latest_asset_file(project_root: Path, asset_name: str) -> Optional[Tuple[Path, Path]]:
-    """Find the newest temporary Dagster storage root containing the target asset."""
+    """Find the newest Dagster storage root containing the target asset."""
     pattern = str(project_root / ".tmp_dagster_home_*")
     roots = sorted(glob.glob(pattern), key=os.path.getmtime, reverse=True)
 
-    for root in roots:
-        root_path = Path(root)
+    dagster_home_env = os.getenv("DAGSTER_HOME")
+    persistent_roots = []
+    if dagster_home_env:
+        persistent_roots.append(Path(dagster_home_env))
+    persistent_roots.append(project_root / "data" / "dagster_home")
+
+    seen_roots = set()
+    candidate_roots = []
+    for root in [*map(Path, roots), *persistent_roots]:
+        resolved_root = root.resolve()
+        if resolved_root in seen_roots:
+            continue
+        seen_roots.add(resolved_root)
+        candidate_roots.append(root)
+
+    for root_path in candidate_roots:
         candidate = root_path / "storage" / asset_name
         if candidate.exists():
             return candidate, root_path
@@ -135,6 +173,12 @@ def _normalize_schedule(rows: List[Dict[str, Any]], fx_rate: float) -> List[Dict
                 "purchase_cost_eur": _optional_float(row.get("purchase_cost_eur")),
                 "export_revenue_eur": _optional_float(row.get("export_revenue_eur")),
                 "degradation_penalty_eur": _optional_float(row.get("degradation_penalty_eur")),
+                "forecast_model_name": _optional_text(row.get("forecast_model_name")),
+                "forecast_model_family": _optional_text(row.get("forecast_model_family")),
+                "forecast_horizon_mode": _optional_text(row.get("forecast_horizon_mode")),
+                "forecast_uncertainty_source": _optional_text(row.get("forecast_uncertainty_source")),
+                "forecast_promotion_active": _optional_bool(row.get("forecast_promotion_active")),
+                "forecast_promotion_source": _optional_text(row.get("forecast_promotion_source")),
                 "solver": str(row.get("solver", "")),
             }
         )
@@ -176,7 +220,9 @@ __all__ = [
     "_load_pickled_asset",
     "_normalize_action",
     "_normalize_schedule",
+    "_optional_bool",
     "_optional_float",
+    "_optional_text",
     "_safe_float",
     "_select_client_rows",
     "_to_rows",

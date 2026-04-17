@@ -88,6 +88,7 @@ def build_polars_module():
     module.Utf8 = "Utf8"
     module.Int64 = "Int64"
     module.Float64 = "Float64"
+    module.Boolean = "Boolean"
     module.DataType = object
     module.col = lambda column: FakeExpr(column)
     module.concat = lambda frames, how=None: FakePolarsFrame([row for frame in frames for row in frame.rows], schema=frames[0].schema if frames else {})
@@ -277,16 +278,28 @@ def test_optimization_schedule_helpers_and_asset(monkeypatch, tmp_path: Path) ->
 
     price_forecast = FakePolarsFrame([
         {
+            "forecast_timestamp": datetime(2026, 3, 2, 0, 0),
             "predicted_price_eur_mwh": 50.0,
             "scenario_low_price_eur_mwh": 45.0,
             "scenario_base_price_eur_mwh": 50.0,
             "scenario_high_price_eur_mwh": 60.0,
+            "model_name": "promoted_model",
+            "model_family": "random_forest_regressor",
+            "uncertainty_source": "walk_forward_residual_std",
+            "promotion_active": True,
+            "promotion_source": "forecast_value_benchmark_asset",
         },
         {
+            "forecast_timestamp": datetime(2026, 3, 2, 1, 0),
             "predicted_price_eur_mwh": 55.0,
             "scenario_low_price_eur_mwh": 50.0,
             "scenario_base_price_eur_mwh": 55.0,
             "scenario_high_price_eur_mwh": 65.0,
+            "model_name": "promoted_model",
+            "model_family": "random_forest_regressor",
+            "uncertainty_source": "walk_forward_residual_std",
+            "promotion_active": True,
+            "promotion_source": "forecast_value_benchmark_asset",
         },
     ])
     client_state = FakePolarsFrame([
@@ -301,6 +314,12 @@ def test_optimization_schedule_helpers_and_asset(monkeypatch, tmp_path: Path) ->
     assert output.rows[0]["algorithm"] == "baseline_dp"
     assert output.rows[0]["price_eur_mwh"] == 45.0
     assert output.rows[1]["price_eur_mwh"] == 50.0
+    assert output.rows[0]["forecast_model_name"] == "promoted_model"
+    assert output.rows[0]["forecast_model_family"] == "random_forest_regressor"
+    assert output.rows[0]["forecast_horizon_mode"] == "conservative"
+    assert output.rows[0]["forecast_uncertainty_source"] == "walk_forward_residual_std"
+    assert output.rows[0]["forecast_promotion_active"] is True
+    assert output.rows[0]["forecast_promotion_source"] == "forecast_value_benchmark_asset"
 
 
 def test_optimization_schedule_asset_uses_stage2_client_inputs(monkeypatch, tmp_path: Path) -> None:

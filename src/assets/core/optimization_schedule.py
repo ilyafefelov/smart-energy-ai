@@ -40,6 +40,12 @@ OPTIMIZATION_SCHEDULE_SCHEMA: Dict[str, pl.DataType] = {
     "total_net_cost_eur": pl.Float64,
     "final_soc_kwh": pl.Float64,
     "throughput_limit_kwh": pl.Float64,
+    "forecast_model_name": pl.Utf8,
+    "forecast_model_family": pl.Utf8,
+    "forecast_horizon_mode": pl.Utf8,
+    "forecast_uncertainty_source": pl.Utf8,
+    "forecast_promotion_active": pl.Boolean,
+    "forecast_promotion_source": pl.Utf8,
     "algorithm": pl.Utf8,
     "solver": pl.Utf8,
 }
@@ -142,6 +148,25 @@ def _resolve_client_optimization_inputs(client_profile: Mapping[str, Any], capac
     }
 
 
+def _resolve_forecast_context(
+    price_forecast: pl.DataFrame,
+    *,
+    horizon_mode: str,
+) -> Dict[str, Any]:
+    rows = price_forecast.sort("forecast_timestamp").to_dicts() if len(price_forecast) else []
+    first_row = rows[0] if rows else {}
+    promotion_active = first_row.get("promotion_active")
+
+    return {
+        "forecast_model_name": str(first_row.get("model_name") or "") or None,
+        "forecast_model_family": str(first_row.get("model_family") or "") or None,
+        "forecast_horizon_mode": horizon_mode,
+        "forecast_uncertainty_source": str(first_row.get("uncertainty_source") or "") or None,
+        "forecast_promotion_active": bool(promotion_active) if promotion_active is not None else False,
+        "forecast_promotion_source": str(first_row.get("promotion_source") or "") or None,
+    }
+
+
 @asset(
     group_name="optimization",
     description="Baseline DP optimizer schedule from forecast prices and client state",
@@ -155,13 +180,15 @@ def _resolve_client_optimization_inputs(client_profile: Mapping[str, Any], capac
     },
 )
 def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_state: pl.DataFrame) -> pl.DataFrame:
-    prices = _extract_price_horizon(price_forecast, horizon_mode="conservative")
+    horizon_mode = "conservative"
+    prices = _extract_price_horizon(price_forecast, horizon_mode=horizon_mode)
     if not prices:
         context.log.warning("No forecast price column found; returning empty optimization schedule")
         return build_empty_optimization_schedule()
 
     horizon = min(24, len(prices))
     client_profiles = _load_client_profiles()
+    forecast_context = _resolve_forecast_context(price_forecast, horizon_mode=horizon_mode)
 
     output_frames: List[pl.DataFrame] = []
     client_ids = (
@@ -229,6 +256,12 @@ def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_st
             "total_net_cost_eur": float(result["objective"]["net_cost_eur"]),
             "final_soc_kwh": float(result["constraints"]["final_soc_kwh"]),
             "throughput_limit_kwh": float(result["constraints"]["throughput_limit_kwh"]),
+            "forecast_model_name": forecast_context["forecast_model_name"],
+            "forecast_model_family": forecast_context["forecast_model_family"],
+            "forecast_horizon_mode": forecast_context["forecast_horizon_mode"],
+            "forecast_uncertainty_source": forecast_context["forecast_uncertainty_source"],
+            "forecast_promotion_active": forecast_context["forecast_promotion_active"],
+            "forecast_promotion_source": forecast_context["forecast_promotion_source"],
             "algorithm": str(result["metadata"]["algorithm"]),
             "solver": None,
         } for row in result["schedule"]]
