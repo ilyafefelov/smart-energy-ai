@@ -14,9 +14,9 @@ Current trading decision and data provenance note:
 
 - `docs/technical/ML_TRADING_DECISION_FRAMEWORK.md`
 
-### Key Thesis Benchmark
+### Optional Benchmark Path (Thesis/Research)
 
-The system implements **Dual-Engine Architecture** for Feature Engineering, allowing dynamic switching between:
+The repository includes a **Dual-Engine benchmark path** for feature engineering experiments, allowing controlled comparisons between:
 
 1. **CPU-Optimized:** Rust-based Polars (for AWS Free Tier / Edge Devices)
 2. **GPU-Accelerated:** NVIDIA NVTabular (for High-Performance Training on large datasets)
@@ -84,7 +84,9 @@ The active schedule and heuristic decision layers should account for degradation
 
 ---
 
-## 4. Hybrid Deployment (AWS Free Tier Strategy)
+## 4. Planned Hybrid Deployment (AWS Free Tier Strategy)
+
+This section describes the planned AWS target architecture. The current operational focus remains the local Dagster + Nuxt stack documented in the quick-start sections below.
 
 Architecture optimized for Free Tier constraints:
 
@@ -177,37 +179,17 @@ except ImportError:
 
 ---
 
-## 7. Project Structure (V2)
+## 7. Active Project Structure Highlights
 
-```
-smart-energy-ai/
-├── dagster.yaml                        # Dagster deployment config
-├── customers.yaml                      # Multi-tenancy config
-├── requirements.txt                    # core Python dependencies for orchestration, ML, and local runtime
-├── src/
-│   ├── __init__.py
-│   ├── definitions.py                  # Main Dagster entry point
-│   ├── assets/
-│   │   ├── core/                       # General data (Prices, Weather)
-│   │   │   ├── market.py
-│   │   │   └── weather.py
-│   │   ├── multi_tenant/               # Asset factories for clients
-│   │   │   ├── telemetry.py
-│   │   │   └── optimization.py
-│   │   └── benchmarks/                 # Dual-Engine assets
-│   │       └── feature_eng.py          # Polars vs NVTabular logic
-│   ├── resources/
-│   │   ├── s3_io_manager.py           # AWS S3 Integration
-│   │   └── mlflow_resource.py         # MLflow logging setup
-│   ├── physics/
-│   │   ├── battery_lfp.py             # Degradation model class
-│   │   └── economics.py               # LCOS formulas
-│   └── engines/
-│       ├── polars_engine.py           # CPU logic implementation
-│       └── nvtabular_engine.py        # GPU logic (with try-import)
-└── scripts/
-    └── deploy_lambda.sh               # Docker container packaging for Lambda
-```
+The active runtime and operator workflows center on:
+
+- `dashboard/`: Canonical Nuxt operator application
+- `src/`: Active Dagster assets, checks, definitions, and orchestration entrypoints
+- `energy_ml/`: Runtime compatibility/domain modules and simulation support
+- `scripts/local/`: Local stack startup and maintenance scripts
+- `tests/`: Unit and integration validation suites
+
+Archive and legacy surfaces remain in `archive/` and are reference-only unless explicitly called out.
 
 ---
 
