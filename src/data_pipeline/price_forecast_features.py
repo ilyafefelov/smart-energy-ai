@@ -10,6 +10,35 @@ import polars as pl
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
+def _fit_forecast_model(
+    model: object,
+    train_df: pl.DataFrame,
+    feature_cols: Sequence[str],
+    target_col: str = "target_price_t_plus_24h",
+) -> None:
+    fit_frame = getattr(model, "fit_frame", None)
+    if callable(fit_frame):
+        fit_frame(train_df, feature_cols, target_col)
+        return
+
+    x_train = train_df.select(feature_cols).to_numpy()
+    y_train = train_df.select(target_col).to_numpy().reshape(-1)
+    model.fit(x_train, y_train)
+
+
+def _predict_forecast_model(
+    model: object,
+    df: pl.DataFrame,
+    feature_cols: Sequence[str],
+) -> np.ndarray:
+    predict_frame = getattr(model, "predict_frame", None)
+    if callable(predict_frame):
+        predictions = predict_frame(df, feature_cols)
+    else:
+        predictions = model.predict(df.select(feature_cols).to_numpy())
+    return np.asarray(predictions, dtype=float).reshape(-1)
+
+
 def _build_feature_frame(market_data: pl.DataFrame) -> pl.DataFrame:
     ordered = market_data.sort("timestamp")
     return ordered.with_columns(
@@ -35,6 +64,31 @@ def _split_train_eval(df: pl.DataFrame) -> Tuple[pl.DataFrame, pl.DataFrame]:
     return df.slice(0, len(df) - eval_size), df.slice(len(df) - eval_size, eval_size)
 
 
+def _build_uncertainty_contract_columns(
+    *,
+    spread: float,
+    uncertainty_source: str,
+) -> list[pl.Expr]:
+    bounded_spread = max(float(spread), 0.0)
+    return [
+        (pl.col("predicted_price_eur_mwh") - bounded_spread)
+        .clip(0.0, 1000.0)
+        .alias("lower_bound_eur_mwh"),
+        (pl.col("predicted_price_eur_mwh") - bounded_spread)
+        .clip(0.0, 1000.0)
+        .alias("scenario_low_price_eur_mwh"),
+        pl.col("predicted_price_eur_mwh").alias("scenario_base_price_eur_mwh"),
+        (pl.col("predicted_price_eur_mwh") + bounded_spread)
+        .clip(0.0, 1000.0)
+        .alias("scenario_high_price_eur_mwh"),
+        (pl.col("predicted_price_eur_mwh") + bounded_spread)
+        .clip(0.0, 1000.0)
+        .alias("upper_bound_eur_mwh"),
+        pl.lit(bounded_spread).alias("uncertainty_spread_eur_mwh"),
+        pl.lit(uncertainty_source).alias("uncertainty_source"),
+    ]
+
+
 def _build_persistence_forecast(market_data: pl.DataFrame, labeled_rows: int) -> pl.DataFrame:
     last_prices = market_data.sort("timestamp").tail(24)
     anchor = market_data.sort("timestamp").select("price_eur_mwh").tail(1).item()
@@ -42,8 +96,6 @@ def _build_persistence_forecast(market_data: pl.DataFrame, labeled_rows: int) ->
         [
             (pl.col("timestamp") + pl.duration(hours=24)).alias("forecast_timestamp"),
             pl.lit(float(anchor)).alias("predicted_price_eur_mwh"),
-            pl.lit(float(anchor)).alias("lower_bound_eur_mwh"),
-            pl.lit(float(anchor)).alias("upper_bound_eur_mwh"),
             pl.lit("persistence_fallback").alias("model_name"),
             pl.lit("persistence").alias("model_family"),
             pl.lit(datetime.now(timezone.utc)).alias("trained_at_utc"),
@@ -56,13 +108,17 @@ def _build_persistence_forecast(market_data: pl.DataFrame, labeled_rows: int) ->
             pl.lit(0).alias("evaluation_folds"),
             pl.lit(labeled_rows).alias("training_rows"),
         ]
+    ).with_columns(
+        _build_uncertainty_contract_columns(
+            spread=0.0,
+            uncertainty_source="persistence_flat",
+        )
     )
 
 
 def _compute_eval_metrics(model, eval_df: pl.DataFrame, feature_cols: Sequence[str]) -> Tuple[float, float, float]:
-    x_eval = eval_df.select(feature_cols).to_numpy()
     y_eval = eval_df.select("target_price_t_plus_24h").to_numpy().reshape(-1)
-    y_hat = model.predict(x_eval)
+    y_hat = _predict_forecast_model(model, eval_df, feature_cols)
     eval_rmse = float(np.sqrt(mean_squared_error(y_eval, y_hat)))
     eval_mae = float(mean_absolute_error(y_eval, y_hat))
     residual_std = float(np.std(y_eval - y_hat))
@@ -149,13 +205,10 @@ def _run_walk_forward_evaluation(
             continue
 
         model = model_builder()
-        x_train = train_df.select(feature_cols).to_numpy()
-        y_train = train_df.select(target_col).to_numpy().reshape(-1)
-        model.fit(x_train, y_train)
+        _fit_forecast_model(model, train_df, feature_cols, target_col)
 
-        x_eval = eval_df.select(feature_cols).to_numpy()
         y_eval = eval_df.select(target_col).to_numpy().reshape(-1)
-        y_hat = np.asarray(model.predict(x_eval), dtype=float).reshape(-1)
+        y_hat = _predict_forecast_model(model, eval_df, feature_cols)
 
         value_metrics = _compute_value_capture_metrics(y_eval, y_hat)
         fold_metrics.append(
@@ -198,8 +251,11 @@ def _run_walk_forward_evaluation(
 __all__ = [
     "_build_feature_frame",
     "_build_persistence_forecast",
+    "_build_uncertainty_contract_columns",
     "_compute_eval_metrics",
     "_compute_value_capture_metrics",
+    "_fit_forecast_model",
+    "_predict_forecast_model",
     "_run_walk_forward_evaluation",
     "_split_train_eval",
 ]

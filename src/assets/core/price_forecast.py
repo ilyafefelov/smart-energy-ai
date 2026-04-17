@@ -18,6 +18,7 @@ from src.data_pipeline.forecast_model_registry import (
 from src.data_pipeline.price_forecast_features import (
     _build_feature_frame,
     _build_persistence_forecast,
+    _build_uncertainty_contract_columns,
     _compute_eval_metrics,
     _fit_forecast_model,
     _predict_forecast_model,
@@ -94,7 +95,16 @@ def _build_forecast_with_model_spec(
     x_infer = infer_features.select(feature_cols).to_numpy()
     predictions = _predict_forecast_model(model, infer_features, feature_cols)
 
-    spread = residual_std if residual_std > 0 else max(eval_rmse, 5.0)
+    if residual_std > 0:
+        spread = residual_std
+        uncertainty_source = "walk_forward_residual_std"
+    elif eval_rmse > 0:
+        spread = max(eval_rmse, 5.0)
+        uncertainty_source = "eval_rmse_floor"
+    else:
+        spread = 5.0
+        uncertainty_source = "minimum_spread_floor"
+
     forecast_df = infer_features.select(
         [
             (pl.col("timestamp") + pl.duration(hours=24)).alias("forecast_timestamp"),
@@ -105,8 +115,10 @@ def _build_forecast_with_model_spec(
         ]
     ).with_columns(
         [
-            (pl.col("predicted_price_eur_mwh") - spread).clip(0.0, 1000.0).alias("lower_bound_eur_mwh"),
-            (pl.col("predicted_price_eur_mwh") + spread).clip(0.0, 1000.0).alias("upper_bound_eur_mwh"),
+            *_build_uncertainty_contract_columns(
+                spread=spread,
+                uncertainty_source=uncertainty_source,
+            ),
             pl.lit(model_spec.model_name).alias("model_name"),
             pl.lit(model_spec.model_family).alias("model_family"),
             pl.lit(datetime.now(timezone.utc)).alias("trained_at_utc"),

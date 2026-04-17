@@ -183,6 +183,10 @@ def test_price_forecast_helpers_and_fallback_asset() -> None:
     assert len(eval_df) == 0
     assert len(forecast) == 24
     assert set(forecast["model_name"].unique().to_list()) == {"persistence_fallback"}
+    assert set(forecast["uncertainty_source"].unique().to_list()) == {"persistence_flat"}
+    assert forecast["lower_bound_eur_mwh"].to_list() == forecast["scenario_low_price_eur_mwh"].to_list()
+    assert forecast["predicted_price_eur_mwh"].to_list() == forecast["scenario_base_price_eur_mwh"].to_list()
+    assert forecast["upper_bound_eur_mwh"].to_list() == forecast["scenario_high_price_eur_mwh"].to_list()
 
 
 class _RegistryFakeModel:
@@ -239,6 +243,14 @@ def test_price_forecast_asset_resolves_model_from_registry(monkeypatch) -> None:
     assert set(forecast["forecast_horizon_hours"].unique().to_list()) == {24}
     assert set(forecast["evaluation_folds"].unique().to_list()) == {1}
     assert "eval_value_capture_ratio" in forecast.columns
+    assert "scenario_low_price_eur_mwh" in forecast.columns
+    assert "scenario_base_price_eur_mwh" in forecast.columns
+    assert "scenario_high_price_eur_mwh" in forecast.columns
+    assert "uncertainty_spread_eur_mwh" in forecast.columns
+    assert "uncertainty_source" in forecast.columns
+    assert forecast["lower_bound_eur_mwh"].to_list() == forecast["scenario_low_price_eur_mwh"].to_list()
+    assert forecast["predicted_price_eur_mwh"].to_list() == forecast["scenario_base_price_eur_mwh"].to_list()
+    assert forecast["upper_bound_eur_mwh"].to_list() == forecast["scenario_high_price_eur_mwh"].to_list()
 
 
 def test_price_forecast_asset_supports_frame_adapter_registry_models(monkeypatch) -> None:
@@ -272,6 +284,9 @@ def test_price_forecast_asset_supports_frame_adapter_registry_models(monkeypatch
     assert set(forecast["model_name"].unique().to_list()) == {"frame_adapter_model"}
     assert set(forecast["model_family"].unique().to_list()) == {"frame_adapter_family"}
     assert set(forecast["forecast_horizon_hours"].unique().to_list()) == {24}
+    assert forecast["lower_bound_eur_mwh"].to_list() == forecast["scenario_low_price_eur_mwh"].to_list()
+    assert forecast["predicted_price_eur_mwh"].to_list() == forecast["scenario_base_price_eur_mwh"].to_list()
+    assert forecast["upper_bound_eur_mwh"].to_list() == forecast["scenario_high_price_eur_mwh"].to_list()
 
 
 def test_price_forecast_asset_resolves_promoted_model_when_env_is_unset(monkeypatch) -> None:

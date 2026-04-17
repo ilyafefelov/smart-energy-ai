@@ -39,6 +39,11 @@ def test_build_persistence_forecast_preserves_expected_contract() -> None:
     assert set(result["model_family"].unique().to_list()) == {"persistence"}
     assert set(result["forecast_horizon_hours"].unique().to_list()) == {24}
     assert set(result["training_rows"].unique().to_list()) == {7}
+    assert set(result["uncertainty_source"].unique().to_list()) == {"persistence_flat"}
+    assert set(result["uncertainty_spread_eur_mwh"].unique().to_list()) == {0.0}
+    assert result["lower_bound_eur_mwh"].to_list() == result["scenario_low_price_eur_mwh"].to_list()
+    assert result["predicted_price_eur_mwh"].to_list() == result["scenario_base_price_eur_mwh"].to_list()
+    assert result["upper_bound_eur_mwh"].to_list() == result["scenario_high_price_eur_mwh"].to_list()
 
 
 def test_compute_eval_metrics_returns_expected_values() -> None:
