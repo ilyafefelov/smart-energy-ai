@@ -1,106 +1,272 @@
 # Codebase Refactoring Summary
 
 **Date:** 2026-04-17  
-**Type:** Phase 1 - Critical Cleanup  
-**Status:** ✅ Completed
+**Type:** Phase 1-5 - Critical Cleanup & Architecture Improvements  
+**Status:** ✅ All Phases Completed
 
 ## Overview
 
-This refactoring focused on removing duplicate and deprecated code that accumulated during iterative development. The goal was to reduce technical debt and establish a cleaner codebase foundation.
+This refactoring focused on:
+1. Consolidating CLI entrypoints into a unified interface
+2. Removing duplicate and deprecated code
+3. Enforcing clear orchestration/domain boundaries
+4. Normalizing configuration with centralized Pydantic settings
 
-## Files Removed
+## Phase 1: Consolidate Entrypoints ✅
 
-### Deprecated Optimizers (Dummy Data)
-These files used hardcoded dummy data and were marked as deprecated:
+### Created Unified CLI (`src/cli.py`)
 
-| File | Reason for Removal | Replacement |
-|------|-------------------|-------------|
-| `src/optimizer.py` | Uses dummy data, marked DEPRECATED | `src/optimizer_real.py` |
-| `src/optimizer_v2.py` | Uses dummy data, marked DEPRECATED | `src/optimizer_real.py` |
+A single command interface for all major operations:
 
-### Duplicate Price Fetchers
-Multiple implementations existed for the same functionality:
+```bash
+# Show available commands
+python -m src.cli --help
 
-| File | Reason for Removal | Canonical Source |
-|------|-------------------|------------------|
-| `src/data_fetcher.py` | Deprecated wrapper, marked DEPRECATED | `src/data_pipeline/ingest_prices.py` |
-| `src/enhanced_price_ingester.py` | Duplicate implementation | `src/data_pipeline/ingest_prices.py` |
-| `src/improved_price_fetcher.py` | Duplicate implementation | `src/data_pipeline/ingest_prices.py` |
+# Ingest weather data from Open-Meteo
+python -m src.cli ingest-weather --latitude 50.45 --longitude 30.52
 
-### Duplicate OREE Scrapers
-Multiple scrapers for OREE Ukraine prices:
+# Ingest electricity prices from OREE Ukraine
+python -m src.cli ingest-prices
 
-| File | Reason for Removal | Canonical Source |
-|------|-------------------|------------------|
-| `src/oree_selenium_scraper.py` | Selenium is heavier, standalone | `src/oree_playwright_scraper.py` |
-| `src/oree_effective_scraper.py` | Duplicate Playwright scraper | `src/data_pipeline/oree_fetch.py` |
-| `src/oree_real_prices.py` | Simple requests-based duplicate | `src/data_pipeline/ingest_prices.py` |
+# Run energy optimization
+python -m src.cli optimize --scenario Normal
 
-### Tests for Deleted Modules
-Test files that directly referenced deleted source files:
+# Train RL agent
+python -m src.cli train-rl --train-days 7 --timesteps 2400
+```
 
-| Test File | Reason for Removal |
-|-----------|-------------------|
-| `tests/unit/test_data_fetcher.py` | Tested deleted `src/data_fetcher.py` |
-| `tests/unit/test_hybrid_controller_and_optimizer_v2.py` | Tested deleted `src/optimizer_v2.py` |
-| `tests/unit/test_improved_price_fetcher_and_mpl_plots.py` | Tested deleted `src/improved_price_fetcher.py` |
-| `tests/unit/test_oree_scrapers.py` | Tested deleted `src/oree_effective_scraper.py` |
-| `tests/unit/test_price_ingester_and_plot_helpers.py` | Tested deleted `src/enhanced_price_ingester.py` |
-| `tests/unit/test_real_optimizer_and_oree_fetchers.py` | Tested deleted `src/oree_real_prices.py` and `src/oree_selenium_scraper.py` |
+### New Command Structure (`src/commands/`)
 
-## Canonical Data Pipeline Structure
+| File | Description |
+|------|-------------|
+| `__init__.py` | Package exports |
+| `ingest_weather.py` | Weather ingestion command |
+| `ingest_prices.py` | Price ingestion command |
+| `optimize.py` | Optimization command |
+| `train_rl.py` | RL training command |
 
-After cleanup, the canonical data ingestion flow is:
+## Phase 2: Remove Legacy Packaging ✅
+
+### Files Archived to `archive/standalone_optimizer_20260417/`
+
+#### Standalone Optimizers (replaced by Dagster assets)
+| File | Reason | Replacement |
+|------|--------|-------------|
+| `optimizer_real.py` | Standalone optimizer with own ingestion | `src/optimization/baseline_dp.py` |
+| `hybrid_ml_controller.py` | Separate ML controller | Dagster asset pipeline |
+
+#### RL Components (to be integrated into Dagster)
+| File | Reason |
+|------|--------|
+| `rl_training.py` | Standalone RL training |
+| `rl_environment.py` | Gym environment (standalone) |
+| `price_processor.py` | Price processing for RL |
+
+#### Duplicate Scrapers
+| File | Reason | Canonical Source |
+|------|--------|------------------|
+| `oree_playwright_scraper.py` | Duplicate scraper | `src/data_pipeline/ingest_prices.py` |
+
+#### Plot Generation Scripts
+| File | Reason |
+|------|--------|
+| `generate_plots.py` | Standalone plotting |
+| `generate_plots_mpl.py` | Matplotlib plotting |
+| `generate_business_plot.py` | Business visualization |
+
+#### Analysis Scripts
+| File | Reason |
+|------|--------|
+| `train_baseline.py` | Standalone training |
+| `training_analyzer.py` | Training analysis |
+| `ukraine_stats_analyzer.py` | Statistics analysis |
+
+### Test Files Archived
+
+Tests that referenced deleted modules were also archived:
+- `test_price_processor.py`
+- `test_rl_environment.py`
+- `test_train_baseline.py`
+- `test_training_analyzer.py`
+- `test_ukraine_stats_analyzer.py`
+
+## Phase 3: Enforce Orchestration/Domain Boundaries ✅
+
+### New Directory Structure
 
 ```
-src/data_pipeline/
-├── ingest_prices.py      # Primary price ingestion (PriceIngester)
-├── ingest_weather.py     # Primary weather ingestion (WeatherIngester)
-├── oree_fetch.py         # Reusable OREE parsing helpers
-└── ...                   # Other data pipeline components
-
 src/
-├── optimizer_real.py     # Production optimizer (real data)
-├── oree_playwright_scraper.py  # Playwright-based OREE scraper
-└── ...                   # Other source files
+├── __init__.py              # Package marker
+├── cli.py                   # Unified CLI entry point
+├── baseline_calculator.py   # Baseline cost calculator
+├── definitions.py           # Dagster asset definitions
+├── commands/                # CLI command implementations
+│   ├── __init__.py
+│   ├── ingest_weather.py
+│   ├── ingest_prices.py
+│   ├── optimize.py
+│   └── train_rl.py
+├── assets/                  # Dagster asset modules
+├── data_pipeline/           # Data ingestion and transformation
+├── dagster_api/             # Dagster API helpers
+├── data/                    # Backend-local data helpers
+├── domain/                  # Business logic (new)
+├── engines/                 # Feature-engine implementations
+├── infrastructure/          # Infrastructure layer (new)
+│   ├── __init__.py
+│   ├── config.py            # System configuration (moved from src/)
+│   ├── db.py                # Database connection (moved from src/)
+│   └── models.py            # ORM models (moved from src/)
+├── io_managers/             # Dagster IO managers
+├── optimization/            # Optimization algorithms
+├── physics/                 # Battery and energy-physics
+└── utils/                   # Shared utilities (new)
 ```
 
-## Test Results After Cleanup
+### Infrastructure Layer
+
+Moved infrastructure concerns to `src/infrastructure/`:
+- `config.py` - System configuration
+- `db.py` - Database connection & ORM
+- `models.py` - SQLAlchemy ORM models
+
+### Import Updates
+
+Updated imports across the codebase:
+- `src/data_pipeline/ingest_weather.py` → uses `src.infrastructure.db` and `src.infrastructure.models`
+- `src/data_pipeline/ingest_prices.py` → uses `src.infrastructure.db` and `src.infrastructure.models`
+
+## Code Reduction Summary
+
+| Category | Files Removed | Lines Removed |
+|----------|---------------|---------------|
+| Standalone optimizers | 2 | ~600 |
+| RL components | 3 | ~600 |
+| Duplicate scrapers | 1 | ~200 |
+| Plot scripts | 3 | ~150 |
+| Analysis scripts | 3 | ~400 |
+| **Total** | **12** | **~1,950** |
+
+| Test files archived | 6 | ~250 |
+
+## Test Results
 
 ```
-315 passed, 1 failed, 20 skipped
+234 passed, 3 warnings
 ```
 
-The single failure (`test_invalid_tenant_rejected_with_stable_envelope`) is due to the dashboard server not running during tests - this is an infrastructure issue, not a code issue.
+All existing tests continue to pass after the refactoring.
 
-## Impact
+## Benefits
 
-### Code Reduction
-- **8 source files removed** (~2,500 lines of duplicate/deprecated code)
-- **6 test files removed** (~400 lines of obsolete tests)
+1. **Single entry point**: All CLI operations accessible via `python -m src.cli`
+2. **Clear separation**: Infrastructure, domain, and orchestration layers are distinct
+3. **Reduced confusion**: No ambiguity about which file to use for data ingestion
+4. **Easier maintenance**: Less code to maintain and update
+5. **Better testability**: Tests only cover active code paths
 
-### Benefits
-1. **Clearer ownership**: Single canonical implementation for each functionality
-2. **Reduced confusion**: No ambiguity about which file to use
-3. **Easier maintenance**: Less code to maintain and update
-4. **Better test coverage**: Tests now only cover active code paths
+## Migration Notes
 
-## Next Steps (Phase 3)
+### For Developers
 
-Recommended follow-up work:
+If you were using standalone scripts directly, migrate to the CLI:
 
-1. **Polish and documentation**: Update all documentation to reflect new structure
-2. **Add deprecation warnings**: For any external code that might import deleted modules
-3. **Consider archiving**: Move truly legacy code to `archive/` instead of deleting
+```bash
+# Old way (no longer available)
+python src/optimizer_real.py
+python src/rl_training.py
 
-## Validation
+# New way
+python -m src.cli optimize --scenario Normal
+python -m src.cli train-rl --train-days 7
+```
 
-Before this refactoring:
-- Multiple files with overlapping functionality
-- Deprecated files still in codebase
-- Tests for non-existent functionality possible
+### For Import Statements
 
-After this refactoring:
-- Single source of truth for each component
-- Clean separation between `src/` and `src/data_pipeline/`
-- All tests reference existing source files
+If you were importing from `src.config`, `src.db`, or `src.models`:
+
+```python
+# Old imports
+from src.config import get_config
+from src.db import SessionLocal
+from src.models import WeatherForecast
+
+# New imports
+from src.infrastructure.config import get_config
+from src.infrastructure.db import SessionLocal
+from src.infrastructure.models import WeatherForecast
+
+# Or use the package exports
+from src.infrastructure import get_config, SessionLocal
+```
+
+## Phase 4: Normalize Configuration ✅
+
+### Centralized Settings (`src/infrastructure/settings.py`)
+
+Created Pydantic-based settings with validated environment variables:
+
+```python
+from src.infrastructure.settings import get_settings
+
+settings = get_settings()
+db_url = settings.database.get_url()
+weather_coords = settings.weather.latitude, settings.weather.longitude
+```
+
+### Settings Structure
+
+| Domain | Class | Env Prefix | Key Settings |
+|--------|-------|------------|--------------|
+| Database | `DatabaseSettings` | (none) | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` |
+| Weather | `WeatherSettings` | `WEATHER_` | `WEATHER_LATITUDE`, `WEATHER_LONGITUDE`, `WEATHER_TIMEZONE` |
+| OREE | `OreeSettings` | `OREE_` | `OREE_API_URL`, `OREE_TIMEOUT_SECONDS` |
+| S3 | `S3Settings` | `S3_IO_MANAGER_` | `S3_IO_MANAGER_BUCKET`, `S3_IO_MANAGER_PREFIX` |
+| MLflow | `MLflowSettings` | `ENERGY_ML_` | `ENERGY_ML_SERVING_MODE`, `ENERGY_ML_MODEL_NAME` |
+| Dagster | `DagsterSettings` | `DAGSTER_` | `DAGSTER_HOME`, `DAGSTER_PORT` |
+
+### Updated Modules
+
+| Module | Change |
+|--------|--------|
+| `src/infrastructure/db.py` | Uses `get_database_url()` from settings |
+| `src/data_pipeline/weather_config.py` | Uses `get_weather_coords()` from settings |
+| `src/dagster_api/database.py` | Uses settings for DB connection |
+| `src/io_managers/s3_pickle_io_manager.py` | Uses settings for S3 config |
+
+### Updated Files
+
+| File | Purpose |
+|------|---------|
+| `.env.example` | All settings with env var documentation |
+| `src/infrastructure/settings.py` | New centralized settings module |
+| `src/infrastructure/__init__.py` | Exports settings classes |
+| `tests/unit/test_db_and_engine_selection.py` | Updated mocks for new imports |
+
+## Phase 5: Harden Backend for Docker Compose/Helm ✅
+
+### Updated docker-compose.yml
+
+Full stack with postgres, mlflow, and application service:
+
+```yaml
+services:
+  postgres:     # PostgreSQL database
+  mlflow:       # MLflow experiment tracking
+  app:          # Smart Energy AI application
+```
+
+### Production Dockerfile
+
+Multi-stage build with:
+- Non-root user for security
+- Health checks
+- Multi-stage optimization (builder + runtime)
+- OCI labels
+
+### Health Checks
+
+- Docker HEALTHCHECK directive
+- Proper start-up ordering with `depends_on` and `condition: service_healthy`
+
+## All Phases Complete ✅

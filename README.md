@@ -217,6 +217,63 @@ customers:
 Dagster automatically generates isolated asset graphs for each client:
 `client_001_optimization -> client_001_schedule`
 
+## 5.5. Useful Commands for Data Inspection
+
+### PostgreSQL Database Commands
+
+View all tables in the Dagster/MLflow database:
+```powershell
+docker compose exec postgres psql -U dagster -d dagster -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';"
+```
+
+View recent asset materializations (asset_results table):
+```powershell
+docker compose exec postgres psql -U dagster -d dagster -c "SELECT asset_name, run_id, materialization_time, status, execution_time_ms FROM asset_results ORDER BY materialization_time DESC LIMIT 10;"
+```
+
+View asset_results table schema:
+```powershell
+docker compose exec postgres psql -U dagster -d dagster -c "\d asset_results"
+```
+
+Count total asset materializations:
+```powershell
+docker compose exec postgres psql -U dagster -d dagster -c "SELECT COUNT(*) FROM asset_results;"
+```
+
+Count total runs:
+```powershell
+docker compose exec postgres psql -U dagster -d dagster -c "SELECT COUNT(*) FROM runs;"
+```
+
+### MLflow Commands
+
+View MLflow experiments:
+```powershell
+curl -s "http://127.0.0.1:5000/api/2.0/mlflow/experiments/search?max_results=10"
+```
+
+View MLflow runs (POST request):
+```powershell
+curl -s -X POST "http://127.0.0.1:5000/api/2.0/mlflow/runs/search" -H "Content-Type: application/json" -d '{"experiment_ids": ["0"], "max_results": 10}'
+```
+
+### Data Storage Locations
+
+- **Asset Data (Pickled)**: `data/dagster_home/storage/`
+- **SQLite Metadata**: `data/dagster_assets.db`
+- **PostgreSQL (Docker)**: Port 5432, database `dagster`, user `dagster`, password `dagster`
+- **MLflow Artifacts**: Docker volume `mlruns` (accessible via MLflow UI at http://127.0.0.1:5000)
+
+### Populate MLflow with Benchmark Data
+
+Run the benchmark job to generate MLflow experiments:
+```powershell
+python -m dagster job execute -m src.definitions -j benchmark_engines
+```
+
+---
+
 ## 6. Benchmarking & MLflow
 
 For thesis and experimentation work, the repo still includes benchmark and MLflow-facing components:

@@ -1,18 +1,19 @@
 # Smart Energy AI - Docker Compose
-# 
+#
 # Services:
 #   - PostgreSQL: Database for Dagster and MLflow
 #   - MLflow: Experiment tracking server
+#   - app: Smart Energy AI application (Dagster + CLI)
 #
 # Usage:
 #   docker compose up -d
-#   python -m dagster dev -h 0.0.0.0 -p 3000  # Run Dagster locally (see README)
+#   docker compose exec app python -m src.cli --help  # Run CLI
+#   docker compose logs -f app                        # View app logs
 #
 # Local learned-policy serving validation:
 #   set MLFLOW_TRACKING_URI=http://127.0.0.1:5000
 #   set ENERGY_ML_SERVING_MODE=learned_policy
 #   set ENERGY_ML_MODEL_URI=models:/battery-optimizer@champion
-#   rem or use ENERGY_ML_MODEL_NAME=battery-optimizer with ENERGY_ML_MODEL_ALIAS=champion
 
 services:
   postgres:
@@ -30,6 +31,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - smart-energy-network
 
   mlflow:
     image: ghcr.io/mlflow/mlflow:latest
@@ -48,7 +51,62 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - smart-energy-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"  # Dagster UI
+      - "5001:5000"  # Optional: MLflow (if running inside app)
+    environment:
+      # Database
+      - DATABASE_URL=postgresql://dagster:dagster@postgres:5432/dagster
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=dagster
+      - DB_PASSWORD=dagster
+      - DB_NAME=dagster
+      # Weather (Kyiv)
+      - WEATHER_LATITUDE=50.45
+      - WEATHER_LONGITUDE=30.52
+      - WEATHER_TIMEZONE=Europe/Kiev
+      # MLflow
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - ENERGY_ML_SERVING_MODE=heuristic
+      # Dagster
+      - DAGSTER_HOME=/app/data/dagster_home
+      - DAGSTER_HOST=0.0.0.0
+      - DAGSTER_PORT=3000
+      - DAGSTER_LOG_LEVEL=INFO
+      # Application
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import requests; requests.get('http://localhost:3000/health')\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - smart-energy-network
+    # Run Dagster by default; use docker compose exec to run CLI
+    command: python -m dagster dev -h 0.0.0.0 -p 3000
 
 volumes:
   postgres_data:
   mlruns:
+
+networks:
+  smart-energy-network:
+    driver: bridge

@@ -6,7 +6,7 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, Index, Boolean,
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql import func
 from datetime import datetime
-from src.db import Base
+from .db import Base
 
 
 class WeatherForecast(Base):

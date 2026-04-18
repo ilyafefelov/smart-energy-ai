@@ -1,25 +1,19 @@
-"""Weather configuration helpers shared by orchestration and pipeline modules."""
+"""Weather configuration helpers shared by orchestration and pipeline modules.
+
+This module is deprecated - use src.infrastructure.settings.get_weather_coords() instead.
+Kept for backward compatibility with existing callers.
+"""
 
 from __future__ import annotations
 
-import os
 from typing import Tuple
+
+from src.infrastructure.settings import get_weather_coords
 
 
 def _resolve_weather_location() -> Tuple[float, float, str]:
-    """Resolve location and timezone for weather fetches from env with Kyiv fallback."""
-
-    try:
-        latitude = float(os.getenv("WEATHER_LATITUDE", "50.45"))
-        longitude = float(os.getenv("WEATHER_LONGITUDE", "30.52"))
-    except ValueError:
-        latitude = 50.45
-        longitude = 30.52
-
-    latitude = max(-90.0, min(90.0, latitude))
-    longitude = max(-180.0, min(180.0, longitude))
-    timezone = os.getenv("WEATHER_TIMEZONE", "Europe/Kiev")
-    return latitude, longitude, timezone
+    """Resolve location and timezone for weather fetches (uses centralized settings)."""
+    return get_weather_coords()
 
 
 __all__ = ["_resolve_weather_location"]

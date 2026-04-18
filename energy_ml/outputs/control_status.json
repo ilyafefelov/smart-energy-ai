@@ -7,13 +7,13 @@
     "command_reason": "Test history",
     "battery_capacity_kwh": 10.0,
     "max_power_kw": 5.0,
-    "last_update": "2026-04-17T20:26:16.608550",
+    "last_update": "2026-04-17T23:23:29.009562",
     "estimated_completion": null,
     "scheduled_commands_count": 0
   },
   "command_history": [
     {
-      "timestamp": "2026-04-17T20:26:16.607548",
+      "timestamp": "2026-04-17T23:23:29.009562",
       "command": "hold",
       "power_kw": 0.0,
       "reason": "Test history",
@@ -26,5 +26,5 @@
     }
   ],
   "scheduled_commands": [],
-  "last_saved": "2026-04-17T20:26:16.608550"
+  "last_saved": "2026-04-17T23:23:29.009562"
 }

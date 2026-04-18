@@ -1,0 +1,124 @@
+configurations:
+  commercial_100kwh:
+    avg_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+    - &id001 !!python/object/apply:numpy.dtype
+      args:
+      - f8
+      - false
+      - true
+      state: !!python/tuple
+      - 3
+      - <
+      - null
+      - null
+      - null
+      - -1
+      - -1
+      - 0
+    - !!binary |
+      PDvIMWSzcUA=
+    capacity_kwh: 100.0
+    conservative_annual_value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      H05gOo45wkA=
+    daily_cycles: 1.5
+    median_annual_value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      hetROKaWyUA=
+    name: commercial_100kwh
+    optimistic_annual_value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      bVZ9/tUe0EA=
+    p10_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      bVZ9rrbqaEA=
+    p90_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      SOF6FC4KdkA=
+  industrial_500kwh:
+    avg_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      PDvIMWSzcUA=
+    capacity_kwh: 500.0
+    conservative_annual_value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      iNf1C+1f7kA=
+    daily_cycles: 2.0
+    median_annual_value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      mZmZ2d9S9UA=
+    name: industrial_500kwh
+    optimistic_annual_value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      YOXQUg/e+kA=
+    p10_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      bVZ9rrbqaEA=
+    p90_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      SOF6FC4KdkA=
+  residential_10kwh:
+    avg_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      PDvIMWSzcUA=
+    capacity_kwh: 10.0
+    conservative_annual_value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      Dw+8tZdwg0A=
+    daily_cycles: 1.0
+    median_annual_value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      FdnO91tLi0A=
+    name: residential_10kwh
+    optimistic_annual_value: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      uOS4U/UxkUA=
+    p10_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      bVZ9rrbqaEA=
+    p90_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+    - *id001
+    - !!binary |
+      SOF6FC4KdkA=
+price_statistics:
+  avg_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    PDvIMWSzcUA=
+  avg_price: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    0V4TDINcY0A=
+  days_analyzed: 13
+  median_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    AAAAAAB+cUA=
+  p10_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    bVZ9rrbqaEA=
+  p90_daily_spread: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    SOF6FC4KdkA=
+  price_volatility: !!python/object/apply:numpy._core.multiarray.scalar
+  - *id001
+  - !!binary |
+    ym9e2BEnVkA=

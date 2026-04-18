@@ -12,8 +12,8 @@ import logging
 import json
 from typing import Optional
 
-from src.db import SessionLocal
-from src.models import MarketPrice
+from src.infrastructure.db import SessionLocal
+from src.infrastructure.models import MarketPrice
 
 logger = logging.getLogger(__name__)
 

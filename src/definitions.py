@@ -28,6 +28,10 @@ from .assets.benchmarks.performance import (
     forecast_value_benchmark_asset,
     mlflow_tracking_asset
 )
+from .assets.benchmarks.model_training import (
+    trained_model_asset,
+    model_metadata_asset,
+)
 from .assets.multi_tenant.asset_factory import create_all_assets, multi_client_analytics
 
 # Import engines for feature processing
@@ -77,8 +81,17 @@ benchmark_job = define_asset_job(
         accuracy_benchmark_asset,
         forecast_value_benchmark_asset,
         mlflow_tracking_asset
-    ),
+    ).upstream(include_self=True),
     description="Performance and accuracy benchmarking of processing engines"
+)
+
+model_training_job = define_asset_job(
+    name="model_training",
+    selection=AssetSelection.assets(
+        trained_model_asset,
+        model_metadata_asset
+    ).upstream(include_self=True),
+    description="Train ML models with modern MLflow LoggedModel API"
 )
 
 multi_tenant_job = define_asset_job(
@@ -132,6 +145,9 @@ all_assets = [
     accuracy_benchmark_asset,
     forecast_value_benchmark_asset,
     mlflow_tracking_asset,
+    # Model training assets (MLflow LoggedModel API)
+    trained_model_asset,
+    model_metadata_asset,
     # Multi-tenant analytics
     multi_client_analytics
 ] + client_assets  # Add dynamically generated client assets
@@ -140,7 +156,7 @@ all_assets = [
 defs = Definitions(
     assets=all_assets,
     asset_checks=optimization_schedule_contract_checks,
-    jobs=[daily_data_refresh_job, optimization_schedule_contract_checks_job, benchmark_job, multi_tenant_job],
+    jobs=[daily_data_refresh_job, optimization_schedule_contract_checks_job, benchmark_job, model_training_job, multi_tenant_job],
     schedules=[daily_refresh_schedule, weekly_benchmark_schedule],
     resources=resources
 )

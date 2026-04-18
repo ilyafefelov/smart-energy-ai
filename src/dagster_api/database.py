@@ -3,11 +3,12 @@ Database connection and schema management for Dagster asset results.
 Uses PostgreSQL for persistent storage.
 """
 
-import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
 import logging
+
+from src.infrastructure.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -16,13 +17,15 @@ LEGACY_UNSCOPED_TENANT_ID = "__legacy_unscoped__"
 
 class Database:
     """PostgreSQL database connection manager."""
-    
+
     def __init__(self):
-        self.host = os.getenv("DB_HOST", "localhost")
-        self.port = os.getenv("DB_PORT", "5432")
-        self.user = os.getenv("DB_USER", "dagster")
-        self.password = os.getenv("DB_PASSWORD", "dagster")
-        self.database = os.getenv("DB_NAME", "dagster")
+        settings = get_settings()
+        db = settings.database
+        self.host = db.db_host
+        self.port = db.db_port
+        self.user = db.db_user
+        self.password = db.db_password
+        self.database = db.db_name
     
     def get_connection(self):
         """Create a new connection."""

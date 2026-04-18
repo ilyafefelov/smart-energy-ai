@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-import os
 import pickle
 import re
 from typing import Any, Iterable, Optional
 
 from dagster import IOManager, IOManagerDefinition, fs_io_manager
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+
+from src.infrastructure.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -125,22 +126,20 @@ class S3PickleIOManager(IOManager):
 
 def build_asset_io_manager_from_env() -> IOManagerDefinition:
     """Build S3-backed IO manager when configured, otherwise fallback to local filesystem."""
-    bucket = os.getenv("S3_IO_MANAGER_BUCKET", "").strip()
-    if not bucket:
-        logger.info("S3_IO_MANAGER_BUCKET not set; using filesystem IO manager")
-        return fs_io_manager
+    settings = get_settings()
+    s3 = settings.s3
 
-    key_prefix = os.getenv("S3_IO_MANAGER_PREFIX", "smart-energy-ai/assets")
-    region_name = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
-    max_retries = int(os.getenv("S3_IO_MANAGER_MAX_RETRIES", "3"))
+    if not s3.is_configured:
+        logger.info("S3 not configured; using filesystem IO manager")
+        return fs_io_manager
 
     try:
         manager = S3PickleIOManager(
             S3PickleIOManagerConfig(
-                s3_bucket=bucket,
-                key_prefix=key_prefix,
-                region_name=region_name,
-                max_retries=max_retries,
+                s3_bucket=s3.bucket,
+                key_prefix=s3.key_prefix,
+                region_name=s3.region,
+                max_retries=s3.max_retries,
             ),
         )
     except Exception as exc:

@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 import logging
 
-from src.db import SessionLocal
-from src.models import WeatherForecast
+from src.infrastructure.db import SessionLocal
+from src.infrastructure.models import WeatherForecast
 
 logger = logging.getLogger(__name__)
 

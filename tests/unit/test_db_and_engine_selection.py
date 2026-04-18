@@ -88,14 +88,25 @@ def test_db_module_initializes_engine_sessions_and_health_checks() -> None:
     orm_mod.declarative_base = fake_declarative_base
     pool_mod = types.ModuleType("sqlalchemy.pool")
     pool_mod.QueuePool = object
+    sql_mod = types.ModuleType("sqlalchemy.sql")
+    sql_mod.text = lambda s: s  # Mock text() function
+
+    # Mock settings module
+    infra_mod = types.ModuleType("src.infrastructure")
+    infra_mod.settings = types.SimpleNamespace(
+        get_database_url=lambda: "postgresql://test:test@localhost:5432/test"
+    )
 
     module = load_module(
         "db_under_test",
-        "src/db.py",
+        "src/infrastructure/db.py",
         injected_modules={
             "sqlalchemy": sqlalchemy_mod,
             "sqlalchemy.orm": orm_mod,
             "sqlalchemy.pool": pool_mod,
+            "sqlalchemy.sql": sql_mod,
+            "src.infrastructure": infra_mod,
+            "src.infrastructure.settings": infra_mod.settings,
         },
     )
 

@@ -1,0 +1,69 @@
+{
+  "price_statistics": {
+    "avg_daily_spread_uah": 10351.146315789476,
+    "median_daily_spread_uah": 10349.5,
+    "p10_daily_spread_uah": 7540.0,
+    "p90_daily_spread_uah": 13779.527000000002,
+    "days_analyzed": 38.0,
+    "avg_price_uah": 7897.383355263158,
+    "price_volatility_uah": 3465.802522531826,
+    "avg_daily_spread_eur": 258.7786578947369,
+    "median_daily_spread_eur": 258.7375,
+    "p10_daily_spread_eur": 188.5,
+    "p90_daily_spread_eur": 344.48817500000007,
+    "avg_price_eur": 197.43458388157893
+  },
+  "configurations": {
+    "residential_10kwh": {
+      "name": "residential_10kwh",
+      "capacity_kwh": 10.0,
+      "daily_cycles": 1.0,
+      "conservative_annual_value_uah": 23530.454999999998,
+      "median_annual_value_uah": 32298.202124999996,
+      "optimistic_annual_value_uah": 43002.458885249995,
+      "conservative_annual_value_eur": 588.2613749999999,
+      "median_annual_value_eur": 807.455053125,
+      "optimistic_annual_value_eur": 1075.06147213125,
+      "avg_daily_spread_uah": 10351.146315789476,
+      "avg_daily_spread_eur": 258.7786578947369,
+      "p10_daily_spread_uah": 7540.0,
+      "p10_daily_spread_eur": 188.5,
+      "p90_daily_spread_uah": 13779.527000000002,
+      "p90_daily_spread_eur": 344.48817500000007
+    },
+    "commercial_100kwh": {
+      "name": "commercial_100kwh",
+      "capacity_kwh": 100.0,
+      "daily_cycles": 1.5,
+      "conservative_annual_value_uah": 352956.825,
+      "median_annual_value_uah": 484473.03187500004,
+      "optimistic_annual_value_uah": 645036.8832787501,
+      "conservative_annual_value_eur": 8823.920625,
+      "median_annual_value_eur": 12111.825796875,
+      "optimistic_annual_value_eur": 16125.922081968753,
+      "avg_daily_spread_uah": 10351.146315789476,
+      "avg_daily_spread_eur": 258.7786578947369,
+      "p10_daily_spread_uah": 7540.0,
+      "p10_daily_spread_eur": 188.5,
+      "p90_daily_spread_uah": 13779.527000000002,
+      "p90_daily_spread_eur": 344.48817500000007
+    },
+    "industrial_500kwh": {
+      "name": "industrial_500kwh",
+      "capacity_kwh": 500.0,
+      "daily_cycles": 2.0,
+      "conservative_annual_value_uah": 2353045.5,
+      "median_annual_value_uah": 3229820.2125,
+      "optimistic_annual_value_uah": 4300245.888525001,
+      "conservative_annual_value_eur": 58826.1375,
+      "median_annual_value_eur": 80745.5053125,
+      "optimistic_annual_value_eur": 107506.14721312502,
+      "avg_daily_spread_uah": 10351.146315789476,
+      "avg_daily_spread_eur": 258.7786578947369,
+      "p10_daily_spread_uah": 7540.0,
+      "p10_daily_spread_eur": 188.5,
+      "p90_daily_spread_uah": 13779.527000000002,
+      "p90_daily_spread_eur": 344.48817500000007
+    }
+  }
+}

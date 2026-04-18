@@ -5,17 +5,17 @@ Uses SQLAlchemy for PostgreSQL connection pooling
 
 import os
 from sqlalchemy import create_engine, event
+from sqlalchemy.sql import text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.pool import QueuePool
 import logging
 
+from src.infrastructure.settings import get_database_url
+
 logger = logging.getLogger(__name__)
 
-# Database configuration
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://energy_user:dev_password@localhost:5432/smart_energy_ai"
-)
+# Database configuration - uses centralized settings
+DATABASE_URL = get_database_url()
 
 # Create engine with connection pooling
 engine = create_engine(
@@ -53,7 +53,7 @@ def health_check():
     """Check database connectivity"""
     try:
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         logger.info("Database health check: OK")
         return True
     except Exception as e:
