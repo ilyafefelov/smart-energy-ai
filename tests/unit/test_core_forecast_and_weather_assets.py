@@ -184,6 +184,12 @@ def test_price_forecast_helpers_and_fallback_asset() -> None:
     assert len(forecast) == 24
     assert set(forecast["model_name"].unique().to_list()) == {"persistence_fallback"}
     assert set(forecast["uncertainty_source"].unique().to_list()) == {"persistence_flat"}
+    assert len(set(forecast["forecast_run_id"].unique().to_list())) == 1
+    assert set(forecast["forecast_model_version"].unique().to_list()) == {
+        "registry:persistence_fallback"
+    }
+    assert forecast["forecast_latency_ms"].min() >= 0
+    assert set(forecast["forecast_freshness_minutes"].unique().to_list()) == {60.0}
     assert forecast["lower_bound_eur_mwh"].to_list() == forecast["scenario_low_price_eur_mwh"].to_list()
     assert forecast["predicted_price_eur_mwh"].to_list() == forecast["scenario_base_price_eur_mwh"].to_list()
     assert forecast["upper_bound_eur_mwh"].to_list() == forecast["scenario_high_price_eur_mwh"].to_list()
@@ -242,6 +248,10 @@ def test_price_forecast_asset_resolves_model_from_registry(monkeypatch) -> None:
     assert set(forecast["model_family"].unique().to_list()) == {"registry_stub_family"}
     assert set(forecast["forecast_horizon_hours"].unique().to_list()) == {24}
     assert set(forecast["evaluation_folds"].unique().to_list()) == {1}
+    assert len(set(forecast["forecast_run_id"].unique().to_list())) == 1
+    assert set(forecast["forecast_model_version"].unique().to_list()) == {
+        "registry:registry_stub_model"
+    }
     assert "eval_value_capture_ratio" in forecast.columns
     assert "scenario_low_price_eur_mwh" in forecast.columns
     assert "scenario_base_price_eur_mwh" in forecast.columns
@@ -309,6 +319,12 @@ def test_price_forecast_asset_resolves_promoted_model_when_env_is_unset(monkeypa
             "benchmark_uncertainty_source": "walk_forward_residual_std",
             "benchmark_avg_uncertainty_spread_eur_mwh": 9.0,
             "benchmark_max_uncertainty_spread_eur_mwh": 12.0,
+            "benchmark_candidate_status": "validated",
+            "benchmark_candidate_ready": True,
+            "benchmark_candidate_rank": 1,
+            "promotion_decision": "promoted",
+            "promotion_decision_reason": "outperformed_incumbent_baseline",
+            "promotion_gate_version": "forecast_value_scorecard_v1",
         },
     )
     monkeypatch.setattr(
@@ -334,6 +350,10 @@ def test_price_forecast_asset_resolves_promoted_model_when_env_is_unset(monkeypa
 
     assert len(forecast) == 24
     assert set(forecast["model_name"].unique().to_list()) == {"promoted_model"}
+    assert len(set(forecast["forecast_run_id"].unique().to_list())) == 1
+    assert set(forecast["forecast_model_version"].unique().to_list()) == {
+        "promotion:2026-04-17T07:40:00+00:00"
+    }
     assert set(forecast["promotion_active"].unique().to_list()) == {True}
     assert set(forecast["promotion_source"].unique().to_list()) == {
         "forecast_value_benchmark_asset"
@@ -359,6 +379,22 @@ def test_price_forecast_asset_resolves_promoted_model_when_env_is_unset(monkeypa
             "promotion_benchmark_max_uncertainty_spread_eur_mwh"
         ].unique().to_list()
     ) == {12.0}
+    assert set(forecast["promotion_benchmark_candidate_status"].unique().to_list()) == {
+        "validated"
+    }
+    assert set(forecast["promotion_benchmark_candidate_ready"].unique().to_list()) == {
+        True
+    }
+    assert set(forecast["promotion_benchmark_candidate_rank"].unique().to_list()) == {
+        1
+    }
+    assert set(forecast["promotion_decision"].unique().to_list()) == {"promoted"}
+    assert set(forecast["promotion_decision_reason"].unique().to_list()) == {
+        "outperformed_incumbent_baseline"
+    }
+    assert set(forecast["promotion_gate_version"].unique().to_list()) == {
+        "forecast_value_scorecard_v1"
+    }
 
 
 def test_price_forecast_asset_exposes_null_promotion_contract_for_non_promoted_model(
@@ -416,6 +452,12 @@ def test_price_forecast_asset_exposes_null_promotion_contract_for_non_promoted_m
         ].null_count()
         == 24
     )
+    assert forecast["promotion_benchmark_candidate_status"].null_count() == 24
+    assert forecast["promotion_benchmark_candidate_ready"].null_count() == 24
+    assert forecast["promotion_benchmark_candidate_rank"].null_count() == 24
+    assert forecast["promotion_decision"].null_count() == 24
+    assert forecast["promotion_decision_reason"].null_count() == 24
+    assert forecast["promotion_gate_version"].null_count() == 24
 
 
 def test_weather_helpers_and_asset_flow(monkeypatch) -> None:

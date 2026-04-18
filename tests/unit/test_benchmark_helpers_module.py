@@ -110,6 +110,14 @@ def test_build_forecast_value_scorecard_computes_realized_metrics() -> None:
     assert row["benchmark_uncertainty_source"] == "walk_forward_residual_std"
     assert row["benchmark_avg_uncertainty_spread_eur_mwh"] == 9.0
     assert row["benchmark_max_uncertainty_spread_eur_mwh"] == 12.0
+    assert row["benchmark_candidate_status"] == "validated"
+    assert row["benchmark_candidate_ready"] is True
+    assert row["benchmark_candidate_rank"] == 1
+    assert row["benchmark_incumbent_baseline"] is True
+    assert row["promotion_eligible"] is True
+    assert row["promotion_decision"] == "promoted"
+    assert row["promotion_decision_reason"] == "incumbent_baseline_retained"
+    assert row["promotion_gate_version"] == "forecast_value_scorecard_v1"
 
 
 def test_build_forecast_value_scorecard_falls_back_to_eval_metrics_without_actual_overlap() -> None:
@@ -159,6 +167,9 @@ def test_build_forecast_value_scorecard_falls_back_to_eval_metrics_without_actua
     assert row["benchmark_uncertainty_source"] == "eval_rmse_floor"
     assert row["benchmark_avg_uncertainty_spread_eur_mwh"] == 5.0
     assert row["benchmark_max_uncertainty_spread_eur_mwh"] == 5.0
+    assert row["benchmark_candidate_status"] == "validated"
+    assert row["promotion_decision"] == "promoted"
+    assert row["promotion_gate_version"] == "forecast_value_scorecard_v1"
 
 
 def test_build_forecast_value_scorecard_keeps_empty_result_without_evaluated_folds() -> None:
@@ -239,13 +250,20 @@ def test_forecast_value_benchmark_asset_builds_scorecard() -> None:
 
     result = module.forecast_value_benchmark_asset(market_data, price_forecast)
 
-    assert len(result) == 1
-    row = result.to_dicts()[0]
+    assert len(result) >= 1
+    rows_by_model = {row["model_name"]: row for row in result.to_dicts()}
+    row = rows_by_model["demo_model"]
     assert row["model_name"] == "demo_model"
     assert row["benchmark_rmse"] > 0.0
     assert 0.0 <= row["benchmark_value_capture_ratio"] <= 1.0
     assert row["benchmark_uncertainty_source"] == "walk_forward_residual_std"
     assert row["benchmark_avg_uncertainty_spread_eur_mwh"] == 7.0
+    assert row["benchmark_candidate_status"] == "untracked"
+    assert row["benchmark_candidate_ready"] is False
+    assert row["benchmark_candidate_skip_reason"] == "model_not_in_registry"
+    assert row["promotion_decision"] == "not_promoted"
+    assert row["promotion_gate_version"] == "forecast_value_scorecard_v1"
+    assert "skipped" in set(result["benchmark_candidate_status"].to_list())
 
 
 def test_forecast_value_benchmark_asset_appends_registry_candidates(monkeypatch) -> None:
@@ -318,6 +336,10 @@ def test_forecast_value_benchmark_asset_appends_registry_candidates(monkeypatch)
 
     assert len(result) == 2
     assert set(result["model_name"].to_list()) == {"demo_model", "alt_model"}
+    rows_by_model = {row["model_name"]: row for row in result.to_dicts()}
+    assert rows_by_model["alt_model"]["benchmark_candidate_status"] == "validated"
+    assert rows_by_model["alt_model"]["promotion_decision"] == "promoted"
+    assert rows_by_model["demo_model"]["promotion_decision"] == "not_promoted"
 
 
 def test_forecast_value_benchmark_asset_skips_unavailable_optional_candidates(monkeypatch) -> None:
@@ -373,8 +395,13 @@ def test_forecast_value_benchmark_asset_skips_unavailable_optional_candidates(mo
 
     result = module.forecast_value_benchmark_asset(market_data, price_forecast)
 
-    assert len(result) == 1
-    assert result["model_name"].to_list() == ["demo_model"]
+    assert len(result) == 2
+    rows_by_model = {row["model_name"]: row for row in result.to_dicts()}
+    assert set(rows_by_model) == {"demo_model", "nbeatsx_dam_24h"}
+    assert rows_by_model["demo_model"]["benchmark_candidate_status"] == "validated"
+    assert rows_by_model["nbeatsx_dam_24h"]["benchmark_candidate_status"] == "skipped"
+    assert rows_by_model["nbeatsx_dam_24h"]["promotion_decision"] == "skipped"
+    assert "neuralforecast" in rows_by_model["nbeatsx_dam_24h"]["benchmark_candidate_skip_reason"]
 
 
 def test_forecast_value_benchmark_asset_persists_promoted_winner(monkeypatch) -> None:
@@ -423,12 +450,18 @@ def test_forecast_value_benchmark_asset_persists_promoted_winner(monkeypatch) ->
 
     result = module.forecast_value_benchmark_asset(market_data, price_forecast)
 
-    assert len(result) == 1
+    assert len(result) >= 1
+    assert "skipped" in set(result["benchmark_candidate_status"].to_list())
     assert captured_metadata["value"]["model_name"] == "random_forest_dam_24h"
     assert captured_metadata["value"]["promotion_source"] == "forecast_value_benchmark_asset"
     assert captured_metadata["value"]["benchmark_uncertainty_source"] == "walk_forward_residual_std"
     assert captured_metadata["value"]["benchmark_avg_uncertainty_spread_eur_mwh"] == 9.0
     assert captured_metadata["value"]["benchmark_max_uncertainty_spread_eur_mwh"] == 12.0
+    assert captured_metadata["value"]["benchmark_candidate_status"] == "validated"
+    assert captured_metadata["value"]["promotion_eligible"] is True
+    assert captured_metadata["value"]["promotion_decision"] == "promoted"
+    assert captured_metadata["value"]["promotion_gate_version"] == "forecast_value_scorecard_v1"
+    assert captured_metadata["value"]["model_ready"] is True
 
 
 def test_log_forecast_benchmark_run_preserves_uncertainty_summaries() -> None:
@@ -449,6 +482,13 @@ def test_log_forecast_benchmark_run_preserves_uncertainty_summaries() -> None:
         "benchmark_uncertainty_source": "walk_forward_residual_std",
         "benchmark_avg_uncertainty_spread_eur_mwh": 9.0,
         "benchmark_max_uncertainty_spread_eur_mwh": 12.0,
+        "benchmark_candidate_status": "validated",
+        "benchmark_candidate_ready": True,
+        "benchmark_candidate_skip_reason": None,
+        "promotion_eligible": True,
+        "promotion_decision": "promoted",
+        "promotion_decision_reason": "incumbent_baseline_retained",
+        "promotion_gate_version": "forecast_value_scorecard_v1",
         "eval_rmse": 4.2,
         "eval_mae": 3.1,
         "eval_value_capture_ratio": 0.75,
@@ -458,6 +498,10 @@ def test_log_forecast_benchmark_run_preserves_uncertainty_summaries() -> None:
     log_row = helper_module.log_forecast_benchmark_run(row, tracking_module=build_mlflow_module())
 
     assert log_row["run_name"] == "forecast_value_random_forest_dam_24h"
+    assert log_row["param_benchmark_candidate_status"] == "validated"
+    assert log_row["param_promotion_decision"] == "promoted"
+    assert log_row["param_promotion_gate_version"] == "forecast_value_scorecard_v1"
+    assert log_row["param_promotion_eligible"] is True
     assert log_row["param_benchmark_uncertainty_source"] == "walk_forward_residual_std"
     assert log_row["metric_benchmark_avg_uncertainty_spread_eur_mwh"] == 9.0
     assert log_row["metric_benchmark_max_uncertainty_spread_eur_mwh"] == 12.0

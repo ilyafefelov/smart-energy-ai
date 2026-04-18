@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from math import sqrt
-from typing import Any, Sequence, TypedDict
+from typing import Any, Mapping, Sequence, TypedDict
 
 import mlflow
 import polars as pl
@@ -21,29 +21,47 @@ class BenchmarkMetrics(TypedDict):
     benchmark_timestamp: datetime
 
 
+FORECAST_PROMOTION_GATE_VERSION = "forecast_value_scorecard_v1"
+
+PL_UTF8 = getattr(pl, "Utf8", None)
+PL_INT64 = getattr(pl, "Int64", None)
+PL_FLOAT64 = getattr(pl, "Float64", None)
+PL_DATETIME = getattr(pl, "Datetime", None)
+PL_BOOLEAN = getattr(pl, "Boolean", None)
+
+
 FORECAST_VALUE_SCORECARD_SCHEMA = {
-    "model_name": pl.Utf8,
-    "model_family": pl.Utf8,
-    "forecast_horizon_hours": pl.Int64,
-    "forecast_rows": pl.Int64,
-    "training_rows": pl.Int64,
-    "evaluation_folds": pl.Int64,
-    "eval_rmse": pl.Float64,
-    "eval_mae": pl.Float64,
-    "eval_value_capture_ratio": pl.Float64,
-    "eval_realized_spread_eur_mwh": pl.Float64,
-    "eval_optimal_spread_eur_mwh": pl.Float64,
-    "benchmark_rmse": pl.Float64,
-    "benchmark_mae": pl.Float64,
-    "benchmark_value_capture_ratio": pl.Float64,
-    "benchmark_realized_spread_eur_mwh": pl.Float64,
-    "benchmark_optimal_spread_eur_mwh": pl.Float64,
-    "benchmark_uncertainty_source": pl.Utf8,
-    "benchmark_avg_uncertainty_spread_eur_mwh": pl.Float64,
-    "benchmark_max_uncertainty_spread_eur_mwh": pl.Float64,
-    "benchmark_window_start": pl.Datetime,
-    "benchmark_window_end": pl.Datetime,
-    "benchmark_timestamp": pl.Datetime,
+    "model_name": PL_UTF8,
+    "model_family": PL_UTF8,
+    "forecast_horizon_hours": PL_INT64,
+    "forecast_rows": PL_INT64,
+    "training_rows": PL_INT64,
+    "evaluation_folds": PL_INT64,
+    "eval_rmse": PL_FLOAT64,
+    "eval_mae": PL_FLOAT64,
+    "eval_value_capture_ratio": PL_FLOAT64,
+    "eval_realized_spread_eur_mwh": PL_FLOAT64,
+    "eval_optimal_spread_eur_mwh": PL_FLOAT64,
+    "benchmark_rmse": PL_FLOAT64,
+    "benchmark_mae": PL_FLOAT64,
+    "benchmark_value_capture_ratio": PL_FLOAT64,
+    "benchmark_realized_spread_eur_mwh": PL_FLOAT64,
+    "benchmark_optimal_spread_eur_mwh": PL_FLOAT64,
+    "benchmark_uncertainty_source": PL_UTF8,
+    "benchmark_avg_uncertainty_spread_eur_mwh": PL_FLOAT64,
+    "benchmark_max_uncertainty_spread_eur_mwh": PL_FLOAT64,
+    "benchmark_window_start": PL_DATETIME,
+    "benchmark_window_end": PL_DATETIME,
+    "benchmark_timestamp": PL_DATETIME,
+    "benchmark_candidate_status": PL_UTF8,
+    "benchmark_candidate_ready": PL_BOOLEAN,
+    "benchmark_candidate_skip_reason": PL_UTF8,
+    "benchmark_candidate_rank": PL_INT64,
+    "benchmark_incumbent_baseline": PL_BOOLEAN,
+    "promotion_eligible": PL_BOOLEAN,
+    "promotion_decision": PL_UTF8,
+    "promotion_decision_reason": PL_UTF8,
+    "promotion_gate_version": PL_UTF8,
 }
 
 
@@ -292,7 +310,200 @@ def _summarize_uncertainty_contract(rows: Sequence[dict[str, Any]]) -> dict[str,
     }
 
 
-def _build_eval_only_scorecard(price_forecast: pl.DataFrame) -> pl.DataFrame:
+def _promotion_sort_key(row: Mapping[str, Any]) -> tuple[float, float, float]:
+    benchmark_value_capture_ratio = float(row.get("benchmark_value_capture_ratio") or 0.0)
+    benchmark_rmse = row.get("benchmark_rmse")
+    benchmark_mae = row.get("benchmark_mae")
+
+    rmse_penalty = float(benchmark_rmse) if benchmark_rmse is not None else float("inf")
+    mae_penalty = float(benchmark_mae) if benchmark_mae is not None else float("inf")
+    return (benchmark_value_capture_ratio, -rmse_penalty, -mae_penalty)
+
+
+def _empty_forecast_scorecard_row(
+    *,
+    model_name: str,
+    model_family: str,
+    forecast_horizon_hours: int,
+    benchmark_timestamp: datetime,
+    benchmark_candidate_status: str,
+    benchmark_candidate_ready: bool,
+    benchmark_candidate_skip_reason: str | None,
+    incumbent_model_name: str,
+) -> dict[str, Any]:
+    return {
+        "model_name": model_name,
+        "model_family": model_family,
+        "forecast_horizon_hours": forecast_horizon_hours,
+        "forecast_rows": 0,
+        "training_rows": 0,
+        "evaluation_folds": 0,
+        "eval_rmse": None,
+        "eval_mae": None,
+        "eval_value_capture_ratio": None,
+        "eval_realized_spread_eur_mwh": None,
+        "eval_optimal_spread_eur_mwh": None,
+        "benchmark_rmse": None,
+        "benchmark_mae": None,
+        "benchmark_value_capture_ratio": None,
+        "benchmark_realized_spread_eur_mwh": None,
+        "benchmark_optimal_spread_eur_mwh": None,
+        "benchmark_uncertainty_source": None,
+        "benchmark_avg_uncertainty_spread_eur_mwh": None,
+        "benchmark_max_uncertainty_spread_eur_mwh": None,
+        "benchmark_window_start": None,
+        "benchmark_window_end": None,
+        "benchmark_timestamp": benchmark_timestamp,
+        "benchmark_candidate_status": benchmark_candidate_status,
+        "benchmark_candidate_ready": benchmark_candidate_ready,
+        "benchmark_candidate_skip_reason": benchmark_candidate_skip_reason,
+        "benchmark_candidate_rank": None,
+        "benchmark_incumbent_baseline": model_name == incumbent_model_name,
+        "promotion_eligible": False,
+        "promotion_decision": "skipped" if benchmark_candidate_status == "skipped" else "not_promoted",
+        "promotion_decision_reason": benchmark_candidate_skip_reason,
+        "promotion_gate_version": FORECAST_PROMOTION_GATE_VERSION,
+    }
+
+
+def _finalize_forecast_scorecard_rows(
+    benchmark_rows: Sequence[dict[str, Any]],
+    *,
+    skipped_candidates: Sequence[Mapping[str, Any]] | None = None,
+    registry_model_names: Sequence[str] | None = None,
+    incumbent_model_name: str = "random_forest_dam_24h",
+) -> pl.DataFrame:
+    registry_names = (
+        {str(model_name) for model_name in registry_model_names}
+        if registry_model_names is not None
+        else None
+    )
+
+    finalized_rows: list[dict[str, Any]] = []
+    for benchmark_row in benchmark_rows:
+        row = dict(benchmark_row)
+        model_name = str(row.get("model_name") or "unknown_model")
+        tracked_model = True if registry_names is None else model_name in registry_names
+        row.update(
+            {
+                "benchmark_candidate_status": "validated" if tracked_model else "untracked",
+                "benchmark_candidate_ready": tracked_model,
+                "benchmark_candidate_skip_reason": None if tracked_model else "model_not_in_registry",
+                "benchmark_candidate_rank": None,
+                "benchmark_incumbent_baseline": model_name == incumbent_model_name,
+                "promotion_eligible": False,
+                "promotion_decision": "not_promoted",
+                "promotion_decision_reason": None if tracked_model else "model_not_in_registry",
+                "promotion_gate_version": FORECAST_PROMOTION_GATE_VERSION,
+            }
+        )
+        finalized_rows.append(row)
+
+    if skipped_candidates:
+        benchmark_timestamp = datetime.now()
+        for candidate in skipped_candidates:
+            finalized_rows.append(
+                _empty_forecast_scorecard_row(
+                    model_name=str(candidate.get("model_name") or "unknown_model"),
+                    model_family=str(candidate.get("model_family") or "unknown_family"),
+                    forecast_horizon_hours=int(candidate.get("forecast_horizon_hours") or 0),
+                    benchmark_timestamp=benchmark_timestamp,
+                    benchmark_candidate_status="skipped",
+                    benchmark_candidate_ready=False,
+                    benchmark_candidate_skip_reason=str(
+                        candidate.get("benchmark_candidate_skip_reason")
+                        or candidate.get("skip_reason")
+                        or "candidate_unavailable"
+                    ),
+                    incumbent_model_name=incumbent_model_name,
+                )
+            )
+
+    validated_rows = [
+        row
+        for row in finalized_rows
+        if row.get("benchmark_candidate_status") == "validated"
+        and bool(row.get("benchmark_candidate_ready"))
+    ]
+    validated_rows.sort(
+        key=lambda row: (
+            -float(row.get("benchmark_value_capture_ratio") or 0.0),
+            float(row.get("benchmark_rmse") if row.get("benchmark_rmse") is not None else float("inf")),
+            float(row.get("benchmark_mae") if row.get("benchmark_mae") is not None else float("inf")),
+            str(row.get("model_name") or ""),
+        )
+    )
+
+    for rank, row in enumerate(validated_rows, start=1):
+        row["benchmark_candidate_rank"] = rank
+
+    incumbent_row = next(
+        (row for row in validated_rows if row.get("model_name") == incumbent_model_name),
+        None,
+    )
+    promoted_row = None
+    incumbent_key = _promotion_sort_key(incumbent_row) if incumbent_row is not None else None
+
+    if validated_rows:
+        if incumbent_row is None:
+            promoted_row = validated_rows[0]
+        else:
+            better_candidates = [
+                row
+                for row in validated_rows
+                if row is not incumbent_row and _promotion_sort_key(row) > incumbent_key
+            ]
+            promoted_row = better_candidates[0] if better_candidates else incumbent_row
+
+    for row in validated_rows:
+        if incumbent_row is None:
+            row["promotion_eligible"] = True
+            if row is promoted_row:
+                row["promotion_decision"] = "promoted"
+                row["promotion_decision_reason"] = "best_validated_candidate"
+            else:
+                row["promotion_decision"] = "not_promoted"
+                row["promotion_decision_reason"] = "higher_ranked_candidate_won"
+            continue
+
+        if row is incumbent_row:
+            row["promotion_eligible"] = True
+            if row is promoted_row:
+                row["promotion_decision"] = "promoted"
+                row["promotion_decision_reason"] = "incumbent_baseline_retained"
+            else:
+                row["promotion_decision"] = "not_promoted"
+                row["promotion_decision_reason"] = "incumbent_baseline_outperformed"
+            continue
+
+        row["promotion_eligible"] = _promotion_sort_key(row) > incumbent_key
+        if row is promoted_row:
+            row["promotion_decision"] = "promoted"
+            row["promotion_decision_reason"] = "outperformed_incumbent_baseline"
+        elif row["promotion_eligible"]:
+            row["promotion_decision"] = "not_promoted"
+            row["promotion_decision_reason"] = "higher_ranked_candidate_won"
+        else:
+            row["promotion_decision"] = "not_promoted"
+            row["promotion_decision_reason"] = "did_not_beat_incumbent_baseline"
+
+    finalized_rows.sort(
+        key=lambda row: (
+            0 if row.get("benchmark_candidate_status") == "validated" else 1,
+            int(row.get("benchmark_candidate_rank") or 999999),
+            str(row.get("model_name") or ""),
+        )
+    )
+    return pl.DataFrame(finalized_rows, schema=FORECAST_VALUE_SCORECARD_SCHEMA)
+
+
+def _build_eval_only_scorecard(
+    price_forecast: pl.DataFrame,
+    *,
+    skipped_candidates: Sequence[Mapping[str, Any]] | None = None,
+    registry_model_names: Sequence[str] | None = None,
+    incumbent_model_name: str = "random_forest_dam_24h",
+) -> pl.DataFrame:
     grouped_rows: dict[tuple[str, str, int], list[dict[str, Any]]] = {}
     for row in price_forecast.to_dicts():
         model_name = str(row.get("model_name") or "unknown_model")
@@ -301,7 +512,12 @@ def _build_eval_only_scorecard(price_forecast: pl.DataFrame) -> pl.DataFrame:
         grouped_rows.setdefault((model_name, model_family, forecast_horizon_hours), []).append(dict(row))
 
     if not grouped_rows:
-        return pl.DataFrame(schema=FORECAST_VALUE_SCORECARD_SCHEMA)
+        return _finalize_forecast_scorecard_rows(
+            [],
+            skipped_candidates=skipped_candidates,
+            registry_model_names=registry_model_names,
+            incumbent_model_name=incumbent_model_name,
+        )
 
     benchmark_rows = []
     benchmark_timestamp = datetime.now()
@@ -343,17 +559,29 @@ def _build_eval_only_scorecard(price_forecast: pl.DataFrame) -> pl.DataFrame:
             }
         )
 
-    if not benchmark_rows:
-        return pl.DataFrame(schema=FORECAST_VALUE_SCORECARD_SCHEMA)
-
-    return pl.DataFrame(benchmark_rows, schema=FORECAST_VALUE_SCORECARD_SCHEMA)
+    return _finalize_forecast_scorecard_rows(
+        benchmark_rows,
+        skipped_candidates=skipped_candidates,
+        registry_model_names=registry_model_names,
+        incumbent_model_name=incumbent_model_name,
+    )
 
 
 def build_forecast_value_scorecard(
-    market_data: pl.DataFrame, price_forecast: pl.DataFrame
+    market_data: pl.DataFrame,
+    price_forecast: pl.DataFrame,
+    *,
+    skipped_candidates: Sequence[Mapping[str, Any]] | None = None,
+    registry_model_names: Sequence[str] | None = None,
+    incumbent_model_name: str = "random_forest_dam_24h",
 ) -> pl.DataFrame:
     if len(market_data) == 0 or len(price_forecast) == 0:
-        return pl.DataFrame(schema=FORECAST_VALUE_SCORECARD_SCHEMA)
+        return _finalize_forecast_scorecard_rows(
+            [],
+            skipped_candidates=skipped_candidates,
+            registry_model_names=registry_model_names,
+            incumbent_model_name=incumbent_model_name,
+        )
 
     actual_prices_by_timestamp = {
         row["forecast_timestamp"]: float(row["actual_price_eur_mwh"])
@@ -381,7 +609,12 @@ def build_forecast_value_scorecard(
         grouped_rows.setdefault(key, []).append(enriched_row)
 
     if not grouped_rows:
-        return _build_eval_only_scorecard(price_forecast)
+        return _build_eval_only_scorecard(
+            price_forecast,
+            skipped_candidates=skipped_candidates,
+            registry_model_names=registry_model_names,
+            incumbent_model_name=incumbent_model_name,
+        )
 
     benchmark_rows = []
     benchmark_timestamp = datetime.now()
@@ -426,7 +659,12 @@ def build_forecast_value_scorecard(
             }
         )
 
-    return pl.DataFrame(benchmark_rows, schema=FORECAST_VALUE_SCORECARD_SCHEMA)
+    return _finalize_forecast_scorecard_rows(
+        benchmark_rows,
+        skipped_candidates=skipped_candidates,
+        registry_model_names=registry_model_names,
+        incumbent_model_name=incumbent_model_name,
+    )
 
 
 def log_engine_benchmark_run(
@@ -507,21 +745,48 @@ def log_forecast_benchmark_run(
     benchmark_max_uncertainty_spread = row.get(
         "benchmark_max_uncertainty_spread_eur_mwh"
     )
+    benchmark_candidate_status = row.get("benchmark_candidate_status")
+    benchmark_candidate_skip_reason = row.get("benchmark_candidate_skip_reason")
+    promotion_decision = row.get("promotion_decision")
+    promotion_decision_reason = row.get("promotion_decision_reason")
+    promotion_gate_version = row.get("promotion_gate_version")
+    promotion_eligible = row.get("promotion_eligible")
 
     with tracking_module.start_run(run_name=f"forecast_value_{row['model_name']}"):
         tracking_module.log_param("model_name", row["model_name"])
         tracking_module.log_param("model_family", row["model_family"])
         tracking_module.log_param("forecast_horizon_hours", row["forecast_horizon_hours"])
         tracking_module.log_param("forecast_rows", row["forecast_rows"])
+        if benchmark_candidate_status is not None:
+            tracking_module.log_param(
+                "benchmark_candidate_status", str(benchmark_candidate_status)
+            )
+        if benchmark_candidate_skip_reason is not None:
+            tracking_module.log_param(
+                "benchmark_candidate_skip_reason", str(benchmark_candidate_skip_reason)
+            )
+        if promotion_decision is not None:
+            tracking_module.log_param("promotion_decision", str(promotion_decision))
+        if promotion_decision_reason is not None:
+            tracking_module.log_param(
+                "promotion_decision_reason", str(promotion_decision_reason)
+            )
+        if promotion_gate_version is not None:
+            tracking_module.log_param("promotion_gate_version", str(promotion_gate_version))
+        if promotion_eligible is not None:
+            tracking_module.log_param("promotion_eligible", str(bool(promotion_eligible)).lower())
         if benchmark_uncertainty_source is not None:
             tracking_module.log_param(
                 "benchmark_uncertainty_source", str(benchmark_uncertainty_source)
             )
-        tracking_module.log_metric("benchmark_rmse", row["benchmark_rmse"])
-        tracking_module.log_metric("benchmark_mae", row["benchmark_mae"])
-        tracking_module.log_metric(
-            "benchmark_value_capture_ratio", row["benchmark_value_capture_ratio"]
-        )
+        if row.get("benchmark_rmse") is not None:
+            tracking_module.log_metric("benchmark_rmse", float(row["benchmark_rmse"]))
+        if row.get("benchmark_mae") is not None:
+            tracking_module.log_metric("benchmark_mae", float(row["benchmark_mae"]))
+        if row.get("benchmark_value_capture_ratio") is not None:
+            tracking_module.log_metric(
+                "benchmark_value_capture_ratio", float(row["benchmark_value_capture_ratio"])
+            )
         if benchmark_avg_uncertainty_spread is not None:
             tracking_module.log_metric(
                 "benchmark_avg_uncertainty_spread_eur_mwh",
@@ -532,9 +797,14 @@ def log_forecast_benchmark_run(
                 "benchmark_max_uncertainty_spread_eur_mwh",
                 float(benchmark_max_uncertainty_spread),
             )
-        tracking_module.log_metric("eval_rmse", row["eval_rmse"])
-        tracking_module.log_metric("eval_mae", row["eval_mae"])
-        tracking_module.log_metric("eval_value_capture_ratio", row["eval_value_capture_ratio"])
+        if row.get("eval_rmse") is not None:
+            tracking_module.log_metric("eval_rmse", float(row["eval_rmse"]))
+        if row.get("eval_mae") is not None:
+            tracking_module.log_metric("eval_mae", float(row["eval_mae"]))
+        if row.get("eval_value_capture_ratio") is not None:
+            tracking_module.log_metric(
+                "eval_value_capture_ratio", float(row["eval_value_capture_ratio"])
+            )
         tracking_module.set_tag("benchmark_type", "forecast_value")
 
     return {
@@ -547,6 +817,32 @@ def log_forecast_benchmark_run(
         "metric_benchmark_rmse": row["benchmark_rmse"],
         "metric_benchmark_mae": row["benchmark_mae"],
         "metric_benchmark_value_capture_ratio": row["benchmark_value_capture_ratio"],
+        "param_benchmark_candidate_status": (
+            str(benchmark_candidate_status)
+            if benchmark_candidate_status is not None
+            else None
+        ),
+        "param_benchmark_candidate_skip_reason": (
+            str(benchmark_candidate_skip_reason)
+            if benchmark_candidate_skip_reason is not None
+            else None
+        ),
+        "param_promotion_decision": (
+            str(promotion_decision) if promotion_decision is not None else None
+        ),
+        "param_promotion_decision_reason": (
+            str(promotion_decision_reason)
+            if promotion_decision_reason is not None
+            else None
+        ),
+        "param_promotion_gate_version": (
+            str(promotion_gate_version)
+            if promotion_gate_version is not None
+            else None
+        ),
+        "param_promotion_eligible": (
+            bool(promotion_eligible) if promotion_eligible is not None else None
+        ),
         "param_benchmark_uncertainty_source": (
             str(benchmark_uncertainty_source)
             if benchmark_uncertainty_source is not None

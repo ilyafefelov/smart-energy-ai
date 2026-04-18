@@ -314,12 +314,19 @@ def test_optimization_schedule_helpers_and_asset(monkeypatch, tmp_path: Path) ->
     assert output.rows[0]["algorithm"] == "baseline_dp"
     assert output.rows[0]["price_eur_mwh"] == 45.0
     assert output.rows[1]["price_eur_mwh"] == 50.0
+    assert output.rows[0]["forecast_run_id"].startswith("forecast-")
     assert output.rows[0]["forecast_model_name"] == "promoted_model"
     assert output.rows[0]["forecast_model_family"] == "random_forest_regressor"
+    assert output.rows[0]["forecast_model_version"] == "registry:promoted_model"
+    assert output.rows[0]["forecast_window_start_utc"] == "2026-03-02T00:00:00"
+    assert output.rows[0]["forecast_window_end_utc"] == "2026-03-02T01:00:00"
+    assert output.rows[0]["forecast_latency_ms"] == 0
+    assert output.rows[0]["forecast_freshness_minutes"] == 0.0
     assert output.rows[0]["forecast_horizon_mode"] == "conservative"
     assert output.rows[0]["forecast_uncertainty_source"] == "walk_forward_residual_std"
     assert output.rows[0]["forecast_promotion_active"] is True
     assert output.rows[0]["forecast_promotion_source"] == "forecast_value_benchmark_asset"
+    assert output.rows[0]["optimization_run_id"].startswith("optimization-")
 
 
 def test_optimization_schedule_asset_uses_stage2_client_inputs(monkeypatch, tmp_path: Path) -> None:
@@ -483,4 +490,4 @@ def test_optimization_schedule_checks_evaluate_contracts() -> None:
     assert invalid_numeric["passed"] is False
     assert invalid_semantics["passed"] is False
     assert result.passed is False
-    assert len(checks_module.optimization_schedule_contract_checks) == 6
+    assert len(checks_module.optimization_schedule_contract_checks) == 10

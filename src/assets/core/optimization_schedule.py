@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Mapping, Optional, Tuple
 import polars as pl
 from dagster import AssetIn, asset
 
+from src.data_pipeline.forecast_lineage import build_forecast_lineage, build_optimization_run_id
 from src.data_pipeline.optimization_profile_loader import (
     _coerce_float,
     _load_client_capacities,
@@ -40,12 +41,19 @@ OPTIMIZATION_SCHEDULE_SCHEMA: Dict[str, pl.DataType] = {
     "total_net_cost_eur": pl.Float64,
     "final_soc_kwh": pl.Float64,
     "throughput_limit_kwh": pl.Float64,
+    "forecast_run_id": pl.Utf8,
     "forecast_model_name": pl.Utf8,
     "forecast_model_family": pl.Utf8,
+    "forecast_model_version": pl.Utf8,
+    "forecast_window_start_utc": pl.Utf8,
+    "forecast_window_end_utc": pl.Utf8,
+    "forecast_latency_ms": pl.Int64,
+    "forecast_freshness_minutes": pl.Float64,
     "forecast_horizon_mode": pl.Utf8,
     "forecast_uncertainty_source": pl.Utf8,
     "forecast_promotion_active": pl.Boolean,
     "forecast_promotion_source": pl.Utf8,
+    "optimization_run_id": pl.Utf8,
     "algorithm": pl.Utf8,
     "solver": pl.Utf8,
 }
@@ -156,10 +164,17 @@ def _resolve_forecast_context(
     rows = price_forecast.sort("forecast_timestamp").to_dicts() if len(price_forecast) else []
     first_row = rows[0] if rows else {}
     promotion_active = first_row.get("promotion_active")
+    forecast_lineage = build_forecast_lineage(rows)
 
     return {
-        "forecast_model_name": str(first_row.get("model_name") or "") or None,
-        "forecast_model_family": str(first_row.get("model_family") or "") or None,
+        "forecast_run_id": str(first_row.get("forecast_run_id") or forecast_lineage["forecast_run_id"] or "") or None,
+        "forecast_model_name": str(first_row.get("model_name") or forecast_lineage["forecast_model_name"] or "") or None,
+        "forecast_model_family": str(first_row.get("model_family") or forecast_lineage["forecast_model_family"] or "") or None,
+        "forecast_model_version": str(first_row.get("forecast_model_version") or forecast_lineage["forecast_model_version"] or "") or None,
+        "forecast_window_start_utc": str(first_row.get("forecast_window_start_utc") or forecast_lineage["forecast_window_start_utc"] or "") or None,
+        "forecast_window_end_utc": str(first_row.get("forecast_window_end_utc") or forecast_lineage["forecast_window_end_utc"] or "") or None,
+        "forecast_latency_ms": int(first_row.get("forecast_latency_ms") or forecast_lineage["forecast_latency_ms"] or 0),
+        "forecast_freshness_minutes": float(first_row.get("forecast_freshness_minutes") or forecast_lineage["forecast_freshness_minutes"] or 0.0),
         "forecast_horizon_mode": horizon_mode,
         "forecast_uncertainty_source": str(first_row.get("uncertainty_source") or "") or None,
         "forecast_promotion_active": bool(promotion_active) if promotion_active is not None else False,
@@ -176,6 +191,7 @@ def _resolve_forecast_context(
     },
     metadata={
         "algorithm": "dynamic_programming_baseline",
+        "lineage_fields": ["forecast_run_id", "optimization_run_id", "forecast_model_version"],
         "objective": "purchase_cost - export_revenue + degradation_penalty",
     },
 )
@@ -213,17 +229,19 @@ def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_st
         load_forecast = _get_client_series(client_df, "load_actual", horizon, fallback=40.0)
         solar_forecast = _get_client_series(client_df, "solar_gen_actual", horizon, fallback=0.0)
         optimization_inputs = _resolve_client_optimization_inputs(client_profile, capacity_kwh)
+        throughput_limit_kwh = capacity_kwh * 1.2
+        initial_soc_fraction = max(0.0, min(1.0, soc_percent / 100.0))
 
         optimizer = BaselineDPOptimizer(
             BaselineOptimizationConfig(
                 capacity_kwh=capacity_kwh,
                 min_soc_fraction=float(optimization_inputs["min_soc_fraction"]),
                 max_soc_fraction=0.95,
-                initial_soc_fraction=max(0.0, min(1.0, soc_percent / 100.0)),
+                initial_soc_fraction=initial_soc_fraction,
                 roundtrip_efficiency=float(optimization_inputs["roundtrip_efficiency"]),
                 max_charge_kw=float(optimization_inputs["max_power_kw"]),
                 max_discharge_kw=float(optimization_inputs["max_power_kw"]),
-                throughput_limit_kwh=capacity_kwh * 1.2,
+                throughput_limit_kwh=throughput_limit_kwh,
                 degradation_cost_per_kwh=float(optimization_inputs["degradation_cost_per_kwh"]),
                 export_price_factor=float(optimization_inputs["export_price_factor"]),
             )
@@ -233,6 +251,26 @@ def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_st
             price_eur_mwh=prices[:horizon],
             load_kw=load_forecast,
             solar_kw=solar_forecast,
+        )
+        algorithm = str(result["metadata"]["algorithm"])
+        optimization_run_id = build_optimization_run_id(
+            forecast_run_id=forecast_context["forecast_run_id"],
+            client_id=str(client_id),
+            algorithm=algorithm,
+            horizon_mode=forecast_context["forecast_horizon_mode"],
+            optimization_inputs={
+                "capacity_kwh": capacity_kwh,
+                "min_soc_fraction": float(optimization_inputs["min_soc_fraction"]),
+                "initial_soc_fraction": initial_soc_fraction,
+                "roundtrip_efficiency": float(optimization_inputs["roundtrip_efficiency"]),
+                "max_charge_kw": float(optimization_inputs["max_power_kw"]),
+                "max_discharge_kw": float(optimization_inputs["max_power_kw"]),
+                "throughput_limit_kwh": throughput_limit_kwh,
+                "degradation_cost_per_kwh": float(optimization_inputs["degradation_cost_per_kwh"]),
+                "export_price_factor": float(optimization_inputs["export_price_factor"]),
+            },
+            load_forecast=load_forecast,
+            solar_forecast=solar_forecast,
         )
 
         schedule_rows = [{
@@ -256,13 +294,20 @@ def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_st
             "total_net_cost_eur": float(result["objective"]["net_cost_eur"]),
             "final_soc_kwh": float(result["constraints"]["final_soc_kwh"]),
             "throughput_limit_kwh": float(result["constraints"]["throughput_limit_kwh"]),
+            "forecast_run_id": forecast_context["forecast_run_id"],
             "forecast_model_name": forecast_context["forecast_model_name"],
             "forecast_model_family": forecast_context["forecast_model_family"],
+            "forecast_model_version": forecast_context["forecast_model_version"],
+            "forecast_window_start_utc": forecast_context["forecast_window_start_utc"],
+            "forecast_window_end_utc": forecast_context["forecast_window_end_utc"],
+            "forecast_latency_ms": forecast_context["forecast_latency_ms"],
+            "forecast_freshness_minutes": forecast_context["forecast_freshness_minutes"],
             "forecast_horizon_mode": forecast_context["forecast_horizon_mode"],
             "forecast_uncertainty_source": forecast_context["forecast_uncertainty_source"],
             "forecast_promotion_active": forecast_context["forecast_promotion_active"],
             "forecast_promotion_source": forecast_context["forecast_promotion_source"],
-            "algorithm": str(result["metadata"]["algorithm"]),
+            "optimization_run_id": optimization_run_id,
+            "algorithm": algorithm,
             "solver": None,
         } for row in result["schedule"]]
 

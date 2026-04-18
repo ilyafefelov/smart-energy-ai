@@ -62,6 +62,13 @@ def _ensure_src_in_path():
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_FORECAST_MODEL_NAME = None
+_build_forecast_with_model_spec = None
+build_promoted_forecast_model_metadata = None
+get_forecast_model_readiness = None
+list_forecast_model_specs = None
+write_promoted_forecast_model_metadata = None
+
 
 def _load_price_forecast_module():
     module_name = "smart_energy_ai_price_forecast_asset"
@@ -78,12 +85,54 @@ def _load_price_forecast_module():
     return module
 
 
+def _resolve_forecast_benchmark_dependencies():
+    build_forecast_with_model_spec = _build_forecast_with_model_spec
+    default_forecast_model_name = DEFAULT_FORECAST_MODEL_NAME
+    build_promotion_metadata = build_promoted_forecast_model_metadata
+    get_model_readiness = get_forecast_model_readiness
+    list_model_specs = list_forecast_model_specs
+    write_promotion_metadata = write_promoted_forecast_model_metadata
+
+    try:
+        if build_forecast_with_model_spec is None:
+            from src.assets.core.price_forecast import _build_forecast_with_model_spec as build_forecast_with_model_spec
+    except ImportError:
+        if build_forecast_with_model_spec is None:
+            price_forecast_module = _load_price_forecast_module()
+            build_forecast_with_model_spec = price_forecast_module._build_forecast_with_model_spec
+
+    if (
+        default_forecast_model_name is None
+        or build_promotion_metadata is None
+        or get_model_readiness is None
+        or list_model_specs is None
+        or write_promotion_metadata is None
+    ):
+        from src.data_pipeline.forecast_model_registry import (
+            DEFAULT_FORECAST_MODEL_NAME as registry_default_model_name,
+            build_promoted_forecast_model_metadata as registry_build_promotion_metadata,
+            get_forecast_model_readiness as registry_get_model_readiness,
+            list_forecast_model_specs as registry_list_model_specs,
+            write_promoted_forecast_model_metadata as registry_write_promotion_metadata,
+        )
+
+        default_forecast_model_name = default_forecast_model_name or registry_default_model_name
+        build_promotion_metadata = build_promotion_metadata or registry_build_promotion_metadata
+        get_model_readiness = get_model_readiness or registry_get_model_readiness
+        list_model_specs = list_model_specs or registry_list_model_specs
+        write_promotion_metadata = write_promotion_metadata or registry_write_promotion_metadata
+
+    return {
+        "DEFAULT_FORECAST_MODEL_NAME": default_forecast_model_name,
+        "build_forecast_with_model_spec": build_forecast_with_model_spec,
+        "build_promoted_forecast_model_metadata": build_promotion_metadata,
+        "get_forecast_model_readiness": get_model_readiness,
+        "list_forecast_model_specs": list_model_specs,
+        "write_promoted_forecast_model_metadata": write_promotion_metadata,
+    }
+
+
 try:
-    from src.assets.core.price_forecast import _build_forecast_with_model_spec
-    from src.data_pipeline.forecast_model_registry import (
-        list_forecast_model_specs,
-        write_promoted_forecast_model_metadata,
-    )
     from src.data_pipeline.benchmark_helpers import (
         BenchmarkMetrics,
         add_performance_analysis as _add_performance_analysis,
@@ -94,12 +143,6 @@ try:
         log_forecast_benchmark_run as _log_forecast_benchmark_run,
     )
 except ImportError:
-    _PRICE_FORECAST_MODULE = _load_price_forecast_module()
-    _build_forecast_with_model_spec = _PRICE_FORECAST_MODULE._build_forecast_with_model_spec
-    from src.data_pipeline.forecast_model_registry import (
-        list_forecast_model_specs,
-        write_promoted_forecast_model_metadata,
-    )
     _HELPER_MODULE_NAME = "smart_energy_ai_benchmark_helpers"
     _HELPER_PATH = Path(__file__).resolve().parents[2] / "data_pipeline" / "benchmark_helpers.py"
     _HELPER_SPEC = importlib.util.spec_from_file_location(_HELPER_MODULE_NAME, _HELPER_PATH)
@@ -123,20 +166,16 @@ def _select_promoted_forecast_row(scorecard: pl.DataFrame) -> dict | None:
     if len(scorecard) == 0:
         return None
 
-    promoted = scorecard.sort(
-        by=[
-            "benchmark_value_capture_ratio",
-            "benchmark_rmse",
-            "benchmark_mae",
-            "model_name",
-        ],
-        descending=[True, False, False, False],
+    promoted = scorecard.filter(
+        pl.col("promotion_decision") == pl.lit("promoted")
+    )
+    if len(promoted) == 0:
+        return None
+
+    return promoted.sort(
+        by=["benchmark_candidate_rank", "model_name"],
+        descending=[False, False],
     ).row(0, named=True)
-    return promoted
-
-
-def _is_registry_forecast_model(model_name: str) -> bool:
-    return model_name in {model_spec.model_name for model_spec in list_forecast_model_specs()}
 
 
 @asset(
@@ -438,16 +477,64 @@ def forecast_value_benchmark_asset(
 ) -> pl.DataFrame:
     """Build a forecast scorecard from price forecast outputs and realized market prices."""
 
+    forecast_dependencies = _resolve_forecast_benchmark_dependencies()
+    build_forecast_with_model_spec = forecast_dependencies["build_forecast_with_model_spec"]
+    default_forecast_model_name = forecast_dependencies["DEFAULT_FORECAST_MODEL_NAME"]
+    build_promotion_metadata = forecast_dependencies[
+        "build_promoted_forecast_model_metadata"
+    ]
+    get_model_readiness = forecast_dependencies["get_forecast_model_readiness"]
+    list_model_specs = forecast_dependencies["list_forecast_model_specs"]
+    write_promotion_metadata = forecast_dependencies[
+        "write_promoted_forecast_model_metadata"
+    ]
+
     logger.info("Building forecast benchmark scorecard...")
     existing_models = set(price_forecast.get_column("model_name").unique().to_list()) if len(price_forecast) > 0 else set()
     candidate_forecasts = [price_forecast] if len(price_forecast) > 0 else []
+    skipped_candidates: list[dict[str, object]] = []
+    registry_model_specs = list_model_specs()
+    registry_model_names = [model_spec.model_name for model_spec in registry_model_specs]
 
-    for model_spec in list_forecast_model_specs():
+    for model_spec in registry_model_specs:
         if model_spec.model_name in existing_models:
             continue
         try:
-            candidate_forecasts.append(_build_forecast_with_model_spec(market_data, model_spec))
+            readiness = get_model_readiness(model_spec.model_name)
+        except KeyError:
+            readiness = {
+                "ready": True,
+                "readiness_reason": None,
+            }
+        if readiness["ready"] is not True:
+            skip_reason = str(
+                readiness["readiness_reason"] or "candidate_not_runtime_ready"
+            )
+            skipped_candidates.append(
+                {
+                    "model_name": model_spec.model_name,
+                    "model_family": getattr(model_spec, "model_family", "unknown_family"),
+                    "forecast_horizon_hours": getattr(model_spec, "forecast_horizon_hours", 0),
+                    "benchmark_candidate_skip_reason": skip_reason,
+                }
+            )
+            logger.warning(
+                "Skipping forecast benchmark candidate %s because it is not runtime-ready: %s",
+                model_spec.model_name,
+                skip_reason,
+            )
+            continue
+        try:
+            candidate_forecasts.append(build_forecast_with_model_spec(market_data, model_spec))
         except ModuleNotFoundError as exc:
+            skipped_candidates.append(
+                {
+                    "model_name": model_spec.model_name,
+                    "model_family": getattr(model_spec, "model_family", "unknown_family"),
+                    "forecast_horizon_hours": getattr(model_spec, "forecast_horizon_hours", 0),
+                    "benchmark_candidate_skip_reason": str(exc),
+                }
+            )
             logger.warning(
                 "Skipping forecast benchmark candidate %s because an optional dependency is unavailable: %s",
                 model_spec.model_name,
@@ -459,37 +546,33 @@ def forecast_value_benchmark_asset(
         if candidate_forecasts
         else price_forecast
     )
-    scorecard = _build_forecast_value_scorecard(market_data, benchmark_forecasts)
+    scorecard = _build_forecast_value_scorecard(
+        market_data,
+        benchmark_forecasts,
+        skipped_candidates=skipped_candidates,
+        registry_model_names=registry_model_names,
+        incumbent_model_name=default_forecast_model_name,
+    )
     promoted_row = _select_promoted_forecast_row(scorecard)
-    if promoted_row is not None and _is_registry_forecast_model(promoted_row["model_name"]):
-        promotion_metadata = {
-            "model_name": promoted_row["model_name"],
-            "model_family": promoted_row["model_family"],
-            "forecast_horizon_hours": promoted_row["forecast_horizon_hours"],
-            "benchmark_value_capture_ratio": promoted_row["benchmark_value_capture_ratio"],
-            "benchmark_rmse": promoted_row["benchmark_rmse"],
-            "benchmark_mae": promoted_row["benchmark_mae"],
-            "benchmark_uncertainty_source": promoted_row["benchmark_uncertainty_source"],
-            "benchmark_avg_uncertainty_spread_eur_mwh": promoted_row[
-                "benchmark_avg_uncertainty_spread_eur_mwh"
-            ],
-            "benchmark_max_uncertainty_spread_eur_mwh": promoted_row[
-                "benchmark_max_uncertainty_spread_eur_mwh"
-            ],
-            "promoted_at_utc": datetime.now(timezone.utc).isoformat(),
-            "promotion_source": "forecast_value_benchmark_asset",
-        }
-        promotion_path = write_promoted_forecast_model_metadata(promotion_metadata)
-        logger.info(
-            "Promoted forecast model %s via benchmark scorecard and wrote metadata to %s",
-            promoted_row["model_name"],
-            promotion_path,
-        )
-    elif promoted_row is not None:
-        logger.warning(
-            "Skipping forecast promotion write for unknown model %s",
-            promoted_row["model_name"],
-        )
+    if promoted_row is not None:
+        try:
+            promotion_metadata = build_promotion_metadata(
+                promoted_row,
+                promoted_at_utc=datetime.now(timezone.utc).isoformat(),
+            )
+        except (KeyError, ValueError) as exc:
+            logger.warning(
+                "Skipping forecast promotion write for model %s because it did not pass the registry gate: %s",
+                promoted_row.get("model_name"),
+                exc,
+            )
+        else:
+            promotion_path = write_promotion_metadata(promotion_metadata)
+            logger.info(
+                "Promoted forecast model %s via benchmark scorecard and wrote metadata to %s",
+                promoted_row["model_name"],
+                promotion_path,
+            )
     logger.info("Forecast benchmark complete: %s scorecard rows", len(scorecard))
     return scorecard
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import polars as pl
 
 from src.assets.core.optimization_schedule import (
@@ -10,10 +12,14 @@ from src.assets.core.optimization_schedule import (
     build_optimization_schedule_frame,
 )
 from src.assets.core.optimization_schedule_checks import (
+    evaluate_schedule_lineage,
+    evaluate_schedule_realized_value_reconciliation,
     evaluate_schedule_action_semantics,
     evaluate_schedule_completeness,
     evaluate_schedule_numeric_fields,
     optimization_schedule_contract_checks,
+    optimization_schedule_lineage_check,
+    optimization_schedule_realized_value_reconciliation_check,
 )
 from src.definitions import defs
 
@@ -74,6 +80,82 @@ def test_schedule_contract_checks_fail_for_duplicate_missing_and_inconsistent_ro
     assert action_semantics["metadata"]["action_balance_mismatch_count"] == 1
 
 
+def test_schedule_lineage_checks_detect_missing_and_inconsistent_lineage(monkeypatch) -> None:
+    schedule = _valid_schedule().with_columns(
+        pl.lit("forecast-demo").alias("forecast_run_id"),
+        pl.lit("registry:demo").alias("forecast_model_version"),
+        pl.when(pl.col("hour") == 0).then(pl.lit("optimization-a")).otherwise(pl.lit("optimization-b")).alias("optimization_run_id"),
+    )
+
+    lineage = evaluate_schedule_lineage(schedule)
+    lineage_result = optimization_schedule_lineage_check(schedule)
+
+    assert lineage["passed"] is False
+    assert lineage["metadata"]["multi_optimization_run_clients"] == 1
+    assert lineage_result.passed is False
+
+    valid_lineage_schedule = schedule.with_columns(pl.lit("optimization-a").alias("optimization_run_id"))
+    matching_history_rows = [
+        {
+            "id": 1,
+            "tenant_id": "client_a",
+            "timestamp": datetime(2026, 3, 6, 10, 0, 0),
+            "predicted_action": 0,
+            "cost_baseline": 40.0,
+            "cost_rl": 24.0,
+            "energy_kwh": 4.0,
+            "price_uah_kwh": 10.0,
+            "tariff_window": "",
+            "economics_method": "tariff_interval",
+            "realized_net_uah": -24.0,
+            "decision_snapshot": {
+                "forecast_run_id": "forecast-demo",
+                "optimization_run_id": "optimization-a",
+            },
+        }
+    ]
+    monkeypatch.setattr(
+        "src.assets.core.optimization_schedule_checks._load_recent_history_rows",
+        lambda **kwargs: (matching_history_rows, None),
+    )
+
+    reconciliation = evaluate_schedule_realized_value_reconciliation(valid_lineage_schedule)
+    reconciliation_result = optimization_schedule_realized_value_reconciliation_check(valid_lineage_schedule)
+
+    assert reconciliation["passed"] is True
+    assert reconciliation["metadata"]["status"] == "reconciled"
+    assert reconciliation["metadata"]["canonical_savings_total_uah"] == 6.0
+    assert reconciliation["metadata"]["realized_net_total_uah"] == -24.0
+    assert reconciliation_result.passed is True
+
+    monkeypatch.setattr(
+        "src.assets.core.optimization_schedule_checks._load_recent_history_rows",
+        lambda **kwargs: (
+            [
+                {
+                    "id": 2,
+                    "tenant_id": "client_a",
+                    "timestamp": datetime(2026, 3, 6, 10, 0, 0),
+                    "predicted_action": 0,
+                    "cost_baseline": 40.0,
+                    "cost_rl": 24.0,
+                    "energy_kwh": 4.0,
+                    "price_uah_kwh": 10.0,
+                    "tariff_window": "offpeak",
+                    "economics_method": "tariff_interval",
+                    "realized_net_uah": -24.0,
+                    "decision_snapshot": {},
+                }
+            ],
+            None,
+        ),
+    )
+
+    missing_lineage = evaluate_schedule_realized_value_reconciliation(valid_lineage_schedule)
+    assert missing_lineage["passed"] is False
+    assert missing_lineage["metadata"]["lineage_missing_row_count"] == 1
+
+
 def test_schedule_frame_builder_uses_canonical_schema_for_empty_and_sparse_rows() -> None:
     empty_schedule = build_empty_optimization_schedule()
     sparse_schedule = build_optimization_schedule_frame(
@@ -111,8 +193,8 @@ def test_schedule_frame_builder_uses_canonical_schema_for_empty_and_sparse_rows(
 
 
 def test_definitions_register_schedule_checks_and_job() -> None:
-    assert len(optimization_schedule_contract_checks) == 6
-    assert len(defs.asset_checks) == 6
+    assert len(optimization_schedule_contract_checks) == 10
+    assert len(defs.asset_checks) == 10
     job_def = defs.resolve_job_def("optimization_schedule_contract_checks")
 
     assert job_def is not None

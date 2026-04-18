@@ -7,13 +7,16 @@ Builds a day-ahead (24h) baseline forecasting model from historical market data.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from time import perf_counter
 
 import polars as pl
 from dagster import AssetIn, asset
+from src.data_pipeline.forecast_lineage import build_forecast_lineage
 from src.data_pipeline.forecast_model_registry import (
     DEFAULT_FORECAST_MODEL_NAME,
     get_forecast_model_spec,
     load_promoted_forecast_metadata,
+    resolve_forecast_model_version,
     resolve_active_forecast_model_name,
 )
 from src.data_pipeline.price_forecast_features import (
@@ -168,10 +171,16 @@ def _attach_promotion_provenance(
     resolved_model_name: str,
     promoted_metadata: dict[str, object] | None,
 ) -> pl.DataFrame:
+    comparison_model_name = resolved_model_name
+    if len(forecast_df) > 0:
+        comparison_model_name = str(
+            forecast_df.sort("forecast_timestamp").select("model_name").to_series().to_list()[0]
+        )
+
     active_promotion = None
     if (
         promoted_metadata is not None
-        and promoted_metadata.get("model_name") == resolved_model_name
+        and promoted_metadata.get("model_name") == comparison_model_name
     ):
         active_promotion = promoted_metadata
 
@@ -220,6 +229,70 @@ def _attach_promotion_provenance(
                 else None,
                 dtype=pl.Float64,
             ).alias("promotion_benchmark_max_uncertainty_spread_eur_mwh"),
+            pl.lit(
+                active_promotion.get("benchmark_candidate_status")
+                if active_promotion
+                else None,
+                dtype=pl.Utf8,
+            ).alias("promotion_benchmark_candidate_status"),
+            pl.lit(
+                active_promotion.get("benchmark_candidate_ready")
+                if active_promotion
+                else None,
+                dtype=pl.Boolean,
+            ).alias("promotion_benchmark_candidate_ready"),
+            pl.lit(
+                active_promotion.get("benchmark_candidate_rank")
+                if active_promotion
+                else None,
+                dtype=pl.Int64,
+            ).alias("promotion_benchmark_candidate_rank"),
+            pl.lit(
+                active_promotion.get("promotion_decision") if active_promotion else None,
+                dtype=pl.Utf8,
+            ).alias("promotion_decision"),
+            pl.lit(
+                active_promotion.get("promotion_decision_reason")
+                if active_promotion
+                else None,
+                dtype=pl.Utf8,
+            ).alias("promotion_decision_reason"),
+            pl.lit(
+                active_promotion.get("promotion_gate_version")
+                if active_promotion
+                else None,
+                dtype=pl.Utf8,
+            ).alias("promotion_gate_version"),
+        ]
+    )
+
+
+def _attach_forecast_lineage(
+    forecast_df: pl.DataFrame,
+    *,
+    source_max_timestamp: datetime | None,
+    promoted_metadata: dict[str, object] | None,
+    latency_ms: int,
+) -> pl.DataFrame:
+    forecast_rows = forecast_df.sort("forecast_timestamp").to_dicts() if len(forecast_df) else []
+    actual_model_name = str(forecast_rows[0].get("model_name") or "").strip() if forecast_rows else ""
+    lineage = build_forecast_lineage(
+        forecast_rows,
+        model_name=actual_model_name or None,
+        model_family=str(forecast_rows[0].get("model_family") or "").strip() or None if forecast_rows else None,
+        model_version=resolve_forecast_model_version(actual_model_name or "unknown", promoted_metadata),
+        source_max_timestamp=source_max_timestamp,
+        latency_ms=latency_ms,
+    )
+
+    return forecast_df.with_columns(
+        [
+            pl.lit(lineage["forecast_run_id"], dtype=pl.Utf8).alias("forecast_run_id"),
+            pl.lit(lineage["forecast_model_version"], dtype=pl.Utf8).alias("forecast_model_version"),
+            pl.lit(lineage["forecast_window_start_utc"], dtype=pl.Utf8).alias("forecast_window_start_utc"),
+            pl.lit(lineage["forecast_window_end_utc"], dtype=pl.Utf8).alias("forecast_window_end_utc"),
+            pl.lit(lineage["forecast_latency_ms"], dtype=pl.Int64).alias("forecast_latency_ms"),
+            pl.lit(lineage["forecast_freshness_minutes"], dtype=pl.Float64).alias("forecast_freshness_minutes"),
         ]
     )
 
@@ -232,6 +305,13 @@ def _attach_promotion_provenance(
         "forecast_horizon_hours": 24,
         "default_model_name": DEFAULT_FORECAST_MODEL_NAME,
         "model_registry_enabled": True,
+        "runtime_selection": "validated_benchmark_promotion_only",
+        "lineage_fields": [
+            "forecast_run_id",
+            "forecast_model_version",
+            "forecast_latency_ms",
+            "forecast_freshness_minutes",
+        ],
         "target_market": "DAM Ukraine",
     },
 )
@@ -239,11 +319,23 @@ def price_forecast_asset(market_data: pl.DataFrame) -> pl.DataFrame:
     """
     Train a baseline DAM forecaster and return the next 24 hourly predictions.
     """
+    started_at = perf_counter()
     resolved_model_name = resolve_active_forecast_model_name()
+    promoted_metadata = load_promoted_forecast_metadata()
     model_spec = get_forecast_model_spec(resolved_model_name)
     forecast_df = _build_forecast_with_model_spec(market_data, model_spec)
-    return _attach_promotion_provenance(
+    forecast_df = _attach_promotion_provenance(
         forecast_df,
         resolved_model_name=resolved_model_name,
-        promoted_metadata=load_promoted_forecast_metadata(),
+        promoted_metadata=promoted_metadata,
+    )
+    source_max_timestamp = None
+    if len(market_data) and "timestamp" in market_data.columns:
+        source_max_timestamp = market_data.sort("timestamp").select("timestamp").to_series().to_list()[-1]
+
+    return _attach_forecast_lineage(
+        forecast_df,
+        source_max_timestamp=source_max_timestamp,
+        promoted_metadata=promoted_metadata,
+        latency_ms=int((perf_counter() - started_at) * 1000),
     )

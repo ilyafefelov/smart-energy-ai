@@ -202,6 +202,9 @@ def test_reconcile_optimization_history_computes_stats_and_main(monkeypatch, cap
 
     assert result["success"] is True
     assert result["stats"] == {"scanned": 3, "eligible": 2, "updated": 1, "unchanged": 1, "skipped": 1}
+    assert result["reconciliation"]["canonical_savings_total_uah"] == 7.5
+    assert result["reconciliation"]["stored_savings_total_uah"] == 7.5
+    assert result["reconciliation"]["status"] == "evaluated"
     assert result["updated_ids"] == [1]
     assert updates[0]["reconciliation_note"] == "test-note"
     assert module.resolve_db_url() == "postgresql://demo"

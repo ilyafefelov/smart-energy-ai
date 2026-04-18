@@ -242,6 +242,15 @@ def test_benchmark_performance_helpers_and_tracking(monkeypatch, capsys) -> None
                 "benchmark_rmse": 4.0,
                 "benchmark_mae": 3.0,
                 "benchmark_value_capture_ratio": 0.8,
+                "benchmark_candidate_status": "validated",
+                "benchmark_candidate_ready": True,
+                "benchmark_candidate_skip_reason": None,
+                "benchmark_candidate_rank": 1,
+                "benchmark_incumbent_baseline": True,
+                "promotion_eligible": True,
+                "promotion_decision": "promoted",
+                "promotion_decision_reason": "incumbent_baseline_retained",
+                "promotion_gate_version": "forecast_value_scorecard_v1",
                 "benchmark_timestamp": datetime(2026, 3, 6, 12, 0, 0),
             }
         ]
@@ -254,6 +263,13 @@ def test_benchmark_performance_helpers_and_tracking(monkeypatch, capsys) -> None
         "standard_lfp_system_lcos",
         "forecast_value_random_forest_dam_24h",
     ]
+    forecast_tracking_row = [
+        row for row in tracking.to_dicts() if row["experiment_name"] == "forecast_value_benchmarks"
+    ][0]
+    assert forecast_tracking_row["param_benchmark_candidate_status"] == "validated"
+    assert forecast_tracking_row["param_promotion_decision"] == "promoted"
+    assert forecast_tracking_row["param_promotion_gate_version"] == "forecast_value_scorecard_v1"
+    assert forecast_tracking_row["param_promotion_eligible"] is True
 
     monkeypatch.setattr(module, "engine_benchmark_asset", lambda market, weather: [1, 2])
     monkeypatch.setattr(module, "accuracy_benchmark_asset", lambda market: [1])

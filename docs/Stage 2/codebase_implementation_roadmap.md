@@ -14,12 +14,15 @@ The current implementation anchors are already in place, but they are still clos
 - `energy_ml/pipeline.py` still holds the simpler rule-driven recommendation and status surfaces that back part of the user-facing behavior.
 - `dashboard/server/utils/recommendation-contract.ts` and `dashboard/server/api/ml/recommendation.get.ts` normalize and expose the recommendation contract to the active dashboard.
 - `src/assets/benchmarks/performance.py` and `src/data_pipeline/benchmark_helpers.py` already give the repo a benchmark lane that can be extended instead of reinvented.
+- Active forecast runtime selection is now benchmark-backed: only validated promotion metadata emitted from `benchmark_engines` is allowed to change the model selected by `src/assets/core/price_forecast.py`.
+- Household EMS expansion, demand response, learned-policy or RL control, and dashboard redesign remain deferred until the bridge, lineage, and benchmark promotion program stay trustworthy under the backend validation path.
 
 ## Roadmap Principles
 
 - Upgrade the active Dagster plus dashboard runtime instead of building a parallel research-only stack.
 - Keep the deterministic path as the production default until a stronger experiment lane proves a learned policy is worth serving.
 - Judge forecasting changes by downstream schedule value, not only by point-error metrics.
+- Treat validated promotion metadata from the benchmark lane as the only active runtime control plane for forecast model selection; do not rely on ad hoc toggles.
 - Prefer new modules under `src/data_pipeline/` or adjacent owning assets instead of spreading forecasting and optimizer logic across unrelated roots.
 - Keep user-facing contract changes explicit and stable through the existing recommendation normalization surfaces.
 

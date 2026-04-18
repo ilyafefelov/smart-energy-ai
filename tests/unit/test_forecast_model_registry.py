@@ -5,10 +5,13 @@ import pytest
 
 from src.data_pipeline.forecast_model_registry import (
     DEFAULT_FORECAST_MODEL_NAME,
+    FORECAST_BENCHMARK_PROMOTION_SOURCE,
+    FORECAST_PROMOTION_GATE_VERSION,
     GRADIENT_BOOSTING_FORECAST_MODEL_NAME,
     NBEATSX_FORECAST_MODEL_NAME,
     NBEATSxForecastAdapter,
     PRICE_FORECAST_MODEL_ENV,
+    build_promoted_forecast_model_metadata,
     get_forecast_model_spec,
     get_forecast_promotion_metadata_path,
     load_promoted_forecast_metadata,
@@ -80,34 +83,82 @@ def test_forecast_model_registry_loads_promoted_model_name(tmp_path, monkeypatch
     monkeypatch.setattr(registry, "FORECAST_MODEL_OUTPUT_DIR", tmp_path)
 
     metadata_path = write_promoted_forecast_model_metadata(
-        {
-            "model_name": GRADIENT_BOOSTING_FORECAST_MODEL_NAME,
-            "model_family": "gradient_boosting_regressor",
-            "benchmark_value_capture_ratio": 0.81,
-            "benchmark_uncertainty_source": "walk_forward_residual_std",
-            "benchmark_avg_uncertainty_spread_eur_mwh": 9.0,
-        }
+        build_promoted_forecast_model_metadata(
+            {
+                "model_name": GRADIENT_BOOSTING_FORECAST_MODEL_NAME,
+                "model_family": "gradient_boosting_regressor",
+                "forecast_horizon_hours": 24,
+                "benchmark_value_capture_ratio": 0.81,
+                "benchmark_rmse": 3.5,
+                "benchmark_mae": 2.5,
+                "benchmark_uncertainty_source": "walk_forward_residual_std",
+                "benchmark_avg_uncertainty_spread_eur_mwh": 9.0,
+                "benchmark_max_uncertainty_spread_eur_mwh": 12.0,
+                "benchmark_candidate_status": "validated",
+                "benchmark_candidate_rank": 1,
+                "benchmark_incumbent_baseline": False,
+                "promotion_eligible": True,
+                "promotion_decision": "promoted",
+                "promotion_decision_reason": "outperformed_incumbent_baseline",
+            },
+            promoted_at_utc="2026-04-18T10:00:00+00:00",
+        )
     )
 
     assert metadata_path == tmp_path / registry.FORECAST_PROMOTION_METADATA_NAME
     assert load_promoted_forecast_metadata() == {
         "model_name": GRADIENT_BOOSTING_FORECAST_MODEL_NAME,
         "model_family": "gradient_boosting_regressor",
+        "forecast_horizon_hours": 24,
         "benchmark_value_capture_ratio": 0.81,
+        "benchmark_rmse": 3.5,
+        "benchmark_mae": 2.5,
         "benchmark_uncertainty_source": "walk_forward_residual_std",
         "benchmark_avg_uncertainty_spread_eur_mwh": 9.0,
+        "benchmark_max_uncertainty_spread_eur_mwh": 12.0,
+        "benchmark_candidate_status": "validated",
+        "benchmark_candidate_ready": True,
+        "benchmark_candidate_skip_reason": None,
+        "benchmark_candidate_rank": 1,
+        "benchmark_incumbent_baseline": False,
+        "promotion_eligible": True,
+        "promotion_decision": "promoted",
+        "promotion_decision_reason": "outperformed_incumbent_baseline",
+        "promotion_gate_version": FORECAST_PROMOTION_GATE_VERSION,
+        "promotion_source": FORECAST_BENCHMARK_PROMOTION_SOURCE,
+        "promoted_at_utc": "2026-04-18T10:00:00+00:00",
+        "model_ready": True,
+        "model_readiness_reason": None,
     }
     assert load_promoted_forecast_model_name() == GRADIENT_BOOSTING_FORECAST_MODEL_NAME
 
 
-def test_forecast_model_registry_prefers_env_override_over_promoted_model(tmp_path, monkeypatch) -> None:
+def test_forecast_model_registry_prefers_validated_promotion_over_env_override(tmp_path, monkeypatch) -> None:
     from src.data_pipeline import forecast_model_registry as registry
 
     monkeypatch.setattr(registry, "FORECAST_MODEL_OUTPUT_DIR", tmp_path)
-    write_promoted_forecast_model_metadata({"model_name": GRADIENT_BOOSTING_FORECAST_MODEL_NAME})
+    write_promoted_forecast_model_metadata(
+        build_promoted_forecast_model_metadata(
+            {
+                "model_name": GRADIENT_BOOSTING_FORECAST_MODEL_NAME,
+                "model_family": "gradient_boosting_regressor",
+                "forecast_horizon_hours": 24,
+                "benchmark_value_capture_ratio": 0.81,
+                "benchmark_rmse": 3.5,
+                "benchmark_mae": 2.5,
+                "benchmark_candidate_status": "validated",
+                "benchmark_candidate_rank": 1,
+                "benchmark_incumbent_baseline": False,
+                "promotion_eligible": True,
+                "promotion_decision": "promoted",
+                "promotion_decision_reason": "outperformed_incumbent_baseline",
+            },
+            promoted_at_utc="2026-04-18T10:05:00+00:00",
+        )
+    )
     monkeypatch.setenv(PRICE_FORECAST_MODEL_ENV, NBEATSX_FORECAST_MODEL_NAME)
 
-    assert resolve_active_forecast_model_name() == NBEATSX_FORECAST_MODEL_NAME
+    assert resolve_active_forecast_model_name() == GRADIENT_BOOSTING_FORECAST_MODEL_NAME
 
 
 def test_forecast_model_registry_ignores_unknown_promoted_model(tmp_path, monkeypatch) -> None:
