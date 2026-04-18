@@ -92,6 +92,28 @@ type DagsterMaterializedRecommendation = {
   error?: string
 }
 
+type SnapshotFreshness = {
+  isFresh: boolean
+  ageMinutes: number | null
+  materializedAtIso: string | null
+  reason: string
+}
+
+type ScheduleQualityAssessment = {
+  isValid: boolean
+  reason: string
+  rowCount: number
+}
+
+type DagsterSnapshotSourceDetail = 'dagster_postgres_snapshot' | 'dagster_asset_file'
+
+type DagsterSnapshotCandidate = {
+  snapshot: DagsterMaterializedRecommendation
+  sourceDetail: DagsterSnapshotSourceDetail
+  freshness: SnapshotFreshness
+  quality: ScheduleQualityAssessment
+}
+
 type ServingMetadata = {
   requested_mode: string
   active_mode: string
@@ -259,7 +281,7 @@ function resolveSnapshotTimestamp(snapshot: DagsterMaterializedRecommendation | 
   return null
 }
 
-function evaluateSnapshotFreshness(snapshot: DagsterMaterializedRecommendation | null) {
+function evaluateSnapshotFreshness(snapshot: DagsterMaterializedRecommendation | null): SnapshotFreshness {
   const materializedAt = resolveSnapshotTimestamp(snapshot)
   if (!materializedAt) {
     return {
@@ -280,7 +302,7 @@ function evaluateSnapshotFreshness(snapshot: DagsterMaterializedRecommendation |
   }
 }
 
-function evaluateScheduleQuality(snapshot: DagsterMaterializedRecommendation | null) {
+function evaluateScheduleQuality(snapshot: DagsterMaterializedRecommendation | null): ScheduleQualityAssessment {
   if (!snapshot || !Array.isArray(snapshot.schedule)) {
     return {
       isValid: false,
@@ -333,6 +355,53 @@ function evaluateScheduleQuality(snapshot: DagsterMaterializedRecommendation | n
     isValid: true,
     reason: 'valid',
     rowCount: rows.length,
+  }
+}
+
+function compareDagsterSnapshotCandidates(a: DagsterSnapshotCandidate, b: DagsterSnapshotCandidate) {
+  const aTimestamp = resolveSnapshotTimestamp(a.snapshot)?.getTime() ?? 0
+  const bTimestamp = resolveSnapshotTimestamp(b.snapshot)?.getTime() ?? 0
+  if (aTimestamp !== bTimestamp) {
+    return bTimestamp - aTimestamp
+  }
+
+  if (a.sourceDetail === b.sourceDetail) {
+    return 0
+  }
+
+  return a.sourceDetail === 'dagster_postgres_snapshot' ? -1 : 1
+}
+
+function buildDagsterSnapshotCandidate(
+  snapshot: DagsterMaterializedRecommendation | null,
+  sourceDetail: DagsterSnapshotSourceDetail,
+): DagsterSnapshotCandidate | null {
+  if (!snapshot) {
+    return null
+  }
+
+  return {
+    snapshot,
+    sourceDetail,
+    freshness: evaluateSnapshotFreshness(snapshot),
+    quality: evaluateScheduleQuality(snapshot),
+  }
+}
+
+function selectDagsterSnapshotCandidate(
+  postgresDagster: DagsterMaterializedRecommendation | null,
+  fileDagster: DagsterMaterializedRecommendation | null,
+) {
+  const candidates = [
+    buildDagsterSnapshotCandidate(postgresDagster, 'dagster_postgres_snapshot'),
+    buildDagsterSnapshotCandidate(fileDagster, 'dagster_asset_file'),
+  ]
+    .filter((candidate): candidate is DagsterSnapshotCandidate => candidate != null)
+    .sort(compareDagsterSnapshotCandidates)
+
+  return {
+    selected: candidates.find((candidate) => candidate.freshness.isFresh && candidate.quality.isValid) || null,
+    latest: candidates[0] || null,
   }
 }
 
@@ -538,10 +607,13 @@ export default defineEventHandler(async (event): Promise<Record<string, unknown>
       $fetch<ConfigPayload>('/api/config/current', tenantRequest).catch(() => null),
     ])
 
-    const latestDagsterSnapshot = postgresDagster || fileDagster
-    const snapshotFreshness = evaluateSnapshotFreshness(latestDagsterSnapshot)
-    const scheduleQuality = evaluateScheduleQuality(latestDagsterSnapshot)
-    const materializedDagster = snapshotFreshness.isFresh && scheduleQuality.isValid ? latestDagsterSnapshot : null
+    const dagsterSnapshotCandidates = selectDagsterSnapshotCandidate(postgresDagster, fileDagster)
+    const selectedDagsterCandidate = dagsterSnapshotCandidates.selected
+    const activeDagsterCandidate = selectedDagsterCandidate || dagsterSnapshotCandidates.latest
+    const materializedDagster = selectedDagsterCandidate?.snapshot || null
+    const activeDagsterSnapshot = activeDagsterCandidate?.snapshot || null
+    const snapshotFreshness = activeDagsterCandidate?.freshness || evaluateSnapshotFreshness(null)
+    const scheduleQuality = activeDagsterCandidate?.quality || evaluateScheduleQuality(null)
     const serving = normalizeServingMetadata(mlRecommendation?.serving)
 
     const currentPrice = Number(pricesPayload?.prices?.current?.price || 0)
@@ -552,16 +624,14 @@ export default defineEventHandler(async (event): Promise<Record<string, unknown>
     const loadProfileType = normalizeLoadProfileType(configPayload?.data?.load_profile_type)
     const strategyWeights = buildStrategyWeights(optimizationStrategy)
     const recommendationSourceDetail = materializedDagster
-      ? postgresDagster
-        ? 'dagster_postgres_snapshot'
-        : 'dagster_asset_file'
-      : latestDagsterSnapshot
+      ? selectedDagsterCandidate?.sourceDetail || 'dagster_asset_file'
+      : activeDagsterCandidate
         ? snapshotFreshness.isFresh
           ? 'ml_api_fallback_invalid_schedule'
           : 'ml_api_fallback_stale_snapshot'
         : 'ml_api_fallback'
 
-    const hybridRefresh = latestDagsterSnapshot && (!snapshotFreshness.isFresh || !scheduleQuality.isValid)
+    const hybridRefresh = activeDagsterCandidate && !selectedDagsterCandidate
       ? maybeTriggerHybridDagsterRefresh({
           projectRoot,
           tenantId: tenant.id,
@@ -575,7 +645,7 @@ export default defineEventHandler(async (event): Promise<Record<string, unknown>
         }
     const fallbackReasonCode = materializedDagster
       ? 'none'
-      : latestDagsterSnapshot
+      : activeDagsterCandidate
         ? !snapshotFreshness.isFresh
           ? 'dagster_snapshot_stale'
           : `dagster_schedule_${scheduleQuality.reason}`
@@ -759,11 +829,11 @@ export default defineEventHandler(async (event): Promise<Record<string, unknown>
         recommendation_source: provenance.decision_source,
         recommendation_source_detail: recommendationSourceDetail,
         contract_version: contract.version,
-        dagster_asset_name: latestDagsterSnapshot?.asset || null,
-        dagster_snapshot_run_id: latestDagsterSnapshot?.run_id || null,
+        dagster_asset_name: activeDagsterSnapshot?.asset || null,
+        dagster_snapshot_run_id: activeDagsterSnapshot?.run_id || null,
         dagster_snapshot_materialized_at: snapshotFreshness.materializedAtIso,
-        dagster_asset_file: latestDagsterSnapshot?.asset_file || null,
-        dagster_selected_client_id: latestDagsterSnapshot?.selected_client_id || null,
+        dagster_asset_file: activeDagsterSnapshot?.asset_file || null,
+        dagster_selected_client_id: activeDagsterSnapshot?.selected_client_id || null,
         dagster_forecast_run_id: dagsterForecastProvenance.forecast_run_id,
         dagster_forecast_model_name: dagsterForecastProvenance.forecast_model_name,
         dagster_forecast_model_family: dagsterForecastProvenance.forecast_model_family,
@@ -893,6 +963,7 @@ function buildScheduleFromDagsterAsset(
           : `Dagster schedule requested ${requestedAction} at ${hour}:00 (action_kw=${requestedActionKw.toFixed(2)}), adjusted to ${action}.${assessment.policyCompliance.reasoning_suffix}`
         return {
           hour,
+          hour_offset: dagsterRow?.offset ?? index,
           time: formatClockHour(hour),
           price_uah_kwh: Number(Number(row.price || dagsterRow?.price_uah_kwh || 0).toFixed(2)),
           recommended_action: action,
@@ -943,6 +1014,7 @@ function buildScheduleFromDagsterAsset(
           : `Dagster schedule requested ${requestedAction} at ${hour}:00 (action_kw=${requestedActionKw.toFixed(2)}), adjusted to ${action}.${assessment.policyCompliance.reasoning_suffix}`
         return {
           hour,
+          hour_offset: row.offset,
           time: formatClockHour(hour),
           price_uah_kwh: Number(Number(row.price_uah_kwh || 0).toFixed(2)),
           recommended_action: action,
@@ -1002,7 +1074,7 @@ function buildDeterministicSchedule(
     ? safeForecast.reduce((sum, row) => sum + Number(row.price || 0), 0) / safeForecast.length
     : 0
 
-  const schedule = safeForecast.map((row) => {
+  const schedule = safeForecast.map((row, index) => {
     const hour = Number(row.hour)
     const price = Number(row.price || 0)
     const ml = actionByHour.get(hour)
@@ -1040,6 +1112,7 @@ function buildDeterministicSchedule(
 
     return {
       hour,
+      hour_offset: index,
       time: formatClockHour(hour),
       price_uah_kwh: Number(price.toFixed(2)),
       recommended_action: adjustedAction,

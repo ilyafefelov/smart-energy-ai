@@ -4,6 +4,9 @@ import { eventHandler } from 'h3'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 type ScheduleRow = {
+  hour?: number | null
+  hour_offset?: number | null
+  time?: string | null
   expected_profit_uah?: number | null
   recommended_action?: string | null
   [key: string]: unknown

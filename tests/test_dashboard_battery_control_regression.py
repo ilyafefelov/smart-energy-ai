@@ -255,6 +255,9 @@ def test_dagster_schedule_contract_uses_clock_hour_and_freshness_sla(tenant_id: 
         hour = int(row.get("hour") or 0)
         assert 0 <= hour <= 23
 
+        hour_offset = int(row.get("hour_offset") or 0)
+        assert 0 <= hour_offset <= 23
+
         time_label = str(row.get("time") or "")
         assert re.match(r"^\d{2}:00$", time_label), f"Expected clock-hour format HH:00, got '{time_label}'"
 

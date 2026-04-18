@@ -20,6 +20,7 @@ type RecommendationExecutionLink = {
 
 type Schedule24hRow = {
   hour: number
+  hour_offset: number
   time: string
   price_uah_kwh: number
   recommended_action: PipelineRecommendationAction | 'DISCHARGE'
@@ -117,6 +118,8 @@ type MlflowStatusResponse = {
 type Schedule24hResponse = {
   schedule?: Array<{
     hour?: number | null
+    hour_offset?: number | null
+    time?: string | null
     price_uah_kwh?: number | null
     recommended_action?: string | null
     expected_profit_uah?: number | null
@@ -336,7 +339,10 @@ export const useMLPipelineStore = defineStore('mlPipeline', () => {
       if (Array.isArray(response.schedule)) {
         schedule24h.value = response.schedule.map((row) => ({
           hour: toFiniteNumber(row?.hour),
-          time: `${String(Math.max(0, Math.min(23, toFiniteNumber(row?.hour)))).padStart(2, '0')}:00`,
+          hour_offset: toFiniteNumber(row?.hour_offset, toFiniteNumber(row?.hour)),
+          time: typeof row?.time === 'string' && row.time.trim().length > 0
+            ? row.time
+            : `${String(Math.max(0, Math.min(23, toFiniteNumber(row?.hour)))).padStart(2, '0')}:00`,
           price_uah_kwh: toFiniteNumber(row?.price_uah_kwh),
           recommended_action: String(row?.recommended_action || 'HOLD').toUpperCase() as Schedule24hRow['recommended_action'],
           expected_profit_uah: toFiniteNumber(row?.expected_profit_uah),
