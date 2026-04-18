@@ -1,0 +1,341 @@
+{
+  "business_metrics": {
+    "arbitrage_ranges": {
+      "avg_daily_spread_eur": 258.7786578947369,
+      "days_analyzed": 38.0,
+      "median_daily_spread_eur": 258.7375,
+      "status": "available"
+    },
+    "ppo_validation": {
+      "daily_baseline": 13648.326857142854,
+      "daily_optimized": 5745.945606857143,
+      "daily_savings": 7902.381250285712,
+      "days_analyzed": 7,
+      "improvement_pct": 57.9,
+      "status": "available"
+    },
+    "provenance": "benchmarked",
+    "reconciliation_status": {
+      "provenance": "benchmarked",
+      "status": "dagster_asset_check_surface",
+      "system_of_record": "optimization_schedule_contract_checks"
+    },
+    "schedule_totals": {
+      "baseline": {
+        "client_count": 5,
+        "degradation_penalty_eur": 1.357937,
+        "export_revenue_eur": 0.0,
+        "forecast_run_ids": [
+          "forecast-bcfa3fbe846fa963"
+        ],
+        "net_cost_eur": 821.088981,
+        "optimization_run_ids": [
+          "optimization-1aac825089cbdd65",
+          "optimization-868e268b540de3a1",
+          "optimization-b2d0a738c2978c6c",
+          "optimization-d6645eda8709c8b8",
+          "optimization-e3976923164a50ca"
+        ],
+        "purchase_cost_eur": 819.731044,
+        "row_count": 120
+      },
+      "milp": {
+        "client_count": 5,
+        "degradation_penalty_eur": 0.638346,
+        "export_revenue_eur": 0.0,
+        "forecast_run_ids": [
+          "forecast-bcfa3fbe846fa963"
+        ],
+        "net_cost_eur": 820.404435,
+        "optimization_run_ids": [
+          "optimization-97ef501c6c9e6b4f",
+          "optimization-a7cc0dd6776d7320",
+          "optimization-ccfb27bf3e3221ff",
+          "optimization-da76f0c918aba35c",
+          "optimization-e209458bfac5464a"
+        ],
+        "purchase_cost_eur": 819.766088,
+        "row_count": 120
+      }
+    }
+  },
+  "case_study": {
+    "client_id": "client_001_kyiv_mall",
+    "client_name": "Kyiv Shopping Mall",
+    "metrics": [
+      {
+        "name": "battery_capacity_kwh",
+        "provenance": "simulated",
+        "surface": "customers.yaml",
+        "value": 280.0
+      },
+      {
+        "name": "solar_capacity_kw",
+        "provenance": "simulated",
+        "surface": "customers.yaml",
+        "value": 150.0
+      },
+      {
+        "name": "peak_load_kw",
+        "provenance": "simulated",
+        "surface": "customers.yaml",
+        "value": 200.0
+      },
+      {
+        "name": "storage_hours",
+        "provenance": "simulated",
+        "surface": "multi_client_analytics",
+        "value": 1.4
+      },
+      {
+        "name": "solar_coverage_ratio",
+        "provenance": "simulated",
+        "surface": "multi_client_analytics",
+        "value": 0.75
+      },
+      {
+        "name": "market_input_mode",
+        "provenance": "fallback-derived",
+        "surface": "market_data_asset",
+        "value": "fallback-derived"
+      },
+      {
+        "name": "weather_input_mode",
+        "provenance": "real",
+        "surface": "weather_asset",
+        "value": "real"
+      },
+      {
+        "name": "client_state_mode",
+        "provenance": "simulated",
+        "surface": "client_state_asset",
+        "value": "simulated"
+      }
+    ],
+    "selection_reason": "explicit_cli_selection"
+  },
+  "fleet_view": {
+    "client_count": 5,
+    "latest_update_utc": "2026-04-17T23:21:03+00:00",
+    "provenance": "simulated",
+    "source_surface": "multi_client_analytics",
+    "status": "materialized_asset",
+    "top_solar_client": "client_001_kyiv_mall",
+    "top_storage_client": "client_001_kyiv_mall"
+  },
+  "generated_at_utc": "2026-04-18T21:57:11+00:00",
+  "layer_summary": [
+    {
+      "dataset_count": 2,
+      "latest_observed_update_utc": "2026-04-24T23:00:00+00:00",
+      "layer": "bronze",
+      "materialized_count": 2,
+      "storage_present_count": 2
+    },
+    {
+      "dataset_count": 3,
+      "latest_observed_update_utc": "2026-04-19T23:00:00+00:00",
+      "layer": "silver",
+      "materialized_count": 2,
+      "storage_present_count": 3
+    },
+    {
+      "dataset_count": 8,
+      "latest_observed_update_utc": "2026-04-20T23:00:00+00:00",
+      "layer": "gold",
+      "materialized_count": 8,
+      "storage_present_count": 7
+    }
+  ],
+  "limitations": [
+    "logical_overlay_not_storage_rewrite",
+    "synthetic_fallbacks_exist",
+    "mlflow_and_benchmark_surfaces_are_optional_locally",
+    "backend_reroot_is_deferred"
+  ],
+  "logical_overlay_only": true,
+  "mlflow_tracking": {
+    "experiment_names": [
+      "accuracy_benchmarks",
+      "engine_benchmarks",
+      "forecast_value_benchmarks"
+    ],
+    "forecast_benchmark_run_count": 1,
+    "forecast_runs": [
+      {
+        "benchmark_mae": null,
+        "benchmark_rmse": null,
+        "benchmark_value_capture_ratio": null,
+        "experiment_name": "forecast_value_benchmarks",
+        "model_name": "nbeatsx_dam_24h",
+        "promotion_decision": "skipped",
+        "run_name": "forecast_value_nbeatsx_dam_24h"
+      }
+    ],
+    "latest_timestamp": "2026-04-19T00:52:57+00:00",
+    "log_count": 8,
+    "status": "materialized",
+    "system_of_record": "mlflow_tracking_asset"
+  },
+  "model_artifacts": {
+    "metadata_lookup": {
+      "error_rows": 0,
+      "latest_fetched_at": null,
+      "row_count": 0,
+      "status": "materialized_empty",
+      "successful_rows": 0,
+      "system_of_record": "model_metadata_asset"
+    },
+    "trained_model": {
+      "artifact_uris": [],
+      "latest_logged_at": null,
+      "model_names": [],
+      "row_count": 0,
+      "run_ids": [],
+      "status": "materialized_empty",
+      "system_of_record": "trained_model_asset"
+    }
+  },
+  "model_vs_model": {
+    "candidate_count": 1,
+    "evaluated_candidate_count": 0,
+    "promotion_gate_versions": [
+      "forecast_value_scorecard_v1"
+    ],
+    "provenance": "benchmarked",
+    "skipped_candidate_count": 1,
+    "status": "materialized",
+    "supporting_outputs": [
+      "data/results/arbitrage_ranges.json",
+      "data/results/arbitrage_ranges.yaml"
+    ],
+    "system_of_record": "forecast_value_benchmark_asset",
+    "top_candidates": [
+      {
+        "benchmark_conservative_value_capture_ratio": null,
+        "benchmark_mae": null,
+        "benchmark_rmse": null,
+        "benchmark_value_capture_ratio": null,
+        "candidate_status": "skipped",
+        "model_family": "nbeatsx_neuralforecast",
+        "model_name": "nbeatsx_dam_24h",
+        "promotion_decision": "skipped",
+        "promotion_decision_reason": "The 'nbeatsx_dam_24h' forecast candidate requires the optional 'neuralforecast' dependency. Install it before selecting this model.",
+        "skip_reason": "The 'nbeatsx_dam_24h' forecast candidate requires the optional 'neuralforecast' dependency. Install it before selecting this model."
+      }
+    ]
+  },
+  "optimizer_vs_optimizer": {
+    "baseline": {
+      "client_count": 5,
+      "degradation_penalty_eur": 1.357937,
+      "export_revenue_eur": 0.0,
+      "forecast_run_ids": [
+        "forecast-bcfa3fbe846fa963"
+      ],
+      "net_cost_eur": 821.088981,
+      "optimization_run_ids": [
+        "optimization-1aac825089cbdd65",
+        "optimization-868e268b540de3a1",
+        "optimization-b2d0a738c2978c6c",
+        "optimization-d6645eda8709c8b8",
+        "optimization-e3976923164a50ca"
+      ],
+      "purchase_cost_eur": 819.731044,
+      "row_count": 120
+    },
+    "milp": {
+      "client_count": 5,
+      "degradation_penalty_eur": 0.638346,
+      "export_revenue_eur": 0.0,
+      "forecast_run_ids": [
+        "forecast-bcfa3fbe846fa963"
+      ],
+      "net_cost_eur": 820.404435,
+      "optimization_run_ids": [
+        "optimization-97ef501c6c9e6b4f",
+        "optimization-a7cc0dd6776d7320",
+        "optimization-ccfb27bf3e3221ff",
+        "optimization-da76f0c918aba35c",
+        "optimization-e209458bfac5464a"
+      ],
+      "purchase_cost_eur": 819.766088,
+      "row_count": 120
+    },
+    "net_cost_delta_eur": -0.684546,
+    "provenance": "fallback-derived",
+    "status": "comparable"
+  },
+  "run_vs_run": {
+    "baseline_schedule": {
+      "client_count": 5,
+      "degradation_penalty_eur": 1.357937,
+      "export_revenue_eur": 0.0,
+      "forecast_run_ids": [
+        "forecast-bcfa3fbe846fa963"
+      ],
+      "net_cost_eur": 821.088981,
+      "optimization_run_ids": [
+        "optimization-1aac825089cbdd65",
+        "optimization-868e268b540de3a1",
+        "optimization-b2d0a738c2978c6c",
+        "optimization-d6645eda8709c8b8",
+        "optimization-e3976923164a50ca"
+      ],
+      "purchase_cost_eur": 819.731044,
+      "row_count": 120,
+      "status": "materialized"
+    },
+    "forecast": {
+      "client_count": 0,
+      "client_ids_preview": [],
+      "forecast_run_ids_preview": [
+        "forecast-bcfa3fbe846fa963"
+      ],
+      "latest_row_timestamp": "2026-04-20T23:00:00+00:00",
+      "optimization_run_ids_preview": [],
+      "row_count": 24,
+      "status": "materialized"
+    },
+    "milp_schedule": {
+      "client_count": 5,
+      "degradation_penalty_eur": 0.638346,
+      "export_revenue_eur": 0.0,
+      "forecast_run_ids": [
+        "forecast-bcfa3fbe846fa963"
+      ],
+      "net_cost_eur": 820.404435,
+      "optimization_run_ids": [
+        "optimization-97ef501c6c9e6b4f",
+        "optimization-a7cc0dd6776d7320",
+        "optimization-ccfb27bf3e3221ff",
+        "optimization-da76f0c918aba35c",
+        "optimization-e209458bfac5464a"
+      ],
+      "purchase_cost_eur": 819.766088,
+      "row_count": 120,
+      "status": "materialized"
+    }
+  },
+  "runtime_entrypoint": "src/definitions.py",
+  "source_modes": {
+    "client_state": {
+      "asset_name": "client_state_asset",
+      "evidence": "simulator",
+      "provenance": "simulated",
+      "status": "materialized"
+    },
+    "market": {
+      "asset_name": "market_data_asset",
+      "evidence": "synthetic",
+      "provenance": "fallback-derived",
+      "status": "materialized"
+    },
+    "weather": {
+      "asset_name": "weather_asset",
+      "evidence": "open_meteo",
+      "provenance": "real",
+      "status": "materialized"
+    }
+  }
+}

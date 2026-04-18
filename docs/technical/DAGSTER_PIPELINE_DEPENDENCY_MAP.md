@@ -138,3 +138,15 @@ flowchart TD
 - The baseline and MILP assets are parallel schedule producers over the same forecast horizon.
 - Asset checks are first-class runtime gates, not external scripts.
 - Benchmark and multi-tenant analytics jobs are intentionally outside the core daily recommendation job so they do not slow or destabilize operational runs.
+
+## Logical Medallion Overlay
+
+For supervisor-facing documentation, the current runtime can also be read as a logical Bronze/Silver/Gold architecture without changing the physical runtime topology.
+
+- Bronze: `market_data_asset`, `weather_asset`, and the source-facing `data/raw/` surface.
+- Silver: `client_state_asset`, `feature_matrix_asset`, and the validated intermediate `data/processed/` surface.
+- Gold: `price_forecast_asset`, both optimization schedule assets, schedule asset checks, benchmark/MLflow/model assets, `multi_client_analytics`, and the presentation-facing `data/results/` plus `artifacts/medallion/` surfaces.
+
+This framing is a presentation overlay only. It does not imply that the repository already uses a physical medallion warehouse layout, and it does not replace the active runtime rooted at `src/definitions.py`.
+
+See [DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md](DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md) for the supervisor-facing narrative, [BRONZE_SILVER_GOLD_DATASET_CATALOG.md](BRONZE_SILVER_GOLD_DATASET_CATALOG.md) for the generated dataset catalog, [EXPERIMENTS_AND_RESULTS_SCORECARD.md](EXPERIMENTS_AND_RESULTS_SCORECARD.md) for benchmark and optimizer evidence, and [../../artifacts/medallion/medallion_dataset_manifest.yaml](../../artifacts/medallion/medallion_dataset_manifest.yaml) for the machine-readable catalog foundation.

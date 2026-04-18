@@ -1,0 +1,343 @@
+manifest_version: 1
+program_slug: supervisor-medallion-dagster-architecture
+runtime_entrypoint: src/definitions.py
+logical_overlay_only: true
+presentation_owner: src/data_pipeline/medallion_catalog.py
+renderer_entrypoint: scripts/render_medallion_catalog.py
+storage_note: Dagster materializations may persist through the configured io_manager and can target S3 or the filesystem. The storage paths below are the presentation anchors used for supervisor-facing packaging.
+artifact_outputs:
+  supervisor_architecture_doc: docs/technical/DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md
+  dataset_catalog_doc: docs/technical/BRONZE_SILVER_GOLD_DATASET_CATALOG.md
+  experiments_scorecard_doc: docs/technical/EXPERIMENTS_AND_RESULTS_SCORECARD.md
+  gold_summary_json: artifacts/medallion/gold_experiment_summary.json
+presentation_defaults:
+  case_study_selection_rule: first stable tenant from customers.yaml unless the renderer CLI overrides it
+  fleet_view_asset: multi_client_analytics
+  limitations:
+    - logical_overlay_not_storage_rewrite
+    - synthetic_fallbacks_exist
+    - mlflow_and_benchmark_surfaces_are_optional_locally
+    - backend_reroot_is_deferred
+layers:
+  bronze:
+    narrative: Source-facing ingest and raw retention with explicit fallback handling.
+    storage_surface: data/raw
+  silver:
+    narrative: Validated, normalized, and enriched operational data used by tenant and ML flows.
+    storage_surface: data/processed
+  gold:
+    narrative: Business-facing forecasting, optimization, benchmark, model, and fleet analytics outputs.
+    storage_surface: data/results
+datasets:
+  - dataset_id: market_data_asset
+    title: OREE market price ingest
+    layer: bronze
+    dagster_asset: market_data_asset
+    dagster_group: market_data
+    owner: src/assets/core/market.py::market_data_asset
+    storage_path: data/raw/oree_historical_prices.parquet
+    storage_surface: data/raw
+    source_kind: real_with_synthetic_fallback
+    real_source: OREE public market data
+    fallback_mode: synthetic_market_on_source_failure
+    provenance_class: real_or_fallback
+    freshness_field: timestamp
+    quality_owner: src/data_pipeline/market_validation.py::_validate_market_data
+    quality_surface: daily_data_refresh
+    observability_surface:
+      - docs/technical/DAGSTER_PIPELINE_DEPENDENCY_MAP.md
+    notes: Bronze source ingest with explicit fallback behavior owned by the market asset.
+
+  - dataset_id: weather_asset
+    title: Open-Meteo weather forecast ingest
+    layer: bronze
+    dagster_asset: weather_asset
+    dagster_group: weather_data
+    owner: src/assets/core/weather.py::weather_asset
+    storage_path: data/raw/weather_forecast.csv
+    storage_surface: data/raw
+    source_kind: real_with_synthetic_fallback
+    real_source: Open-Meteo forecast API
+    fallback_mode: synthetic_weather_on_source_failure
+    provenance_class: real_or_fallback
+    freshness_field: timestamp
+    quality_owner: src/data_pipeline/weather_validation.py::_validate_weather_data
+    quality_surface: daily_data_refresh
+    observability_surface:
+      - docs/technical/DAGSTER_PIPELINE_DEPENDENCY_MAP.md
+    notes: Bronze weather ingest for solar-aware downstream features.
+
+  - dataset_id: client_state_asset
+    title: Client operational state
+    layer: silver
+    dagster_asset: client_state_asset
+    dagster_group: client_data
+    owner: src/assets/core/client_state.py::client_state_asset
+    storage_path: data/processed
+    storage_surface: data/processed
+    source_kind: simulator_backed_with_config_fallback
+    real_source: dashboard simulator-backed tenant battery state when available
+    fallback_mode: config_default_state
+    provenance_class: simulator_or_config_fallback
+    freshness_field: battery_state_updated_at
+    quality_owner: src/data_pipeline/client_state_validation.py::_validate_client_data
+    quality_surface: daily_data_refresh
+    observability_surface:
+      - state_source
+      - state_source_detail
+      - telemetry_classification
+    notes: Silver operational state assembled from tenant config, market, weather, and persisted simulator telemetry.
+
+  - dataset_id: feature_matrix_asset
+    title: Forecast and optimization feature matrix
+    layer: silver
+    dagster_asset: feature_matrix_asset
+    dagster_group: feature_engineering
+    owner: src/assets/core/feature_matrix.py::feature_matrix_asset
+    storage_path: data/processed
+    storage_surface: data/processed
+    source_kind: validated_enriched
+    real_source: joins of market, weather, and client state
+    fallback_mode: upstream_dependent
+    provenance_class: derived_operational
+    freshness_field: timestamp
+    quality_owner: src/data_pipeline/feature_matrix_builder.py
+    quality_surface: daily_data_refresh
+    observability_surface:
+      - selected_feature_engine
+    notes: Silver enriched feature surface for downstream forecasting and analysis.
+
+  - dataset_id: tenant_asset_factory
+    title: Dynamic tenant projections
+    layer: silver
+    dagster_asset: create_all_assets
+    dagster_group: multi_tenant
+    owner: src/assets/multi_tenant/asset_factory.py::create_all_assets
+    storage_path: data/processed
+    storage_surface: data/processed
+    source_kind: tenant_projected
+    real_source: shared market, weather, and customer configuration
+    fallback_mode: customer_config_dependent
+    provenance_class: derived_operational
+    freshness_field: analysis_timestamp
+    quality_owner: src/assets/multi_tenant/asset_factory.py
+    quality_surface: multi_tenant_analytics
+    observability_surface:
+      - tenant_namespace
+      - storage_namespace
+    notes: Silver per-tenant projections created dynamically from customer configuration.
+
+  - dataset_id: price_forecast_asset
+    title: Gold price forecast horizon
+    layer: gold
+    dagster_asset: price_forecast_asset
+    dagster_group: market_data
+    owner: src/assets/core/price_forecast.py::price_forecast_asset
+    storage_path: data/results
+    storage_surface: data/results
+    source_kind: ml_forecast_output
+    real_source: trained model over validated market history
+    fallback_mode: baseline_model_and_runtime_selection_controls
+    provenance_class: model_derived
+    freshness_field: forecast_freshness_minutes
+    quality_owner: src/assets/core/price_forecast.py
+    quality_surface: daily_data_refresh
+    observability_surface:
+      - forecast_run_id
+      - forecast_model_version
+      - forecast_latency_ms
+      - forecast_freshness_minutes
+      - uncertainty_contract_version
+      - promotion_gate_version
+    notes: Gold forecast output with lineage, freshness, and promotion metadata.
+
+  - dataset_id: optimization_schedule_asset
+    title: Baseline optimization schedule
+    layer: gold
+    dagster_asset: optimization_schedule_asset
+    dagster_group: optimization
+    owner: src/assets/core/optimization_schedule.py::optimization_schedule_asset
+    storage_path: data/results/optimization_results.csv
+    storage_surface: data/results
+    source_kind: optimization_output
+    real_source: baseline dynamic-programming optimizer over Gold forecast horizon
+    fallback_mode: empty_schedule_when_forecast_missing
+    provenance_class: decision_support
+    freshness_field: forecast_freshness_minutes
+    quality_owner: src/assets/core/optimization_schedule_checks.py
+    quality_surface: optimization_schedule_contract_checks
+    observability_surface:
+      - forecast_run_id
+      - optimization_run_id
+      - forecast_model_version
+      - schedule_lineage
+      - schedule_realized_value_reconciliation
+    notes: Gold baseline schedule with economic outputs and Dagster-owned quality checks.
+
+  - dataset_id: optimization_schedule_milp_asset
+    title: MILP optimization schedule
+    layer: gold
+    dagster_asset: optimization_schedule_milp_asset
+    dagster_group: optimization
+    owner: src/assets/core/optimization_schedule_milp.py::optimization_schedule_milp_asset
+    storage_path: data/results
+    storage_surface: data/results
+    source_kind: optimizer_alternative_output
+    real_source: MILP or LP-backed scheduling path over the same forecast horizon
+    fallback_mode: solver_fallback_behavior
+    provenance_class: decision_support
+    freshness_field: forecast_freshness_minutes
+    quality_owner: src/assets/core/optimization_schedule_checks.py
+    quality_surface: optimization_schedule_contract_checks
+    observability_surface:
+      - forecast_run_id
+      - optimization_run_id
+      - algorithm
+      - solver
+      - schedule_lineage
+      - schedule_realized_value_reconciliation
+    notes: Gold alternative optimizer lane for optimizer-vs-optimizer comparison.
+
+  - dataset_id: forecast_value_benchmark_asset
+    title: Forecast benchmark scorecard
+    layer: gold
+    dagster_asset: forecast_value_benchmark_asset
+    dagster_group: benchmarks
+    owner: src/assets/benchmarks/performance.py::forecast_value_benchmark_asset
+    storage_path: data/results/arbitrage_ranges.json
+    storage_surface: data/results
+    source_kind: benchmark_derived
+    real_source: benchmark comparisons over price forecast and realized market data
+    fallback_mode: optional_candidates_may_be_skipped_when_dependencies_missing
+    provenance_class: benchmark_derived
+    freshness_field: benchmark_timestamp
+    quality_owner: src/assets/benchmarks/performance.py
+    quality_surface: benchmark_engines
+    observability_surface:
+      - benchmark_rmse
+      - benchmark_mae
+      - benchmark_value_capture_ratio
+      - benchmark_conservative_value_capture_ratio
+      - promotion_gate_version
+    notes: Gold benchmark evidence for model-vs-model and value-capture comparisons.
+
+  - dataset_id: mlflow_tracking_asset
+    title: MLflow experiment tracking export
+    layer: gold
+    dagster_asset: mlflow_tracking_asset
+    dagster_group: benchmarks
+    owner: src/assets/benchmarks/performance.py::mlflow_tracking_asset
+    storage_path: data/results
+    storage_surface: data/results
+    source_kind: experiment_tracking
+    real_source: benchmark rows logged to MLflow
+    fallback_mode: local_mlflow_optional
+    provenance_class: benchmark_derived
+    freshness_field: fetched_at
+    quality_owner: src/assets/benchmarks/performance.py
+    quality_surface: benchmark_engines
+    observability_surface:
+      - mlflow_run_id
+      - experiment_name
+      - metric_logging_status
+    notes: Gold experiment-tracking lane kept separate from live recommendation execution.
+
+  - dataset_id: trained_model_asset
+    title: Trained forecast model artifact
+    layer: gold
+    dagster_asset: trained_model_asset
+    dagster_group: benchmarks
+    owner: src/assets/benchmarks/model_training.py::trained_model_asset
+    storage_path: models
+    storage_surface: models
+    source_kind: model_artifact
+    real_source: MLflow LoggedModel training run over market data
+    fallback_mode: empty_frame_when_training_data_is_insufficient
+    provenance_class: model_derived
+    freshness_field: logged_at
+    quality_owner: src/assets/benchmarks/model_training.py
+    quality_surface: model_training
+    observability_surface:
+      - model_id
+      - run_id
+      - artifact_uri
+      - rmse
+      - mae
+      - r2
+    notes: Gold model artifact lane used for supervisor-facing model lineage.
+
+  - dataset_id: model_metadata_asset
+    title: Logged model metadata lookup
+    layer: gold
+    dagster_asset: model_metadata_asset
+    dagster_group: benchmarks
+    owner: src/assets/benchmarks/model_training.py::model_metadata_asset
+    storage_path: models
+    storage_surface: models
+    source_kind: model_metadata
+    real_source: MLflow logged model metadata query
+    fallback_mode: status_error_on_lookup_failure
+    provenance_class: model_derived
+    freshness_field: fetched_at
+    quality_owner: src/assets/benchmarks/model_training.py
+    quality_surface: model_training
+    observability_surface:
+      - model_id
+      - params
+      - metrics
+      - status
+    notes: Gold metadata lookup surface for trained model verification.
+
+  - dataset_id: multi_client_analytics
+    title: Fleet analytics summary
+    layer: gold
+    dagster_asset: multi_client_analytics
+    dagster_group: aggregation
+    owner: src/assets/multi_tenant/asset_factory.py::multi_client_analytics
+    storage_path: customers.yaml
+    storage_surface: data/results
+    source_kind: fleet_analytics
+    real_source: customer configuration aggregated into comparative analytics
+    fallback_mode: empty_frame_when_no_customer_configs
+    provenance_class: fleet_summary
+    freshness_field: analysis_timestamp
+    quality_owner: src/assets/multi_tenant/asset_factory.py
+    quality_surface: multi_tenant_analytics
+    observability_surface:
+      - storage_rank
+      - solar_rank
+      - tariff_rank
+      - storage_class
+      - solar_class
+    notes: Gold fleet view for breadth across tenants and site profiles.
+
+experiments:
+  model_vs_model:
+    primary_asset: forecast_value_benchmark_asset
+    supporting_outputs:
+      - data/results/arbitrage_ranges.json
+      - data/results/arbitrage_ranges.yaml
+  run_vs_run:
+    primary_assets:
+      - price_forecast_asset
+      - optimization_schedule_asset
+      - optimization_schedule_milp_asset
+    supporting_checks:
+      - optimization_schedule_contract_checks
+  optimizer_vs_optimizer:
+    primary_assets:
+      - optimization_schedule_asset
+      - optimization_schedule_milp_asset
+    supporting_outputs:
+      - data/processed/optimization_results.csv
+      - data/processed/opt_normal_REAL.csv
+  business_metrics:
+    primary_fields:
+      - purchase_cost_eur
+      - export_revenue_eur
+      - degradation_penalty_eur
+      - net_cost_eur
+      - total_net_cost_eur
+    supporting_surfaces:
+      - src/data_pipeline/optimization_history_reconciliation.py
+      - src/assets/core/optimization_schedule_checks.py
