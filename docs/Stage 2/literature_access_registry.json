@@ -1,0 +1,424 @@
+{
+  "version": "v2",
+  "created": "2026-04-18",
+  "updated": "2026-04-18",
+  "expected_entry_count": 35,
+  "source_bib": "docs/Stage 2/diploma_bibliography.bib",
+  "source_tracker": "docs/Stage 2/diploma_literature_tracker.md",
+  "render_command": ".venv\\Scripts\\python.exe scripts\\render_stage2_literature_links.py",
+  "description": "Canonical access-link registry for Stage 2 literature. Keep one normalized record per bibliography entry and render markdown exports from this file.",
+  "entries": [
+    {
+      "citation_key": "Lago2021ForecastingDayAhead",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1016/j.apenergy.2021.116983",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1016/j.apenergy.2021.116983",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Core benchmark review; follow DOI landing page for accepted manuscript or repository copy."
+    },
+    {
+      "citation_key": "OConnor2025ElectricityPriceForecastingReview",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.3390/en18123097",
+      "direct_pdf_url": "https://www.mdpi.com/1996-1073/18/12/3097/pdf?version=1749795910",
+      "fallback_url": "https://doi.org/10.3390/en18123097",
+      "access_status": "pdf_direct",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "MDPI publisher PDF confirmed."
+    },
+    {
+      "citation_key": "Smets2025ValueOrientedPriceForecasting",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1016/j.energy.2025.137112",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1016/j.energy.2025.137112",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Decision-focused arbitrage paper; search for accepted manuscript."
+    },
+    {
+      "citation_key": "Finhold2023OptimizingMarketingFlexibility",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1016/j.apenergy.2023.121667",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1016/j.apenergy.2023.121667",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Rolling-horizon case study; accepted manuscript search pending."
+    },
+    {
+      "citation_key": "Olivares2023NBEATSx",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1016/j.ijforecast.2022.03.001",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1016/j.ijforecast.2022.03.001",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Core model candidate; OA copy not yet confirmed."
+    },
+    {
+      "citation_key": "Jiang2024ProbabilisticTFT",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1002/for.3084",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1002/for.3084",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Probabilistic TFT article; Wiley landing page only so far."
+    },
+    {
+      "citation_key": "Alghumayjan2024TwoSettlementArbitrage",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1016/j.epsr.2024.110755",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1016/j.epsr.2024.110755",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Transformer-based arbitrage paper; accepted manuscript search pending."
+    },
+    {
+      "citation_key": "Weber2024OpenSourceEnergyArbitrage",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.3390/en17010013",
+      "direct_pdf_url": "https://www.mdpi.com/1996-1073/17/1/13/pdf?version=1702995829",
+      "fallback_url": "https://doi.org/10.3390/en17010013",
+      "access_status": "pdf_direct",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "MDPI publisher PDF confirmed."
+    },
+    {
+      "citation_key": "Kampker2025BatteryEnergyStorageModelling",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.3390/batteries11110392",
+      "direct_pdf_url": "https://www.mdpi.com/2313-0105/11/11/392/pdf?version=1761545873",
+      "fallback_url": "https://doi.org/10.3390/batteries11110392",
+      "access_status": "pdf_direct",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "MDPI publisher PDF confirmed."
+    },
+    {
+      "citation_key": "Zhang2025BatteryStateEstimationReview",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.3390/en18143834",
+      "direct_pdf_url": "https://www.mdpi.com/1996-1073/18/14/3834/pdf?version=1752843747",
+      "fallback_url": "https://doi.org/10.3390/en18143834",
+      "access_status": "pdf_direct",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "MDPI publisher PDF confirmed."
+    },
+    {
+      "citation_key": "Sang2022DecisionFocusedArbitrage",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1109/TSG.2022.3166791",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1109/TSG.2022.3166791",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "IEEE paper; look for author-posted accepted manuscript."
+    },
+    {
+      "citation_key": "ElmachtoubGrigas2022SmartPredictThenOptimize",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1287/mnsc.2020.3922",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1287/mnsc.2020.3922",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Publisher landing page only; preprint or accepted version may exist."
+    },
+    {
+      "citation_key": "Aslam2021DeepLearningSurvey",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1016/j.rser.2021.110992",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1016/j.rser.2021.110992",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Survey article; repository copy not yet found."
+    },
+    {
+      "citation_key": "BediToshniwal2019DeepLearningFramework",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1016/j.apenergy.2019.01.113",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1016/j.apenergy.2019.01.113",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Applied Energy article; accepted manuscript search pending."
+    },
+    {
+      "citation_key": "Zhang2023CNNLSTMMultiTaskLoad",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1016/j.epsr.2023.109507",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1016/j.epsr.2023.109507",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Load-forecasting paper; OA copy not yet confirmed."
+    },
+    {
+      "citation_key": "Shareef2018HomeEnergyManagementReview",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1109/ACCESS.2018.2831917",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1109/ACCESS.2018.2831917",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "IEEE Access review; OA status not yet verified."
+    },
+    {
+      "citation_key": "Kavya2025HybridAIDrivenEMS",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1109/INCET64471.2025.11140961",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1109/INCET64471.2025.11140961",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Conference paper; IEEE landing page only so far."
+    },
+    {
+      "citation_key": "Farhana2023EfficientDeepReinforcementLearning",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.14569/IJACSA.2023.0141257",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.14569/IJACSA.2023.0141257",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Directional appendix source; stable OA PDF not yet recorded."
+    },
+    {
+      "citation_key": "Kanna2025UrbanSmartGridsPreprint",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.21203/rs.3.rs-6326251/v1",
+      "direct_pdf_url": "https://www.researchsquare.com/article/rs-6326251/latest.pdf",
+      "fallback_url": "https://doi.org/10.21203/rs.3.rs-6326251/v1",
+      "access_status": "pdf_direct",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Research Square preprint PDF confirmed."
+    },
+    {
+      "citation_key": "Liu2025DistributedSmartHomeNILM",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.3390/electronics14091719",
+      "direct_pdf_url": "https://www.mdpi.com/2079-9292/14/9/1719/pdf?version=1745413823",
+      "fallback_url": "https://doi.org/10.3390/electronics14091719",
+      "access_status": "pdf_direct",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "MDPI publisher PDF confirmed."
+    },
+    {
+      "citation_key": "Mischos2023IntelligentEMSReview",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1007/s10462-023-10441-3",
+      "direct_pdf_url": "https://link.springer.com/content/pdf/10.1007/s10462-023-10441-3.pdf",
+      "fallback_url": "https://doi.org/10.1007/s10462-023-10441-3",
+      "access_status": "pdf_direct",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Springer direct PDF confirmed."
+    },
+    {
+      "citation_key": "Kwon2022AIBasedHomeEMS",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1109/JIOT.2021.3104830",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1109/JIOT.2021.3104830",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "IEEE IoT Journal paper; accepted manuscript search pending."
+    },
+    {
+      "citation_key": "Wei2023DeepReinforcementLearningSmartHome",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1109/JSYST.2023.3247592",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1109/JSYST.2023.3247592",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "IEEE Systems Journal paper; OA copy not yet confirmed."
+    },
+    {
+      "citation_key": "Hu2024IncentiveBasedIntegratedDemandResponse",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1016/j.energy.2024.132997",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.1016/j.energy.2024.132997",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Demand-response RL paper; accepted manuscript search pending."
+    },
+    {
+      "citation_key": "Dey2025IntelligentIncentiveBasedDR",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1038/s41598-025-85175-z",
+      "direct_pdf_url": "https://www.nature.com/articles/s41598-025-85175-z.pdf",
+      "fallback_url": "https://doi.org/10.1038/s41598-025-85175-z",
+      "access_status": "pdf_direct",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Nature direct PDF confirmed."
+    },
+    {
+      "citation_key": "Ikram2024SmartHomeLoadScheduling",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.1049/pel2.12663",
+      "direct_pdf_url": "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1049/pel2.12663",
+      "fallback_url": "https://doi.org/10.1049/pel2.12663",
+      "access_status": "pdf_direct",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Wiley direct PDF confirmed."
+    },
+    {
+      "citation_key": "Aleemoddin2025AIBasedEMS",
+      "source_type": "academic",
+      "canonical_url": "https://doi.org/10.64771/ijesat.2025.v25.i09.pp436-440",
+      "direct_pdf_url": null,
+      "fallback_url": "https://doi.org/10.64771/ijesat.2025.v25.i09.pp436-440",
+      "access_status": "landing_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": true,
+      "notes": "Low-priority contextual source; stable OA PDF not yet recorded."
+    },
+    {
+      "citation_key": "CMSMarketCoupling",
+      "source_type": "regulatory",
+      "canonical_url": "https://cms.law/en/ukr/legal-updates/ukraine-moves-toward-market-coupling-with-the-eu-energy-market",
+      "direct_pdf_url": null,
+      "fallback_url": "https://cms.law/en/ukr/legal-updates/ukraine-moves-toward-market-coupling-with-the-eu-energy-market",
+      "access_status": "web_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Normative summary; references Draft Law No. 12087-d."
+    },
+    {
+      "citation_key": "EnergyCommunity2026WinterReport",
+      "source_type": "regulatory",
+      "canonical_url": "https://www.energy-community.org/news/Energy-Community-News/2026/2/17.html",
+      "direct_pdf_url": "https://www.energy-community.org/dam/jcr:ff7c985b-e87e-45c6-906b-c5300f98cdba/Observatory%20Report_Q42025_Final_13_02_2026.pdf",
+      "fallback_url": "https://www.energy-community.org/news/Energy-Community-News/2026/2/17.html",
+      "access_status": "report_pdf",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Energy Community report page with direct observatory PDF."
+    },
+    {
+      "citation_key": "ESSNews2026SolarStorageAuctions",
+      "source_type": "industry",
+      "canonical_url": "https://www.ess-news.com/2026/03/16/ukraine-prioritizes-solar-plus-storage-in-renewables-auctions/",
+      "direct_pdf_url": null,
+      "fallback_url": "https://www.ess-news.com/2026/03/16/ukraine-prioritizes-solar-plus-storage-in-renewables-auctions/",
+      "access_status": "web_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Industry news context for renewables auctions."
+    },
+    {
+      "citation_key": "PVMagazine2026SolarStorageAuctions",
+      "source_type": "industry",
+      "canonical_url": "https://www.pv-magazine.com/2026/03/16/ukraine-prioritizes-solar-plus-storage-in-renewables-auctions/",
+      "direct_pdf_url": null,
+      "fallback_url": "https://www.pv-magazine.com/2026/03/16/ukraine-prioritizes-solar-plus-storage-in-renewables-auctions/",
+      "access_status": "web_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Industry coverage referencing Law No. 4777-IX."
+    },
+    {
+      "citation_key": "EPRIDERIntegrationTools",
+      "source_type": "tooling",
+      "canonical_url": "https://restservice.epri.com/publicattachment/94985",
+      "direct_pdf_url": null,
+      "fallback_url": "https://restservice.epri.com/publicattachment/94985",
+      "access_status": "web_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Practical tooling attachment page."
+    },
+    {
+      "citation_key": "EPRIDERVET",
+      "source_type": "tooling",
+      "canonical_url": "https://www.der-vet.com/",
+      "direct_pdf_url": null,
+      "fallback_url": "https://www.der-vet.com/",
+      "access_status": "web_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "DER-VET product page."
+    },
+    {
+      "citation_key": "EPRIDERVETGuide",
+      "source_type": "tooling",
+      "canonical_url": "https://www.der-vet.com/files/DER-VET_User_Guide_v0.1.1.pdf",
+      "direct_pdf_url": "https://www.der-vet.com/files/DER-VET_User_Guide_v0.1.1.pdf",
+      "fallback_url": "https://www.der-vet.com/files/DER-VET_User_Guide_v0.1.1.pdf",
+      "access_status": "pdf_direct",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Direct PDF guide for DER-VET."
+    },
+    {
+      "citation_key": "SolarForecastArbiterCalculatingCosts",
+      "source_type": "tooling",
+      "canonical_url": "https://solarforecastarbiter-core.readthedocs.io/en/latest/cost.html",
+      "direct_pdf_url": null,
+      "fallback_url": "https://solarforecastarbiter-core.readthedocs.io/en/latest/cost.html",
+      "access_status": "web_only",
+      "verified_at": "2026-04-18",
+      "needs_followup": false,
+      "notes": "Documentation page for forecast-evaluation cost metrics."
+    }
+  ],
+  "official_references": [
+    {
+      "label": "Draft Law No. 12087-d",
+      "url": "https://itd.rada.gov.ua/billInfo/Bills/Card/56682",
+      "relation": "Referenced by CMSMarketCoupling",
+      "notes": "Verkhovna Rada bill card."
+    },
+    {
+      "label": "Law No. 4777-IX",
+      "url": "https://zakon.rada.gov.ua/laws/show/4777-20",
+      "relation": "Referenced by PVMagazine2026SolarStorageAuctions and ESSNews2026SolarStorageAuctions",
+      "notes": "Official law text; English view available via ?lang=en."
+    },
+    {
+      "label": "Energy Community Ukraine Observatory Q4 2025 PDF",
+      "url": "https://www.energy-community.org/dam/jcr:ff7c985b-e87e-45c6-906b-c5300f98cdba/Observatory%20Report_Q42025_Final_13_02_2026.pdf",
+      "relation": "Primary report linked from EnergyCommunity2026WinterReport",
+      "notes": "Direct report PDF."
+    }
+  ],
+  "changelog": [
+    {
+      "version": "v2",
+      "date": "2026-04-18",
+      "summary": "Introduced a normalized access-link registry so markdown exports can be rendered instead of hand-maintained."
+    }
+  ]
+}

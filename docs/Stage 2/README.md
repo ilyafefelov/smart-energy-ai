@@ -4,6 +4,9 @@ Research workspace for the diploma literature review, bibliography curation, and
 
 - Keep `diploma_bibliography.bib` as the canonical machine-friendly bibliography source.
 - Keep `diploma_literature_tracker.md` as the operational source for ranking, read order, source quality, and MVP implementation status.
+- Keep `literature_access_registry.json` as the canonical source for per-entry access URLs, OA status, and follow-up state.
+- Keep `literature_pdf_links.md` as a rendered human-readable export generated from the registry instead of a hand-maintained source of truth.
+- Regenerate the rendered links export with `.venv\Scripts\python.exe scripts\render_stage2_literature_links.py` after changing the registry.
 - Keep `diploma_bibliography_apa.md` and the paper insight notes aligned with the tracker instead of treating them as independent sources of truth.
 - Keep `weekly_reports/` as the active workspace for recurring capstone progress reports, weekly evidence capture, and reusable report templates.
 - Move practical, vendor, regulatory, and low-confidence material into the tracker workflow instead of mixing it into the core academic bibliography without review.
@@ -30,6 +33,8 @@ Research workspace for the diploma literature review, bibliography curation, and
 - [diploma_literature_tracker.md](diploma_literature_tracker.md) - Diploma Literature Tracker.
 - [energy_management_ai_insights.md](energy_management_ai_insights.md) - Markdown guide for energy management ai insights.
 - [EPRI_ ИИ в энергетике и арбитраже з Modulus.md](EPRI_%20ИИ%20в%20энергетике%20и%20арбитраже%20з%20Modulus.md) - **Исследование передовых подходов EPRI и технологий NVIDIA в области энергоарбитража, управления DER и автономного уп....
+- [literature_access_registry.json](literature_access_registry.json) - Canonical normalized access-link registry for Stage 2 literature sources.
+- [literature_pdf_links.md](literature_pdf_links.md) - Rendered export of Stage 2 literature links and access metadata.
 - [plan.md](plan.md) - Plan: Stage 2 Diploma MVP.
 - [README.md](README.md) - Folder guide and local index.
 - [Аналіз енергоефективності та ринкових механізмів ПДЕ 2026 - Table 1.csv](Аналіз%20енергоефективності%20та%20ринкових%20механізмів%20ПДЕ%202026%20-%20Table%201.csv) - CSV dataset or export for Аналіз енергоефективності та ринкових механізмів ПДЕ 2026 Table 1.
