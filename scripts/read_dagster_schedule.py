@@ -55,6 +55,36 @@ ASSET_PRIORITY = [
     "optimization_schedule_milp_asset",
     "optimization_schedule_asset",
 ]
+
+
+def _parse_schedule_timestamp(value: Any) -> datetime | None:
+    if value is None:
+        return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+
+    return parsed.astimezone(timezone.utc)
+
+
+def _resolve_schedule_start_utc(rows: list[dict[str, Any]]) -> datetime:
+    for row in rows:
+        parsed = _parse_schedule_timestamp(row.get("forecast_window_start_utc"))
+        if parsed is not None:
+            return parsed
+
+    return datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Read latest Dagster schedule materialization")
     parser.add_argument("--tenant-id", required=True, help="Tenant id for client row selection")
@@ -107,7 +137,7 @@ def main() -> None:
 
     schedule = _normalize_schedule(selected_rows, args.fx_rate)
     recommendation = _build_recommendation(schedule, selected_asset)
-    schedule_start_utc = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    schedule_start_utc = _resolve_schedule_start_utc(selected_rows)
 
     print(
         json.dumps(
