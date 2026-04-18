@@ -7,7 +7,10 @@ This directory now keeps only active reference and runbook material in the main 
 - `technical/README.md` - entry point for architecture, pipeline, validation, and backend design references
 - `deployment/README.md` - deployment runbooks and infrastructure operations guide
 - `Stage 2/README.md` - diploma research workspace, bibliography workflow, and MVP literature mapping guide
+- `API_REFERENCE.md` - consolidated reference for the active dashboard and backend API surface
 - `technical/DAGSTER_PIPELINE_DEPENDENCY_MAP.md` - current Dagster asset graph, job boundaries, and Mermaid diagram
+- `technical/DATASET_MODEL_REFERENCE.md` - supervisor-facing Bronze, Silver, Gold, and multi-tenant dataset model reference
+- `technical/DATASET_LINEAGE_AND_FRESHNESS_SLA.md` - lineage, freshness, fallback, and enforcement guide for the supervisor dataset package
 - `technical/ML_TRADING_DECISION_FRAMEWORK.md` - current trading decision flow, data provenance, and history posture
 - `technical/REPO_LAYOUT_GUIDE.md` - active root-folder map, README coverage policy, and safe organization direction
 - `technical/ARCHITECTURE_V2.md` - architecture overview worth keeping as background context
@@ -43,6 +46,7 @@ If a file reads like a dated plan, completion report, or “ready to start” no
 
 ### Files
 
+- [API_REFERENCE.md](API_REFERENCE.md) - Consolidated reference for the active dashboard and backend API surface.
 - [API_DOCUMENTATION_IMPORT_EXPORT.md](API_DOCUMENTATION_IMPORT_EXPORT.md) - API DOCUMENTATION: SETTINGS IMPORT/EXPORT.
 - [POSTGRES_SETUP.md](POSTGRES_SETUP.md) - PostgreSQL Configuration & Database Setup.
 - [README.md](README.md) - Folder guide and local index.

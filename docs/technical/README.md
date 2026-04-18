@@ -6,6 +6,8 @@ Architecture, validation, and backend design reference material.
 
 - [DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md](DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md) - Supervisor-facing Bronze/Silver/Gold architecture narrative over the active Dagster runtime.
 - [BRONZE_SILVER_GOLD_DATASET_CATALOG.md](BRONZE_SILVER_GOLD_DATASET_CATALOG.md) - Generated Bronze/Silver/Gold dataset catalog with provenance, freshness, fleet, and case-study views.
+- [DATASET_MODEL_REFERENCE.md](DATASET_MODEL_REFERENCE.md) - Dataset-model reference covering Bronze, Silver, Gold, and multi-tenant contract shapes.
+- [DATASET_LINEAGE_AND_FRESHNESS_SLA.md](DATASET_LINEAGE_AND_FRESHNESS_SLA.md) - Lineage, freshness, fallback, and enforcement guide for the supervisor-facing dataset package.
 - [EXPERIMENTS_AND_RESULTS_SCORECARD.md](EXPERIMENTS_AND_RESULTS_SCORECARD.md) - Generated experiments scorecard reusing benchmark, MLflow, optimizer, and business-metric evidence.
 
 This supervisor package is a logical presentation overlay on the runtime rooted at `src/definitions.py`. It does not claim a physical medallion warehouse, it keeps synthetic-fallback and optional local MLflow or benchmark caveats explicit, and it treats any future `backend/...` re-root as separate deferred architecture work.
@@ -32,6 +34,8 @@ This supervisor package is a logical presentation overlay on the runtime rooted 
 - [DAGSTER_PIPELINE_DEPENDENCY_MAP.md](DAGSTER_PIPELINE_DEPENDENCY_MAP.md) - Dagster Pipeline Dependency Map.
 - [DASHBOARD_FIXES_GUIDE.md](DASHBOARD_FIXES_GUIDE.md) - Dashboard Fixes: Implementation Guide.
 - [DATA_FLOW_EXPLAINED.md](DATA_FLOW_EXPLAINED.md) - Smart Energy AI - Current Data Flow.
+- [DATASET_LINEAGE_AND_FRESHNESS_SLA.md](DATASET_LINEAGE_AND_FRESHNESS_SLA.md) - Dataset lineage, freshness, fallback, and enforcement guide for the supervisor-facing package.
+- [DATASET_MODEL_REFERENCE.md](DATASET_MODEL_REFERENCE.md) - Dataset-model reference for Bronze, Silver, Gold, and multi-tenant runtime surfaces.
 - [EXPERIMENTS_AND_RESULTS_SCORECARD.md](EXPERIMENTS_AND_RESULTS_SCORECARD.md) - Supervisor-facing experiments and results scorecard for benchmark, MLflow, and optimizer evidence.
 - [ML_APPROACH_ANALYSIS.md](ML_APPROACH_ANALYSIS.md) - 🧠 ML Approach Analysis: Is This The Right Method?.
 - [ML_DASHBOARD_INTEGRATION.md](ML_DASHBOARD_INTEGRATION.md) - Dashboard Integration Guide.

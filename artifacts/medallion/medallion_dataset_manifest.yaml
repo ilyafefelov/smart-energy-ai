@@ -8,7 +8,10 @@ storage_note: Dagster materializations may persist through the configured io_man
 artifact_outputs:
   supervisor_architecture_doc: docs/technical/DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md
   dataset_catalog_doc: docs/technical/BRONZE_SILVER_GOLD_DATASET_CATALOG.md
+  dataset_model_reference_doc: docs/technical/DATASET_MODEL_REFERENCE.md
+  lineage_and_freshness_doc: docs/technical/DATASET_LINEAGE_AND_FRESHNESS_SLA.md
   experiments_scorecard_doc: docs/technical/EXPERIMENTS_AND_RESULTS_SCORECARD.md
+  api_reference_doc: docs/API_REFERENCE.md
   gold_summary_json: artifacts/medallion/gold_experiment_summary.json
 presentation_defaults:
   case_study_selection_rule: first stable tenant from customers.yaml unless the renderer CLI overrides it
