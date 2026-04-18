@@ -37,12 +37,15 @@ const hybridRefreshLastAttemptByTenant = new Map<string, number>()
 const hybridRefreshInFlightTenants = new Set<string>()
 
 type DagsterForecastProvenance = {
+  forecast_run_id: string | null
   forecast_model_name: string | null
   forecast_model_family: string | null
+  forecast_model_version: string | null
   forecast_horizon_mode: string | null
   forecast_uncertainty_source: string | null
   forecast_promotion_active: boolean | null
   forecast_promotion_source: string | null
+  optimization_run_id: string | null
 }
 
 type DagsterMaterializedRecommendation = {
@@ -182,12 +185,15 @@ function toNullableBoolean(value: unknown): boolean | null {
 function resolveDagsterForecastProvenance(value: unknown): DagsterForecastProvenance {
   const row = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   return {
+    forecast_run_id: toNullableText(row.forecast_run_id),
     forecast_model_name: toNullableText(row.forecast_model_name),
     forecast_model_family: toNullableText(row.forecast_model_family),
+    forecast_model_version: toNullableText(row.forecast_model_version),
     forecast_horizon_mode: toNullableText(row.forecast_horizon_mode),
     forecast_uncertainty_source: toNullableText(row.forecast_uncertainty_source),
     forecast_promotion_active: toNullableBoolean(row.forecast_promotion_active),
     forecast_promotion_source: toNullableText(row.forecast_promotion_source),
+    optimization_run_id: toNullableText(row.optimization_run_id),
   }
 }
 
@@ -195,24 +201,30 @@ function summarizeDagsterForecastProvenance(rows: Array<Record<string, unknown>>
   for (const row of rows || []) {
     const provenance = resolveDagsterForecastProvenance(row)
     if (
-      provenance.forecast_model_name != null
+      provenance.forecast_run_id != null
+      || provenance.forecast_model_name != null
       || provenance.forecast_model_family != null
+      || provenance.forecast_model_version != null
       || provenance.forecast_horizon_mode != null
       || provenance.forecast_uncertainty_source != null
       || provenance.forecast_promotion_active != null
       || provenance.forecast_promotion_source != null
+      || provenance.optimization_run_id != null
     ) {
       return provenance
     }
   }
 
   return {
+    forecast_run_id: null,
     forecast_model_name: null,
     forecast_model_family: null,
+    forecast_model_version: null,
     forecast_horizon_mode: null,
     forecast_uncertainty_source: null,
     forecast_promotion_active: null,
     forecast_promotion_source: null,
+    optimization_run_id: null,
   }
 }
 
@@ -752,12 +764,15 @@ export default defineEventHandler(async (event): Promise<Record<string, unknown>
         dagster_snapshot_materialized_at: snapshotFreshness.materializedAtIso,
         dagster_asset_file: latestDagsterSnapshot?.asset_file || null,
         dagster_selected_client_id: latestDagsterSnapshot?.selected_client_id || null,
+        dagster_forecast_run_id: dagsterForecastProvenance.forecast_run_id,
         dagster_forecast_model_name: dagsterForecastProvenance.forecast_model_name,
         dagster_forecast_model_family: dagsterForecastProvenance.forecast_model_family,
+        dagster_forecast_model_version: dagsterForecastProvenance.forecast_model_version,
         dagster_forecast_horizon_mode: dagsterForecastProvenance.forecast_horizon_mode,
         dagster_forecast_uncertainty_source: dagsterForecastProvenance.forecast_uncertainty_source,
         dagster_forecast_promotion_active: dagsterForecastProvenance.forecast_promotion_active,
         dagster_forecast_promotion_source: dagsterForecastProvenance.forecast_promotion_source,
+        dagster_optimization_run_id: dagsterForecastProvenance.optimization_run_id,
         dagster_snapshot_is_fresh: snapshotFreshness.isFresh,
         dagster_snapshot_age_minutes: snapshotFreshness.ageMinutes,
         dagster_snapshot_max_age_minutes: MAX_SNAPSHOT_AGE_MINUTES,
@@ -895,12 +910,15 @@ function buildScheduleFromDagsterAsset(
           soc_after_kwh: dagsterRow?.soc_after_kwh ?? null,
           grid_export_kwh: dagsterRow?.grid_export_kwh ?? null,
           grid_import_kwh: dagsterRow?.grid_import_kwh ?? null,
+          forecast_run_id: dagsterRow?.forecast_run_id ?? null,
           forecast_model_name: dagsterRow?.forecast_model_name ?? null,
           forecast_model_family: dagsterRow?.forecast_model_family ?? null,
+          forecast_model_version: dagsterRow?.forecast_model_version ?? null,
           forecast_horizon_mode: dagsterRow?.forecast_horizon_mode ?? null,
           forecast_uncertainty_source: dagsterRow?.forecast_uncertainty_source ?? null,
           forecast_promotion_active: dagsterRow?.forecast_promotion_active ?? null,
           forecast_promotion_source: dagsterRow?.forecast_promotion_source ?? null,
+          optimization_run_id: dagsterRow?.optimization_run_id ?? null,
         }
       })
     : normalizedDagster.map((row, index) => {
@@ -942,12 +960,15 @@ function buildScheduleFromDagsterAsset(
           soc_after_kwh: row.soc_after_kwh ?? null,
           grid_export_kwh: row.grid_export_kwh ?? null,
           grid_import_kwh: row.grid_import_kwh ?? null,
+          forecast_run_id: row.forecast_run_id ?? null,
           forecast_model_name: row.forecast_model_name ?? null,
           forecast_model_family: row.forecast_model_family ?? null,
+          forecast_model_version: row.forecast_model_version ?? null,
           forecast_horizon_mode: row.forecast_horizon_mode ?? null,
           forecast_uncertainty_source: row.forecast_uncertainty_source ?? null,
           forecast_promotion_active: row.forecast_promotion_active ?? null,
           forecast_promotion_source: row.forecast_promotion_source ?? null,
+          optimization_run_id: row.optimization_run_id ?? null,
         }
       })
 

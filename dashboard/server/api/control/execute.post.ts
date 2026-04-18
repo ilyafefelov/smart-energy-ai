@@ -27,6 +27,12 @@ import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/ten
 
 type ExecutableCommand = 'charge' | 'discharge' | 'hold'
 
+type ExecutionLineage = {
+  forecast_run_id: string | null
+  forecast_model_version: string | null
+  optimization_run_id: string | null
+}
+
 type ExecutionPlan = {
   command: ExecutableCommand
   power_kw: number
@@ -41,6 +47,7 @@ type ExecutionPlan = {
   strategyWeights: StrategyWeights
   recommendationSource: string
   decisionSnapshot: DecisionSnapshot
+  lineage: ExecutionLineage
 }
 
 export default defineEventHandler(async (event) => {
@@ -86,6 +93,11 @@ export default defineEventHandler(async (event) => {
       user_id: body.user_id || 'dashboard',
       timestamp: requestTimestamp,
     }
+    const requestedLineage: ExecutionLineage = {
+      forecast_run_id: normalizeOptionalString(body?.forecast_run_id),
+      forecast_model_version: normalizeOptionalString(body?.forecast_model_version),
+      optimization_run_id: normalizeOptionalString(body?.optimization_run_id),
+    }
     
     console.log('Executing control command:', command)
     
@@ -106,7 +118,7 @@ export default defineEventHandler(async (event) => {
       },
     }).catch(() => null)
     
-    const executionPlan = await resolveExecutionPlan(command, tenant.id)
+    const executionPlan = await resolveExecutionPlan(command, tenant.id, requestedLineage)
     const executableCommand = {
       ...command,
       command: executionPlan.command,
@@ -137,6 +149,7 @@ export default defineEventHandler(async (event) => {
           modeTo: executionPlan.modeTo,
           requestedCommand: executionPlan.requestedCommand,
           decisionSnapshot: executionPlan.decisionSnapshot,
+          lineage: executionPlan.lineage,
         })
 
         recordBillingForExecutedCommand(executableCommand, pythonResult, 'python_controller', executionPlan.requestedCommand)
@@ -171,6 +184,9 @@ export default defineEventHandler(async (event) => {
           execution_status: pythonResult?.success === false ? 'failed' : 'executed',
           is_reconciled: historyPersistResult.reconciled,
           reconciliation_note: historyPersistResult.reconciliationNote ?? null,
+          forecast_run_id: executionPlan.lineage.forecast_run_id,
+          forecast_model_version: executionPlan.lineage.forecast_model_version,
+          optimization_run_id: executionPlan.lineage.optimization_run_id,
           decision_snapshot: executionPlan.decisionSnapshot,
           tenant_id: tenant.id,
           result: pythonResult,
@@ -277,6 +293,9 @@ export default defineEventHandler(async (event) => {
       execution_status: simulationResult?.success === false ? 'failed' : 'executed',
       is_reconciled: false,
       reconciliation_note: null,
+      forecast_run_id: executionPlan.lineage.forecast_run_id,
+      forecast_model_version: executionPlan.lineage.forecast_model_version,
+      optimization_run_id: executionPlan.lineage.optimization_run_id,
       decision_snapshot: executionPlan.decisionSnapshot,
       tenant_id: tenant.id,
       result: simulationResult,
@@ -300,6 +319,7 @@ export default defineEventHandler(async (event) => {
       modeTo: executionPlan.modeTo,
       requestedCommand: executionPlan.requestedCommand,
       decisionSnapshot: executionPlan.decisionSnapshot,
+      lineage: executionPlan.lineage,
     })
 
     historyEntry.execution_key = historyPersistResult.executionKey
@@ -429,6 +449,31 @@ function resolveSnapshotDecisionSource(value: string): string {
   return normalizeDecisionSource(value, 'heuristic_fallback')
 }
 
+function emptyExecutionLineage(): ExecutionLineage {
+  return {
+    forecast_run_id: null,
+    forecast_model_version: null,
+    optimization_run_id: null,
+  }
+}
+
+function resolveExecutionLineage(value: unknown): ExecutionLineage {
+  const sourceMetadata = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  return {
+    forecast_run_id: normalizeOptionalString(sourceMetadata.dagster_forecast_run_id),
+    forecast_model_version: normalizeOptionalString(sourceMetadata.dagster_forecast_model_version),
+    optimization_run_id: normalizeOptionalString(sourceMetadata.dagster_optimization_run_id),
+  }
+}
+
+function preferExecutionLineage(primary: ExecutionLineage, fallback: ExecutionLineage): ExecutionLineage {
+  return {
+    forecast_run_id: primary.forecast_run_id || fallback.forecast_run_id,
+    forecast_model_version: primary.forecast_model_version || fallback.forecast_model_version,
+    optimization_run_id: primary.optimization_run_id || fallback.optimization_run_id,
+  }
+}
+
 type CommandPayload = {
   command_id: string
   schedule_id: string | null
@@ -452,6 +497,7 @@ type PersistInput = {
   modeTo: 'manual' | 'automatic'
   requestedCommand: string
   decisionSnapshot: DecisionSnapshot
+  lineage: ExecutionLineage
 }
 
 type PricingContext = {
@@ -711,6 +757,9 @@ async function persistCommandToOptimizationHistory(input: PersistInput): Promise
     battery_soc_end: Number.isFinite(socAfter) ? socAfter : null,
     solar_actual: null,
     load_actual: null,
+    forecast_run_id: input.lineage.forecast_run_id,
+    forecast_model_version: input.lineage.forecast_model_version,
+    optimization_run_id: input.lineage.optimization_run_id,
     decision_source: input.decisionSource,
     execution_status: executionResult?.success === false ? 'failed' : 'executed',
     event_type: input.eventType,
@@ -777,7 +826,11 @@ function recordBillingForExecutedCommand(
   }
 }
 
-async function resolveExecutionPlan(command: CommandPayload, tenantId: string): Promise<ExecutionPlan> {
+async function resolveExecutionPlan(
+  command: CommandPayload,
+  tenantId: string,
+  requestedLineage: ExecutionLineage,
+): Promise<ExecutionPlan> {
   const modeStateByTenant = (globalThis as any).__controlModeByTenant || {}
   const previousMode = modeStateByTenant[tenantId]?.mode === 'automatic' ? 'automatic' : 'manual'
 
@@ -852,6 +905,7 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
         selected_action: mapExecutionCommandToRecommendationAction(command.command as ExecutableCommand),
         selected_power_kw: normalizedPower,
       }),
+      lineage: requestedLineage,
     }
   }
 
@@ -868,6 +922,10 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
 
   try {
     const dagsterRecommendation = await $fetch<any>('/api/dagster/recommendation', tenantRequest)
+    const dagsterLineage = preferExecutionLineage(
+      resolveExecutionLineage(dagsterRecommendation?.source_metadata),
+      requestedLineage,
+    )
     const mapped = mapRecommendationActionToExecution(dagsterRecommendation?.recommendation?.action || 'HOLD', fallbackPowerKw)
     const adjusted = applyAutoStrategyDecision(mapped.command, mapped.power_kw, strategyContext)
     const source = String(dagsterRecommendation?.source_metadata?.recommendation_source || '')
@@ -919,6 +977,7 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
             || null,
         },
       }),
+      lineage: dagsterLineage,
     }
   } catch {
     try {
@@ -982,6 +1041,7 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
               || null,
           },
         }),
+        lineage: emptyExecutionLineage(),
       }
     } catch {
       const pricesPayload = await $fetch<any>('/api/prices/current', tenantRequest).catch(() => null)
@@ -1014,6 +1074,7 @@ async function resolveExecutionPlan(command: CommandPayload, tenantId: string): 
           selected_power_kw: adjusted.powerKw,
           fallback_reason: 'heuristic_price_threshold',
         }),
+        lineage: emptyExecutionLineage(),
       }
     }
   }

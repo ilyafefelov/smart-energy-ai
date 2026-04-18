@@ -143,6 +143,9 @@ def _load_recent_history_rows(*, days: int = 14, limit: int = 5000) -> tuple[lis
           tariff_window,
           economics_method,
           realized_net_uah,
+          forecast_run_id,
+          forecast_model_version,
+          optimization_run_id,
           decision_snapshot,
           command_id,
           schedule_id

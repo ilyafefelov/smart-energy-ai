@@ -153,6 +153,9 @@ export type OptimizationHistoryInsert = {
   battery_soc_end: number | null
   solar_actual: number | null
   load_actual: number | null
+  forecast_run_id?: string | null
+  forecast_model_version?: string | null
+  optimization_run_id?: string | null
   decision_source?: string | null
   execution_status?: string | null
   event_type?: string | null
@@ -597,6 +600,9 @@ function normalizeOptimizationHistoryEntry(entry: OptimizationHistoryInsert): Op
     battery_soc_end: normalizeFiniteNumber(entry.battery_soc_end),
     solar_actual: normalizeFiniteNumber(entry.solar_actual),
     load_actual: normalizeFiniteNumber(entry.load_actual),
+    forecast_run_id: normalizeNullableText(entry.forecast_run_id),
+    forecast_model_version: normalizeNullableText(entry.forecast_model_version),
+    optimization_run_id: normalizeNullableText(entry.optimization_run_id),
     decision_source: normalizeNullableText(entry.decision_source) || decisionSnapshot?.decision_source || null,
     execution_status: normalizeExecutionStatus(entry.execution_status),
     event_type: normalizeNullableText(entry.event_type),
@@ -680,6 +686,9 @@ export function reconcileOptimizationHistoryEntry(
       battery_soc_end: preferDefined(normalizedIncoming.battery_soc_end, normalizedExisting.battery_soc_end),
       solar_actual: preferDefined(normalizedIncoming.solar_actual, normalizedExisting.solar_actual),
       load_actual: preferDefined(normalizedIncoming.load_actual, normalizedExisting.load_actual),
+      forecast_run_id: preferDefined(normalizedIncoming.forecast_run_id, normalizedExisting.forecast_run_id),
+      forecast_model_version: preferDefined(normalizedIncoming.forecast_model_version, normalizedExisting.forecast_model_version),
+      optimization_run_id: preferDefined(normalizedIncoming.optimization_run_id, normalizedExisting.optimization_run_id),
       decision_source: preferDefined(normalizedIncoming.decision_source, normalizedExisting.decision_source),
       execution_status: pickExecutionStatus(normalizedExisting.execution_status, normalizedIncoming.execution_status),
       event_type: preferDefined(normalizedIncoming.event_type, normalizedExisting.event_type),
@@ -785,6 +794,9 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
       battery_soc_end DOUBLE PRECISION,
       solar_actual DOUBLE PRECISION,
       load_actual DOUBLE PRECISION,
+      forecast_run_id VARCHAR(128),
+      forecast_model_version VARCHAR(128),
+      optimization_run_id VARCHAR(128),
       decision_source VARCHAR(32),
       execution_status VARCHAR(32),
       event_type VARCHAR(32),
@@ -820,6 +832,9 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS tariff_window VARCHAR(32)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS interval_start TIMESTAMP`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS interval_end TIMESTAMP`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS forecast_run_id VARCHAR(128)`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS forecast_model_version VARCHAR(128)`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS optimization_run_id VARCHAR(128)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS decision_source VARCHAR(32)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS execution_status VARCHAR(32)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS event_type VARCHAR(32)`)
@@ -833,6 +848,14 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS reconciled_at TIMESTAMP`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS reconciliation_note TEXT`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`)
+  await optimizationPool.query(`
+    UPDATE optimization_history
+    SET
+      forecast_run_id = COALESCE(forecast_run_id, NULLIF(BTRIM(decision_snapshot ->> 'forecast_run_id'), '')),
+      forecast_model_version = COALESCE(forecast_model_version, NULLIF(BTRIM(decision_snapshot ->> 'forecast_model_version'), '')),
+      optimization_run_id = COALESCE(optimization_run_id, NULLIF(BTRIM(decision_snapshot ->> 'optimization_run_id'), ''))
+    WHERE decision_snapshot IS NOT NULL
+  `)
   await optimizationPool.query(`
     UPDATE optimization_history
     SET execution_key = CONCAT(
@@ -1012,6 +1035,9 @@ export async function persistOptimizationHistory(
         battery_soc_end,
         solar_actual,
         load_actual,
+        forecast_run_id,
+        forecast_model_version,
+        optimization_run_id,
         decision_source,
         execution_status,
         event_type,
@@ -1061,6 +1087,9 @@ export async function persistOptimizationHistory(
         battery_soc_end,
         solar_actual,
         load_actual,
+        forecast_run_id,
+        forecast_model_version,
+        optimization_run_id,
         decision_source,
         execution_status,
         event_type,
@@ -1075,7 +1104,7 @@ export async function persistOptimizationHistory(
         reconciliation_note,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, NOW())
       ON CONFLICT (execution_key)
       DO UPDATE SET
         command_id = EXCLUDED.command_id,
@@ -1101,6 +1130,9 @@ export async function persistOptimizationHistory(
         battery_soc_end = EXCLUDED.battery_soc_end,
         solar_actual = EXCLUDED.solar_actual,
         load_actual = EXCLUDED.load_actual,
+        forecast_run_id = EXCLUDED.forecast_run_id,
+        forecast_model_version = EXCLUDED.forecast_model_version,
+        optimization_run_id = EXCLUDED.optimization_run_id,
         decision_source = EXCLUDED.decision_source,
         execution_status = EXCLUDED.execution_status,
         event_type = EXCLUDED.event_type,
@@ -1141,6 +1173,9 @@ export async function persistOptimizationHistory(
         mergedEntry.battery_soc_end,
         mergedEntry.solar_actual,
         mergedEntry.load_actual,
+        mergedEntry.forecast_run_id ?? null,
+        mergedEntry.forecast_model_version ?? null,
+        mergedEntry.optimization_run_id ?? null,
         mergedEntry.decision_source ?? null,
         mergedEntry.execution_status ?? null,
         mergedEntry.event_type ?? null,

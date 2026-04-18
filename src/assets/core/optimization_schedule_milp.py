@@ -7,6 +7,8 @@ from typing import List
 import polars as pl
 from dagster import AssetIn, asset
 
+from src.data_pipeline.forecast_lineage import build_optimization_run_id
+
 try:
     from ... import optimization as _optimization_module
 except ImportError:
@@ -21,6 +23,7 @@ from .optimization_schedule import (
     _extract_price_horizon,
     _get_client_series,
     _load_client_capacities,
+    _resolve_forecast_context,
     build_empty_optimization_schedule,
     build_optimization_schedule_frame,
 )
@@ -39,13 +42,15 @@ from .optimization_schedule import (
     },
 )
 def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, client_state: pl.DataFrame) -> pl.DataFrame:
-    prices = _extract_price_horizon(price_forecast)
+    horizon_mode = "base"
+    prices = _extract_price_horizon(price_forecast, horizon_mode=horizon_mode)
     if not prices:
         context.log.warning("No forecast prices available for MILP schedule")
         return build_empty_optimization_schedule()
 
     horizon = min(24, len(prices))
     capacity_by_client = _load_client_capacities()
+    forecast_context = _resolve_forecast_context(price_forecast, horizon_mode=horizon_mode)
     output_frames: List[pl.DataFrame] = []
 
     client_ids = (
@@ -82,6 +87,26 @@ def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, clie
         )
 
         result = scheduler.optimize(prices[:horizon], load_forecast, solar_forecast)
+        algorithm = str(result["metadata"]["algorithm"])
+        throughput_limit_kwh = capacity_kwh * 1.2
+        optimization_run_id = build_optimization_run_id(
+            forecast_run_id=forecast_context["forecast_run_id"],
+            client_id=str(client_id),
+            algorithm=algorithm,
+            horizon_mode=forecast_context["forecast_horizon_mode"],
+            optimization_inputs={
+                "capacity_kwh": capacity_kwh,
+                "min_soc_fraction": 0.15,
+                "max_soc_fraction": 0.95,
+                "initial_soc_fraction": max(0.0, min(1.0, soc_percent / 100.0)),
+                "max_charge_kw": max(25.0, 0.25 * capacity_kwh),
+                "max_discharge_kw": max(25.0, 0.25 * capacity_kwh),
+                "throughput_limit_kwh": throughput_limit_kwh,
+                "degradation_cost_per_kwh": 0.01,
+            },
+            load_forecast=load_forecast,
+            solar_forecast=solar_forecast,
+        )
 
         rows = [{
             "client_id": str(client_id),
@@ -104,7 +129,20 @@ def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, clie
             "total_net_cost_eur": float(result["objective"]["net_cost_eur"]),
             "final_soc_kwh": float(result["constraints"]["final_soc_kwh"]),
             "throughput_limit_kwh": float(result["constraints"]["throughput_limit_kwh"]),
-            "algorithm": str(result["metadata"]["algorithm"]),
+            "forecast_run_id": forecast_context["forecast_run_id"],
+            "forecast_model_name": forecast_context["forecast_model_name"],
+            "forecast_model_family": forecast_context["forecast_model_family"],
+            "forecast_model_version": forecast_context["forecast_model_version"],
+            "forecast_window_start_utc": forecast_context["forecast_window_start_utc"],
+            "forecast_window_end_utc": forecast_context["forecast_window_end_utc"],
+            "forecast_latency_ms": forecast_context["forecast_latency_ms"],
+            "forecast_freshness_minutes": forecast_context["forecast_freshness_minutes"],
+            "forecast_horizon_mode": forecast_context["forecast_horizon_mode"],
+            "forecast_uncertainty_source": forecast_context["forecast_uncertainty_source"],
+            "forecast_promotion_active": forecast_context["forecast_promotion_active"],
+            "forecast_promotion_source": forecast_context["forecast_promotion_source"],
+            "optimization_run_id": optimization_run_id,
+            "algorithm": algorithm,
             "solver": str(result["metadata"]["solver"]),
         } for row in result["schedule"]]
 

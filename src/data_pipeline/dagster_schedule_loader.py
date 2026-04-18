@@ -172,12 +172,15 @@ def _normalize_schedule(rows: List[Dict[str, Any]], fx_rate: float) -> List[Dict
                 "purchase_cost_eur": _optional_float(row.get("purchase_cost_eur")),
                 "export_revenue_eur": _optional_float(row.get("export_revenue_eur")),
                 "degradation_penalty_eur": _optional_float(row.get("degradation_penalty_eur")),
+                "forecast_run_id": _optional_text(row.get("forecast_run_id")),
                 "forecast_model_name": _optional_text(row.get("forecast_model_name")),
                 "forecast_model_family": _optional_text(row.get("forecast_model_family")),
+                "forecast_model_version": _optional_text(row.get("forecast_model_version")),
                 "forecast_horizon_mode": _optional_text(row.get("forecast_horizon_mode")),
                 "forecast_uncertainty_source": _optional_text(row.get("forecast_uncertainty_source")),
                 "forecast_promotion_active": _optional_bool(row.get("forecast_promotion_active")),
                 "forecast_promotion_source": _optional_text(row.get("forecast_promotion_source")),
+                "optimization_run_id": _optional_text(row.get("optimization_run_id")),
                 "solver": str(row.get("solver", "")),
             }
         )
