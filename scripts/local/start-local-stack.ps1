@@ -56,6 +56,18 @@ $dashboardUrl = "http://127.0.0.1:$DashboardPort/api/health"
 
 $shouldStartDagster = ($Start -eq 'both' -or $Start -eq 'dagster')
 $shouldStartDashboard = ($Start -eq 'both' -or $Start -eq 'dashboard')
+$dagsterPython = $null
+
+if ($shouldStartDagster -or $shouldStartDashboard) {
+  $dagsterPython = Resolve-DagsterPython -RepoRoot $repoRoot
+  $optimizationDbConfig = Resolve-OptimizationDbConfig
+  Set-OptimizationDbEnvironment -Config $optimizationDbConfig
+  Write-Host "Optimization history DB target: $($optimizationDbConfig.User)@$($optimizationDbConfig.Host):$($optimizationDbConfig.Port)/$($optimizationDbConfig.Database)" -ForegroundColor DarkGray
+  $optimizationDbReady = Ensure-OptimizationDatabase -PythonPath $dagsterPython -Config $optimizationDbConfig
+  if (-not $optimizationDbReady) {
+    Write-Host 'Optimization history DB bootstrap was unavailable; Dagster reconciliation checks may stay in degraded mode until the app DB becomes reachable.' -ForegroundColor Yellow
+  }
+}
 
 if ($shouldStartDagster) {
   if (Test-Endpoint -Url $dagsterUrl) {
@@ -65,7 +77,6 @@ if ($shouldStartDagster) {
     if ($dagsterOwner) {
       Write-Host "Dagster port $DagsterPort already has a listener (PID $dagsterOwner); waiting for health endpoint before starting another process." -ForegroundColor Yellow
     } else {
-      $dagsterPython = Resolve-DagsterPython -RepoRoot $repoRoot
       Write-Host "Using Dagster Python: $dagsterPython" -ForegroundColor Green
 
       $dagsterCommand = "Set-Location '$repoRoot'; & '$dagsterPython' -m dagster dev -h 127.0.0.1 -p $DagsterPort -d '$repoRoot' -m src.definitions"

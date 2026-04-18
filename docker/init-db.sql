@@ -1,18 +1,21 @@
--- Initialize databases for Dagster and MLflow
+-- Bootstrap auxiliary local PostgreSQL databases on first container init.
+\set ON_ERROR_STOP on
 
--- Create Dagster database and user
-CREATE DATABASE dagster;
-CREATE USER dagster WITH PASSWORD 'dagster';
-GRANT ALL PRIVILEGES ON DATABASE dagster TO dagster;
+SELECT 'CREATE DATABASE mlflow'
+WHERE NOT EXISTS (
+	SELECT 1 FROM pg_database WHERE datname = 'mlflow'
+)\gexec
 
--- Create MLflow database and user  
-CREATE DATABASE mlflow;
-CREATE USER mlflow WITH PASSWORD 'mlflow123';
-GRANT ALL PRIVILEGES ON DATABASE mlflow TO mlflow;
+SELECT 'CREATE DATABASE smart_energy_ai'
+WHERE NOT EXISTS (
+	SELECT 1 FROM pg_database WHERE datname = 'smart_energy_ai'
+)\gexec
 
--- Grant schema permissions
-\c dagster;
-GRANT ALL ON SCHEMA public TO dagster;
+GRANT ALL PRIVILEGES ON DATABASE mlflow TO dagster;
+GRANT ALL PRIVILEGES ON DATABASE smart_energy_ai TO dagster;
 
 \c mlflow;
-GRANT ALL ON SCHEMA public TO mlflow;
+GRANT ALL ON SCHEMA public TO dagster;
+
+\c smart_energy_ai;
+GRANT ALL ON SCHEMA public TO dagster;

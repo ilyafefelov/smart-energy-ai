@@ -26,6 +26,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/20-init-db.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dagster"]
       interval: 10s
