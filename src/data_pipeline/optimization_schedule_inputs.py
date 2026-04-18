@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Mapping
+from typing import Any, List, Mapping, Sequence
 
 import polars as pl
 
@@ -46,6 +46,7 @@ PROBABILISTIC_HORIZON_COLUMNS = frozenset(
         "upper_bound_eur_mwh",
     }
 )
+DEFAULT_ROLLING_WINDOW_HOURS = 6
 
 
 def _coerce_optional_text(value: Any) -> str | None:
@@ -116,6 +117,15 @@ def _extract_price_horizon(
     return list(_resolve_price_horizon(price_forecast, horizon_mode=horizon_mode)["prices"])
 
 
+def _slice_horizon_window(values: Sequence[float], start_hour: int, window_hours: int) -> List[float]:
+    if window_hours <= 0:
+        return []
+
+    bounded_start = max(int(start_hour), 0)
+    bounded_end = min(len(values), bounded_start + int(window_hours))
+    return [float(value) for value in values[bounded_start:bounded_end]]
+
+
 def _get_client_series(client_df: pl.DataFrame, column: str, horizon: int, fallback: float) -> List[float]:
     if column not in client_df.columns or len(client_df) == 0:
         return [fallback] * horizon
@@ -131,9 +141,11 @@ def _get_client_series(client_df: pl.DataFrame, column: str, horizon: int, fallb
 
 
 __all__ = [
+    "DEFAULT_ROLLING_WINDOW_HOURS",
     "HORIZON_COLUMN_CANDIDATES",
     "PROBABILISTIC_HORIZON_COLUMNS",
     "_extract_price_horizon",
     "_get_client_series",
     "_resolve_price_horizon",
+    "_slice_horizon_window",
 ]

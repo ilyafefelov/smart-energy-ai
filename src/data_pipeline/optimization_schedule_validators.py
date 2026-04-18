@@ -25,6 +25,20 @@ PROBABILISTIC_HORIZON_SOURCES = {
     "lower_bound_eur_mwh",
     "upper_bound_eur_mwh",
 }
+ROLLING_METADATA_COLUMNS = (
+    "rolling_horizon_enabled",
+    "rolling_window_index",
+    "rolling_window_start_hour",
+    "rolling_window_end_hour",
+    "rolling_window_horizon_hours",
+    "rolling_window_commit_hours",
+    "rolling_state_initial_soc_kwh",
+    "rolling_state_initial_throughput_kwh",
+    "rolling_window_purchase_cost_eur",
+    "rolling_window_export_revenue_eur",
+    "rolling_window_degradation_penalty_eur",
+    "rolling_window_net_cost_eur",
+)
 
 
 def _serialize_preview(value: Dict[str, Any], limit: int = 5) -> str:
@@ -59,6 +73,20 @@ def _coerce_text(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _coerce_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes"}:
+        return True
+    if text in {"false", "0", "no"}:
+        return False
+    return None
 
 
 def _filter_client_frame(schedule: pl.DataFrame, client_id: Any) -> pl.DataFrame:
@@ -347,13 +375,150 @@ def evaluate_schedule_forecast_metadata(schedule: pl.DataFrame) -> Dict[str, Any
     }
 
 
+def evaluate_schedule_rolling_horizon_metadata(schedule: pl.DataFrame) -> Dict[str, Any]:
+    missing_columns = [column for column in ROLLING_METADATA_COLUMNS if column not in schedule.columns]
+    if missing_columns:
+        return {
+            "passed": False,
+            "metadata": {
+                "missing_rolling_metadata_columns": ", ".join(missing_columns),
+                "missing_rolling_enabled_count": 0,
+                "invalid_rolling_window_index_count": 0,
+                "invalid_rolling_window_shape_count": 0,
+                "invalid_rolling_commit_hours_count": 0,
+                "invalid_rolling_initial_soc_count": 0,
+                "invalid_rolling_initial_throughput_count": 0,
+                "missing_rolling_objective_breakdown_count": 0,
+                "rolling_enabled_client_count": 0,
+                "rolling_metadata_failing_rows_preview": "[]",
+            },
+        }
+
+    missing_enabled_count = 0
+    invalid_window_index_count = 0
+    invalid_window_shape_count = 0
+    invalid_commit_hours_count = 0
+    invalid_initial_soc_count = 0
+    invalid_initial_throughput_count = 0
+    missing_objective_breakdown_count = 0
+    rolling_enabled_client_count = 0
+    failing_rows = []
+
+    for client_id, frame in _iter_client_frames(schedule):
+        rows = sorted(frame.iter_rows(named=True), key=lambda row: (_coerce_hour(row.get("hour")) or -1))
+        previous_throughput = None
+        client_rolling_enabled = False
+
+        for expected_index, row in enumerate(rows):
+            row_failures = []
+            rolling_enabled = _coerce_bool(row.get("rolling_horizon_enabled"))
+            row_hour = _coerce_hour(row.get("hour"))
+            rolling_window_index = _coerce_hour(row.get("rolling_window_index"))
+            rolling_window_start_hour = _coerce_hour(row.get("rolling_window_start_hour"))
+            rolling_window_end_hour = _coerce_hour(row.get("rolling_window_end_hour"))
+            rolling_window_horizon_hours = _coerce_hour(row.get("rolling_window_horizon_hours"))
+            rolling_window_commit_hours = _coerce_hour(row.get("rolling_window_commit_hours"))
+            rolling_state_initial_soc_kwh = _coerce_float(row.get("rolling_state_initial_soc_kwh"))
+            rolling_state_initial_throughput_kwh = _coerce_float(
+                row.get("rolling_state_initial_throughput_kwh")
+            )
+
+            if rolling_enabled is None:
+                missing_enabled_count += 1
+                row_failures.append("rolling_horizon_enabled")
+
+            if (
+                _coerce_float(row.get("rolling_window_purchase_cost_eur")) is None
+                or _coerce_float(row.get("rolling_window_export_revenue_eur")) is None
+                or _coerce_float(row.get("rolling_window_degradation_penalty_eur")) is None
+                or _coerce_float(row.get("rolling_window_net_cost_eur")) is None
+            ):
+                missing_objective_breakdown_count += 1
+                row_failures.append("rolling_window_objective")
+
+            if rolling_enabled is True:
+                client_rolling_enabled = True
+                if rolling_window_index != expected_index:
+                    invalid_window_index_count += 1
+                    row_failures.append("rolling_window_index")
+                if rolling_window_start_hour != row_hour:
+                    invalid_window_index_count += 1
+                    row_failures.append("rolling_window_start_hour")
+
+                expected_horizon_hours = None
+                if rolling_window_start_hour is not None and rolling_window_end_hour is not None:
+                    expected_horizon_hours = rolling_window_end_hour - rolling_window_start_hour + 1
+                if (
+                    rolling_window_horizon_hours is None
+                    or rolling_window_horizon_hours < 1
+                    or expected_horizon_hours is None
+                    or rolling_window_horizon_hours != expected_horizon_hours
+                ):
+                    invalid_window_shape_count += 1
+                    row_failures.append("rolling_window_horizon_hours")
+
+                if rolling_window_commit_hours != 1:
+                    invalid_commit_hours_count += 1
+                    row_failures.append("rolling_window_commit_hours")
+
+                soc_before_kwh = _coerce_float(row.get("soc_before_kwh"))
+                if (
+                    rolling_state_initial_soc_kwh is None
+                    or soc_before_kwh is None
+                    or abs(rolling_state_initial_soc_kwh - soc_before_kwh) > ACTION_TOLERANCE
+                ):
+                    invalid_initial_soc_count += 1
+                    row_failures.append("rolling_state_initial_soc_kwh")
+
+                if rolling_state_initial_throughput_kwh is None:
+                    invalid_initial_throughput_count += 1
+                    row_failures.append("rolling_state_initial_throughput_kwh")
+                elif previous_throughput is not None and abs(rolling_state_initial_throughput_kwh - previous_throughput) > ACTION_TOLERANCE:
+                    invalid_initial_throughput_count += 1
+                    row_failures.append("rolling_state_transition")
+
+            if row_failures:
+                failing_rows.append(
+                    {
+                        "client_id": client_id,
+                        "hour": row.get("hour"),
+                        "fields": row_failures,
+                    }
+                )
+
+            throughput_total_kwh = _coerce_float(row.get("throughput_total_kwh"))
+            if throughput_total_kwh is not None:
+                previous_throughput = throughput_total_kwh
+
+        if client_rolling_enabled:
+            rolling_enabled_client_count += 1
+
+    return {
+        "passed": not failing_rows,
+        "metadata": {
+            "missing_rolling_metadata_columns": "",
+            "missing_rolling_enabled_count": missing_enabled_count,
+            "invalid_rolling_window_index_count": invalid_window_index_count,
+            "invalid_rolling_window_shape_count": invalid_window_shape_count,
+            "invalid_rolling_commit_hours_count": invalid_commit_hours_count,
+            "invalid_rolling_initial_soc_count": invalid_initial_soc_count,
+            "invalid_rolling_initial_throughput_count": invalid_initial_throughput_count,
+            "missing_rolling_objective_breakdown_count": missing_objective_breakdown_count,
+            "rolling_enabled_client_count": rolling_enabled_client_count,
+            "rolling_metadata_failing_rows_preview": json.dumps(failing_rows[:5], sort_keys=True),
+        },
+    }
+
+
 __all__ = [
     "ACTION_TOLERANCE",
     "EXPECTED_HOURS",
     "FLOW_TOLERANCE",
+    "ROLLING_METADATA_COLUMNS",
     "ROW_COUNT_TARGET",
     "evaluate_schedule_action_semantics",
     "evaluate_schedule_completeness",
     "evaluate_schedule_forecast_metadata",
     "evaluate_schedule_numeric_fields",
+    "evaluate_schedule_rolling_horizon_metadata",
 ]

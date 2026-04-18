@@ -20,9 +20,9 @@ if _optimization_module is not None and hasattr(_optimization_module, "MilpBatte
 else:
     from ...optimization.milp_scheduler import MilpBatteryScheduler, MilpSchedulerConfig
 from .optimization_schedule import (
-    _extract_price_horizon,
     _get_client_series,
     _load_client_capacities,
+    _resolve_objective_breakdown,
     _resolve_forecast_context,
     _resolve_price_horizon,
     build_empty_optimization_schedule,
@@ -80,13 +80,15 @@ def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, clie
         soc_percent = float(client_df.select("battery_soc").to_series().to_list()[-1]) if "battery_soc" in client_df.columns else 50.0
         load_forecast = _get_client_series(client_df, "load_actual", horizon, fallback=40.0)
         solar_forecast = _get_client_series(client_df, "solar_gen_actual", horizon, fallback=0.0)
+        initial_soc_fraction = max(0.0, min(1.0, soc_percent / 100.0))
+        initial_soc_kwh = capacity_kwh * initial_soc_fraction
 
         scheduler = MilpBatteryScheduler(
             MilpSchedulerConfig(
                 capacity_kwh=capacity_kwh,
                 min_soc_fraction=0.15,
                 max_soc_fraction=0.95,
-                initial_soc_fraction=max(0.0, min(1.0, soc_percent / 100.0)),
+                initial_soc_fraction=initial_soc_fraction,
                 max_charge_kw=max(25.0, 0.25 * capacity_kwh),
                 max_discharge_kw=max(25.0, 0.25 * capacity_kwh),
                 throughput_limit_kwh=capacity_kwh * 1.2,
@@ -95,6 +97,7 @@ def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, clie
         )
 
         result = scheduler.optimize(prices[:horizon], load_forecast, solar_forecast)
+        objective = _resolve_objective_breakdown(result)
         algorithm = str(result["metadata"]["algorithm"])
         throughput_limit_kwh = capacity_kwh * 1.2
         optimization_run_id = build_optimization_run_id(
@@ -106,11 +109,13 @@ def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, clie
                 "capacity_kwh": capacity_kwh,
                 "min_soc_fraction": 0.15,
                 "max_soc_fraction": 0.95,
-                "initial_soc_fraction": max(0.0, min(1.0, soc_percent / 100.0)),
+                "initial_soc_fraction": initial_soc_fraction,
                 "max_charge_kw": max(25.0, 0.25 * capacity_kwh),
                 "max_discharge_kw": max(25.0, 0.25 * capacity_kwh),
                 "throughput_limit_kwh": throughput_limit_kwh,
                 "degradation_cost_per_kwh": 0.01,
+                "rolling_window_hours": horizon,
+                "rolling_commit_hours": horizon,
             },
             load_forecast=load_forecast,
             solar_forecast=solar_forecast,
@@ -137,6 +142,18 @@ def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, clie
             "total_net_cost_eur": float(result["objective"]["net_cost_eur"]),
             "final_soc_kwh": float(result["constraints"]["final_soc_kwh"]),
             "throughput_limit_kwh": float(result["constraints"]["throughput_limit_kwh"]),
+            "rolling_horizon_enabled": False,
+            "rolling_window_index": 0,
+            "rolling_window_start_hour": 0,
+            "rolling_window_end_hour": max(horizon - 1, 0),
+            "rolling_window_horizon_hours": horizon,
+            "rolling_window_commit_hours": horizon,
+            "rolling_state_initial_soc_kwh": initial_soc_kwh,
+            "rolling_state_initial_throughput_kwh": 0.0,
+            "rolling_window_purchase_cost_eur": objective["purchase_cost_eur"],
+            "rolling_window_export_revenue_eur": objective["export_revenue_eur"],
+            "rolling_window_degradation_penalty_eur": objective["degradation_penalty_eur"],
+            "rolling_window_net_cost_eur": objective["net_cost_eur"],
             "forecast_run_id": forecast_context["forecast_run_id"],
             "forecast_model_name": forecast_context["forecast_model_name"],
             "forecast_model_family": forecast_context["forecast_model_family"],

@@ -326,6 +326,14 @@ def test_optimization_schedule_helpers_and_asset(monkeypatch, tmp_path: Path) ->
     assert output.rows[0]["forecast_uncertainty_source"] == "walk_forward_residual_std"
     assert output.rows[0]["forecast_promotion_active"] is True
     assert output.rows[0]["forecast_promotion_source"] == "forecast_value_benchmark_asset"
+    assert output.rows[0]["rolling_horizon_enabled"] is True
+    assert output.rows[0]["rolling_window_index"] == 0
+    assert output.rows[0]["rolling_window_start_hour"] == 0
+    assert output.rows[0]["rolling_window_horizon_hours"] == 2
+    assert output.rows[0]["rolling_state_initial_throughput_kwh"] == 0.0
+    assert output.rows[1]["rolling_window_index"] == 1
+    assert output.rows[1]["rolling_window_horizon_hours"] == 1
+    assert output.rows[1]["rolling_state_initial_throughput_kwh"] == output.rows[0]["throughput_total_kwh"]
     assert output.rows[0]["optimization_run_id"].startswith("optimization-")
 
 
@@ -419,6 +427,94 @@ def test_optimization_schedule_asset_uses_stage2_client_inputs(monkeypatch, tmp_
     assert captured["config"] is config
 
 
+def test_optimization_schedule_asset_uses_bounded_rolling_windows(monkeypatch, tmp_path: Path) -> None:
+    injected = build_schedule_injected_modules()
+    module = load_module(
+        "src.assets.core.optimization_schedule",
+        "src/assets/core/optimization_schedule.py",
+        injected_modules=injected,
+    )
+
+    optimize_horizons = []
+
+    class CapturingOptimizer:
+        def __init__(self, config):
+            self.config = config
+
+        def optimize(self, price_eur_mwh, load_kw, solar_kw):
+            optimize_horizons.append(list(price_eur_mwh))
+            return {
+                "schedule": [
+                    {
+                        "hour": 0,
+                        "action_kw": 0.0,
+                        "charge_kwh": 0.0,
+                        "discharge_kwh": 0.0,
+                        "soc_before_kwh": 100.0,
+                        "soc_after_kwh": 100.0,
+                        "throughput_total_kwh": float(self.config.initial_throughput_kwh),
+                        "price_eur_mwh": float(price_eur_mwh[0]),
+                        "load_kwh": float(load_kw[0]),
+                        "solar_kwh": float(solar_kw[0]),
+                        "grid_import_kwh": float(load_kw[0]),
+                        "grid_export_kwh": 0.0,
+                        "purchase_cost_eur": 0.0,
+                        "export_revenue_eur": 0.0,
+                        "degradation_penalty_eur": 0.0,
+                        "net_cost_eur": 0.0,
+                    }
+                ],
+                "objective": {"net_cost_eur": 0.0},
+                "constraints": {
+                    "final_soc_kwh": 100.0,
+                    "throughput_limit_kwh": self.config.throughput_limit_kwh,
+                },
+                "metadata": {"algorithm": "baseline_dp"},
+            }
+
+    module.BaselineDPOptimizer = CapturingOptimizer
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "customers.yaml").write_text(
+        "customers:\n  - id: tenant-a\n    battery_capacity_kwh: 150\n",
+        encoding="utf-8",
+    )
+
+    price_forecast = FakePolarsFrame(
+        [
+            {
+                "forecast_timestamp": datetime(2026, 3, 2, hour, 0),
+                "predicted_price_eur_mwh": 50.0 + hour,
+                "scenario_low_price_eur_mwh": 45.0 + hour,
+            }
+            for hour in range(8)
+        ]
+    )
+    client_state = FakePolarsFrame(
+        [
+            {
+                "client_id": "tenant-a",
+                "timestamp": hour,
+                "battery_soc": 60.0,
+                "load_actual": 40.0,
+                "solar_gen_actual": 5.0,
+            }
+            for hour in range(8)
+        ]
+    )
+    context = types.SimpleNamespace(log=types.SimpleNamespace(info=lambda *args, **kwargs: None, warning=lambda *args, **kwargs: None))
+
+    output = module.optimization_schedule_asset(context, price_forecast, client_state)
+
+    assert len(output) == 8
+    assert len(optimize_horizons) == 8
+    assert len(optimize_horizons[0]) == 6
+    assert len(optimize_horizons[1]) == 6
+    assert len(optimize_horizons[-1]) == 1
+    assert output.rows[0]["rolling_window_horizon_hours"] == 6
+    assert output.rows[-1]["rolling_window_horizon_hours"] == 1
+
+
 def test_extract_price_horizon_prefers_requested_uncertainty_mode() -> None:
     module = load_module(
         "src.data_pipeline.optimization_schedule_inputs_under_test",
@@ -508,6 +604,18 @@ def test_optimization_schedule_checks_evaluate_contracts() -> None:
             "charge_kwh": 0.0,
             "discharge_kwh": 1.0 if hour == 0 else 0.0,
             "price_eur_mwh": 50.0,
+            "rolling_horizon_enabled": True,
+            "rolling_window_index": hour,
+            "rolling_window_start_hour": hour,
+            "rolling_window_end_hour": 23,
+            "rolling_window_horizon_hours": 24 - hour,
+            "rolling_window_commit_hours": 1,
+            "rolling_state_initial_soc_kwh": 100.0,
+            "rolling_state_initial_throughput_kwh": 0.0 if hour == 0 else 1.0,
+            "rolling_window_purchase_cost_eur": 0.0,
+            "rolling_window_export_revenue_eur": 0.0,
+            "rolling_window_degradation_penalty_eur": 0.0,
+            "rolling_window_net_cost_eur": 0.0,
         }
         for hour in range(24)
     ])

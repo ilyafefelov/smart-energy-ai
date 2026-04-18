@@ -18,6 +18,7 @@ from src.assets.core.optimization_schedule_checks import (
     evaluate_schedule_completeness,
     evaluate_schedule_forecast_metadata,
     evaluate_schedule_numeric_fields,
+    evaluate_schedule_rolling_horizon_metadata,
     optimization_schedule_contract_checks,
     optimization_schedule_lineage_check,
     optimization_schedule_realized_value_reconciliation_check,
@@ -27,9 +28,15 @@ from src.definitions import defs
 
 def _valid_schedule() -> pl.DataFrame:
     rows = []
+    throughput_before_kwh = 0.0
+    soc_before_kwh = 100.0
     for hour in range(24):
         charge_kwh = 5.0 if hour < 6 else 0.0
         discharge_kwh = 6.0 if 17 <= hour <= 20 else 0.0
+        throughput_total_kwh = throughput_before_kwh + charge_kwh + discharge_kwh
+        soc_after_kwh = soc_before_kwh + charge_kwh - discharge_kwh
+        rolling_window_horizon_hours = 24 - hour
+        rolling_window_net_cost_eur = 10.0 + hour
         rows.append(
             {
                 "client_id": "client_a",
@@ -37,13 +44,30 @@ def _valid_schedule() -> pl.DataFrame:
                 "action_kw": discharge_kwh - charge_kwh,
                 "charge_kwh": charge_kwh,
                 "discharge_kwh": discharge_kwh,
+                "soc_before_kwh": soc_before_kwh,
+                "soc_after_kwh": soc_after_kwh,
+                "throughput_total_kwh": throughput_total_kwh,
                 "price_eur_mwh": 40.0 + hour,
                 "forecast_horizon_mode": "conservative",
                 "forecast_horizon_source": "scenario_low_price_eur_mwh",
                 "forecast_uncertainty_source": "walk_forward_residual_std",
                 "forecast_uncertainty_contract_version": "probabilistic_forecast_v1",
+                "rolling_horizon_enabled": True,
+                "rolling_window_index": hour,
+                "rolling_window_start_hour": hour,
+                "rolling_window_end_hour": hour + rolling_window_horizon_hours - 1,
+                "rolling_window_horizon_hours": rolling_window_horizon_hours,
+                "rolling_window_commit_hours": 1,
+                "rolling_state_initial_soc_kwh": soc_before_kwh,
+                "rolling_state_initial_throughput_kwh": throughput_before_kwh,
+                "rolling_window_purchase_cost_eur": rolling_window_net_cost_eur,
+                "rolling_window_export_revenue_eur": 0.0,
+                "rolling_window_degradation_penalty_eur": 0.0,
+                "rolling_window_net_cost_eur": rolling_window_net_cost_eur,
             }
         )
+        throughput_before_kwh = throughput_total_kwh
+        soc_before_kwh = soc_after_kwh
     return pl.DataFrame(rows)
 
 
@@ -54,11 +78,13 @@ def test_schedule_contract_checks_pass_for_valid_schedule() -> None:
     numeric_fields = evaluate_schedule_numeric_fields(schedule)
     action_semantics = evaluate_schedule_action_semantics(schedule)
     forecast_metadata = evaluate_schedule_forecast_metadata(schedule)
+    rolling_metadata = evaluate_schedule_rolling_horizon_metadata(schedule)
 
     assert completeness["passed"] is True
     assert numeric_fields["passed"] is True
     assert action_semantics["passed"] is True
     assert forecast_metadata["passed"] is True
+    assert rolling_metadata["passed"] is True
 
 
 def test_schedule_contract_checks_fail_for_duplicate_missing_and_inconsistent_rows() -> None:
@@ -179,6 +205,23 @@ def test_schedule_lineage_checks_fail_for_missing_forecast_provenance() -> None:
     assert lineage_result.passed is False
 
 
+def test_schedule_lineage_checks_fail_for_rolling_horizon_transition_breakage() -> None:
+    schedule = _valid_schedule().with_columns(
+        pl.lit("forecast-demo").alias("forecast_run_id"),
+        pl.lit("registry:demo").alias("forecast_model_version"),
+        pl.lit("optimization-a").alias("optimization_run_id"),
+        pl.when(pl.col("hour") == 5)
+        .then(999.0)
+        .otherwise(pl.col("rolling_state_initial_throughput_kwh"))
+        .alias("rolling_state_initial_throughput_kwh"),
+    )
+
+    lineage = evaluate_schedule_lineage(schedule)
+
+    assert lineage["passed"] is False
+    assert lineage["metadata"]["invalid_rolling_initial_throughput_count"] >= 1
+
+
 def test_schedule_frame_builder_uses_canonical_schema_for_empty_and_sparse_rows() -> None:
     empty_schedule = build_empty_optimization_schedule()
     sparse_schedule = build_optimization_schedule_frame(
@@ -213,6 +256,8 @@ def test_schedule_frame_builder_uses_canonical_schema_for_empty_and_sparse_rows(
     assert sparse_schedule.columns == list(OPTIMIZATION_SCHEDULE_SCHEMA.keys())
     assert sparse_schedule.get_column("final_soc_kwh").to_list() == [None]
     assert sparse_schedule.get_column("throughput_limit_kwh").to_list() == [None]
+    assert sparse_schedule.get_column("rolling_horizon_enabled").to_list() == [None]
+    assert sparse_schedule.get_column("rolling_window_net_cost_eur").to_list() == [None]
 
 
 def test_definitions_register_schedule_checks_and_job() -> None:

@@ -118,6 +118,12 @@ def build_milp_injected_modules():
         "uncertainty_source": "stub_uncertainty",
         "uncertainty_contract_version": None,
     }
+    opt_sched_mod._resolve_objective_breakdown = lambda result: {
+        "purchase_cost_eur": float(sum(row.get("purchase_cost_eur", 0.0) for row in result.get("schedule", []))),
+        "export_revenue_eur": float(sum(row.get("export_revenue_eur", 0.0) for row in result.get("schedule", []))),
+        "degradation_penalty_eur": float(sum(row.get("degradation_penalty_eur", 0.0) for row in result.get("schedule", []))),
+        "net_cost_eur": float(result.get("objective", {}).get("net_cost_eur", 0.0)),
+    }
     opt_sched_mod._get_client_series = lambda client_df, column, horizon, fallback: [float(v) for v in client_df[column].to_list()[-horizon:]] if column in client_df.columns else [fallback] * horizon
     opt_sched_mod._load_client_capacities = lambda: {"tenant-a": 180.0}
     opt_sched_mod._resolve_forecast_context = lambda df, horizon_mode="base", horizon_source=None, uncertainty_source=None, uncertainty_contract_version=None: {
@@ -157,6 +163,18 @@ def build_milp_injected_modules():
         "total_net_cost_eur": pl.Float64,
         "final_soc_kwh": pl.Float64,
         "throughput_limit_kwh": pl.Float64,
+        "rolling_horizon_enabled": pl.Boolean,
+        "rolling_window_index": pl.Int64,
+        "rolling_window_start_hour": pl.Int64,
+        "rolling_window_end_hour": pl.Int64,
+        "rolling_window_horizon_hours": pl.Int64,
+        "rolling_window_commit_hours": pl.Int64,
+        "rolling_state_initial_soc_kwh": pl.Float64,
+        "rolling_state_initial_throughput_kwh": pl.Float64,
+        "rolling_window_purchase_cost_eur": pl.Float64,
+        "rolling_window_export_revenue_eur": pl.Float64,
+        "rolling_window_degradation_penalty_eur": pl.Float64,
+        "rolling_window_net_cost_eur": pl.Float64,
         "forecast_run_id": pl.Utf8,
         "forecast_model_name": pl.Utf8,
         "forecast_model_family": pl.Utf8,

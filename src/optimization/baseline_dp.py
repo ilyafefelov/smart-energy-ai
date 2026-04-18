@@ -19,6 +19,7 @@ class BaselineOptimizationConfig:
     max_charge_kw: float = 50.0
     max_discharge_kw: float = 50.0
     throughput_limit_kwh: Optional[float] = None
+    initial_throughput_kwh: float = 0.0
     degradation_cost_per_kwh: float = 0.01
     export_price_factor: float = 0.9
     timestep_hours: float = 1.0
@@ -37,6 +38,7 @@ class BaselineOptimizationConfig:
             max_charge_kw=self.max_charge_kw,
             max_discharge_kw=self.max_discharge_kw,
             throughput_limit_kwh=self.capacity_kwh * 1.2,
+            initial_throughput_kwh=self.initial_throughput_kwh,
             degradation_cost_per_kwh=self.degradation_cost_per_kwh,
             export_price_factor=self.export_price_factor,
             timestep_hours=self.timestep_hours,
@@ -177,12 +179,16 @@ class BaselineDPOptimizer:
         soc_max = self.config.capacity_kwh * self.config.max_soc_fraction
         soc_init = min(max(self.config.capacity_kwh * self.config.initial_soc_fraction, soc_min), soc_max)
         throughput_limit = float(self.config.throughput_limit_kwh or self.config.capacity_kwh * 1.2)
+        throughput_init = min(max(float(self.config.initial_throughput_kwh), 0.0), throughput_limit)
 
         states: MutableMapping[Tuple[int, int], Dict[str, float]] = {
-            (self._quantize(soc_init, self.config.soc_step_kwh), 0): {
+            (
+                self._quantize(soc_init, self.config.soc_step_kwh),
+                self._quantize(throughput_init, self.config.throughput_step_kwh),
+            ): {
                 "cost": 0.0,
                 "soc": soc_init,
-                "throughput": 0.0,
+                "throughput": throughput_init,
             }
         }
         backpointers: List[Dict[Tuple[int, int], Tuple[Tuple[int, int], Dict[str, float]]]] = []
