@@ -4,27 +4,33 @@
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping
 
 from dagster import AssetCheckKey, AssetKey, DagsterInstance
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-CHECKS_BY_ASSET: Mapping[str, tuple[str, ...]] = {
-    "optimization_schedule_asset": (
-        "schedule_completeness",
-        "schedule_numeric_fields",
-        "schedule_action_semantics",
-    ),
-    "optimization_schedule_milp_asset": (
-        "schedule_completeness",
-        "schedule_numeric_fields",
-        "schedule_action_semantics",
-    ),
-}
+
+def _collect_checks_by_asset() -> Dict[str, tuple[str, ...]]:
+    from src.assets.core.optimization_schedule_checks import optimization_schedule_contract_checks
+
+    checks_by_asset: dict[str, list[str]] = {}
+    for checks_def in optimization_schedule_contract_checks:
+        for spec in checks_def.check_specs:
+            asset_name = spec.asset_key.path[-1] if spec.asset_key.path else str(spec.asset_key)
+            checks_by_asset.setdefault(asset_name, []).append(spec.name)
+    return {asset_name: tuple(check_names) for asset_name, check_names in checks_by_asset.items()}
+
+
+CHECKS_BY_ASSET = _collect_checks_by_asset()
 
 
 def _isoformat(timestamp: float | None) -> str | None:
@@ -42,6 +48,40 @@ def _jsonable_metadata_value(value: Any) -> Any:
     if isinstance(raw_value, (list, tuple, set)):
         return [_jsonable_metadata_value(item) for item in raw_value]
     return str(raw_value)
+
+
+def _candidate_dagster_homes(project_root: Path) -> list[tuple[Path, str]]:
+    pattern = str(project_root / ".tmp_dagster_home_*")
+    temporary_roots = sorted(
+        (Path(path) for path in glob.glob(pattern)),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+
+    dagster_home_env = os.getenv("DAGSTER_HOME")
+    persistent_roots = [(project_root / "data" / "dagster_home", "persistent")]
+    if dagster_home_env:
+        persistent_roots.append((Path(dagster_home_env), "environment"))
+
+    seen_roots: set[Path] = set()
+    candidates: list[tuple[Path, str]] = []
+    for root_path, source in [*[(path, "temporary") for path in temporary_roots], *persistent_roots]:
+        try:
+            resolved_root = root_path.resolve()
+        except FileNotFoundError:
+            continue
+        if resolved_root in seen_roots or not root_path.exists():
+            continue
+        seen_roots.add(resolved_root)
+        candidates.append((resolved_root, source))
+    return candidates
+
+
+def _ensure_dagster_home_config(dagster_home: Path) -> None:
+    dagster_home.mkdir(parents=True, exist_ok=True)
+    dagster_yaml = dagster_home / "dagster.yaml"
+    if not dagster_yaml.exists():
+        dagster_yaml.touch()
 
 
 def _check_status_from_payload(check: Mapping[str, Any]) -> str:
@@ -145,10 +185,15 @@ def _build_check_payload(instance: DagsterInstance, asset_name: str, check_name:
     }
 
 
-def _resolve_dagster_home(project_root: Path, dagster_home: str | None) -> Path:
+def _resolve_dagster_home(project_root: Path, dagster_home: str | None) -> tuple[Path, str]:
     if dagster_home:
-        return Path(dagster_home).expanduser().resolve()
-    return (project_root / "data" / "dagster_home").resolve()
+        return Path(dagster_home).expanduser().resolve(), "explicit"
+
+    candidates = _candidate_dagster_homes(project_root)
+    if candidates:
+        return candidates[0]
+
+    return (project_root / "data" / "dagster_home").resolve(), "persistent"
 
 
 def main() -> None:
@@ -158,7 +203,8 @@ def main() -> None:
     args = parser.parse_args()
 
     project_root = Path(args.project_root).resolve()
-    dagster_home = _resolve_dagster_home(project_root, args.dagster_home)
+    dagster_home, dagster_home_source = _resolve_dagster_home(project_root, args.dagster_home)
+    _ensure_dagster_home_config(dagster_home)
     os.environ["DAGSTER_HOME"] = str(dagster_home)
 
     try:
@@ -170,6 +216,7 @@ def main() -> None:
                     "success": False,
                     "error": f"Failed to load Dagster instance: {exc}",
                     "dagster_home": str(dagster_home),
+                    "dagster_home_source": dagster_home_source,
                 }
             )
         )
@@ -195,6 +242,7 @@ def main() -> None:
                 "success": True,
                 "generated_at": datetime.now(timezone.utc).isoformat(),
                 "dagster_home": str(dagster_home),
+                "dagster_home_source": dagster_home_source,
                 "summary": summarize_check_states(checks),
                 "assets": assets,
                 "checks": checks,

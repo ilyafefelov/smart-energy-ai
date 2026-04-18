@@ -224,3 +224,92 @@ def test_reconcile_optimization_history_computes_stats_and_main(monkeypatch, cap
     assert payload == {"success": True, "days": 7, "limit": 5, "dry_run": True, "note": "cli"}
 
 
+def test_read_dagster_asset_checks_discovers_latest_temp_home_and_all_checks(
+    monkeypatch,
+    capsys,
+    tmp_path: Path,
+) -> None:
+    module = load_script_module(
+        "scripts.read_dagster_asset_checks_under_test",
+        "scripts/read_dagster_asset_checks.py",
+    )
+
+    expected_checks = {
+        "optimization_schedule_asset": {
+            "schedule_completeness",
+            "schedule_numeric_fields",
+            "schedule_action_semantics",
+            "schedule_lineage",
+            "schedule_realized_value_reconciliation",
+        },
+        "optimization_schedule_milp_asset": {
+            "schedule_completeness",
+            "schedule_numeric_fields",
+            "schedule_action_semantics",
+            "schedule_lineage",
+            "schedule_realized_value_reconciliation",
+        },
+    }
+    assert {asset_name: set(check_names) for asset_name, check_names in module.CHECKS_BY_ASSET.items()} == expected_checks
+
+    temp_home = tmp_path / ".tmp_dagster_home_recent"
+    temp_home.mkdir()
+    persistent_home = tmp_path / "data" / "dagster_home"
+    persistent_home.mkdir(parents=True)
+
+    resolved_home, resolved_source = module._resolve_dagster_home(tmp_path, None)
+    assert resolved_home == temp_home.resolve()
+    assert resolved_source == "temporary"
+
+    class FakeInstance:
+        pass
+
+    monkeypatch.setattr(module.DagsterInstance, "get", staticmethod(lambda: FakeInstance()))
+
+    def fake_build_check_payload(instance, asset_name: str, check_name: str):
+        if check_name == "schedule_realized_value_reconciliation":
+            return {
+                "asset_name": asset_name,
+                "check_name": check_name,
+                "status": "warning",
+                "execution_status": "FAILED",
+                "severity": "WARN",
+                "run_id": "run-warning",
+                "timestamp": "2026-04-18T14:26:34+00:00",
+                "description": None,
+                "metadata": {
+                    "status": "history_unavailable",
+                    "history_source_status": "unavailable",
+                },
+            }
+
+        return {
+            "asset_name": asset_name,
+            "check_name": check_name,
+            "status": "passed",
+            "execution_status": "SUCCEEDED",
+            "severity": "ERROR",
+            "run_id": "run-passed",
+            "timestamp": "2026-04-18T14:26:33+00:00",
+            "description": None,
+            "metadata": {},
+        }
+
+    monkeypatch.setattr(module, "_build_check_payload", fake_build_check_payload)
+    monkeypatch.setattr(sys, "argv", ["read_dagster_asset_checks.py", "--project-root", str(tmp_path)])
+
+    module.main()
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["success"] is True
+    assert payload["dagster_home"] == str(temp_home.resolve())
+    assert payload["dagster_home_source"] == "temporary"
+    assert payload["summary"]["total_checks"] == 10
+    assert payload["summary"]["warning_checks"] == 2
+    assert payload["summary"]["failing_check_names"] == [
+        "optimization_schedule_asset.schedule_realized_value_reconciliation",
+        "optimization_schedule_milp_asset.schedule_realized_value_reconciliation",
+    ]
+    assert (temp_home / "dagster.yaml").exists()
+
+
