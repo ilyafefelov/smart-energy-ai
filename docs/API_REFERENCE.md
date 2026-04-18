@@ -166,6 +166,457 @@ Important contract notes:
 - Local offline MLflow is an expected degraded mode.
 - The route should report success with an explicit disconnected flag rather than turning the dashboard unhealthy when MLflow is unavailable locally.
 
+## Representative Payload Examples
+
+These examples are representative request and response shapes derived from the current route handlers. They are intentionally compact: they show the fields a client should expect to anchor on, not every optional field that may appear in a full runtime payload.
+
+### `GET /api/config/current`
+
+Example request:
+
+```http
+GET /api/config/current?tenantId=client_001_kyiv_mall HTTP/1.1
+Host: localhost:3600
+x-tenant-id: client_001_kyiv_mall
+Accept: application/json
+```
+
+Representative response:
+
+```json
+{
+	"success": true,
+	"tenant": {
+		"id": "client_001_kyiv_mall",
+		"name": "Kyiv Shopping Mall"
+	},
+	"data": {
+		"battery_type": "LFP",
+		"battery_capacity_kwh": 280,
+		"load_profile_type": "standard",
+		"optimization_strategy": "balanced",
+		"has_solar": true,
+		"solar_capacity_kw": 150,
+		"market_regime_override": "auto"
+	},
+	"metadata": {
+		"config_scope": "tenant",
+		"config_file_exists": true,
+		"last_modified": "2026-04-19T00:11:32.000Z",
+		"battery_specs": {
+			"full_name": "Lithium Iron Phosphate",
+			"expected_cycles": 8000,
+			"efficiency_typical": 0.95
+		},
+		"arbitrage_metrics": {
+			"daily_profit_net_uah": 975.41,
+			"annual_profit_uah": 356024,
+			"usable_capacity_kwh": 252,
+			"price_spread_uah": 4.5
+		}
+	},
+	"timestamp": "2026-04-19T01:15:00.000Z"
+}
+```
+
+### `POST /api/config/save`
+
+Example request:
+
+```http
+POST /api/config/save HTTP/1.1
+Host: localhost:3600
+Content-Type: application/json
+x-tenant-id: client_001_kyiv_mall
+
+{
+	"tenantId": "client_001_kyiv_mall",
+	"battery_capacity_kwh": 280,
+	"load_profile_type": "multi-shift",
+	"optimization_strategy": "balanced",
+	"has_solar": true,
+	"solar_capacity_kw": 150,
+	"market_regime_override": "auto"
+}
+```
+
+Representative response:
+
+```json
+{
+	"success": true,
+	"tenant": {
+		"id": "client_001_kyiv_mall",
+		"name": "Kyiv Shopping Mall"
+	},
+	"data": {
+		"battery_capacity_kwh": 280,
+		"load_profile_type": "multi-shift",
+		"optimization_strategy": "balanced",
+		"has_solar": true,
+		"solar_capacity_kw": 150,
+		"last_updated": "2026-04-19T01:16:05.000Z",
+		"version": "1.0"
+	},
+	"validation": {
+		"errors": [],
+		"warnings": []
+	},
+	"recalculation": {
+		"triggered": true,
+		"result": {
+			"status": "queued"
+		}
+	},
+	"message": "Configuration saved successfully"
+}
+```
+
+### `GET /api/dagster/recommendation`
+
+Example request:
+
+```http
+GET /api/dagster/recommendation?tenantId=client_001_kyiv_mall HTTP/1.1
+Host: localhost:3600
+x-tenant-id: client_001_kyiv_mall
+Accept: application/json
+```
+
+Representative response:
+
+```json
+{
+	"status": "success",
+	"timestamp": "2026-04-19T01:18:00.000Z",
+	"tenant": {
+		"id": "client_001_kyiv_mall",
+		"name": "Kyiv Shopping Mall"
+	},
+	"recommendation": {
+		"action": "SELL",
+		"action_kw": 12.5,
+		"confidence": 0.84,
+		"confidence_percent": 84,
+		"rationale": "High-price window detected and reserve floor remains safe.",
+		"normalized_action": {
+			"action": "SELL",
+			"power_kw": 12.5,
+			"strategy_adjusted": false
+		},
+		"policy_compliance": {
+			"veto_applied": false,
+			"market_regime": "market_premium"
+		}
+	},
+	"current_state": {
+		"price_uah_kwh": 10.8,
+		"battery_soc_percent": 62,
+		"time": "01:18:00"
+	},
+	"schedule_24h": {
+		"schedule": [
+			{
+				"hour": 0,
+				"hour_offset": 0,
+				"recommended_action": "SELL",
+				"expected_profit_uah": 123.4,
+				"forecast_run_id": "forecast-bcfa3fbe846fa963",
+				"optimization_run_id": "optimization-a27f8e52"
+			}
+		]
+	},
+	"strategy_context": {
+		"optimization_strategy": "balanced",
+		"load_profile_type": "standard"
+	},
+	"source_metadata": {
+		"recommendation_source": "dagster",
+		"dagster_snapshot_is_fresh": true,
+		"dagster_snapshot_age_minutes": 4.1,
+		"dagster_snapshot_max_age_minutes": 15,
+		"dagster_forecast_run_id": "forecast-bcfa3fbe846fa963",
+		"dagster_optimization_run_id": "optimization-a27f8e52",
+		"fallback_used": false
+	}
+}
+```
+
+### `GET /api/dagster/schedule-24h`
+
+Example request:
+
+```http
+GET /api/dagster/schedule-24h?tenantId=client_001_kyiv_mall HTTP/1.1
+Host: localhost:3600
+x-tenant-id: client_001_kyiv_mall
+Accept: application/json
+```
+
+Representative response:
+
+```json
+{
+	"status": "success",
+	"timestamp": "2026-04-19T01:19:00.000Z",
+	"tenant": {
+		"id": "client_001_kyiv_mall",
+		"name": "Kyiv Shopping Mall"
+	},
+	"registry_diagnostics": {
+		"available": false,
+		"service_role": "registry_and_experiment_diagnostics",
+		"latest_run_name": null,
+		"recent_runs_count": 0,
+		"authoritative_for_runtime_serving": false
+	},
+	"schedule": [
+		{
+			"hour": 0,
+			"hour_offset": 0,
+			"time": "2026-04-19T00:00:00+00:00",
+			"recommended_action": "SELL",
+			"expected_profit_uah": 123.4
+		}
+	],
+	"summary": {
+		"total_expected_profit": 7902.38,
+		"average_hourly_profit": 329.27,
+		"buy_hours": 6,
+		"sell_hours": 8,
+		"discharge_hours": 0,
+		"hold_hours": 10
+	},
+	"source_metadata": {
+		"tenant_filter_applied": true,
+		"mlflow_registry_diagnostics_available": false
+	}
+}
+```
+
+### `GET /api/ml/recommendation`
+
+Example request:
+
+```http
+GET /api/ml/recommendation?tenantId=client_001_kyiv_mall HTTP/1.1
+Host: localhost:3600
+x-tenant-id: client_001_kyiv_mall
+Accept: application/json
+```
+
+Representative response:
+
+```json
+{
+	"success": true,
+	"contract": {
+		"version": "learned_policy_migration_v1",
+		"normalized_action": {
+			"action": "BUY",
+			"power_kw": 8
+		},
+		"strategy_context": {
+			"optimization_strategy": "balanced",
+			"load_profile_type": "standard"
+		}
+	},
+	"serving": {
+		"requested_mode": "incumbent",
+		"active_mode": "incumbent",
+		"adapter": "PredictionService",
+		"fallback_used": false,
+		"fallback_reason_code": "none"
+	},
+	"data": {
+		"action": "BUY",
+		"confidence": 0.79,
+		"reasoning": "Current tariff window favors charge accumulation before the evening peak.",
+		"daily_forecast": [
+			{
+				"hour": 0,
+				"action": "BUY",
+				"price_uah_mwh": 10800,
+				"reasoning": "Off-peak charge window"
+			}
+		],
+		"savings_estimate": {
+			"daily_uah": 512.4,
+			"monthly_uah": 15372,
+			"annual_uah": 186694
+		},
+		"battery_impact": {
+			"current_soc": 62,
+			"health_impact": 0.0003,
+			"cycles_remaining": 5000
+		},
+		"model_info": {
+			"version": "Phase4F-v1.0",
+			"confidence_level": "Medium",
+			"serving_mode": "incumbent",
+			"requested_serving_mode": "incumbent",
+			"serving_adapter": "PredictionService",
+			"resolved_model_uri": null
+		},
+		"feature_provenance": {
+			"config_source": "tenant_config",
+			"price_source": "prices_current_api",
+			"weather_source": "open-meteo",
+			"battery_source": "simulator",
+			"tenant_id": "client_001_kyiv_mall"
+		},
+		"inference_lineage": {
+			"tenant_id": "client_001_kyiv_mall",
+			"training_reference": {
+				"mlflow_connected": false,
+				"source": "runtime_incumbent_or_registry_diagnostics"
+			},
+			"serving_reference": {
+				"requested_mode": "incumbent",
+				"active_mode": "incumbent",
+				"fallback_used": false
+			}
+		}
+	}
+}
+```
+
+### `POST /api/control/execute`
+
+Example request:
+
+```http
+POST /api/control/execute HTTP/1.1
+Host: localhost:3600
+Content-Type: application/json
+x-tenant-id: client_001_kyiv_mall
+
+{
+	"tenantId": "client_001_kyiv_mall",
+	"command": "charge",
+	"power_kw": 5,
+	"reason": "Supervisor demo manual charge command",
+	"user_id": "dashboard_demo"
+}
+```
+
+Representative response:
+
+```json
+{
+	"success": true,
+	"tenant": {
+		"id": "client_001_kyiv_mall",
+		"name": "Kyiv Shopping Mall"
+	},
+	"command_id": "cmd_20260419T011930Z_client_001_kyiv_mall",
+	"requested_command": "charge",
+	"resolved_command": "charge",
+	"decision_source": "manual",
+	"executed_at": "2026-04-19T01:19:30.000Z",
+	"source": "simulation",
+	"source_metadata": {
+		"tenant_filter_applied": true,
+		"fallback_reason_code": "python_script_missing",
+		"execution_status": "executed",
+		"optimization_history_reconciled": false
+	},
+	"decision_snapshot": {
+		"version": "control_execution_v1"
+	}
+}
+```
+
+### `GET /api/battery/simulate` and `POST /api/battery/simulate`
+
+Example read request:
+
+```http
+GET /api/battery/simulate?tenantId=client_001_kyiv_mall HTTP/1.1
+Host: localhost:3600
+x-tenant-id: client_001_kyiv_mall
+Accept: application/json
+```
+
+Representative read response:
+
+```json
+{
+	"success": true,
+	"tenant": {
+		"id": "client_001_kyiv_mall",
+		"name": "Kyiv Shopping Mall"
+	},
+	"battery": {
+		"soc": 0.62,
+		"socPercentage": 62,
+		"power": 0,
+		"commandedPower": 0,
+		"voltage": 400,
+		"current": 0,
+		"health": 98.5,
+		"capacity": 280,
+		"optimization_strategy": "balanced",
+		"manualMode": false,
+		"autoOptimization": true,
+		"execution_mode": "auto_recommendation",
+		"active_command": "hold",
+		"decision_source": "dagster",
+		"source": "control_status_backed_simulator",
+		"lastUpdated": "2026-04-19T01:20:00.000Z"
+	},
+	"specs": {
+		"typeName": "Lithium Iron Phosphate",
+		"efficiency": 0.95,
+		"roundTripEfficiency": 0.9025,
+		"nominalVoltage": 400
+	},
+	"source_metadata": {
+		"tenant_filter_applied": true,
+		"control_status_source": "control_execute",
+		"renewable_model_source": "local_deterministic_estimate"
+	}
+}
+```
+
+Example write request:
+
+```http
+POST /api/battery/simulate HTTP/1.1
+Host: localhost:3600
+Content-Type: application/json
+x-tenant-id: client_001_kyiv_mall
+
+{
+	"tenantId": "client_001_kyiv_mall",
+	"action": "setPower",
+	"power": 4,
+	"reason": "Supervisor demo charge step"
+}
+```
+
+Representative write response:
+
+```json
+{
+	"success": true,
+	"tenant": {
+		"id": "client_001_kyiv_mall",
+		"name": "Kyiv Shopping Mall"
+	},
+	"message": "Power set to 4kW",
+	"powerCommand": 4,
+	"requested_command": "charge",
+	"resolved_command": "charge",
+	"decision_source": "manual",
+	"execution_mode": "manual_command",
+	"source": "control_execute",
+	"source_metadata": {
+		"tenant_filter_applied": true
+	}
+}
+```
+
 ## Python Bridge Mapping
 
 The dashboard API does not own forecasting or recommendation logic by itself. The canonical Python bridge service in `src/data_pipeline/ml_bridge_service.py` currently anchors these actions:

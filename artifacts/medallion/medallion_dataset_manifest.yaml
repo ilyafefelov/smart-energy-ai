@@ -10,6 +10,7 @@ artifact_outputs:
   dataset_catalog_doc: docs/technical/BRONZE_SILVER_GOLD_DATASET_CATALOG.md
   dataset_model_reference_doc: docs/technical/DATASET_MODEL_REFERENCE.md
   lineage_and_freshness_doc: docs/technical/DATASET_LINEAGE_AND_FRESHNESS_SLA.md
+  presentation_appendix_doc: docs/technical/SUPERVISOR_PRESENTATION_APPENDIX.md
   experiments_scorecard_doc: docs/technical/EXPERIMENTS_AND_RESULTS_SCORECARD.md
   api_reference_doc: docs/API_REFERENCE.md
   gold_summary_json: artifacts/medallion/gold_experiment_summary.json

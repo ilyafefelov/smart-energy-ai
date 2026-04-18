@@ -8,6 +8,7 @@ Architecture, validation, and backend design reference material.
 - [BRONZE_SILVER_GOLD_DATASET_CATALOG.md](BRONZE_SILVER_GOLD_DATASET_CATALOG.md) - Generated Bronze/Silver/Gold dataset catalog with provenance, freshness, fleet, and case-study views.
 - [DATASET_MODEL_REFERENCE.md](DATASET_MODEL_REFERENCE.md) - Dataset-model reference covering Bronze, Silver, Gold, and multi-tenant contract shapes.
 - [DATASET_LINEAGE_AND_FRESHNESS_SLA.md](DATASET_LINEAGE_AND_FRESHNESS_SLA.md) - Lineage, freshness, fallback, and enforcement guide for the supervisor-facing dataset package.
+- [SUPERVISOR_PRESENTATION_APPENDIX.md](SUPERVISOR_PRESENTATION_APPENDIX.md) - Presentation-outline and thesis-appendix packaging guide for the supervisor-facing medallion artifacts.
 - [EXPERIMENTS_AND_RESULTS_SCORECARD.md](EXPERIMENTS_AND_RESULTS_SCORECARD.md) - Generated experiments scorecard reusing benchmark, MLflow, optimizer, and business-metric evidence.
 
 This supervisor package is a logical presentation overlay on the runtime rooted at `src/definitions.py`. It does not claim a physical medallion warehouse, it keeps synthetic-fallback and optional local MLflow or benchmark caveats explicit, and it treats any future `backend/...` re-root as separate deferred architecture work.
@@ -40,6 +41,7 @@ This supervisor package is a logical presentation overlay on the runtime rooted 
 - [ML_APPROACH_ANALYSIS.md](ML_APPROACH_ANALYSIS.md) - 🧠 ML Approach Analysis: Is This The Right Method?.
 - [ML_DASHBOARD_INTEGRATION.md](ML_DASHBOARD_INTEGRATION.md) - Dashboard Integration Guide.
 - [ML_TRADING_DECISION_FRAMEWORK.md](ML_TRADING_DECISION_FRAMEWORK.md) - ML Trading Decision Framework.
+- [SUPERVISOR_PRESENTATION_APPENDIX.md](SUPERVISOR_PRESENTATION_APPENDIX.md) - Supervisor presentation and thesis-appendix packaging guide for the medallion artifact set.
 - [OREE_EFFECTIVE_STRATEGY.md](OREE_EFFECTIVE_STRATEGY.md) - OREE Effective Scraper - Summary & Real Ukrainian Price Examples.
 - [OREE_PLAYWRIGHT_SETUP_GUIDE.md](OREE_PLAYWRIGHT_SETUP_GUIDE.md) - OREE Ukrainian Prices - Playwright Integration Guide.
 - [OREE_SCRAPER_INDEX.md](OREE_SCRAPER_INDEX.md) - OREE Scraper - Complete Index & Quick Reference.

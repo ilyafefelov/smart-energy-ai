@@ -11,6 +11,7 @@ This directory now keeps only active reference and runbook material in the main 
 - `technical/DAGSTER_PIPELINE_DEPENDENCY_MAP.md` - current Dagster asset graph, job boundaries, and Mermaid diagram
 - `technical/DATASET_MODEL_REFERENCE.md` - supervisor-facing Bronze, Silver, Gold, and multi-tenant dataset model reference
 - `technical/DATASET_LINEAGE_AND_FRESHNESS_SLA.md` - lineage, freshness, fallback, and enforcement guide for the supervisor dataset package
+- `technical/SUPERVISOR_PRESENTATION_APPENDIX.md` - presentation-outline and thesis-appendix guide for the supervisor medallion package
 - `technical/ML_TRADING_DECISION_FRAMEWORK.md` - current trading decision flow, data provenance, and history posture
 - `technical/REPO_LAYOUT_GUIDE.md` - active root-folder map, README coverage policy, and safe organization direction
 - `technical/ARCHITECTURE_V2.md` - architecture overview worth keeping as background context
