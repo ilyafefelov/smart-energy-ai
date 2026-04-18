@@ -225,6 +225,18 @@ def build_promoted_forecast_model_metadata(
         "benchmark_value_capture_ratio": benchmark_row.get("benchmark_value_capture_ratio"),
         "benchmark_rmse": benchmark_row.get("benchmark_rmse"),
         "benchmark_mae": benchmark_row.get("benchmark_mae"),
+        "benchmark_dispatch_comparison_mode": benchmark_row.get(
+            "benchmark_dispatch_comparison_mode"
+        ),
+        "benchmark_conservative_dispatch_source": benchmark_row.get(
+            "benchmark_conservative_dispatch_source"
+        ),
+        "benchmark_conservative_value_capture_ratio": benchmark_row.get(
+            "benchmark_conservative_value_capture_ratio"
+        ),
+        "benchmark_point_vs_conservative_value_capture_delta": benchmark_row.get(
+            "benchmark_point_vs_conservative_value_capture_delta"
+        ),
         "benchmark_uncertainty_source": benchmark_row.get("benchmark_uncertainty_source"),
         "benchmark_avg_uncertainty_spread_eur_mwh": benchmark_row.get(
             "benchmark_avg_uncertainty_spread_eur_mwh"

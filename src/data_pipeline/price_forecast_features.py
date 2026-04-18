@@ -10,6 +10,12 @@ import polars as pl
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
+UNCERTAINTY_CONTRACT_VERSION = "probabilistic_forecast_v1"
+SCENARIO_LOW_QUANTILE = 0.10
+SCENARIO_BASE_QUANTILE = 0.50
+SCENARIO_HIGH_QUANTILE = 0.90
+
+
 def _fit_forecast_model(
     model: object,
     train_df: pl.DataFrame,
@@ -115,6 +121,13 @@ def _build_uncertainty_contract_columns(
         (pl.col("predicted_price_eur_mwh") + bounded_spread)
         .clip(0.0, 1000.0)
         .alias("upper_bound_eur_mwh"),
+
+        # Explicit scenario contract metadata
+        pl.lit(UNCERTAINTY_CONTRACT_VERSION).alias("uncertainty_contract_version"),
+        pl.lit(3, dtype=pl.Int8).alias("scenario_count"),
+        pl.lit(SCENARIO_LOW_QUANTILE).alias("scenario_low_quantile"),
+        pl.lit(SCENARIO_BASE_QUANTILE).alias("scenario_base_quantile"),
+        pl.lit(SCENARIO_HIGH_QUANTILE).alias("scenario_high_quantile"),
 
         # Phase 2: Explicit quantile columns for probabilistic forecasting
         (pl.col("predicted_price_eur_mwh") + q10_factor * quantile_std)
@@ -299,6 +312,10 @@ def _run_walk_forward_evaluation(
 
 
 __all__ = [
+    "UNCERTAINTY_CONTRACT_VERSION",
+    "SCENARIO_LOW_QUANTILE",
+    "SCENARIO_BASE_QUANTILE",
+    "SCENARIO_HIGH_QUANTILE",
     "_build_feature_frame",
     "_build_persistence_forecast",
     "_build_uncertainty_contract_columns",

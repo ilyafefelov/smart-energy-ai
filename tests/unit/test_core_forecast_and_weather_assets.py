@@ -23,8 +23,21 @@ def build_dagster_module():
 
 def load_module(module_name: str, relative_path: str, injected_modules: dict[str, object] | None = None):
     module_path = REPO_ROOT / relative_path
-    injected_modules = injected_modules or {}
+    injected_modules = dict(injected_modules or {})
     previous = {}
+
+    if relative_path.startswith("src/"):
+        injected_modules.setdefault("src", types.ModuleType("src"))
+        injected_modules["src"].__path__ = [str(REPO_ROOT / "src")]
+
+        injected_modules.setdefault("src.assets", types.ModuleType("src.assets"))
+        injected_modules["src.assets"].__path__ = [str(REPO_ROOT / "src" / "assets")]
+
+        injected_modules.setdefault("src.assets.core", types.ModuleType("src.assets.core"))
+        injected_modules["src.assets.core"].__path__ = [str(REPO_ROOT / "src" / "assets" / "core")]
+
+        injected_modules.setdefault("src.data_pipeline", types.ModuleType("src.data_pipeline"))
+        injected_modules["src.data_pipeline"].__path__ = [str(REPO_ROOT / "src" / "data_pipeline")]
 
     for name, module in injected_modules.items():
         previous[name] = sys.modules.get(name)
@@ -215,6 +228,11 @@ def test_price_forecast_helpers_and_fallback_asset() -> None:
     assert len(forecast) == 24
     assert set(forecast["model_name"].unique().to_list()) == {"persistence_fallback"}
     assert set(forecast["uncertainty_source"].unique().to_list()) == {"persistence_flat"}
+    assert set(forecast["uncertainty_contract_version"].unique().to_list()) == {"probabilistic_forecast_v1"}
+    assert set(forecast["scenario_count"].unique().to_list()) == {3}
+    assert set(forecast["scenario_low_quantile"].unique().to_list()) == {0.1}
+    assert set(forecast["scenario_base_quantile"].unique().to_list()) == {0.5}
+    assert set(forecast["scenario_high_quantile"].unique().to_list()) == {0.9}
     assert len(set(forecast["forecast_run_id"].unique().to_list())) == 1
     assert set(forecast["forecast_model_version"].unique().to_list()) == {
         "registry:persistence_fallback"
@@ -287,8 +305,17 @@ def test_price_forecast_asset_resolves_model_from_registry(monkeypatch) -> None:
     assert "scenario_low_price_eur_mwh" in forecast.columns
     assert "scenario_base_price_eur_mwh" in forecast.columns
     assert "scenario_high_price_eur_mwh" in forecast.columns
+    assert "quantile_p10_eur_mwh" in forecast.columns
+    assert "quantile_p25_eur_mwh" in forecast.columns
+    assert "quantile_p50_eur_mwh" in forecast.columns
+    assert "quantile_p75_eur_mwh" in forecast.columns
+    assert "quantile_p90_eur_mwh" in forecast.columns
     assert "uncertainty_spread_eur_mwh" in forecast.columns
     assert "uncertainty_source" in forecast.columns
+    assert "uncertainty_contract_version" in forecast.columns
+    assert "scenario_low_quantile" in forecast.columns
+    assert "scenario_base_quantile" in forecast.columns
+    assert "scenario_high_quantile" in forecast.columns
     assert forecast["lower_bound_eur_mwh"].to_list() == forecast["scenario_low_price_eur_mwh"].to_list()
     assert forecast["predicted_price_eur_mwh"].to_list() == forecast["scenario_base_price_eur_mwh"].to_list()
     assert forecast["upper_bound_eur_mwh"].to_list() == forecast["scenario_high_price_eur_mwh"].to_list()

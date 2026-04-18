@@ -4,6 +4,10 @@ import numpy as np
 import polars as pl
 
 from src.data_pipeline.price_forecast_features import (
+    SCENARIO_BASE_QUANTILE,
+    SCENARIO_HIGH_QUANTILE,
+    SCENARIO_LOW_QUANTILE,
+    UNCERTAINTY_CONTRACT_VERSION,
     _build_feature_frame,
     _build_persistence_forecast,
     _compute_eval_metrics,
@@ -41,6 +45,11 @@ def test_build_persistence_forecast_preserves_expected_contract() -> None:
     assert set(result["training_rows"].unique().to_list()) == {7}
     assert set(result["uncertainty_source"].unique().to_list()) == {"persistence_flat"}
     assert set(result["uncertainty_spread_eur_mwh"].unique().to_list()) == {0.0}
+    assert set(result["uncertainty_contract_version"].unique().to_list()) == {UNCERTAINTY_CONTRACT_VERSION}
+    assert set(result["scenario_count"].unique().to_list()) == {3}
+    assert set(result["scenario_low_quantile"].unique().to_list()) == {SCENARIO_LOW_QUANTILE}
+    assert set(result["scenario_base_quantile"].unique().to_list()) == {SCENARIO_BASE_QUANTILE}
+    assert set(result["scenario_high_quantile"].unique().to_list()) == {SCENARIO_HIGH_QUANTILE}
     assert result["lower_bound_eur_mwh"].to_list() == result["scenario_low_price_eur_mwh"].to_list()
     assert result["predicted_price_eur_mwh"].to_list() == result["scenario_base_price_eur_mwh"].to_list()
     assert result["upper_bound_eur_mwh"].to_list() == result["scenario_high_price_eur_mwh"].to_list()

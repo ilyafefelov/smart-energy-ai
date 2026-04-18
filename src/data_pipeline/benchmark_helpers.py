@@ -47,6 +47,12 @@ FORECAST_VALUE_SCORECARD_SCHEMA = {
     "benchmark_value_capture_ratio": PL_FLOAT64,
     "benchmark_realized_spread_eur_mwh": PL_FLOAT64,
     "benchmark_optimal_spread_eur_mwh": PL_FLOAT64,
+    "benchmark_dispatch_comparison_mode": PL_UTF8,
+    "benchmark_conservative_dispatch_source": PL_UTF8,
+    "benchmark_conservative_value_capture_ratio": PL_FLOAT64,
+    "benchmark_conservative_realized_spread_eur_mwh": PL_FLOAT64,
+    "benchmark_conservative_optimal_spread_eur_mwh": PL_FLOAT64,
+    "benchmark_point_vs_conservative_value_capture_delta": PL_FLOAT64,
     "benchmark_uncertainty_source": PL_UTF8,
     "benchmark_avg_uncertainty_spread_eur_mwh": PL_FLOAT64,
     "benchmark_max_uncertainty_spread_eur_mwh": PL_FLOAT64,
@@ -310,6 +316,83 @@ def _summarize_uncertainty_contract(rows: Sequence[dict[str, Any]]) -> dict[str,
     }
 
 
+def _resolve_dispatch_price_series(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    mode: str,
+) -> tuple[list[float], str | None]:
+    column_candidates = {
+        "point": [
+            "predicted_price_eur_mwh",
+            "scenario_base_price_eur_mwh",
+            "quantile_p50_eur_mwh",
+            "price_eur_mwh",
+        ],
+        "conservative": [
+            "quantile_p10_eur_mwh",
+            "scenario_low_price_eur_mwh",
+            "lower_bound_eur_mwh",
+            "predicted_price_eur_mwh",
+            "scenario_base_price_eur_mwh",
+            "quantile_p50_eur_mwh",
+            "price_eur_mwh",
+        ],
+    }
+
+    for column in column_candidates.get(mode, column_candidates["point"]):
+        if all(row.get(column) is not None for row in rows):
+            return [float(row[column]) for row in rows], column
+
+    return [], None
+
+
+def _summarize_dispatch_comparison(
+    rows: Sequence[Mapping[str, Any]],
+    actual_prices: Sequence[float] | None = None,
+) -> dict[str, Any]:
+    point_prices, point_source = _resolve_dispatch_price_series(rows, mode="point")
+    conservative_prices, conservative_source = _resolve_dispatch_price_series(rows, mode="conservative")
+
+    comparison_mode = None
+    if point_source is not None and conservative_source is not None:
+        comparison_mode = (
+            "point_vs_conservative"
+            if conservative_source != point_source
+            else "point_only_fallback"
+        )
+
+    conservative_metrics = {
+        "benchmark_conservative_value_capture_ratio": None,
+        "benchmark_conservative_realized_spread_eur_mwh": None,
+        "benchmark_conservative_optimal_spread_eur_mwh": None,
+        "benchmark_point_vs_conservative_value_capture_delta": None,
+    }
+    if actual_prices is not None and point_prices and conservative_prices:
+        point_metrics = _compute_forecast_value_metrics(actual_prices, point_prices)
+        conservative_value_metrics = _compute_forecast_value_metrics(actual_prices, conservative_prices)
+        conservative_metrics = {
+            "benchmark_conservative_value_capture_ratio": conservative_value_metrics[
+                "benchmark_value_capture_ratio"
+            ],
+            "benchmark_conservative_realized_spread_eur_mwh": conservative_value_metrics[
+                "benchmark_realized_spread_eur_mwh"
+            ],
+            "benchmark_conservative_optimal_spread_eur_mwh": conservative_value_metrics[
+                "benchmark_optimal_spread_eur_mwh"
+            ],
+            "benchmark_point_vs_conservative_value_capture_delta": (
+                conservative_value_metrics["benchmark_value_capture_ratio"]
+                - point_metrics["benchmark_value_capture_ratio"]
+            ),
+        }
+
+    return {
+        "benchmark_dispatch_comparison_mode": comparison_mode,
+        "benchmark_conservative_dispatch_source": conservative_source,
+        **conservative_metrics,
+    }
+
+
 def _promotion_sort_key(row: Mapping[str, Any]) -> tuple[float, float, float]:
     benchmark_value_capture_ratio = float(row.get("benchmark_value_capture_ratio") or 0.0)
     benchmark_rmse = row.get("benchmark_rmse")
@@ -348,6 +431,12 @@ def _empty_forecast_scorecard_row(
         "benchmark_value_capture_ratio": None,
         "benchmark_realized_spread_eur_mwh": None,
         "benchmark_optimal_spread_eur_mwh": None,
+        "benchmark_dispatch_comparison_mode": None,
+        "benchmark_conservative_dispatch_source": None,
+        "benchmark_conservative_value_capture_ratio": None,
+        "benchmark_conservative_realized_spread_eur_mwh": None,
+        "benchmark_conservative_optimal_spread_eur_mwh": None,
+        "benchmark_point_vs_conservative_value_capture_delta": None,
         "benchmark_uncertainty_source": None,
         "benchmark_avg_uncertainty_spread_eur_mwh": None,
         "benchmark_max_uncertainty_spread_eur_mwh": None,
@@ -533,6 +622,7 @@ def _build_eval_only_scorecard(
         eval_realized_spread_eur_mwh = float(first_row.get("eval_realized_spread_eur_mwh") or 0.0)
         eval_optimal_spread_eur_mwh = float(first_row.get("eval_optimal_spread_eur_mwh") or 0.0)
         uncertainty_summary = _summarize_uncertainty_contract(rows)
+        dispatch_comparison = _summarize_dispatch_comparison(rows)
 
         benchmark_rows.append(
             {
@@ -552,6 +642,7 @@ def _build_eval_only_scorecard(
                 "benchmark_value_capture_ratio": eval_value_capture_ratio,
                 "benchmark_realized_spread_eur_mwh": eval_realized_spread_eur_mwh,
                 "benchmark_optimal_spread_eur_mwh": eval_optimal_spread_eur_mwh,
+                **dispatch_comparison,
                 **uncertainty_summary,
                 "benchmark_window_start": min(row["forecast_timestamp"] for row in rows),
                 "benchmark_window_end": max(row["forecast_timestamp"] for row in rows),
@@ -631,6 +722,7 @@ def build_forecast_value_scorecard(
         value_metrics = _compute_forecast_value_metrics(actual_prices, predicted_prices)
         first_row = rows[0]
         uncertainty_summary = _summarize_uncertainty_contract(rows)
+        dispatch_comparison = _summarize_dispatch_comparison(rows, actual_prices)
 
         benchmark_rows.append(
             {
@@ -652,6 +744,7 @@ def build_forecast_value_scorecard(
                 "benchmark_rmse": float(benchmark_rmse),
                 "benchmark_mae": float(benchmark_mae),
                 **value_metrics,
+                **dispatch_comparison,
                 **uncertainty_summary,
                 "benchmark_window_start": min(row["forecast_timestamp"] for row in rows),
                 "benchmark_window_end": max(row["forecast_timestamp"] for row in rows),
@@ -751,6 +844,14 @@ def log_forecast_benchmark_run(
     promotion_decision_reason = row.get("promotion_decision_reason")
     promotion_gate_version = row.get("promotion_gate_version")
     promotion_eligible = row.get("promotion_eligible")
+    benchmark_dispatch_comparison_mode = row.get("benchmark_dispatch_comparison_mode")
+    benchmark_conservative_dispatch_source = row.get("benchmark_conservative_dispatch_source")
+    benchmark_conservative_value_capture_ratio = row.get(
+        "benchmark_conservative_value_capture_ratio"
+    )
+    benchmark_point_vs_conservative_value_capture_delta = row.get(
+        "benchmark_point_vs_conservative_value_capture_delta"
+    )
 
     with tracking_module.start_run(run_name=f"forecast_value_{row['model_name']}"):
         tracking_module.log_param("model_name", row["model_name"])
@@ -779,6 +880,16 @@ def log_forecast_benchmark_run(
             tracking_module.log_param(
                 "benchmark_uncertainty_source", str(benchmark_uncertainty_source)
             )
+        if benchmark_dispatch_comparison_mode is not None:
+            tracking_module.log_param(
+                "benchmark_dispatch_comparison_mode",
+                str(benchmark_dispatch_comparison_mode),
+            )
+        if benchmark_conservative_dispatch_source is not None:
+            tracking_module.log_param(
+                "benchmark_conservative_dispatch_source",
+                str(benchmark_conservative_dispatch_source),
+            )
         if row.get("benchmark_rmse") is not None:
             tracking_module.log_metric("benchmark_rmse", float(row["benchmark_rmse"]))
         if row.get("benchmark_mae") is not None:
@@ -796,6 +907,16 @@ def log_forecast_benchmark_run(
             tracking_module.log_metric(
                 "benchmark_max_uncertainty_spread_eur_mwh",
                 float(benchmark_max_uncertainty_spread),
+            )
+        if benchmark_conservative_value_capture_ratio is not None:
+            tracking_module.log_metric(
+                "benchmark_conservative_value_capture_ratio",
+                float(benchmark_conservative_value_capture_ratio),
+            )
+        if benchmark_point_vs_conservative_value_capture_delta is not None:
+            tracking_module.log_metric(
+                "benchmark_point_vs_conservative_value_capture_delta",
+                float(benchmark_point_vs_conservative_value_capture_delta),
             )
         if row.get("eval_rmse") is not None:
             tracking_module.log_metric("eval_rmse", float(row["eval_rmse"]))
@@ -848,6 +969,16 @@ def log_forecast_benchmark_run(
             if benchmark_uncertainty_source is not None
             else None
         ),
+        "param_benchmark_dispatch_comparison_mode": (
+            str(benchmark_dispatch_comparison_mode)
+            if benchmark_dispatch_comparison_mode is not None
+            else None
+        ),
+        "param_benchmark_conservative_dispatch_source": (
+            str(benchmark_conservative_dispatch_source)
+            if benchmark_conservative_dispatch_source is not None
+            else None
+        ),
         "metric_benchmark_avg_uncertainty_spread_eur_mwh": (
             float(benchmark_avg_uncertainty_spread)
             if benchmark_avg_uncertainty_spread is not None
@@ -856,6 +987,16 @@ def log_forecast_benchmark_run(
         "metric_benchmark_max_uncertainty_spread_eur_mwh": (
             float(benchmark_max_uncertainty_spread)
             if benchmark_max_uncertainty_spread is not None
+            else None
+        ),
+        "metric_benchmark_conservative_value_capture_ratio": (
+            float(benchmark_conservative_value_capture_ratio)
+            if benchmark_conservative_value_capture_ratio is not None
+            else None
+        ),
+        "metric_benchmark_point_vs_conservative_value_capture_delta": (
+            float(benchmark_point_vs_conservative_value_capture_delta)
+            if benchmark_point_vs_conservative_value_capture_delta is not None
             else None
         ),
         "metric_eval_rmse": row["eval_rmse"],

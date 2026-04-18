@@ -242,6 +242,10 @@ def test_benchmark_performance_helpers_and_tracking(monkeypatch, capsys) -> None
                 "benchmark_rmse": 4.0,
                 "benchmark_mae": 3.0,
                 "benchmark_value_capture_ratio": 0.8,
+                "benchmark_dispatch_comparison_mode": "point_vs_conservative",
+                "benchmark_conservative_dispatch_source": "scenario_low_price_eur_mwh",
+                "benchmark_conservative_value_capture_ratio": 0.72,
+                "benchmark_point_vs_conservative_value_capture_delta": -0.08,
                 "benchmark_candidate_status": "validated",
                 "benchmark_candidate_ready": True,
                 "benchmark_candidate_skip_reason": None,
@@ -270,6 +274,10 @@ def test_benchmark_performance_helpers_and_tracking(monkeypatch, capsys) -> None
     assert forecast_tracking_row["param_promotion_decision"] == "promoted"
     assert forecast_tracking_row["param_promotion_gate_version"] == "forecast_value_scorecard_v1"
     assert forecast_tracking_row["param_promotion_eligible"] is True
+    assert forecast_tracking_row["param_benchmark_dispatch_comparison_mode"] == "point_vs_conservative"
+    assert forecast_tracking_row["param_benchmark_conservative_dispatch_source"] == "scenario_low_price_eur_mwh"
+    assert forecast_tracking_row["metric_benchmark_conservative_value_capture_ratio"] == 0.72
+    assert forecast_tracking_row["metric_benchmark_point_vs_conservative_value_capture_delta"] == -0.08
 
     monkeypatch.setattr(module, "engine_benchmark_asset", lambda market, weather: [1, 2])
     monkeypatch.setattr(module, "accuracy_benchmark_asset", lambda market: [1])

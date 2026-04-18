@@ -469,6 +469,8 @@ def accuracy_benchmark_asset(market_data: pl.DataFrame) -> pl.DataFrame:
             "benchmark_rmse",
             "benchmark_mae",
             "benchmark_value_capture_ratio",
+            "benchmark_conservative_value_capture_ratio",
+            "benchmark_point_vs_conservative_value_capture_delta",
         ],
     },
 )

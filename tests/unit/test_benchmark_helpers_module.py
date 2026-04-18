@@ -232,6 +232,7 @@ def test_forecast_value_benchmark_asset_builds_scorecard() -> None:
         {
             "forecast_timestamp": timestamps,
             "predicted_price_eur_mwh": [48.0, 22.0, 66.0, 67.0],
+            "scenario_low_price_eur_mwh": [44.0, 28.0, 61.0, 60.0],
             "model_name": ["demo_model"] * 4,
             "model_family": ["demo_family"] * 4,
             "forecast_horizon_hours": [24] * 4,
@@ -256,6 +257,9 @@ def test_forecast_value_benchmark_asset_builds_scorecard() -> None:
     assert row["model_name"] == "demo_model"
     assert row["benchmark_rmse"] > 0.0
     assert 0.0 <= row["benchmark_value_capture_ratio"] <= 1.0
+    assert row["benchmark_dispatch_comparison_mode"] == "point_vs_conservative"
+    assert row["benchmark_conservative_dispatch_source"] == "scenario_low_price_eur_mwh"
+    assert 0.0 <= row["benchmark_conservative_value_capture_ratio"] <= 1.0
     assert row["benchmark_uncertainty_source"] == "walk_forward_residual_std"
     assert row["benchmark_avg_uncertainty_spread_eur_mwh"] == 7.0
     assert row["benchmark_candidate_status"] == "untracked"
@@ -426,6 +430,7 @@ def test_forecast_value_benchmark_asset_persists_promoted_winner(monkeypatch) ->
         {
             "forecast_timestamp": timestamps,
             "predicted_price_eur_mwh": [48.0, 22.0, 66.0, 67.0],
+            "scenario_low_price_eur_mwh": [44.0, 28.0, 61.0, 60.0],
             "model_name": ["random_forest_dam_24h"] * 4,
             "model_family": ["random_forest_regressor"] * 4,
             "forecast_horizon_hours": [24] * 4,
@@ -454,6 +459,8 @@ def test_forecast_value_benchmark_asset_persists_promoted_winner(monkeypatch) ->
     assert "skipped" in set(result["benchmark_candidate_status"].to_list())
     assert captured_metadata["value"]["model_name"] == "random_forest_dam_24h"
     assert captured_metadata["value"]["promotion_source"] == "forecast_value_benchmark_asset"
+    assert captured_metadata["value"]["benchmark_dispatch_comparison_mode"] == "point_vs_conservative"
+    assert captured_metadata["value"]["benchmark_conservative_dispatch_source"] == "scenario_low_price_eur_mwh"
     assert captured_metadata["value"]["benchmark_uncertainty_source"] == "walk_forward_residual_std"
     assert captured_metadata["value"]["benchmark_avg_uncertainty_spread_eur_mwh"] == 9.0
     assert captured_metadata["value"]["benchmark_max_uncertainty_spread_eur_mwh"] == 12.0
@@ -479,6 +486,10 @@ def test_log_forecast_benchmark_run_preserves_uncertainty_summaries() -> None:
         "benchmark_rmse": 4.0,
         "benchmark_mae": 3.0,
         "benchmark_value_capture_ratio": 0.8,
+        "benchmark_dispatch_comparison_mode": "point_vs_conservative",
+        "benchmark_conservative_dispatch_source": "scenario_low_price_eur_mwh",
+        "benchmark_conservative_value_capture_ratio": 0.72,
+        "benchmark_point_vs_conservative_value_capture_delta": -0.08,
         "benchmark_uncertainty_source": "walk_forward_residual_std",
         "benchmark_avg_uncertainty_spread_eur_mwh": 9.0,
         "benchmark_max_uncertainty_spread_eur_mwh": 12.0,
@@ -503,5 +514,9 @@ def test_log_forecast_benchmark_run_preserves_uncertainty_summaries() -> None:
     assert log_row["param_promotion_gate_version"] == "forecast_value_scorecard_v1"
     assert log_row["param_promotion_eligible"] is True
     assert log_row["param_benchmark_uncertainty_source"] == "walk_forward_residual_std"
+    assert log_row["param_benchmark_dispatch_comparison_mode"] == "point_vs_conservative"
+    assert log_row["param_benchmark_conservative_dispatch_source"] == "scenario_low_price_eur_mwh"
     assert log_row["metric_benchmark_avg_uncertainty_spread_eur_mwh"] == 9.0
     assert log_row["metric_benchmark_max_uncertainty_spread_eur_mwh"] == 12.0
+    assert log_row["metric_benchmark_conservative_value_capture_ratio"] == 0.72
+    assert log_row["metric_benchmark_point_vs_conservative_value_capture_delta"] == -0.08
