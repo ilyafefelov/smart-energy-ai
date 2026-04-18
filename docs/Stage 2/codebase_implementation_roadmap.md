@@ -347,3 +347,32 @@ These items stay explicitly outside the near-term roadmap unless the codebase, d
 7. Phase 6
 
 That order keeps the repo honest: first measurement, then better forecasts, then optimizer upgrades, then richer user-facing contracts, then household-objective realism, and only then a learned-policy experiment lane.
+
+## Appendix: energy_ml/mlops/ Analysis (2026-04-18)
+
+The `energy_ml/mlops/` folder contains isolated ML infrastructure assessed on 2026-04-18.
+
+### Files
+
+| File | Lines | Status | Notes |
+|------|-------|--------|-------|
+| `battery_physics.py` | 510 | Useful | Multi-chemistry (LFP, Lead-Acid, VRFB) with degradation physics |
+| `feature_store.py` | 416 | Useful | Polars-based feature serving with batch/online stores |
+| `model_registry.py` | 420 | Obsolete | Uses old pickle/joblib; should migrate to MLflow LoggedModel API |
+| `monitoring_dashboard.py` | 437 | Useful | Alert manager, drift detection, A/B testing |
+| `optimization_engine.py` | 325 | Useful | Strategy-based optimization (max_earn, max_battery_health) |
+| `renewable_forecasting.py` | 272 | Useful | Solar/wind forecasting with Open-Meteo integration |
+| `retraining_pipeline.py` | 465 | Useful | Automated retraining with drift detection |
+
+### Key Findings
+
+1. **No `*_support.py` duplicates** - All 7 support files verified functional
+2. **Model registry uses deprecated patterns** - `joblib.dump/load` vs MLflow LoggedModel API
+3. **Hardcoded model name** - `"energy_optimizer"` should be configurable
+4. **No active imports from `src/`** - `energy_ml/mlops/` is isolated from Dagster pipeline
+
+### Recommendations
+
+- Phase 0-2 work (forecasting, benchmarking) continues using `src/` patterns
+- Consider migrating `energy_ml/mlops/` components to `src/` once Phase 4-5 surfaces
+- Battery physics and renewable forecasting are candidates for `src/physics/` and `src/data_pipeline/`

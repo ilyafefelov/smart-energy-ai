@@ -68,9 +68,40 @@ def _build_uncertainty_contract_columns(
     *,
     spread: float,
     uncertainty_source: str,
+    residual_std: float = 0.0,
+    skewness: float = 0.0,
 ) -> list[pl.Expr]:
+    """Build uncertainty contract columns with quantile-based intervals.
+
+    Args:
+        spread: The uncertainty spread (residual_std or fallback).
+        uncertainty_source: Source of uncertainty estimate.
+        residual_std: Standard deviation of residuals for quantile calculation.
+        skewness: Skewness of residuals for asymmetric intervals.
+
+    Returns:
+        List of polars expressions for uncertainty columns.
+    """
     bounded_spread = max(float(spread), 0.0)
+
+    # Calculate quantile-based intervals from residual distribution
+    # Using normal approximation with optional skewness adjustment
+    # p10 = mean - 1.28 * std, p90 = mean + 1.28 * std
+    # p25 = mean - 0.67 * std, p75 = mean + 0.67 * std
+    quantile_std = residual_std if residual_std > 0 else bounded_spread
+
+    # Apply skewness adjustment for asymmetric intervals
+    # Positive skew: upper tail is fatter, negative skew: lower tail is fatter
+    skew_adj = float(skewness) * 0.5  # Dampen skewness effect
+
+    # Quantile factors (normal distribution)
+    q10_factor = -1.28 + skew_adj
+    q25_factor = -0.67 + skew_adj
+    q75_factor = 0.67 + skew_adj
+    q90_factor = 1.28 + skew_adj
+
     return [
+        # Legacy symmetric bounds (backward compatibility)
         (pl.col("predicted_price_eur_mwh") - bounded_spread)
         .clip(0.0, 1000.0)
         .alias("lower_bound_eur_mwh"),
@@ -84,8 +115,27 @@ def _build_uncertainty_contract_columns(
         (pl.col("predicted_price_eur_mwh") + bounded_spread)
         .clip(0.0, 1000.0)
         .alias("upper_bound_eur_mwh"),
+
+        # Phase 2: Explicit quantile columns for probabilistic forecasting
+        (pl.col("predicted_price_eur_mwh") + q10_factor * quantile_std)
+        .clip(0.0, 1000.0)
+        .alias("quantile_p10_eur_mwh"),
+        (pl.col("predicted_price_eur_mwh") + q25_factor * quantile_std)
+        .clip(0.0, 1000.0)
+        .alias("quantile_p25_eur_mwh"),
+        pl.col("predicted_price_eur_mwh").alias("quantile_p50_eur_mwh"),  # Same as point forecast
+        (pl.col("predicted_price_eur_mwh") + q75_factor * quantile_std)
+        .clip(0.0, 1000.0)
+        .alias("quantile_p75_eur_mwh"),
+        (pl.col("predicted_price_eur_mwh") + q90_factor * quantile_std)
+        .clip(0.0, 1000.0)
+        .alias("quantile_p90_eur_mwh"),
+
+        # Summary statistics
         pl.lit(bounded_spread).alias("uncertainty_spread_eur_mwh"),
         pl.lit(uncertainty_source).alias("uncertainty_source"),
+        pl.lit(quantile_std).alias("quantile_std_eur_mwh"),
+        pl.lit(skewness).alias("residual_skewness"),
     ]
 
 

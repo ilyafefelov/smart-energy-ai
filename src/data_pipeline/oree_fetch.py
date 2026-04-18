@@ -202,8 +202,15 @@ def _fetch_oree_data_view_prices(target_date: datetime.date) -> Optional[List[Di
         )
         response.raise_for_status()
 
-        payload = response.json()
-        content = payload.get("content", "") if isinstance(payload, dict) else ""
+        # Handle both JSON and HTML responses
+        content_type = response.headers.get('content-type', '')
+        if 'application/json' in content_type:
+            payload = response.json()
+            content = payload.get("content", "") if isinstance(payload, dict) else ""
+        else:
+            # API returned HTML - use raw response text
+            content = response.text
+
         if not content:
             return None
 

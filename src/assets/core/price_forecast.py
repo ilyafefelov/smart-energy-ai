@@ -106,6 +106,29 @@ def _build_forecast_with_model_spec(
         spread = 5.0
         uncertainty_source = "minimum_spread_floor"
 
+    # Phase 2: Compute residual skewness for asymmetric quantile intervals
+    residual_skewness = 0.0
+    if int(walk_forward_metrics["fold_count"]) > 0:
+        # Compute skewness from walk-forward residuals
+        all_residuals: list[float] = []
+        labeled_sorted = labeled.sort("timestamp")
+        min_train = 48
+        eval_size = 24
+        step_size = 24
+        for train_end in range(min_train, len(labeled_sorted) - eval_size + 1, step_size):
+            train_df = labeled_sorted.slice(0, train_end)
+            eval_df = labeled_sorted.slice(train_end, eval_size)
+            if len(eval_df) == 0:
+                continue
+            fold_model = model_spec.build_estimator()
+            _fit_forecast_model(fold_model, train_df, feature_cols)
+            y_eval = eval_df.select("target_price_t_plus_24h").to_numpy().reshape(-1)
+            y_hat = _predict_forecast_model(fold_model, eval_df, feature_cols)
+            all_residuals.extend((y_eval - y_hat).tolist())
+        if len(all_residuals) >= 3:
+            from scipy import stats as scipy_stats
+            residual_skewness = float(scipy_stats.skew(all_residuals))
+
     forecast_df = infer_features.select(
         [
             (pl.col("timestamp") + pl.duration(hours=24)).alias("forecast_timestamp"),
@@ -119,6 +142,8 @@ def _build_forecast_with_model_spec(
             *_build_uncertainty_contract_columns(
                 spread=spread,
                 uncertainty_source=uncertainty_source,
+                residual_std=residual_std,
+                skewness=residual_skewness,
             ),
             pl.lit(model_spec.model_name).alias("model_name"),
             pl.lit(model_spec.model_family).alias("model_family"),
