@@ -822,6 +822,7 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
   await optimizationPool.query(`ALTER TABLE optimization_history ALTER COLUMN execution_source SET DEFAULT 'unknown'`)
   await optimizationPool.query(`UPDATE optimization_history SET execution_source = 'unknown' WHERE execution_source IS NULL`)
   await optimizationPool.query(`ALTER TABLE optimization_history ALTER COLUMN execution_source SET NOT NULL`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS actual_action INTEGER`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS price_uah_kwh DOUBLE PRECISION`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS duration_minutes INTEGER`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS energy_kwh DOUBLE PRECISION`)
@@ -832,6 +833,10 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS tariff_window VARCHAR(32)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS interval_start TIMESTAMP`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS interval_end TIMESTAMP`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS battery_soc_start DOUBLE PRECISION`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS battery_soc_end DOUBLE PRECISION`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS solar_actual DOUBLE PRECISION`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS load_actual DOUBLE PRECISION`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS forecast_run_id VARCHAR(128)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS forecast_model_version VARCHAR(128)`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS optimization_run_id VARCHAR(128)`)
@@ -847,6 +852,7 @@ async function ensureSchema(optimizationPool: any): Promise<void> {
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS is_reconciled BOOLEAN NOT NULL DEFAULT FALSE`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS reconciled_at TIMESTAMP`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS reconciliation_note TEXT`)
+  await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`)
   await optimizationPool.query(`ALTER TABLE optimization_history ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW()`)
   await optimizationPool.query(`
     UPDATE optimization_history
