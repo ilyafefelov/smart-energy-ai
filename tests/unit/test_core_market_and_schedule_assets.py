@@ -445,6 +445,46 @@ def test_extract_price_horizon_prefers_requested_uncertainty_mode() -> None:
     assert module._extract_price_horizon(price_forecast, horizon_mode="base") == [50.0, 55.0]
     assert module._extract_price_horizon(price_forecast, horizon_mode="optimistic") == [60.0, 65.0]
 
+    quantile_only_forecast = FakePolarsFrame([
+        {
+            "predicted_price_eur_mwh": 50.0,
+            "quantile_p10_eur_mwh": 44.0,
+            "quantile_p50_eur_mwh": 49.0,
+            "quantile_p90_eur_mwh": 58.0,
+        },
+        {
+            "predicted_price_eur_mwh": 55.0,
+            "quantile_p10_eur_mwh": 48.0,
+            "quantile_p50_eur_mwh": 54.0,
+            "quantile_p90_eur_mwh": 63.0,
+        },
+    ])
+
+    assert module._extract_price_horizon(quantile_only_forecast, horizon_mode="conservative") == [44.0, 48.0]
+    assert module._extract_price_horizon(quantile_only_forecast, horizon_mode="base") == [49.0, 54.0]
+    assert module._extract_price_horizon(quantile_only_forecast, horizon_mode="optimistic") == [58.0, 63.0]
+
+    incomplete_uncertainty_forecast = FakePolarsFrame([
+        {
+            "predicted_price_eur_mwh": 50.0,
+            "scenario_low_price_eur_mwh": 45.0,
+            "lower_bound_eur_mwh": 46.0,
+            "scenario_high_price_eur_mwh": 60.0,
+            "upper_bound_eur_mwh": 59.0,
+        },
+        {
+            "predicted_price_eur_mwh": 55.0,
+            "scenario_low_price_eur_mwh": None,
+            "lower_bound_eur_mwh": 51.0,
+            "scenario_high_price_eur_mwh": None,
+            "upper_bound_eur_mwh": 64.0,
+        },
+    ])
+
+    assert module._extract_price_horizon(incomplete_uncertainty_forecast, horizon_mode="conservative") == [46.0, 51.0]
+    assert module._extract_price_horizon(incomplete_uncertainty_forecast, horizon_mode="base") == [50.0, 55.0]
+    assert module._extract_price_horizon(incomplete_uncertainty_forecast, horizon_mode="optimistic") == [59.0, 64.0]
+
 
 def test_optimization_schedule_checks_evaluate_contracts() -> None:
     injected = build_schedule_injected_modules()

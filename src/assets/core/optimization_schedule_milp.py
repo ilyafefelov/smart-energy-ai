@@ -24,6 +24,7 @@ from .optimization_schedule import (
     _get_client_series,
     _load_client_capacities,
     _resolve_forecast_context,
+    _resolve_price_horizon,
     build_empty_optimization_schedule,
     build_optimization_schedule_frame,
 )
@@ -43,14 +44,21 @@ from .optimization_schedule import (
 )
 def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, client_state: pl.DataFrame) -> pl.DataFrame:
     horizon_mode = "base"
-    prices = _extract_price_horizon(price_forecast, horizon_mode=horizon_mode)
+    horizon_details = _resolve_price_horizon(price_forecast, horizon_mode=horizon_mode)
+    prices = list(horizon_details["prices"])
     if not prices:
         context.log.warning("No forecast prices available for MILP schedule")
         return build_empty_optimization_schedule()
 
     horizon = min(24, len(prices))
     capacity_by_client = _load_client_capacities()
-    forecast_context = _resolve_forecast_context(price_forecast, horizon_mode=horizon_mode)
+    forecast_context = _resolve_forecast_context(
+        price_forecast,
+        horizon_mode=horizon_mode,
+        horizon_source=horizon_details["source_column"],
+        uncertainty_source=horizon_details["uncertainty_source"],
+        uncertainty_contract_version=horizon_details["uncertainty_contract_version"],
+    )
     output_frames: List[pl.DataFrame] = []
 
     client_ids = (
@@ -138,7 +146,11 @@ def optimization_schedule_milp_asset(context, price_forecast: pl.DataFrame, clie
             "forecast_latency_ms": forecast_context["forecast_latency_ms"],
             "forecast_freshness_minutes": forecast_context["forecast_freshness_minutes"],
             "forecast_horizon_mode": forecast_context["forecast_horizon_mode"],
+            "forecast_horizon_source": forecast_context["forecast_horizon_source"],
             "forecast_uncertainty_source": forecast_context["forecast_uncertainty_source"],
+            "forecast_uncertainty_contract_version": forecast_context[
+                "forecast_uncertainty_contract_version"
+            ],
             "forecast_promotion_active": forecast_context["forecast_promotion_active"],
             "forecast_promotion_source": forecast_context["forecast_promotion_source"],
             "optimization_run_id": optimization_run_id,

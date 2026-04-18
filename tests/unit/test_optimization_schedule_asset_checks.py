@@ -16,6 +16,7 @@ from src.assets.core.optimization_schedule_checks import (
     evaluate_schedule_realized_value_reconciliation,
     evaluate_schedule_action_semantics,
     evaluate_schedule_completeness,
+    evaluate_schedule_forecast_metadata,
     evaluate_schedule_numeric_fields,
     optimization_schedule_contract_checks,
     optimization_schedule_lineage_check,
@@ -37,6 +38,10 @@ def _valid_schedule() -> pl.DataFrame:
                 "charge_kwh": charge_kwh,
                 "discharge_kwh": discharge_kwh,
                 "price_eur_mwh": 40.0 + hour,
+                "forecast_horizon_mode": "conservative",
+                "forecast_horizon_source": "scenario_low_price_eur_mwh",
+                "forecast_uncertainty_source": "walk_forward_residual_std",
+                "forecast_uncertainty_contract_version": "probabilistic_forecast_v1",
             }
         )
     return pl.DataFrame(rows)
@@ -48,10 +53,12 @@ def test_schedule_contract_checks_pass_for_valid_schedule() -> None:
     completeness = evaluate_schedule_completeness(schedule)
     numeric_fields = evaluate_schedule_numeric_fields(schedule)
     action_semantics = evaluate_schedule_action_semantics(schedule)
+    forecast_metadata = evaluate_schedule_forecast_metadata(schedule)
 
     assert completeness["passed"] is True
     assert numeric_fields["passed"] is True
     assert action_semantics["passed"] is True
+    assert forecast_metadata["passed"] is True
 
 
 def test_schedule_contract_checks_fail_for_duplicate_missing_and_inconsistent_rows() -> None:
@@ -154,6 +161,22 @@ def test_schedule_lineage_checks_detect_missing_and_inconsistent_lineage(monkeyp
     missing_lineage = evaluate_schedule_realized_value_reconciliation(valid_lineage_schedule)
     assert missing_lineage["passed"] is False
     assert missing_lineage["metadata"]["lineage_missing_row_count"] == 1
+
+
+def test_schedule_lineage_checks_fail_for_missing_forecast_provenance() -> None:
+    schedule = _valid_schedule().with_columns(
+        pl.lit("forecast-demo").alias("forecast_run_id"),
+        pl.lit("registry:demo").alias("forecast_model_version"),
+        pl.lit("optimization-a").alias("optimization_run_id"),
+        pl.lit(None).alias("forecast_horizon_source"),
+    )
+
+    lineage = evaluate_schedule_lineage(schedule)
+    lineage_result = optimization_schedule_lineage_check(schedule)
+
+    assert lineage["passed"] is False
+    assert lineage["metadata"]["missing_forecast_horizon_source_count"] == 24
+    assert lineage_result.passed is False
 
 
 def test_schedule_frame_builder_uses_canonical_schema_for_empty_and_sparse_rows() -> None:

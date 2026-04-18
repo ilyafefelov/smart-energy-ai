@@ -14,6 +14,7 @@ from src.data_pipeline.optimization_history_reconciliation import (
 from src.data_pipeline.optimization_schedule_validators import (
     evaluate_schedule_action_semantics,
     evaluate_schedule_completeness,
+    evaluate_schedule_forecast_metadata,
     evaluate_schedule_numeric_fields,
 )
 from .optimization_schedule import optimization_schedule_asset
@@ -59,10 +60,11 @@ def evaluate_schedule_lineage(schedule: pl.DataFrame) -> Dict[str, Any]:
     required_columns = ["forecast_run_id", "optimization_run_id", "forecast_model_version"]
     available_columns = list(getattr(schedule, "columns", []))
     missing_columns = [column for column in required_columns if column not in available_columns]
+    forecast_metadata_evaluation = evaluate_schedule_forecast_metadata(schedule)
 
     if not rows:
         return {
-            "passed": not missing_columns,
+            "passed": not missing_columns and forecast_metadata_evaluation["passed"],
             "metadata": {
                 "status": "empty_schedule",
                 "missing_lineage_columns": ",".join(missing_columns),
@@ -72,6 +74,7 @@ def evaluate_schedule_lineage(schedule: pl.DataFrame) -> Dict[str, Any]:
                 "null_forecast_model_version_count": 0,
                 "multi_forecast_run_clients": 0,
                 "multi_optimization_run_clients": 0,
+                **forecast_metadata_evaluation["metadata"],
             },
         }
 
@@ -109,6 +112,7 @@ def evaluate_schedule_lineage(schedule: pl.DataFrame) -> Dict[str, Any]:
         and null_forecast_model_version_count == 0
         and multi_forecast_run_clients == 0
         and multi_optimization_run_clients == 0
+        and forecast_metadata_evaluation["passed"]
     )
 
     return {
@@ -122,6 +126,7 @@ def evaluate_schedule_lineage(schedule: pl.DataFrame) -> Dict[str, Any]:
             "null_forecast_model_version_count": null_forecast_model_version_count,
             "multi_forecast_run_clients": multi_forecast_run_clients,
             "multi_optimization_run_clients": multi_optimization_run_clients,
+            **forecast_metadata_evaluation["metadata"],
         },
     }
 

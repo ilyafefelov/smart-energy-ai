@@ -112,9 +112,15 @@ def build_milp_injected_modules():
     optimization_mod.MilpSchedulerConfig = MilpSchedulerConfig
 
     opt_sched_mod._extract_price_horizon = lambda df, horizon_mode="base": df["predicted_price_eur_mwh"].to_list() if "predicted_price_eur_mwh" in df.columns else []
+    opt_sched_mod._resolve_price_horizon = lambda df, horizon_mode="base": {
+        "prices": opt_sched_mod._extract_price_horizon(df, horizon_mode=horizon_mode),
+        "source_column": "predicted_price_eur_mwh" if "predicted_price_eur_mwh" in df.columns else None,
+        "uncertainty_source": "stub_uncertainty",
+        "uncertainty_contract_version": None,
+    }
     opt_sched_mod._get_client_series = lambda client_df, column, horizon, fallback: [float(v) for v in client_df[column].to_list()[-horizon:]] if column in client_df.columns else [fallback] * horizon
     opt_sched_mod._load_client_capacities = lambda: {"tenant-a": 180.0}
-    opt_sched_mod._resolve_forecast_context = lambda df, horizon_mode="base": {
+    opt_sched_mod._resolve_forecast_context = lambda df, horizon_mode="base", horizon_source=None, uncertainty_source=None, uncertainty_contract_version=None: {
         "forecast_run_id": "forecast-stub-1234",
         "forecast_model_name": "stub_model",
         "forecast_model_family": "stub_family",
@@ -124,7 +130,9 @@ def build_milp_injected_modules():
         "forecast_latency_ms": 0,
         "forecast_freshness_minutes": 0.0,
         "forecast_horizon_mode": horizon_mode,
-        "forecast_uncertainty_source": "stub_uncertainty",
+        "forecast_horizon_source": horizon_source or "predicted_price_eur_mwh",
+        "forecast_uncertainty_source": uncertainty_source or "stub_uncertainty",
+        "forecast_uncertainty_contract_version": uncertainty_contract_version,
         "forecast_promotion_active": False,
         "forecast_promotion_source": None,
     }
@@ -158,7 +166,9 @@ def build_milp_injected_modules():
         "forecast_latency_ms": pl.Int64,
         "forecast_freshness_minutes": pl.Float64,
         "forecast_horizon_mode": pl.Utf8,
+        "forecast_horizon_source": pl.Utf8,
         "forecast_uncertainty_source": pl.Utf8,
+        "forecast_uncertainty_contract_version": pl.Utf8,
         "forecast_promotion_active": pl.Boolean,
         "forecast_promotion_source": pl.Utf8,
         "optimization_run_id": pl.Utf8,
@@ -204,6 +214,7 @@ def test_optimization_schedule_milp_asset_outputs_schedule() -> None:
     assert result["forecast_run_id"].to_list() == ["forecast-stub-1234", "forecast-stub-1234"]
     assert result["forecast_model_version"].to_list() == ["registry:stub_model", "registry:stub_model"]
     assert result["forecast_horizon_mode"].to_list() == ["base", "base"]
+    assert result["forecast_horizon_source"].to_list() == ["predicted_price_eur_mwh", "predicted_price_eur_mwh"]
     assert result["optimization_run_id"].to_list()[0].startswith("optimization-")
     assert result["solver"].to_list()[0] == "stub-solver"
 

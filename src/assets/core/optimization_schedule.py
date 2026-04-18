@@ -14,7 +14,11 @@ from src.data_pipeline.optimization_profile_loader import (
     _load_client_profiles,
     _normalize_market_regime_override,
 )
-from src.data_pipeline.optimization_schedule_inputs import _extract_price_horizon, _get_client_series
+from src.data_pipeline.optimization_schedule_inputs import (
+    _extract_price_horizon,
+    _get_client_series,
+    _resolve_price_horizon,
+)
 
 from ...physics.economics import BatteryTechnology, EconomicModel
 from ...optimization.baseline_dp import BaselineDPOptimizer, BaselineOptimizationConfig
@@ -50,7 +54,9 @@ OPTIMIZATION_SCHEDULE_SCHEMA: Dict[str, pl.DataType] = {
     "forecast_latency_ms": pl.Int64,
     "forecast_freshness_minutes": pl.Float64,
     "forecast_horizon_mode": pl.Utf8,
+    "forecast_horizon_source": pl.Utf8,
     "forecast_uncertainty_source": pl.Utf8,
+    "forecast_uncertainty_contract_version": pl.Utf8,
     "forecast_promotion_active": pl.Boolean,
     "forecast_promotion_source": pl.Utf8,
     "optimization_run_id": pl.Utf8,
@@ -160,6 +166,9 @@ def _resolve_forecast_context(
     price_forecast: pl.DataFrame,
     *,
     horizon_mode: str,
+    horizon_source: str | None = None,
+    uncertainty_source: str | None = None,
+    uncertainty_contract_version: str | None = None,
 ) -> Dict[str, Any]:
     rows = price_forecast.sort("forecast_timestamp").to_dicts() if len(price_forecast) else []
     first_row = rows[0] if rows else {}
@@ -176,7 +185,11 @@ def _resolve_forecast_context(
         "forecast_latency_ms": int(first_row.get("forecast_latency_ms") or forecast_lineage["forecast_latency_ms"] or 0),
         "forecast_freshness_minutes": float(first_row.get("forecast_freshness_minutes") or forecast_lineage["forecast_freshness_minutes"] or 0.0),
         "forecast_horizon_mode": horizon_mode,
-        "forecast_uncertainty_source": str(first_row.get("uncertainty_source") or "") or None,
+        "forecast_horizon_source": str(horizon_source or "") or None,
+        "forecast_uncertainty_source": str(uncertainty_source or first_row.get("uncertainty_source") or "") or None,
+        "forecast_uncertainty_contract_version": str(
+            uncertainty_contract_version or first_row.get("uncertainty_contract_version") or ""
+        ) or None,
         "forecast_promotion_active": bool(promotion_active) if promotion_active is not None else False,
         "forecast_promotion_source": str(first_row.get("promotion_source") or "") or None,
     }
@@ -197,14 +210,21 @@ def _resolve_forecast_context(
 )
 def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_state: pl.DataFrame) -> pl.DataFrame:
     horizon_mode = "conservative"
-    prices = _extract_price_horizon(price_forecast, horizon_mode=horizon_mode)
+    horizon_details = _resolve_price_horizon(price_forecast, horizon_mode=horizon_mode)
+    prices = list(horizon_details["prices"])
     if not prices:
         context.log.warning("No forecast price column found; returning empty optimization schedule")
         return build_empty_optimization_schedule()
 
     horizon = min(24, len(prices))
     client_profiles = _load_client_profiles()
-    forecast_context = _resolve_forecast_context(price_forecast, horizon_mode=horizon_mode)
+    forecast_context = _resolve_forecast_context(
+        price_forecast,
+        horizon_mode=horizon_mode,
+        horizon_source=horizon_details["source_column"],
+        uncertainty_source=horizon_details["uncertainty_source"],
+        uncertainty_contract_version=horizon_details["uncertainty_contract_version"],
+    )
 
     output_frames: List[pl.DataFrame] = []
     client_ids = (
@@ -303,7 +323,11 @@ def optimization_schedule_asset(context, price_forecast: pl.DataFrame, client_st
             "forecast_latency_ms": forecast_context["forecast_latency_ms"],
             "forecast_freshness_minutes": forecast_context["forecast_freshness_minutes"],
             "forecast_horizon_mode": forecast_context["forecast_horizon_mode"],
+            "forecast_horizon_source": forecast_context["forecast_horizon_source"],
             "forecast_uncertainty_source": forecast_context["forecast_uncertainty_source"],
+            "forecast_uncertainty_contract_version": forecast_context[
+                "forecast_uncertainty_contract_version"
+            ],
             "forecast_promotion_active": forecast_context["forecast_promotion_active"],
             "forecast_promotion_source": forecast_context["forecast_promotion_source"],
             "optimization_run_id": optimization_run_id,

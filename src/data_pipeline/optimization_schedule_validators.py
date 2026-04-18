@@ -14,6 +14,17 @@ ROW_COUNT_TARGET = 24
 EXPECTED_HOURS = set(range(24))
 ACTION_TOLERANCE = 1e-4
 FLOW_TOLERANCE = 1e-6
+VALID_HORIZON_MODES = {"base", "conservative", "optimistic"}
+PROBABILISTIC_HORIZON_SOURCES = {
+    "scenario_low_price_eur_mwh",
+    "scenario_base_price_eur_mwh",
+    "scenario_high_price_eur_mwh",
+    "quantile_p10_eur_mwh",
+    "quantile_p50_eur_mwh",
+    "quantile_p90_eur_mwh",
+    "lower_bound_eur_mwh",
+    "upper_bound_eur_mwh",
+}
 
 
 def _serialize_preview(value: Dict[str, Any], limit: int = 5) -> str:
@@ -41,6 +52,13 @@ def _coerce_hour(value: Any) -> int | None:
     if numeric is None or not float(numeric).is_integer():
         return None
     return int(numeric)
+
+
+def _coerce_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
 
 
 def _filter_client_frame(schedule: pl.DataFrame, client_id: Any) -> pl.DataFrame:
@@ -247,6 +265,88 @@ def evaluate_schedule_action_semantics(schedule: pl.DataFrame) -> Dict[str, Any]
     }
 
 
+def evaluate_schedule_forecast_metadata(schedule: pl.DataFrame) -> Dict[str, Any]:
+    required_columns = (
+        "forecast_horizon_mode",
+        "forecast_horizon_source",
+        "forecast_uncertainty_source",
+        "forecast_uncertainty_contract_version",
+    )
+    missing_columns = [column for column in required_columns if column not in schedule.columns]
+    if missing_columns:
+        return {
+            "passed": False,
+            "metadata": {
+                "missing_forecast_metadata_columns": ", ".join(missing_columns),
+                "invalid_forecast_horizon_mode_count": 0,
+                "missing_forecast_horizon_source_count": 0,
+                "missing_probabilistic_uncertainty_source_count": 0,
+                "missing_probabilistic_contract_version_count": 0,
+                "forecast_metadata_failing_rows_preview": "[]",
+            },
+        }
+
+    invalid_mode_count = 0
+    missing_horizon_source_count = 0
+    missing_probabilistic_uncertainty_source_count = 0
+    missing_probabilistic_contract_version_count = 0
+    failing_rows = []
+
+    for row in schedule.iter_rows(named=True):
+        horizon_mode = _coerce_text(row.get("forecast_horizon_mode"))
+        horizon_source = _coerce_text(row.get("forecast_horizon_source"))
+        uncertainty_source = _coerce_text(row.get("forecast_uncertainty_source"))
+        contract_version = _coerce_text(row.get("forecast_uncertainty_contract_version"))
+
+        row_failures = []
+        if horizon_mode not in VALID_HORIZON_MODES:
+            invalid_mode_count += 1
+            row_failures.append("forecast_horizon_mode")
+        if horizon_source is None:
+            missing_horizon_source_count += 1
+            row_failures.append("forecast_horizon_source")
+        elif horizon_source in PROBABILISTIC_HORIZON_SOURCES:
+            if uncertainty_source is None:
+                missing_probabilistic_uncertainty_source_count += 1
+                row_failures.append("forecast_uncertainty_source")
+            if contract_version is None:
+                missing_probabilistic_contract_version_count += 1
+                row_failures.append("forecast_uncertainty_contract_version")
+
+        if row_failures:
+            failing_rows.append(
+                {
+                    "client_id": str(row.get("client_id") or "default"),
+                    "hour": row.get("hour"),
+                    "fields": row_failures,
+                }
+            )
+
+    return {
+        "passed": (
+            invalid_mode_count == 0
+            and missing_horizon_source_count == 0
+            and missing_probabilistic_uncertainty_source_count == 0
+            and missing_probabilistic_contract_version_count == 0
+        ),
+        "metadata": {
+            "missing_forecast_metadata_columns": "",
+            "invalid_forecast_horizon_mode_count": invalid_mode_count,
+            "missing_forecast_horizon_source_count": missing_horizon_source_count,
+            "missing_probabilistic_uncertainty_source_count": (
+                missing_probabilistic_uncertainty_source_count
+            ),
+            "missing_probabilistic_contract_version_count": (
+                missing_probabilistic_contract_version_count
+            ),
+            "forecast_metadata_failing_rows_preview": json.dumps(
+                failing_rows[:5],
+                sort_keys=True,
+            ),
+        },
+    }
+
+
 __all__ = [
     "ACTION_TOLERANCE",
     "EXPECTED_HOURS",
@@ -254,5 +354,6 @@ __all__ = [
     "ROW_COUNT_TARGET",
     "evaluate_schedule_action_semantics",
     "evaluate_schedule_completeness",
+    "evaluate_schedule_forecast_metadata",
     "evaluate_schedule_numeric_fields",
 ]
