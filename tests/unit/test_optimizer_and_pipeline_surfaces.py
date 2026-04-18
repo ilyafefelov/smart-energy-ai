@@ -188,6 +188,8 @@ def test_pipeline_decision_and_status_surfaces_remain_stable():
     assert forecast.shape == (3, 6)
     assert status["battery_state"]["soc_percent"] == 74.0
     assert status["tariff"]["current_rate_uah_mwh"] in {11500.0, 12000}
+    assert status["last_recommendation"]["decision_source"] == "python_rule_engine"
+    assert status["last_recommendation"]["fallback_reason_code"] == "none"
 
 
 def test_pipeline_economic_helpers_remain_stable():
@@ -271,4 +273,7 @@ def test_pipeline_recommendation_override_rebuilds_runtime_components():
     assert orchestrator.config.load_peak_kw == 22.0
     assert orchestrator.battery.config.capacity_kwh == 18.0
     assert orchestrator.load_profile.config.peak_load_kw == 22.0
+    assert recommendation["decision_source"] == "python_rule_engine"
+    assert recommendation["fallback_reason_code"] == "none"
+    assert recommendation["normalized_action"]["action"] == recommendation["action"]
     assert recommendation["details"]["load_kw"] == pytest.approx(22.0)

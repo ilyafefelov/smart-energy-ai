@@ -4,6 +4,7 @@ Orchestrates battery models, load profiles, tariffs, and user configuration
 into a unified decision-making pipeline.
 """
 import logging
+import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional, Any, TypedDict
 import json
@@ -11,6 +12,19 @@ from pathlib import Path
 
 import polars as pl
 from pydantic import ValidationError
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.data_pipeline.live_context import (
+    parse_live_battery_state as _shared_parse_live_battery_state,
+    parse_live_price_signal as _shared_parse_live_price_signal,
+    price_source_for_hour as _shared_price_source_for_hour,
+    safe_float as _shared_safe_float,
+)
+from src.data_pipeline.ml_bridge_contracts import build_normalized_action
 
 from energy_ml.user_config import UserConfigModel, ConfigurationManager
 from energy_ml.config_models import BatteryConfig, LoadProfileConfig
@@ -26,13 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 def _safe_float(value: Any, default: float = 0.0) -> float:
-    try:
-        numeric = float(value)
-        if numeric != numeric:
-            return default
-        return numeric
-    except Exception:
-        return default
+    return _shared_safe_float(value, default)
 
 
 class LivePriceForecastRow(TypedDict, total=False):
@@ -62,50 +70,17 @@ class LiveContextPayload(TypedDict, total=False):
 def _parse_live_battery_state(
     battery_signal: Any,
 ) -> Tuple[Optional[float], Optional[float], Optional[float]]:
-    signal: LiveBatterySignal = battery_signal if isinstance(battery_signal, dict) else {}
-    soc = _safe_float(signal.get('soc_percent', signal.get('soc')), default=-1)
-    health = _safe_float(signal.get('health_percent', signal.get('health')), default=-1)
-    cycles = _safe_float(signal.get('cycles_remaining'), default=-1)
-
-    return (
-        soc if soc >= 0 else None,
-        health if health >= 0 else None,
-        cycles if cycles >= 0 else None,
-    )
+    return _shared_parse_live_battery_state(battery_signal)
 
 
 def _parse_live_price_signal(
     price_signal: Any,
 ) -> Tuple[Optional[float], Dict[int, float]]:
-    signal: LivePriceSignal = price_signal if isinstance(price_signal, dict) else {}
-    current_price_kwh: Optional[float] = None
-    live_price_map_kwh: Dict[int, float] = {}
-
-    current_price = _safe_float(signal.get('current_uah_kwh'), default=-1)
-    if current_price > 0:
-        current_price_kwh = current_price
-
-    forecast_rows = signal.get('forecast_next24h') if isinstance(signal.get('forecast_next24h'), list) else []
-    for row in forecast_rows:
-        if not isinstance(row, dict):
-            continue
-        try:
-            hour = int(row.get('hour'))
-        except Exception:
-            logger.debug('Skipping live price row with invalid hour: %r', row.get('hour'))
-            continue
-        if hour < 0 or hour > 23:
-            continue
-        price = _safe_float(row.get('price'), default=-1)
-        if price <= 0:
-            continue
-        live_price_map_kwh[hour] = price
-
-    return current_price_kwh, live_price_map_kwh
+    return _shared_parse_live_price_signal(price_signal)
 
 
 def _price_source_for_hour(live_price_map_kwh: Dict[int, float], hour: int) -> str:
-    return 'live_market' if hour in live_price_map_kwh else 'tariff_model'
+    return _shared_price_source_for_hour(live_price_map_kwh, hour)
 
 
 class RecommendationDetails(TypedDict):
@@ -129,6 +104,9 @@ class RecommendationPayload(TypedDict):
     estimated_savings: float
     battery_impact: float
     timestamp: str
+    decision_source: str
+    fallback_reason_code: str
+    normalized_action: Dict[str, Any]
     details: RecommendationDetails
 
 
@@ -502,13 +480,21 @@ class PipelineOrchestrator:
         
         timestamp = datetime.now().isoformat()
         
+        normalized_action = build_normalized_action(
+            action=action,
+            confidence=confidence,
+        )
+
         recommendation: RecommendationPayload = {
-            'action': action,
+            'action': normalized_action['action'],
             'reasoning': reasoning,
             'confidence': confidence,
             'estimated_savings': estimated_savings,
             'battery_impact': battery_impact,
             'timestamp': timestamp,
+            'decision_source': 'python_rule_engine',
+            'fallback_reason_code': 'none',
+            'normalized_action': normalized_action,
             'details': self._build_recommendation_details(
                 current_hour=current_hour,
                 load_kw=load_kw,

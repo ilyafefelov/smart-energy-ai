@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Compatibility wrapper for the canonical scripts ML integration bridge.
+"""Compatibility wrapper for the canonical src ML bridge via the script adapter.
 
-Keep all bridge implementation logic in ``scripts/ml_integration_api.py``.
-This module exists only to preserve legacy invocations such as
-``python ml_integration_api.py`` while callers migrate to the canonical path.
+Keep bridge implementation logic in ``src/data_pipeline/ml_bridge_service.py`` and
+preserve ``python ml_integration_api.py`` plus import-based compatibility through
+the existing script bridge entrypoint.
 """
 
 from importlib.util import module_from_spec, spec_from_file_location

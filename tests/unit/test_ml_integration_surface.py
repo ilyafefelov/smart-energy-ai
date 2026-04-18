@@ -6,6 +6,8 @@ from pathlib import Path
 
 import polars as pl
 
+from src.data_pipeline.ml_bridge_contracts import build_normalized_action, build_recommendation_contract
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -336,3 +338,23 @@ def test_ml_integration_api_main_emits_json(monkeypatch, capsys):
     assert payload["success"] is True
     assert payload["status"]["battery_state"]["cycles_remaining"] == 4200
     assert exit_codes == [0]
+
+
+def test_ml_bridge_contract_reuses_prebuilt_normalized_action():
+    normalized_action = build_normalized_action("SELL", confidence=0.81)
+
+    contract = build_recommendation_contract(
+        types.SimpleNamespace(optimization_strategy="balanced", load_profile_type="standard"),
+        {"battery_signal": {"source": "simulator_backed_telemetry", "source_detail": "api/battery/status"}},
+        {
+            "action": "SELL",
+            "confidence": 0.81,
+            "decision_source": "python_rule_engine",
+            "fallback_reason_code": "none",
+            "normalized_action": normalized_action,
+        },
+    )
+
+    assert contract["normalized_action"] is normalized_action
+    assert contract["provenance"]["state_source"] == "simulator_backed_telemetry"
+    assert contract["provenance"]["telemetry_classification"] == "simulated_operational_telemetry"

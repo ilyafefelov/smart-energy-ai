@@ -1,5 +1,6 @@
 # tests/e2e/test_dashboard_e2e.py
 import pytest
+import pytest_asyncio
 import asyncio
 import time
 import subprocess
@@ -14,7 +15,7 @@ except ImportError:
     PLAYWRIGHT_AVAILABLE = False
 
 class TestDashboardE2E:
-    @pytest.fixture(scope="session")
+    @pytest_asyncio.fixture(scope="session")
     async def dashboard_server(self):
         """Start dashboard server for testing."""
         if not PLAYWRIGHT_AVAILABLE:
@@ -44,7 +45,7 @@ class TestDashboardE2E:
         except Exception as e:
             pytest.skip(f"Could not start dashboard server: {e}")
 
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def browser_page(self, dashboard_server):
         if not PLAYWRIGHT_AVAILABLE:
             pytest.skip("Playwright not available")

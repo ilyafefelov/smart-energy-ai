@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compatibility wrapper for the canonical scripts ML integration bridge."""
+"""Compatibility wrapper for the canonical src ML bridge via the script adapter."""
 
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
