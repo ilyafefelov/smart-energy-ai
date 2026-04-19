@@ -7,7 +7,13 @@ import { exec } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
 import { assessStage2MarketPolicy, inferReserveFloorPercent, inferSitePowerKw } from '../../utils/market-policy'
-import { buildDecisionProvenance, buildNormalizedAction } from '../../utils/recommendation-contract'
+import {
+  buildDecisionProvenance,
+  buildNormalizedAction,
+  normalizeServingMetadata,
+  toFiniteNumber,
+  type ServingContract,
+} from '../../utils/recommendation-contract'
 import { resolveTenantContext } from '../../utils/tenant-context'
 
 const execAsync = promisify(exec)
@@ -65,20 +71,6 @@ interface DriftDiagnostics {
     contribution: number
   }>
   recommendation: string
-}
-
-interface ServingContract {
-  requested_mode: string
-  active_mode: string
-  adapter: string
-  fallback_used: boolean
-  fallback_reason_code: string
-  model_info: Record<string, any> | null
-}
-
-function toFiniteNumber(value: unknown): number | null {
-  const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric : null
 }
 
 function buildHourlyPriceMap(pricesPayload: PricesCurrentResponse | null | undefined): Map<number, number> {
@@ -147,22 +139,6 @@ interface MLRecommendationResponse {
     policy_compliance?: Record<string, any>
   }
   error?: string
-}
-
-function normalizeServingMetadata(value: unknown): ServingContract {
-  const serving = value && typeof value === 'object' ? value as Record<string, any> : {}
-  const modelInfo = serving.model_info && typeof serving.model_info === 'object'
-    ? serving.model_info as Record<string, any>
-    : null
-
-  return {
-    requested_mode: typeof serving.requested_mode === 'string' ? serving.requested_mode : 'incumbent',
-    active_mode: typeof serving.active_mode === 'string' ? serving.active_mode : 'incumbent',
-    adapter: typeof serving.adapter === 'string' ? serving.adapter : 'PredictionService',
-    fallback_used: Boolean(serving.fallback_used),
-    fallback_reason_code: typeof serving.fallback_reason_code === 'string' ? serving.fallback_reason_code : 'none',
-    model_info: modelInfo,
-  }
 }
 
 function average(values: number[]): number {

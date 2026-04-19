@@ -10,6 +10,15 @@ export type CanonicalStateSource = 'simulator_backed_telemetry' | 'config_fallba
 export type CanonicalRecommendationAction = 'BUY' | 'SELL' | 'HOLD'
 export type CanonicalExecutionCommand = 'charge' | 'discharge' | 'hold'
 
+export type ServingContract = {
+  requested_mode: string
+  active_mode: string
+  adapter: string
+  fallback_used: boolean
+  fallback_reason_code: string
+  model_info: Record<string, any> | null
+}
+
 type DecisionProvenanceInput = {
   decisionSource: unknown
   fallbackReasonCode?: unknown
@@ -111,6 +120,27 @@ export function mapRecommendationActionToExecutionCommand(
   if (action === 'BUY') return 'charge'
   if (action === 'SELL') return 'discharge'
   return 'hold'
+}
+
+export function toFiniteNumber(value: unknown): number | null {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+export function normalizeServingMetadata(value: unknown): ServingContract {
+  const serving = value && typeof value === 'object' ? value as Record<string, any> : {}
+  const modelInfo = serving.model_info && typeof serving.model_info === 'object'
+    ? serving.model_info as Record<string, any>
+    : null
+
+  return {
+    requested_mode: typeof serving.requested_mode === 'string' ? serving.requested_mode : 'incumbent',
+    active_mode: typeof serving.active_mode === 'string' ? serving.active_mode : 'incumbent',
+    adapter: typeof serving.adapter === 'string' ? serving.adapter : 'PredictionService',
+    fallback_used: Boolean(serving.fallback_used),
+    fallback_reason_code: typeof serving.fallback_reason_code === 'string' ? serving.fallback_reason_code : 'none',
+    model_info: modelInfo,
+  }
 }
 
 export function buildNormalizedAction(input: NormalizedActionInput) {

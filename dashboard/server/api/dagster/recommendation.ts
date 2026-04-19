@@ -25,7 +25,14 @@ import {
   normalizeScheduleAction,
 } from '../../utils/dagster-schedule-policy'
 import { assessStage2MarketPolicy, inferReserveFloorPercent, inferSitePowerKw } from '../../utils/market-policy'
-import { buildDecisionProvenance, buildNormalizedAction, normalizeDecisionSource } from '../../utils/recommendation-contract'
+import {
+  buildDecisionProvenance,
+  buildNormalizedAction,
+  normalizeDecisionSource,
+  normalizeServingMetadata,
+  toFiniteNumber,
+  type ServingContract,
+} from '../../utils/recommendation-contract'
 import { getTenantResponseMetadata, resolveTenantContext } from '../../utils/tenant-context'
 
 const DAGSTER_API = process.env.DAGSTER_API_URL || 'http://localhost:3000'
@@ -114,15 +121,6 @@ type DagsterSnapshotCandidate = {
   quality: ScheduleQualityAssessment
 }
 
-type ServingMetadata = {
-  requested_mode: string
-  active_mode: string
-  adapter: string
-  fallback_used: boolean
-  fallback_reason_code: string
-  model_info: Record<string, any> | null
-}
-
 type MlRecommendationPayload = {
   serving?: unknown
   data?: {
@@ -180,11 +178,6 @@ type MlflowStatusPayload = {
 
 type ConfigPayload = {
   data?: Record<string, any> | null
-}
-
-function toFiniteNumber(value: unknown): number | null {
-  const numeric = Number(value)
-  return Number.isFinite(numeric) ? numeric : null
 }
 
 function toNullableText(value: unknown): string | null {
@@ -247,22 +240,6 @@ function summarizeDagsterForecastProvenance(rows: Array<Record<string, unknown>>
     forecast_promotion_active: null,
     forecast_promotion_source: null,
     optimization_run_id: null,
-  }
-}
-
-function normalizeServingMetadata(value: unknown): ServingMetadata {
-  const serving = value && typeof value === 'object' ? value as Record<string, any> : {}
-  const modelInfo = serving.model_info && typeof serving.model_info === 'object'
-    ? serving.model_info as Record<string, any>
-    : null
-
-  return {
-    requested_mode: typeof serving.requested_mode === 'string' ? serving.requested_mode : 'incumbent',
-    active_mode: typeof serving.active_mode === 'string' ? serving.active_mode : 'incumbent',
-    adapter: typeof serving.adapter === 'string' ? serving.adapter : 'PredictionService',
-    fallback_used: Boolean(serving.fallback_used),
-    fallback_reason_code: typeof serving.fallback_reason_code === 'string' ? serving.fallback_reason_code : 'none',
-    model_info: modelInfo,
   }
 }
 
