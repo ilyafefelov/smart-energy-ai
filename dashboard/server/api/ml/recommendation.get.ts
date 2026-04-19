@@ -15,6 +15,8 @@ import {
   type MlflowStatusPayload,
   normalizeServingMetadata,
   type PricesPayload,
+  resolveTenantLocationConfig,
+  sanitizeTimezone,
   toFiniteNumber,
   type ServingContract,
 } from '../../utils/recommendation-contract'
@@ -194,14 +196,6 @@ function computeDriftDiagnostics(input: {
   }
 }
 
-function sanitizeTimezone(timezone: string | null | undefined): string {
-  const fallback = 'Europe/Kiev'
-  if (!timezone || typeof timezone !== 'string') return fallback
-  const normalized = timezone.trim()
-  if (!normalized) return fallback
-  return normalized.replace(/[^A-Za-z0-9_\-/+]/g, '') || fallback
-}
-
 async function fetchOpenMeteoSnapshot(latitude: number, longitude: number, timezone: string): Promise<OpenMeteoSnapshot | null> {
   try {
     const safeTimezone = sanitizeTimezone(timezone)
@@ -292,10 +286,12 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
       $fetch<MlflowStatusPayload>('/api/mlflow/status', tenantRequest).catch(() => null),
     ])
 
-    const latitude = toFiniteNumber(configPayload?.data?.latitude) ?? 50.45
-    const longitude = toFiniteNumber(configPayload?.data?.longitude) ?? 30.52
-    const timezone = sanitizeTimezone(configPayload?.data?.timezone)
-    const weatherPayload = await fetchOpenMeteoSnapshot(latitude, longitude, timezone)
+    const tenantLocation = resolveTenantLocationConfig(configPayload?.data)
+    const weatherPayload = await fetchOpenMeteoSnapshot(
+      tenantLocation.latitude,
+      tenantLocation.longitude,
+      sanitizeTimezone(tenantLocation.timezone),
+    )
 
     const liveContext = {
       tenant_id: tenant.id,
@@ -316,9 +312,9 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
         wind_capacity_kw: configPayload?.data?.wind_capacity_kw,
         solar_efficiency: configPayload?.data?.solar_efficiency,
         wind_efficiency: configPayload?.data?.wind_efficiency,
-        latitude,
-        longitude,
-        timezone,
+        latitude: tenantLocation.latitude,
+        longitude: tenantLocation.longitude,
+        timezone: tenantLocation.timezone,
       },
       price_signal: {
         source: 'api/prices/current',
@@ -416,7 +412,7 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
       sitePowerKw,
       marketRegimeOverride: liveContext.config.market_regime_override,
       timestamp: liveContext.captured_at,
-      timezone,
+      timezone: tenantLocation.timezone,
     })
     const normalizedAction = buildNormalizedAction({
       action: policyCompliance.adjusted_action,

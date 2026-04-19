@@ -34,6 +34,7 @@ import {
   normalizeDecisionSource,
   normalizeServingMetadata,
   type PricesPayload,
+  resolveTenantLocationConfig,
   toFiniteNumber,
   type ServingContract,
 } from '../../utils/recommendation-contract'
@@ -376,9 +377,7 @@ function maybeTriggerHybridDagsterRefresh(params: {
   hybridRefreshInFlightTenants.add(tenantId)
 
   const tenantConfigDir = path.join(projectRoot, 'energy_ml', 'configs', 'tenants', tenantId)
-  const latitude = toFiniteNumber(configPayload?.data?.latitude) ?? 50.45
-  const longitude = toFiniteNumber(configPayload?.data?.longitude) ?? 30.52
-  const timezone = String(configPayload?.data?.timezone || 'Europe/Kiev')
+  const tenantLocation = resolveTenantLocationConfig(configPayload?.data)
 
   execFile(
     'python',
@@ -390,9 +389,9 @@ function maybeTriggerHybridDagsterRefresh(params: {
         ...process.env,
         ENERGY_ML_CONFIG_DIR: tenantConfigDir,
         ENERGY_ML_TENANT_ID: tenantId,
-        WEATHER_LATITUDE: String(latitude),
-        WEATHER_LONGITUDE: String(longitude),
-        WEATHER_TIMEZONE: timezone,
+        WEATHER_LATITUDE: String(tenantLocation.latitude),
+        WEATHER_LONGITUDE: String(tenantLocation.longitude),
+        WEATHER_TIMEZONE: tenantLocation.timezone,
       },
     },
     (error) => {
@@ -560,6 +559,7 @@ export default defineEventHandler(async (event): Promise<Record<string, unknown>
     const currentPrice = Number(pricesPayload?.prices?.current?.price || 0)
     const avgPrice = Number(pricesPayload?.prices?.today?.avg || currentPrice || 0)
     const batterySoc = Number(batteryPayload?.battery?.soc || 50)
+    const tenantLocation = resolveTenantLocationConfig(configPayload?.data)
     const mlData = mlRecommendation?.data || null
     const optimizationStrategy = normalizeOptimizationStrategy(configPayload?.data?.optimization_strategy)
     const loadProfileType = normalizeLoadProfileType(configPayload?.data?.load_profile_type)
@@ -658,7 +658,7 @@ export default defineEventHandler(async (event): Promise<Record<string, unknown>
       sitePowerKw: inferSitePowerKw(configPayload?.data || null),
       marketRegimeOverride: configPayload?.data?.market_regime_override,
       timestamp: new Date().toISOString(),
-      timezone: String(configPayload?.data?.timezone || 'Europe/Kiev'),
+      timezone: tenantLocation.timezone,
     })
     const policyAdjustedRecommendation = {
       ...strategyAdjustedRecommendation,
@@ -1036,6 +1036,7 @@ function buildDeterministicSchedule(
         : 0
 
     const requestedAction = action
+    const tenantLocation = resolveTenantLocationConfig(configData)
     const policyCompliance = assessStage2MarketPolicy({
       action: requestedAction,
       batteryCapacityKwh: configData?.battery_capacity_kwh,
@@ -1043,7 +1044,7 @@ function buildDeterministicSchedule(
       sitePowerKw: inferSitePowerKw(configData || null),
       marketRegimeOverride: configData?.market_regime_override,
       timestamp: row.timestamp,
-      timezone: String(configData?.timezone || 'Europe/Kiev'),
+      timezone: tenantLocation.timezone,
     })
 
     const adjustedAction = policyCompliance.adjusted_action

@@ -68,6 +68,12 @@ export type ConfigPayload = {
   data?: Record<string, any> | null
 }
 
+export type TenantLocationConfig = {
+  latitude: number
+  longitude: number
+  timezone: string
+}
+
 type DecisionProvenanceInput = {
   decisionSource: unknown
   fallbackReasonCode?: unknown
@@ -132,6 +138,10 @@ const FALLBACK_REASON_MAP: Record<string, string> = {
   python_unavailable: 'python_unavailable',
 }
 
+const DEFAULT_TENANT_LATITUDE = 50.45
+const DEFAULT_TENANT_LONGITUDE = 30.52
+const DEFAULT_TENANT_TIMEZONE = 'Europe/Kiev'
+
 export function normalizeDecisionSource(
   value: unknown,
   fallback: CanonicalDecisionSource = 'heuristic_fallback',
@@ -151,6 +161,23 @@ export function normalizeStateSource(
 export function normalizeFallbackReasonCode(value: unknown): string {
   const normalized = String(value || '').trim().toLowerCase()
   return FALLBACK_REASON_MAP[normalized] || normalized || 'none'
+}
+
+export function resolveTenantLocationConfig(
+  configData: Record<string, any> | null | undefined,
+): TenantLocationConfig {
+  return {
+    latitude: toFiniteNumber(configData?.latitude) ?? DEFAULT_TENANT_LATITUDE,
+    longitude: toFiniteNumber(configData?.longitude) ?? DEFAULT_TENANT_LONGITUDE,
+    timezone: String(configData?.timezone || DEFAULT_TENANT_TIMEZONE),
+  }
+}
+
+export function sanitizeTimezone(timezone: string | null | undefined): string {
+  if (!timezone || typeof timezone !== 'string') return DEFAULT_TENANT_TIMEZONE
+  const normalized = timezone.trim()
+  if (!normalized) return DEFAULT_TENANT_TIMEZONE
+  return normalized.replace(/[^A-Za-z0-9_\-/+]/g, '') || DEFAULT_TENANT_TIMEZONE
 }
 
 export function normalizeRecommendationAction(
