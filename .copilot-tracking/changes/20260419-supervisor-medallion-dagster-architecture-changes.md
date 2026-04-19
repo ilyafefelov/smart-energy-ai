@@ -12,6 +12,8 @@ This release was later extended outside the original plan with a follow-up docum
 
 The release also received a small follow-up stabilization outside the original plan so the generated medallion preview now keys its timestamp from manifest state instead of the current wall clock, preventing no-op validation runs from creating timestamp-only churn.
 
+The release was then extended again outside the original plan with a supervisor-report completion pass that added one consolidated handoff document, documented the current Gold experiment-summary mart contract explicitly, upgraded the generated scorecard into a reusable comparison template, and wired the new report into the package indexes and manifest.
+
 ## Changes
 
 ### Added
@@ -29,6 +31,7 @@ The release also received a small follow-up stabilization outside the original p
 * docs/technical/DATASET_MODEL_REFERENCE.md - Added a supervisor-facing dataset model reference outside the original plan because the user requested an explicit Bronze, Silver, Gold, and multi-tenant contract guide.
 * docs/technical/DATASET_LINEAGE_AND_FRESHNESS_SLA.md - Added a lineage, freshness, fallback, and enforcement guide outside the original plan because the user requested fuller operational documentation for the dataset package.
 * docs/technical/SUPERVISOR_PRESENTATION_APPENDIX.md - Added a presentation-outline and thesis-appendix packaging guide outside the original plan because the user requested a tighter supervisor-facing handoff artifact.
+* docs/technical/SUPERVISOR_MEDALLION_REPORT.md - Added a consolidated supervisor-facing handoff report outside the original plan because the user requested one end-to-end report with exact datasets, Gold mart contract, comparison pack, and deferred implementation roadmap.
 
 ### Modified
 
@@ -51,6 +54,16 @@ The release also received a small follow-up stabilization outside the original p
 * src/data_pipeline/medallion_catalog.py - Stabilized generated artifact timestamps outside the original plan by deriving `generated_at_utc` from the manifest file modification time so re-renders do not create timestamp-only preview churn.
 * tests/unit/test_medallion_catalog_module.py - Added focused coverage outside the original plan to verify the catalog payload uses the manifest's stored modification timestamp on Windows.
 * data/results/medallion_preview.md - Regenerated the medallion preview once more after the renderer stabilization so the tracked preview reflects the manifest-derived timestamp.
+* artifacts/medallion/medallion_dataset_manifest.yaml - Extended the manifest again outside the original plan to publish the consolidated supervisor report as part of the canonical package metadata.
+* docs/technical/DATASET_MODEL_REFERENCE.md - Added explicit schema-source links and documented the current `gold_experiment_summary.json` payload as the Gold mart contract for the supervisor package.
+* src/data_pipeline/medallion_catalog.py - Upgraded the generated scorecard renderer with rerender guidance plus tabular run-vs-run and business-metric sections so the scorecard doubles as a reusable reporting template.
+* tests/unit/test_medallion_catalog_module.py - Extended renderer coverage again to assert the new scorecard regeneration and comparison-table sections remain present.
+* docs/technical/EXPERIMENTS_AND_RESULTS_SCORECARD.md - Regenerated the generated scorecard after the renderer upgrade so the report package now includes explicit model, run, optimizer, and business-metric tables.
+* docs/technical/BRONZE_SILVER_GOLD_DATASET_CATALOG.md - Regenerated the generated catalog after the manifest extension so the report package timestamps and layer snapshots stay coherent.
+* artifacts/medallion/gold_experiment_summary.json - Regenerated the Gold mart after the manifest extension so the machine-readable supervisor payload stays aligned with the current package metadata.
+* docs/technical/README.md - Added the consolidated supervisor report to the supervisor package index and refreshed the folder index so the report is discoverable from the technical docs surface.
+* docs/README.md - Added main-index discoverability for the consolidated supervisor report.
+* data/results/medallion_preview.md - Regenerated the preview again after the report-completion pass so the tracked preview reflects the current manifest and package outputs.
 
 ### Removed
 

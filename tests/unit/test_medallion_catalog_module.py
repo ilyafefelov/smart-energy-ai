@@ -292,5 +292,8 @@ def test_build_gold_summary_and_renderers(tmp_path: Path, monkeypatch) -> None:
     assert summary["business_metrics"]["ppo_validation"]["daily_savings"] == 123.4
     assert "# Bronze/Silver/Gold Dataset Catalog" in catalog_markdown
     assert "# Experiments And Results Scorecard" in experiments_markdown
+    assert "## Reuse And Regeneration" in experiments_markdown
+    assert "| Surface | Status | Rows | Latest Timestamp | Run Identifiers | Notes |" in experiments_markdown
+    assert "| Metric | Status | Value | Units | System Of Record |" in experiments_markdown
     assert "# Medallion Preview" in preview_markdown
     assert '"daily_savings": 123.4' in json_render

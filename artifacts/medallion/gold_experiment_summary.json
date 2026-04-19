@@ -112,7 +112,7 @@
         "value": "simulated"
       }
     ],
-    "selection_reason": "explicit_cli_selection"
+    "selection_reason": "manifest_default_first_customer"
   },
   "fleet_view": {
     "client_count": 5,
@@ -123,7 +123,7 @@
     "top_solar_client": "client_001_kyiv_mall",
     "top_storage_client": "client_001_kyiv_mall"
   },
-  "generated_at_utc": "2026-04-18T21:57:11+00:00",
+  "generated_at_utc": "2026-04-19T11:53:05+00:00",
   "layer_summary": [
     {
       "dataset_count": 2,
@@ -134,7 +134,7 @@
     },
     {
       "dataset_count": 3,
-      "latest_observed_update_utc": "2026-04-19T23:00:00+00:00",
+      "latest_observed_update_utc": "2026-04-20T23:00:00+00:00",
       "layer": "silver",
       "materialized_count": 2,
       "storage_present_count": 3
@@ -172,7 +172,7 @@
         "run_name": "forecast_value_nbeatsx_dam_24h"
       }
     ],
-    "latest_timestamp": "2026-04-19T00:52:57+00:00",
+    "latest_timestamp": "2026-04-19T06:01:03+00:00",
     "log_count": 8,
     "status": "materialized",
     "system_of_record": "mlflow_tracking_asset"

@@ -98,7 +98,7 @@ Common fields and field families that recur across the current runtime:
 - Representative fields: `client_id`, `hour`, `action_kw`, `charge_kwh`, `discharge_kwh`, `soc_before_kwh`, `soc_after_kwh`, `throughput_total_kwh`, `price_eur_mwh`, `load_kwh`, `solar_kwh`, `grid_import_kwh`, `grid_export_kwh`, `purchase_cost_eur`, `export_revenue_eur`, `degradation_penalty_eur`, `net_cost_eur`, `forecast_run_id`, `optimization_run_id`, `forecast_model_version`, `rolling_horizon_enabled`, `rolling_window_index`, `rolling_window_start_hour`, `rolling_window_end_hour`, `rolling_window_horizon_hours`, `rolling_window_commit_hours`, `algorithm`, `solver`
 - Fallback and provenance: forecast-driven baseline dynamic-programming schedule; returns an empty canonical schedule when forecast inputs are missing or unusable
 - Downstream consumers: dashboard schedule views, optimization-history reconciliation, realized-value comparison, supervisor evidence pack
-- Schema posture: explicit shared contract via `OPTIMIZATION_SCHEDULE_SCHEMA`
+- Schema posture: explicit shared contract via [OPTIMIZATION_SCHEDULE_SCHEMA](../../src/assets/core/optimization_schedule.py#L28)
 
 ### `optimization_schedule_milp_asset`
 
@@ -107,7 +107,7 @@ Common fields and field families that recur across the current runtime:
 - Representative fields: same shared schedule contract as `optimization_schedule_asset`, including economics, lineage, and rolling-metadata columns
 - Fallback and provenance: MILP or LP-backed optimizer alternative over the same forecast horizon, including solver metadata and explicit contract alignment with the baseline schedule surface
 - Downstream consumers: optimizer-vs-optimizer comparison, realized-value reconciliation, supervisor experiment comparisons
-- Schema posture: explicit shared contract aligned to `OPTIMIZATION_SCHEDULE_SCHEMA`
+- Schema posture: explicit shared contract aligned to [OPTIMIZATION_SCHEDULE_SCHEMA](../../src/assets/core/optimization_schedule.py#L28)
 
 ### `forecast_value_benchmark_asset`
 
@@ -116,7 +116,7 @@ Common fields and field families that recur across the current runtime:
 - Representative fields: `model_name`, `model_family`, `forecast_horizon_hours`, `forecast_rows`, `training_rows`, `evaluation_folds`, `eval_rmse`, `eval_mae`, `eval_value_capture_ratio`, `benchmark_rmse`, `benchmark_mae`, `benchmark_value_capture_ratio`, `benchmark_conservative_value_capture_ratio`, `benchmark_realized_spread_eur_mwh`, `benchmark_optimal_spread_eur_mwh`, `benchmark_uncertainty_source`, `promotion_eligible`, `promotion_decision`, `promotion_decision_reason`, `benchmark_candidate_rank`, `benchmark_incumbent_baseline`, `benchmark_timestamp`
 - Fallback and provenance: benchmark-derived scorecard driven by realized market data, forecast output, and promotion logic
 - Downstream consumers: supervisor scorecard, model promotion review, MLflow logging, benchmark documentation
-- Schema posture: explicit shared contract via `FORECAST_VALUE_SCORECARD_SCHEMA`
+- Schema posture: explicit shared contract via [FORECAST_VALUE_SCORECARD_SCHEMA](../../src/data_pipeline/benchmark_helpers.py#L33)
 
 ### `trained_model_asset`
 
@@ -144,6 +144,30 @@ Common fields and field families that recur across the current runtime:
 - Fallback and provenance: metadata-driven fleet analytics derived from `customers.yaml`, not from live telemetry
 - Downstream consumers: fleet summary, supervisor case-study packaging, comparative dashboard views
 - Schema posture: stable in practice, but generated from tenant metadata and ranking logic rather than a centralized schema constant
+
+### `gold_experiment_summary.json`
+
+- Owner: `src/data_pipeline/medallion_catalog.py::build_gold_summary`
+- Grain: one supervisor-facing Gold snapshot per render, keyed by `generated_at_utc` and the case-study tenant selection used for the package
+- Representative fields: `generated_at_utc`, `logical_overlay_only`, `layer_summary`, `fleet_view`, `case_study`, `model_vs_model`, `mlflow_tracking`, `run_vs_run`, `optimizer_vs_optimizer`, `model_artifacts`, `business_metrics`, `limitations`
+- Fallback and provenance: not a primary operational dataset; it inherits provenance and status values from persisted Dagster assets, local benchmark outputs, MLflow export state, and the selected case-study tenant
+- Downstream consumers: the consolidated supervisor report, the presentation appendix, generated scorecards, and supervisor handoff packaging
+- Schema posture: explicit JSON payload contract rendered by [build_gold_summary()](../../src/data_pipeline/medallion_catalog.py#L613) and stored at [artifacts/medallion/gold_experiment_summary.json](../../artifacts/medallion/gold_experiment_summary.json); this is the current Gold mart contract even though it is not yet materialized as a first-class Dagster asset
+
+#### Gold Summary Mart Semantics
+
+| Payload block | Current meaning | System of record | Notes |
+| --- | --- | --- | --- |
+| `layer_summary` | Layer counts, materialization coverage, and freshness snapshot for Bronze, Silver, and Gold | `artifacts/medallion/medallion_dataset_manifest.yaml` plus current Dagster materializations | One row per logical layer |
+| `fleet_view` | Fleet-wide comparative summary for the current package | `multi_client_analytics` | Current runtime treats this as simulated metadata-driven fleet evidence |
+| `case_study` | One selected tenant slice for supervisor discussion | `customers.yaml` plus selected runtime provenance surfaces | Defaults to the first stable tenant unless the renderer CLI overrides it |
+| `model_vs_model` | Model benchmark and promotion evidence | `forecast_value_benchmark_asset` | Rows can legitimately be `skipped` when optional model dependencies are unavailable |
+| `mlflow_tracking` | MLflow-backed logging and benchmark-support state | `mlflow_tracking_asset` | Can be absent locally when MLflow export was not materialized |
+| `run_vs_run` | Forecast, baseline schedule, MILP schedule, and model-artifact run surfaces | `price_forecast_asset`, `optimization_schedule_asset`, `optimization_schedule_milp_asset`, `trained_model_asset`, `model_metadata_asset` | Summarizes rows, identifiers, and latest timestamps rather than copying full source tables |
+| `optimizer_vs_optimizer` | Baseline DP versus MILP economic comparison | `optimization_schedule_asset` and `optimization_schedule_milp_asset` | Compares the same forecast horizon when both schedule surfaces are present |
+| `model_artifacts` | Trained-model and metadata-lookup status | `trained_model_asset` and `model_metadata_asset` | `materialized_empty` is an honest contract state when training data is insufficient |
+| `business_metrics` | PPO validation, arbitrage spread, schedule totals, and reconciliation status | persisted benchmark outputs and `optimization_schedule_contract_checks` | Current package treats these as supervisor-facing business metrics, not live operator controls |
+| `limitations` | Scope and deployment caveats for the package | manifest presentation defaults | Keeps the report honest about logical overlay, fallbacks, optional MLflow, and deferred re-rooting |
 
 ## Multi-Tenant Model Notes
 

@@ -4,6 +4,7 @@ Architecture, validation, and backend design reference material.
 
 ## Supervisor Medallion Package
 
+- [SUPERVISOR_MEDALLION_REPORT.md](SUPERVISOR_MEDALLION_REPORT.md) - Consolidated supervisor-facing report that threads architecture, dataset inventory, Gold summary contract, comparison tables, and deferred implementation steps into one handoff artifact.
 - [DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md](DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md) - Supervisor-facing Bronze/Silver/Gold architecture narrative over the active Dagster runtime.
 - [BRONZE_SILVER_GOLD_DATASET_CATALOG.md](BRONZE_SILVER_GOLD_DATASET_CATALOG.md) - Generated Bronze/Silver/Gold dataset catalog with provenance, freshness, fleet, and case-study views.
 - [DATASET_MODEL_REFERENCE.md](DATASET_MODEL_REFERENCE.md) - Dataset-model reference covering Bronze, Silver, Gold, and multi-tenant contract shapes.
@@ -26,22 +27,22 @@ This supervisor package is a logical presentation overlay on the runtime rooted 
 
 ### Files
 
-- [BRONZE_SILVER_GOLD_DATASET_CATALOG.md](BRONZE_SILVER_GOLD_DATASET_CATALOG.md) - Bronze or Silver or Gold dataset catalog for the supervisor-facing medallion package.
 - [ARCHITECTURE_V2.md](ARCHITECTURE_V2.md) - Smart Energy AI - V2 Architecture: ETL/ELT + RL Pipeline.
 - [BACKEND_PACKAGE_CONVERGENCE_PLAN.md](BACKEND_PACKAGE_CONVERGENCE_PLAN.md) - Backend Package Convergence Plan.
 - [BACKEND_STAGE1_ML_BRIDGE_CONSOLIDATION.md](BACKEND_STAGE1_ML_BRIDGE_CONSOLIDATION.md) - Backend Stage 1: ML Bridge Consolidation.
+- [BRONZE_SILVER_GOLD_DATASET_CATALOG.md](BRONZE_SILVER_GOLD_DATASET_CATALOG.md) - Bronze/Silver/Gold Dataset Catalog.
+- [CLINE_BEADS_SYNC_GUIDE.md](CLINE_BEADS_SYNC_GUIDE.md) - Cline ↔ Beads Sync Guide.
 - [CONFIGURATION_SYSTEM.md](CONFIGURATION_SYSTEM.md) - Configuration System Documentation.
-- [DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md](DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md) - Supervisor-facing Bronze or Silver or Gold architecture narrative for the current Dagster runtime.
+- [DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md](DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md) - Dagster Bronze/Silver/Gold Supervisor Architecture.
 - [DAGSTER_PIPELINE_DEPENDENCY_MAP.md](DAGSTER_PIPELINE_DEPENDENCY_MAP.md) - Dagster Pipeline Dependency Map.
 - [DASHBOARD_FIXES_GUIDE.md](DASHBOARD_FIXES_GUIDE.md) - Dashboard Fixes: Implementation Guide.
 - [DATA_FLOW_EXPLAINED.md](DATA_FLOW_EXPLAINED.md) - Smart Energy AI - Current Data Flow.
-- [DATASET_LINEAGE_AND_FRESHNESS_SLA.md](DATASET_LINEAGE_AND_FRESHNESS_SLA.md) - Dataset lineage, freshness, fallback, and enforcement guide for the supervisor-facing package.
-- [DATASET_MODEL_REFERENCE.md](DATASET_MODEL_REFERENCE.md) - Dataset-model reference for Bronze, Silver, Gold, and multi-tenant runtime surfaces.
-- [EXPERIMENTS_AND_RESULTS_SCORECARD.md](EXPERIMENTS_AND_RESULTS_SCORECARD.md) - Supervisor-facing experiments and results scorecard for benchmark, MLflow, and optimizer evidence.
+- [DATASET_LINEAGE_AND_FRESHNESS_SLA.md](DATASET_LINEAGE_AND_FRESHNESS_SLA.md) - Dataset Lineage And Freshness SLA.
+- [DATASET_MODEL_REFERENCE.md](DATASET_MODEL_REFERENCE.md) - Dataset Model Reference.
+- [EXPERIMENTS_AND_RESULTS_SCORECARD.md](EXPERIMENTS_AND_RESULTS_SCORECARD.md) - Experiments And Results Scorecard.
 - [ML_APPROACH_ANALYSIS.md](ML_APPROACH_ANALYSIS.md) - 🧠 ML Approach Analysis: Is This The Right Method?.
 - [ML_DASHBOARD_INTEGRATION.md](ML_DASHBOARD_INTEGRATION.md) - Dashboard Integration Guide.
 - [ML_TRADING_DECISION_FRAMEWORK.md](ML_TRADING_DECISION_FRAMEWORK.md) - ML Trading Decision Framework.
-- [SUPERVISOR_PRESENTATION_APPENDIX.md](SUPERVISOR_PRESENTATION_APPENDIX.md) - Supervisor presentation and thesis-appendix packaging guide for the medallion artifact set.
 - [OREE_EFFECTIVE_STRATEGY.md](OREE_EFFECTIVE_STRATEGY.md) - OREE Effective Scraper - Summary & Real Ukrainian Price Examples.
 - [OREE_PLAYWRIGHT_SETUP_GUIDE.md](OREE_PLAYWRIGHT_SETUP_GUIDE.md) - OREE Ukrainian Prices - Playwright Integration Guide.
 - [OREE_SCRAPER_INDEX.md](OREE_SCRAPER_INDEX.md) - OREE Scraper - Complete Index & Quick Reference.
@@ -50,7 +51,10 @@ This supervisor package is a logical presentation overlay on the runtime rooted 
 - [PROJECT_SCHEMATIC.md](PROJECT_SCHEMATIC.md) - Smart Energy AI Project Schematic.
 - [README.md](README.md) - Folder guide and local index.
 - [REAL_DATA_SOURCES.md](REAL_DATA_SOURCES.md) - REAL DATA SOURCES - Smart Energy AI V2.
+- [REFACTORING_SUMMARY_20260417.md](REFACTORING_SUMMARY_20260417.md) - Codebase Refactoring Summary.
 - [REPO_LAYOUT_GUIDE.md](REPO_LAYOUT_GUIDE.md) - Repo Layout Guide.
+- [SUPERVISOR_MEDALLION_REPORT.md](SUPERVISOR_MEDALLION_REPORT.md) - Supervisor Medallion Report.
+- [SUPERVISOR_PRESENTATION_APPENDIX.md](SUPERVISOR_PRESENTATION_APPENDIX.md) - Supervisor Presentation Appendix.
 - [Technical Specification_ Autonomous Energy Arbitrage System (Ukraine 2026).md](Technical%20Specification_%20Autonomous%20Energy%20Arbitrage%20System%20(Ukraine%202026).md) - Technical Specification: Autonomous Energy Arbitrage System (Ukraine 2026\).
 - [TEST_PIPELINE_GUIDE.md](TEST_PIPELINE_GUIDE.md) - OREE Effective Scraper - Test Pipeline & Integration Guide.
 <!-- AUTOGENERATED FOLDER INDEX:END -->

@@ -1,13 +1,13 @@
 # Medallion Preview
 
-Generated at 2026-04-19T01:42:25+00:00 from the supervisor medallion manifest.
+Generated at 2026-04-19T11:53:05+00:00 from the supervisor medallion manifest.
 
 ## Layer Snapshot
 
 | Layer | Datasets | Materialized | Latest Update |
 | --- | ---: | ---: | --- |
 | Bronze | 2 | 2 | 2026-04-24T23:00:00+00:00 |
-| Silver | 3 | 2 | 2026-04-19T23:00:00+00:00 |
+| Silver | 3 | 2 | 2026-04-20T23:00:00+00:00 |
 | Gold | 8 | 8 | 2026-04-20T23:00:00+00:00 |
 
 ## Provenance Snapshot

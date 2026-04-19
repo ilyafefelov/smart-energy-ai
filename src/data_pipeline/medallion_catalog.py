@@ -96,6 +96,13 @@ def _format_number(value: float | int | None, digits: int = 2) -> str:
     return f"{value:.{digits}f}"
 
 
+def _format_list(values: Iterable[Any] | None) -> str:
+    if values is None:
+        return "n/a"
+    rendered = [str(value).strip() for value in values if value is not None and str(value).strip()]
+    return ", ".join(rendered) if rendered else "n/a"
+
+
 def _format_bytes(size_bytes: int) -> str:
     if size_bytes < 1024:
         return f"{size_bytes} B"
@@ -990,6 +997,12 @@ def render_experiments_markdown(catalog: Mapping[str, Any], summary: Mapping[str
         "",
         "This scorecard reuses existing Dagster benchmark, MLflow, optimization lineage, reconciliation, and fleet-analytics surfaces instead of creating a second observability plane.",
         "",
+        "## Reuse And Regeneration",
+        "",
+        "- Main render command: `python scripts/render_medallion_catalog.py --manifest artifacts/medallion/medallion_dataset_manifest.yaml --include-experiments --output docs/technical/EXPERIMENTS_AND_RESULTS_SCORECARD.md`.",
+        "- Case-study override: `python scripts/render_medallion_catalog.py --manifest artifacts/medallion/medallion_dataset_manifest.yaml --case-study-tenant <tenant_id> --include-experiments --output docs/technical/EXPERIMENTS_AND_RESULTS_SCORECARD.md`.",
+        "- Expected empty lanes: `trained_model_asset` and `model_metadata_asset` can legitimately render as `materialized_empty`, and forecast candidates can render as `skipped` when optional dependencies such as `neuralforecast` are unavailable.",
+        "",
         "## Model-vs-Model",
         "",
         f"- System of record: `{model_vs_model['system_of_record']}`",
@@ -1038,6 +1051,14 @@ def render_experiments_markdown(catalog: Mapping[str, Any], summary: Mapping[str
             f"- Trained model surface: `{(model_artifacts.get('trained_model') or {}).get('status') or 'not_materialized'}` with `{(model_artifacts.get('trained_model') or {}).get('row_count') or 0}` rows and latest logged-at `{(model_artifacts.get('trained_model') or {}).get('latest_logged_at') or 'n/a'}`.",
             f"- Model metadata surface: `{(model_artifacts.get('metadata_lookup') or {}).get('status') or 'not_materialized'}` with `{(model_artifacts.get('metadata_lookup') or {}).get('row_count') or 0}` rows and latest fetched-at `{(model_artifacts.get('metadata_lookup') or {}).get('latest_fetched_at') or 'n/a'}`.",
             "",
+            "| Surface | Status | Rows | Latest Timestamp | Run Identifiers | Notes |",
+            "| --- | --- | ---: | --- | --- | --- |",
+            f"| Forecast output | {run_vs_run['forecast']['status']} | {run_vs_run['forecast']['row_count']} | {run_vs_run['forecast']['latest_row_timestamp'] or 'n/a'} | {_format_list(run_vs_run['forecast'].get('forecast_run_ids_preview'))} | optimization IDs: {_format_list(run_vs_run['forecast'].get('optimization_run_ids_preview'))} |",
+            f"| Baseline schedule | {run_vs_run['baseline_schedule']['status']} | {run_vs_run['baseline_schedule']['row_count']} | n/a | {_format_list(run_vs_run['baseline_schedule'].get('optimization_run_ids'))} | forecast runs: {_format_list(run_vs_run['baseline_schedule'].get('forecast_run_ids'))} |",
+            f"| MILP schedule | {run_vs_run['milp_schedule']['status']} | {run_vs_run['milp_schedule']['row_count']} | n/a | {_format_list(run_vs_run['milp_schedule'].get('optimization_run_ids'))} | forecast runs: {_format_list(run_vs_run['milp_schedule'].get('forecast_run_ids'))} |",
+            f"| Trained model artifact | {(model_artifacts.get('trained_model') or {}).get('status') or 'not_materialized'} | {(model_artifacts.get('trained_model') or {}).get('row_count') or 0} | {(model_artifacts.get('trained_model') or {}).get('latest_logged_at') or 'n/a'} | {_format_list((model_artifacts.get('trained_model') or {}).get('run_ids'))} | model names: {_format_list((model_artifacts.get('trained_model') or {}).get('model_names'))} |",
+            f"| Model metadata lookup | {(model_artifacts.get('metadata_lookup') or {}).get('status') or 'not_materialized'} | {(model_artifacts.get('metadata_lookup') or {}).get('row_count') or 0} | {(model_artifacts.get('metadata_lookup') or {}).get('latest_fetched_at') or 'n/a'} | n/a | success rows: {(model_artifacts.get('metadata_lookup') or {}).get('successful_rows') or 0}; error rows: {(model_artifacts.get('metadata_lookup') or {}).get('error_rows') or 0} |",
+            "",
             "## Optimizer-vs-Optimizer",
             "",
             f"- Comparison status: `{optimizer_vs_optimizer['status']}`",
@@ -1055,6 +1076,15 @@ def render_experiments_markdown(catalog: Mapping[str, Any], summary: Mapping[str
             f"- PPO validation status: `{business_metrics['ppo_validation']['status']}` with daily savings `{_format_number(_safe_float(business_metrics['ppo_validation']['daily_savings']))}` and improvement `{_format_number(_safe_float(business_metrics['ppo_validation']['improvement_pct']))}`%.",
             f"- Arbitrage range status: `{business_metrics['arbitrage_ranges']['status']}` with median daily spread `{_format_number(_safe_float(business_metrics['arbitrage_ranges']['median_daily_spread_eur']))}` EUR.",
             f"- Reconciliation status source: `{business_metrics['reconciliation_status']['system_of_record']}` ({business_metrics['reconciliation_status']['status']}).",
+            "",
+            "| Metric | Status | Value | Units | System Of Record |",
+            "| --- | --- | ---: | --- | --- |",
+            f"| PPO daily savings | {business_metrics['ppo_validation']['status']} | {_format_number(_safe_float(business_metrics['ppo_validation']['daily_savings']))} | EUR/day | data/results/ppo_validation_feb2026.json |",
+            f"| PPO improvement | {business_metrics['ppo_validation']['status']} | {_format_number(_safe_float(business_metrics['ppo_validation']['improvement_pct']))} | % | data/results/ppo_validation_feb2026.json |",
+            f"| Median daily arbitrage spread | {business_metrics['arbitrage_ranges']['status']} | {_format_number(_safe_float(business_metrics['arbitrage_ranges']['median_daily_spread_eur']))} | EUR/day | data/results/arbitrage_ranges.json |",
+            f"| Baseline schedule net cost | {optimizer_vs_optimizer['status']} | {_format_number(_safe_float(business_metrics['schedule_totals']['baseline'].get('net_cost_eur')))} | EUR | optimization_schedule_asset |",
+            f"| MILP schedule net cost | {optimizer_vs_optimizer['status']} | {_format_number(_safe_float(business_metrics['schedule_totals']['milp'].get('net_cost_eur')))} | EUR | optimization_schedule_milp_asset |",
+            f"| Reconciliation status | {business_metrics['reconciliation_status']['status']} | n/a | contract status | {business_metrics['reconciliation_status']['system_of_record']} |",
             "",
             "## Fleet View",
             "",
