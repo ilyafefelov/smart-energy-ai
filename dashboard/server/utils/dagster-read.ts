@@ -22,6 +22,71 @@ export type DagsterForecastProvenance = {
   optimization_run_id: string | null
 }
 
+function toNullableText(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const normalized = value.trim()
+  return normalized.length > 0 ? normalized : null
+}
+
+function toNullableBoolean(value: unknown): boolean | null {
+  if (typeof value === 'boolean') return value
+  if (value == null) return null
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase()
+    if (normalized === 'true') return true
+    if (normalized === 'false') return false
+  }
+  return Boolean(value)
+}
+
+export function resolveDagsterForecastProvenance(value: unknown): DagsterForecastProvenance {
+  const row = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  return {
+    forecast_run_id: toNullableText(row.forecast_run_id),
+    forecast_model_name: toNullableText(row.forecast_model_name),
+    forecast_model_family: toNullableText(row.forecast_model_family),
+    forecast_model_version: toNullableText(row.forecast_model_version),
+    forecast_horizon_mode: toNullableText(row.forecast_horizon_mode),
+    forecast_uncertainty_source: toNullableText(row.forecast_uncertainty_source),
+    forecast_promotion_active: toNullableBoolean(row.forecast_promotion_active),
+    forecast_promotion_source: toNullableText(row.forecast_promotion_source),
+    optimization_run_id: toNullableText(row.optimization_run_id),
+  }
+}
+
+export function summarizeDagsterForecastProvenance(
+  rows: Array<Record<string, unknown>> | null | undefined,
+): DagsterForecastProvenance {
+  for (const row of rows || []) {
+    const provenance = resolveDagsterForecastProvenance(row)
+    if (
+      provenance.forecast_run_id != null
+      || provenance.forecast_model_name != null
+      || provenance.forecast_model_family != null
+      || provenance.forecast_model_version != null
+      || provenance.forecast_horizon_mode != null
+      || provenance.forecast_uncertainty_source != null
+      || provenance.forecast_promotion_active != null
+      || provenance.forecast_promotion_source != null
+      || provenance.optimization_run_id != null
+    ) {
+      return provenance
+    }
+  }
+
+  return {
+    forecast_run_id: null,
+    forecast_model_name: null,
+    forecast_model_family: null,
+    forecast_model_version: null,
+    forecast_horizon_mode: null,
+    forecast_uncertainty_source: null,
+    forecast_promotion_active: null,
+    forecast_promotion_source: null,
+    optimization_run_id: null,
+  }
+}
+
 export type DagsterMaterializedRecommendation = {
   success: boolean
   source?: string
