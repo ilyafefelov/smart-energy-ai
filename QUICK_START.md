@@ -78,3 +78,38 @@ node dashboard/scripts/stage2_demo_evidence.mjs
 - The active dashboard is the Nuxt application under `dashboard/`.
 - Market and weather assets have synthetic fallbacks so local development remains runnable when external sources are unavailable.
 - Benchmark assets and multi-tenant analytics are separate from the core daily recommendation path and can be run independently.
+
+## Working With Agents On Deliverables
+
+This repo includes a recurring-deliverables instruction at [.github/instructions/recurring-deliverables.instructions.md](.github/instructions/recurring-deliverables.instructions.md) and a weekly-report slash prompt at [.github/prompts/stage2-weekly-report.prompt.md](.github/prompts/stage2-weekly-report.prompt.md).
+
+Example prompts you can give directly in chat:
+
+```text
+Update this week's Stage 2 report with the latest commits, tests, risks, and literature links.
+```
+
+```text
+Start week 03 report from the existing template and prepare the matching artifacts folder.
+```
+
+```text
+Extend the supervisor report package and keep the medallion manifest, scorecard, catalog, and indexes in sync.
+```
+
+```text
+Refresh the defense brief and thesis appendix export after the latest supervisor-report changes.
+```
+
+How to use this as the repo owner:
+
+- Name the exact week when you want a new weekly report created.
+- If you do not name the week, the agent should ask which week to update before editing `docs/Stage 2/weekly_reports/`.
+- Use the slash prompt when you want a structured weekly-report drafting flow instead of a freeform request.
+
+How agents should use it:
+
+- Treat weekly reports and supervisor docs as a linked deliverable package.
+- Reuse the weekly template and artifact-folder conventions in `docs/Stage 2/weekly_reports/`.
+- Keep evidence grounded in commits, tests, generated artifacts, and literature links.
+- If `artifacts/medallion/medallion_dataset_manifest.yaml` changes, rerender the manifest-backed outputs.
