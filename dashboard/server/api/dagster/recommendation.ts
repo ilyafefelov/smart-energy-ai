@@ -26,10 +26,14 @@ import {
 } from '../../utils/dagster-schedule-policy'
 import { assessStage2MarketPolicy, inferReserveFloorPercent, inferSitePowerKw } from '../../utils/market-policy'
 import {
+  type BatteryPayload,
   buildDecisionProvenance,
   buildNormalizedAction,
+  type ConfigPayload,
+  type MlflowStatusPayload,
   normalizeDecisionSource,
   normalizeServingMetadata,
+  type PricesPayload,
   toFiniteNumber,
   type ServingContract,
 } from '../../utils/recommendation-contract'
@@ -137,47 +141,6 @@ type MlRecommendationPayload = {
       state_source_detail?: string | null
     } | null
   } | null
-}
-
-type PricesPayload = {
-  prices?: {
-    current?: {
-      price?: number | null
-    } | null
-    today?: {
-      avg?: number | null
-    } | null
-    forecast?: {
-      next24h?: Array<{ hour: number; timestamp: string; price: number }> | null
-    } | null
-  } | null
-}
-
-type BatteryPayload = {
-  battery?: {
-    soc?: number | null
-    capacity?: number | null
-  } | null
-  source_metadata?: {
-    state_source?: string | null
-    state_source_detail?: string | null
-  } | null
-  source?: string | null
-}
-
-type MlflowStatusPayload = {
-  active_model?: {
-    last_updated?: string | null
-  } | null
-  mlflow_connected?: boolean | null
-  monitoring?: {
-    drift_detected?: boolean | null
-  } | null
-  service_role?: string | null
-}
-
-type ConfigPayload = {
-  data?: Record<string, any> | null
 }
 
 function toNullableText(value: unknown): string | null {
@@ -385,7 +348,7 @@ function selectDagsterSnapshotCandidate(
 function maybeTriggerHybridDagsterRefresh(params: {
   projectRoot: string
   tenantId: string
-  configPayload: any
+  configPayload: ConfigPayload | null
 }) {
   const { projectRoot, tenantId, configPayload } = params
   const now = Date.now()

@@ -8,32 +8,19 @@ import { promisify } from 'util'
 import path from 'path'
 import { assessStage2MarketPolicy, inferReserveFloorPercent, inferSitePowerKw } from '../../utils/market-policy'
 import {
+  type BatteryPayload,
   buildDecisionProvenance,
   buildNormalizedAction,
+  type ConfigPayload,
+  type MlflowStatusPayload,
   normalizeServingMetadata,
+  type PricesPayload,
   toFiniteNumber,
   type ServingContract,
 } from '../../utils/recommendation-contract'
 import { resolveTenantContext } from '../../utils/tenant-context'
 
 const execAsync = promisify(exec)
-
-interface PriceForecastPoint {
-  hour: number
-  price: number
-}
-
-interface PricesCurrentResponse {
-  success?: boolean
-  prices?: {
-    current?: {
-      price?: number
-    }
-    forecast?: {
-      next24h?: PriceForecastPoint[]
-    }
-  }
-}
 
 interface OpenMeteoSnapshot {
   source: string
@@ -73,7 +60,7 @@ interface DriftDiagnostics {
   recommendation: string
 }
 
-function buildHourlyPriceMap(pricesPayload: PricesCurrentResponse | null | undefined): Map<number, number> {
+function buildHourlyPriceMap(pricesPayload: PricesPayload | null | undefined): Map<number, number> {
   const map = new Map<number, number>()
   const rows = pricesPayload?.prices?.forecast?.next24h
   if (!Array.isArray(rows)) {
@@ -299,10 +286,10 @@ export default defineEventHandler(async (event): Promise<MLRecommendationRespons
     }
 
     const [configPayload, pricesPayload, batteryPayload, mlflowStatus] = await Promise.all([
-      $fetch<any>('/api/config/current', tenantRequest).catch(() => null),
-      $fetch<PricesCurrentResponse>('/api/prices/current', tenantRequest).catch(() => null),
-      $fetch<any>('/api/battery/status', tenantRequest).catch(() => null),
-      $fetch<any>('/api/mlflow/status', tenantRequest).catch(() => null),
+      $fetch<ConfigPayload>('/api/config/current', tenantRequest).catch(() => null),
+      $fetch<PricesPayload>('/api/prices/current', tenantRequest).catch(() => null),
+      $fetch<BatteryPayload>('/api/battery/status', tenantRequest).catch(() => null),
+      $fetch<MlflowStatusPayload>('/api/mlflow/status', tenantRequest).catch(() => null),
     ])
 
     const latitude = toFiniteNumber(configPayload?.data?.latitude) ?? 50.45

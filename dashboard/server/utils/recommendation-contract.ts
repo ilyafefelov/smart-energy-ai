@@ -19,6 +19,55 @@ export type ServingContract = {
   model_info: Record<string, any> | null
 }
 
+export type PriceForecastPoint = {
+  hour: number
+  timestamp: string
+  price: number
+}
+
+export type PricesPayload = {
+  success?: boolean
+  prices?: {
+    current?: {
+      price?: number | null
+    } | null
+    today?: {
+      avg?: number | null
+    } | null
+    forecast?: {
+      next24h?: PriceForecastPoint[] | null
+    } | null
+  } | null
+}
+
+export type BatteryPayload = {
+  battery?: {
+    soc?: number | null
+    capacity?: number | null
+    health?: number | null
+  } | null
+  source_metadata?: {
+    state_source?: string | null
+    state_source_detail?: string | null
+  } | null
+  source?: string | null
+}
+
+export type MlflowStatusPayload = {
+  active_model?: {
+    last_updated?: string | null
+  } | null
+  mlflow_connected?: boolean | null
+  monitoring?: {
+    drift_detected?: boolean | null
+  } | null
+  service_role?: string | null
+}
+
+export type ConfigPayload = {
+  data?: Record<string, any> | null
+}
+
 type DecisionProvenanceInput = {
   decisionSource: unknown
   fallbackReasonCode?: unknown
