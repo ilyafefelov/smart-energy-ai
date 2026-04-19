@@ -599,6 +599,7 @@ export default defineEventHandler(async (event): Promise<Record<string, unknown>
     ] = await Promise.all([
       readDagsterRecommendationFromPostgres(tenant.id),
       readMaterializedDagsterRecommendation(projectRoot, tenant.id),
+      // Fetch the live ML bridge eagerly for fallback and enrichment. A fresh Dagster snapshot remains the decision authority.
       $fetch<MlRecommendationPayload>('/api/ml/recommendation', tenantRequest).catch(() => null),
       $fetch<PricesPayload>('/api/prices/current', tenantRequest).catch(() => null),
       $fetch<BatteryPayload>('/api/battery/status', tenantRequest).catch(() => null),

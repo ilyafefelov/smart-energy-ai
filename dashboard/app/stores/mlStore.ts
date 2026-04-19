@@ -203,6 +203,10 @@ export const useMLStore = defineStore('ml', {
         }
 
         const request = buildTenantRequest(resolvedTenantId)
+        // This store intentionally uses the live ML route because the UI still renders
+        // ML-specific enrichment fields such as savings and battery impact that are not
+        // yet exposed by `/api/dagster/recommendation`. Do not treat this store as the
+        // execution-authority source for auto-mode decisions.
         const response = request
           ? await $fetch<MLRecommendationApiResponse>('/api/ml/recommendation', request)
           : await $fetch<MLRecommendationApiResponse>('/api/ml/recommendation')

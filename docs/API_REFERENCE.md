@@ -29,57 +29,64 @@ It documents the current runtime as it exists today:
 - Thin root compatibility wrapper: `ml_integration_api.py`
 - Canonical Dagster code location: `src/definitions.py`
 
+### Recommendation authority rule
+
+- `/api/dagster/recommendation` is the current default operational recommendation authority for dashboard decisioning, auto-mode execution, and schedule-backed UI flows.
+- `/api/ml/recommendation` is the live-context Python bridge surface used for fallback, transparency, and ML-specific enrichment fields.
+- Some UI slices still call `/api/ml/recommendation` directly because it exposes payload families such as `savings_estimate`, `battery_impact`, `feature_provenance`, and `inference_lineage` that are not yet surfaced in the Dagster route.
+- Do not introduce a third recommendation authority endpoint. If a neutral alias is ever needed later, it should resolve to the Dagster-backed route rather than creating another source of truth.
+
 ## Route Inventory
 
-| Group | Method | Route | Purpose | Notes |
-| --- | --- | --- | --- | --- |
-| Platform | `GET` | `/api/health` | Lightweight dashboard readiness probe. | Preferred health endpoint for local startup checks. |
-| Platform | `GET` | `/api/tenants` | Enumerate known tenants for dashboard selection. | Derived from current tenant configuration surfaces. |
-| Config | `GET` | `/api/config/current` | Load the current effective tenant configuration. | Preferred read path for config-aware dashboard pages. |
-| Config | `POST` | `/api/config/save` | Persist updated tenant configuration. | Save-side logic can trigger recalculation when significant changes are detected. |
-| Config | `GET` | `/api/config/templates` | Return available configuration templates or presets. | Used by settings flows and onboarding helpers. |
-| Settings | `GENERIC` | `/api/settings/load` | Load persisted settings payloads. | Older settings surface still used by parts of the dashboard. |
-| Settings | `GENERIC` | `/api/settings/save` | Persist settings payloads. | Compatibility-facing settings save surface. |
-| Settings | `GENERIC` | `/api/settings/import` | Import settings bundle. | See [API_DOCUMENTATION_IMPORT_EXPORT.md](API_DOCUMENTATION_IMPORT_EXPORT.md). |
-| Settings | `GENERIC` | `/api/settings/export` | Export settings bundle. | See [API_DOCUMENTATION_IMPORT_EXPORT.md](API_DOCUMENTATION_IMPORT_EXPORT.md). |
-| Settings | `POST` | `/api/settings/battery` | Update tenant battery settings. | Specialized settings mutation endpoint. |
-| Settings | `POST` | `/api/settings/load-profile` | Update tenant load-profile settings. | Specialized settings mutation endpoint. |
-| Dagster | `GET` | `/api/dagster/assets` | Expose Dagster asset status and recent materialization state. | Dashboard observability surface over `src/definitions.py`. |
-| Dagster | `GET` | `/api/dagster/recommendation` | Return the active recommendation with freshness and fallback metadata. | Enforces a 15-minute snapshot freshness gate before using Dagster snapshots directly. |
-| Dagster | `GET` | `/api/dagster/schedule-24h` | Return the active 24-hour optimization schedule snapshot. | Primary schedule consumption path for the dashboard. |
-| Dagster | `POST` | `/api/dagster/trigger` | Trigger Dagster materialization or refresh flows. | Operational control surface, not the default user-facing path. |
-| ML | `GET` | `/api/ml/recommendation` | Return a live-context ML recommendation for the selected tenant. | Includes lineage and model-input metadata when available. |
-| ML | `GET` | `/api/ml/pipeline-health` | Report Python pipeline, component, and dependency health. | Used to expose degradation rather than only hard-failure state. |
-| ML | `POST` | `/api/ml/recalculate` | Request a recalculation or refresh of ML outputs. | Command-style route. |
-| ML | `GET` | `/api/ml/recalculate-status` | Report recalculation progress or staleness. | Companion status surface for recalculation workflows. |
-| ML | `GENERIC` | `/api/ml/predict` | Compatibility prediction bridge into the Python ML runtime. | Legacy-facing bridge surface backed by the root Python wrapper. |
-| ML | `GENERIC` | `/api/ml/monitoring` | Return ML monitoring and drift diagnostics when available. | Read-style operational surface. |
-| Optimization | `GET` | `/api/optimization/strategy` | Read the active optimization strategy. | Strategy values are tenant-aware. |
-| Optimization | `POST` | `/api/optimization/strategy` | Update the active optimization strategy. | Configuration mutation surface. |
-| Control | `POST` | `/api/control/execute` | Execute an immediate control command. | Used by simulator-backed manual control flows. |
-| Control | `GET` | `/api/control/history` | Read recent control command history. | Observability and troubleshooting surface. |
-| Control | `GET` | `/api/control/physics` | Read control or battery physics metadata used by the control UI. | Read-style helper surface. |
-| Control | `GET` | `/api/control/status` | Read the current control state. | Key source for command provenance in the battery UI. |
-| Control | `POST` | `/api/control/schedule` | Create a scheduled control command. | Scheduling mutation surface. |
-| Control | `GET` | `/api/control/scheduled` | List scheduled control commands. | Companion read path for scheduled commands. |
-| Control | `DELETE` | `/api/control/schedule/:id` | Delete a scheduled control command. | Route file `control/schedule/[id].delete.ts`. |
-| Battery | `GET/POST` | `/api/battery/simulate` | Read or mutate the simulator-backed battery state. | The current handler branches on method and powers the interactive battery UI. |
-| Battery | `GET` | `/api/battery/status` | Return current battery status. | Read-style battery snapshot endpoint. |
-| Physics | `GET` | `/api/physics/battery` | Return battery physics characteristics and derived limits. | Physics reference surface separate from the simulator state. |
-| Billing | `GET` | `/api/billing/draft` | Produce a draft billing or settlement view. | Tenant-aware financial helper. |
-| Prices | `GENERIC` | `/api/prices/current` | Return the current price view used by dashboard and ML flows. | Read-style route that can bridge to OREE-backed data. |
-| Renewable | `GENERIC` | `/api/renewable/forecast` | Return the general renewable forecast surface used by the dashboard. | Preferred dashboard contract. |
-| Renewable | `GET` | `/api/renewable/ml-forecast` | Return the ML-backed renewable forecast lane. | Separate from the general forecast surface so GET precedence stays explicit. |
-| Metrics | `GET` | `/api/metrics/dashboard` | Return dashboard summary metrics. | Main metrics route for the dashboard. |
-| History | `GENERIC` | `/api/history` | Return financial and operational history. | Canonical dashboard financial telemetry surface. |
-| MLflow | `GENERIC` | `/api/mlflow/status` | Return MLflow connectivity and availability status. | Should degrade with `success: true` and `mlflow_connected: false` when MLflow is offline locally. |
-| MLflow | `GENERIC` | `/api/mlflow/log-metrics` | Log metrics into MLflow from dashboard-triggered flows. | Command or integration surface. |
-| Retraining | `GENERIC` | `/api/retraining/start` | Start a retraining workflow. | Command surface. |
-| Retraining | `GENERIC` | `/api/retraining/progress` | Read retraining progress. | Read-style companion surface. |
-| Retraining | `GENERIC` | `/api/retraining/cancel` | Cancel an active retraining workflow. | Command surface. |
-| Compatibility | `GENERIC` | `/api/battery` | Dashboard-facing battery rollup. | Keep documented as a compatibility summary surface. |
-| Compatibility | `GENERIC` | `/api/prices` | Dashboard-facing prices rollup. | Keep documented as a compatibility summary surface. |
-| Compatibility | `GENERIC` | `/api/metrics` | Dashboard-facing metrics rollup. | Keep documented as a compatibility summary surface. |
+| Group         | Method       | Route                                         | Purpose                                                                | Notes                                                                                                 |
+| ------------- | ------------ | ------------------------------------------------------------------ | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Platform      | `GET`      | `/api/health`                                                    | Lightweight dashboard readiness probe.                                 | Preferred health endpoint for local startup checks.                                                   |
+| Platform      | `GET`      | `/api/tenants`                                                   | Enumerate known tenants for dashboard selection.                       | Derived from current tenant configuration surfaces.                                                   |
+| Config        | `GET`      | `/api/config/current`                                            | Load the current effective tenant configuration.                       | Preferred read path for config-aware dashboard pages.                                                 |
+| Config        | `POST`     | `/api/config/save`                                               | Persist updated tenant configuration.                                  | Save-side logic can trigger recalculation when significant changes are detected.                      |
+| Config        | `GET`      | `/api/config/templates`                                          | Return available configuration templates or presets.                   | Used by settings flows and onboarding helpers.                                                        |
+| Settings      | `GENERIC`  | `/api/settings/load`                                             | Load persisted settings payloads.                                      | Older settings surface still used by parts of the dashboard.                                          |
+| Settings      | `GENERIC`  | `/api/settings/save`                                             | Persist settings payloads.                                             | Compatibility-facing settings save surface.                                                           |
+| Settings      | `GENERIC`  | `/api/settings/import`                                           | Import settings bundle.                                                | See[API_DOCUMENTATION_IMPORT_EXPORT.md](API_DOCUMENTATION_IMPORT_EXPORT.md).                             |
+| Settings      | `GENERIC`  | `/api/settings/export`                                           | Export settings bundle.                                                | See[API_DOCUMENTATION_IMPORT_EXPORT.md](API_DOCUMENTATION_IMPORT_EXPORT.md).                             |
+| Settings      | `POST`     | `/api/settings/battery`                                          | Update tenant battery settings.                                        | Specialized settings mutation endpoint.                                                               |
+| Settings      | `POST`     | `/api/settings/load-profile`                                     | Update tenant load-profile settings.                                   | Specialized settings mutation endpoint.                                                               |
+| Dagster       | `GET`      | `/api/dagster/assets`                                            | Expose Dagster asset status and recent materialization state.          | Dashboard observability surface over `src/definitions.py`.                                          |
+| Dagster       | `GET`      | `/api/dagster/recommendation`                                    | Return the active recommendation with freshness and fallback metadata. | Enforces a 15-minute snapshot freshness gate before using Dagster snapshots directly.                 |
+| Dagster       | `GET`      | `/api/dagster/schedule-24h`                                      | Return the active 24-hour optimization schedule snapshot.              | Primary schedule consumption path for the dashboard.                                                  |
+| Dagster       | `POST`     | `/api/dagster/trigger`                                           | Trigger Dagster materialization or refresh flows.                      | Operational control surface, not the default user-facing path.                                        |
+| ML            | `GET`      | `/api/ml/recommendation`                                         | Return a live-context ML recommendation for the selected tenant.       | Includes lineage and model-input metadata when available.                                             |
+| ML            | `GET`      | `/api/ml/pipeline-health`                                        | Report Python pipeline, component, and dependency health.              | Used to expose degradation rather than only hard-failure state.                                       |
+| ML            | `POST`     | `/api/ml/recalculate`                                            | Request a recalculation or refresh of ML outputs.                      | Command-style route.                                                                                  |
+| ML            | `GET`      | `/api/ml/recalculate-status`                                     | Report recalculation progress or staleness.                            | Companion status surface for recalculation workflows.                                                 |
+| ML            | `GENERIC`  | `/api/ml/predict`                                                | Compatibility prediction bridge into the Python ML runtime.            | Legacy-facing bridge surface backed by the root Python wrapper.                                       |
+| ML            | `GENERIC`  | `/api/ml/monitoring`                                             | Return ML monitoring and drift diagnostics when available.             | Read-style operational surface.                                                                       |
+| Optimization  | `GET`      | `/api/optimization/strategy`                                     | Read the active optimization strategy.                                 | Strategy values are tenant-aware.                                                                     |
+| Optimization  | `POST`     | `/api/optimization/strategy`                                     | Update the active optimization strategy.                               | Configuration mutation surface.                                                                       |
+| Control       | `POST`     | `/api/control/execute`                                           | Execute an immediate control command.                                  | Used by simulator-backed manual control flows.                                                        |
+| Control       | `GET`      | `/api/control/history`                                           | Read recent control command history.                                   | Observability and troubleshooting surface.                                                            |
+| Control       | `GET`      | `/api/control/physics`                                           | Read control or battery physics metadata used by the control UI.       | Read-style helper surface.                                                                            |
+| Control       | `GET`      | `/api/control/status`                                            | Read the current control state.                                        | Key source for command provenance in the battery UI.                                                  |
+| Control       | `POST`     | `/api/control/schedule`                                          | Create a scheduled control command.                                    | Scheduling mutation surface.                                                                          |
+| Control       | `GET`      | `/api/control/scheduled`                                         | List scheduled control commands.                                       | Companion read path for scheduled commands.                                                           |
+| Control       | `DELETE`   | `/api/control/schedule/:id`                                      | Delete a scheduled control command.                                    | Route file `control/schedule/[id].delete.ts`.                                                       |
+| Battery       | `GET/POST` | `/api/battery/simulate`                                          | Read or mutate the simulator-backed battery state.                     | The current handler branches on method and powers the interactive battery UI.                         |
+| Battery       | `GET`      | `/api/battery/status`                                            | Return current battery status.                                         | Read-style battery snapshot endpoint.                                                                 |
+| Physics       | `GET`      | `/api/physics/battery`                                           | Return battery physics characteristics and derived limits.             | Physics reference surface separate from the simulator state.                                          |
+| Billing       | `GET`      | `/api/billing/draft`                                             | Produce a draft billing or settlement view.                            | Tenant-aware financial helper.                                                                        |
+| Prices        | `GENERIC`  | `/api/prices/current`                                            | Return the current price view used by dashboard and ML flows.          | Read-style route that can bridge to OREE-backed data.                                                 |
+| Renewable     | `GENERIC`  | `/api/renewable/forecast`                                        | Return the general renewable forecast surface used by the dashboard.   | Preferred dashboard contract.                                                                         |
+| Renewable     | `GET`      | `/api/renewable/ml-forecast`                                     | Return the ML-backed renewable forecast lane.                          | Separate from the general forecast surface so GET precedence stays explicit.                          |
+| Metrics       | `GET`      | `/api/metrics/dashboard`                                         | Return dashboard summary metrics.                                      | Main metrics route for the dashboard.                                                                 |
+| History       | `GENERIC`  | `/api/history`                                                   | Return financial and operational history.                              | Canonical dashboard financial telemetry surface.                                                      |
+| MLflow        | `GENERIC`  | `/api/mlflow/status`                                             | Return MLflow connectivity and availability status.                    | Should degrade with `success: true` and `mlflow_connected: false` when MLflow is offline locally. |
+| MLflow        | `GENERIC`  | `/api/mlflow/log-metrics`                                        | Log metrics into MLflow from dashboard-triggered flows.                | Command or integration surface.                                                                       |
+| Retraining    | `GENERIC`  | `/api/retraining/start`                                          | Start a retraining workflow.                                           | Command surface.                                                                                      |
+| Retraining    | `GENERIC`  | `/api/retraining/progress`                                       | Read retraining progress.                                              | Read-style companion surface.                                                                         |
+| Retraining    | `GENERIC`  | `/api/retraining/cancel`                                         | Cancel an active retraining workflow.                                  | Command surface.                                                                                      |
+| Compatibility | `GENERIC`  | `/api/battery`                                                   | Dashboard-facing battery rollup.                                       | Keep documented as a compatibility summary surface.                                                   |
+| Compatibility | `GENERIC`  | `/api/prices`                                                    | Dashboard-facing prices rollup.                                        | Keep documented as a compatibility summary surface.                                                   |
+| Compatibility | `GENERIC`  | `/api/metrics`                                                   | Dashboard-facing metrics rollup.                                       | Keep documented as a compatibility summary surface.                                                   |
 
 ## Key Runtime Contracts
 
@@ -114,7 +121,8 @@ Important contract notes:
 
 - The bridge is backed by `src/data_pipeline/ml_bridge_service.py` and compatibility wrappers rather than by ad hoc dashboard logic.
 - Current payloads can include `feature_provenance`, `model_inputs`, `inference_lineage`, and drift or monitoring details when the Python runtime exposes them.
-- This route is used both as a fallback and as a transparency surface when comparing ML output to Dagster-driven recommendation flows.
+- This route is used as a fallback and as a transparency or enrichment surface when comparing ML output to Dagster-driven recommendation flows.
+- It is not the default execution-authority endpoint for auto-mode or schedule-backed recommendation flows.
 
 ### `POST /api/control/execute`
 
@@ -634,6 +642,7 @@ Those bridge functions are exposed to the dashboard through the thin wrappers in
 ## Preferred Integration Guidance
 
 - Prefer the Dagster-backed recommendation and schedule surfaces for optimizer-facing UI views.
+- Keep `/api/dagster/recommendation` as the operational recommendation default, and treat `/api/ml/recommendation` as the live bridge, fallback, and ML-explainability surface until the Dagster route exposes the same enrichment payloads.
 - Prefer `x-tenant-id` over ad hoc query-only tenant selection when designing new clients.
 - Treat root rollups such as `/api/battery`, `/api/prices`, and `/api/metrics` as existing compatibility surfaces rather than as the target shape for future backend organization.
 - Reuse [API_DOCUMENTATION_IMPORT_EXPORT.md](API_DOCUMENTATION_IMPORT_EXPORT.md) for the detailed settings import and export flow instead of copying its examples into new docs.

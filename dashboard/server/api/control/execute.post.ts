@@ -921,6 +921,8 @@ async function resolveExecutionPlan(
   }
 
   try {
+    // Auto execution resolves against the Dagster-backed recommendation first.
+    // The live ML route remains the explicit fallback when the Dagster path is unavailable.
     const dagsterRecommendation = await $fetch<any>('/api/dagster/recommendation', tenantRequest)
     const dagsterLineage = preferExecutionLineage(
       resolveExecutionLineage(dagsterRecommendation?.source_metadata),

@@ -12,7 +12,8 @@ The dashboard integrates with two kinds of backend surfaces:
 
 The key runtime rule is:
 
-- `/api/dagster/recommendation` and `/api/ml/recommendation` are recommendation surfaces
+- `/api/dagster/recommendation` is the default operational recommendation authority
+- `/api/ml/recommendation` is the live-context bridge, fallback, and explainability surface
 - `/api/mlflow/status` and `/api/mlflow/log-metrics` are diagnostics surfaces
 - MLflow does not currently define live execution authority on its own
 
@@ -48,6 +49,14 @@ Fallback recommendation surface.
 - builds live context from tenant config, prices, battery state, and weather
 - invokes the shared Python bridge `scripts/ml_integration_api.py`
 - exposes the same normalized `contract` and `serving` metadata used by the Dagster handoff
+- remains useful for UI slices that still need ML-specific enrichment fields not yet exposed by the Dagster route
+
+## Consumer Guidance
+
+- Use `/api/dagster/recommendation` for operational recommendation displays, auto-mode command resolution, and schedule-backed user-facing flows.
+- Use `/api/ml/recommendation` for live-model transparency, drift-aware diagnostics, and enrichment fields such as `savings_estimate`, `battery_impact`, `feature_provenance`, and `inference_lineage`.
+- Do not treat `/api/ml/recommendation` as a competing primary authority when a fresh Dagster recommendation is available.
+- Do not introduce a separate third recommendation route while these two surfaces already express the current authority stack.
 
 ### `/api/mlflow/status`
 
