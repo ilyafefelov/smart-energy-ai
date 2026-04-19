@@ -7,6 +7,14 @@ This appendix packages the supervisor-facing medallion docs into two ready-to-us
 
 It does not introduce new technical claims. It is a packaging layer over the existing supervisor artifacts.
 
+## Companion Export Artifacts
+
+Use these companion documents when the package needs a different level of compression or a more ready-to-paste format:
+
+- [SUPERVISOR_DEFENSE_BRIEF.md](SUPERVISOR_DEFENSE_BRIEF.md) - shortest defense-ready version for a diploma meeting or oral walkthrough
+- [SUPERVISOR_THESIS_APPENDIX_EXPORT.md](SUPERVISOR_THESIS_APPENDIX_EXPORT.md) - appendix-ready prose and section numbering for written submission
+- [SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md](SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md) - deferred implementation roadmap if the supervisor asks for the next runtime evolution beyond the current report
+
 ## Core Message
 
 The Smart Energy AI runtime already supports a credible Bronze, Silver, and Gold ELT or ML story for supervisor review because it has:

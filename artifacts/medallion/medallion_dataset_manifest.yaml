@@ -7,6 +7,9 @@ renderer_entrypoint: scripts/render_medallion_catalog.py
 storage_note: Dagster materializations may persist through the configured io_manager and can target S3 or the filesystem. The storage paths below are the presentation anchors used for supervisor-facing packaging.
 artifact_outputs:
   supervisor_report_doc: docs/technical/SUPERVISOR_MEDALLION_REPORT.md
+  supervisor_defense_brief_doc: docs/technical/SUPERVISOR_DEFENSE_BRIEF.md
+  supervisor_runtime_roadmap_doc: docs/technical/SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md
+  supervisor_thesis_appendix_export_doc: docs/technical/SUPERVISOR_THESIS_APPENDIX_EXPORT.md
   supervisor_architecture_doc: docs/technical/DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md
   dataset_catalog_doc: docs/technical/BRONZE_SILVER_GOLD_DATASET_CATALOG.md
   dataset_model_reference_doc: docs/technical/DATASET_MODEL_REFERENCE.md

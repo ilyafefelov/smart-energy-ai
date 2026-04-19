@@ -1,6 +1,6 @@
 # Experiments And Results Scorecard
 
-Generated from current runtime evidence at 2026-04-19T11:53:05+00:00.
+Generated from current runtime evidence at 2026-04-19T12:07:48+00:00.
 
 This scorecard reuses existing Dagster benchmark, MLflow, optimization lineage, reconciliation, and fleet-analytics surfaces instead of creating a second observability plane.
 

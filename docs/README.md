@@ -6,6 +6,9 @@ This directory now keeps only active reference and runbook material in the main 
 
 - `technical/README.md` - entry point for architecture, pipeline, validation, and backend design references
 - `technical/SUPERVISOR_MEDALLION_REPORT.md` - consolidated supervisor handoff report for the current Bronze/Silver/Gold medallion package
+- `technical/SUPERVISOR_DEFENSE_BRIEF.md` - short diploma-defense version of the supervisor medallion package
+- `technical/SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md` - deferred implementation roadmap for the next Bronze-to-Silver and Gold-summary runtime evolution
+- `technical/SUPERVISOR_THESIS_APPENDIX_EXPORT.md` - thesis-appendix-ready export of the supervisor medallion package
 - `deployment/README.md` - deployment runbooks and infrastructure operations guide
 - `Stage 2/README.md` - diploma research workspace, bibliography workflow, and MVP literature mapping guide
 - `API_REFERENCE.md` - consolidated reference for the active dashboard and backend API surface

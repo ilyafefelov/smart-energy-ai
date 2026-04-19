@@ -117,6 +117,9 @@ The practical next runtime plan, if requested later, is: keep Bronze source asse
 The report package to hand to a supervisor now consists of these deliverables:
 
 - [docs/technical/SUPERVISOR_MEDALLION_REPORT.md](SUPERVISOR_MEDALLION_REPORT.md) - consolidated supervisor report and handoff narrative
+- [docs/technical/SUPERVISOR_DEFENSE_BRIEF.md](SUPERVISOR_DEFENSE_BRIEF.md) - shortest defense-ready version for an oral diploma review
+- [docs/technical/SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md](SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md) - deferred runtime implementation roadmap for explicit Silver assets and a first-class Gold summary asset
+- [docs/technical/SUPERVISOR_THESIS_APPENDIX_EXPORT.md](SUPERVISOR_THESIS_APPENDIX_EXPORT.md) - thesis-appendix-ready export text for written submission
 - [docs/technical/DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md](DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md) - architecture narrative and Mermaid diagram
 - [docs/technical/BRONZE_SILVER_GOLD_DATASET_CATALOG.md](BRONZE_SILVER_GOLD_DATASET_CATALOG.md) - exact dataset inventory with runtime snapshot evidence
 - [docs/technical/DATASET_MODEL_REFERENCE.md](DATASET_MODEL_REFERENCE.md) - dataset contract and Gold mart schema reference

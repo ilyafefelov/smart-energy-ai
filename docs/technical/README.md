@@ -5,6 +5,9 @@ Architecture, validation, and backend design reference material.
 ## Supervisor Medallion Package
 
 - [SUPERVISOR_MEDALLION_REPORT.md](SUPERVISOR_MEDALLION_REPORT.md) - Consolidated supervisor-facing report that threads architecture, dataset inventory, Gold summary contract, comparison tables, and deferred implementation steps into one handoff artifact.
+- [SUPERVISOR_DEFENSE_BRIEF.md](SUPERVISOR_DEFENSE_BRIEF.md) - Short diploma-defense version of the supervisor package with a compressed thesis, key evidence, and likely question handling.
+- [SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md](SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md) - Deferred runtime roadmap for explicit Bronze-to-Silver market and weather assets plus a first-class Gold experiment-summary asset.
+- [SUPERVISOR_THESIS_APPENDIX_EXPORT.md](SUPERVISOR_THESIS_APPENDIX_EXPORT.md) - Appendix-ready export text that can be dropped into a thesis or diploma report with minimal rewriting.
 - [DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md](DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md) - Supervisor-facing Bronze/Silver/Gold architecture narrative over the active Dagster runtime.
 - [BRONZE_SILVER_GOLD_DATASET_CATALOG.md](BRONZE_SILVER_GOLD_DATASET_CATALOG.md) - Generated Bronze/Silver/Gold dataset catalog with provenance, freshness, fleet, and case-study views.
 - [DATASET_MODEL_REFERENCE.md](DATASET_MODEL_REFERENCE.md) - Dataset-model reference covering Bronze, Silver, Gold, and multi-tenant contract shapes.
@@ -53,7 +56,10 @@ This supervisor package is a logical presentation overlay on the runtime rooted 
 - [REAL_DATA_SOURCES.md](REAL_DATA_SOURCES.md) - REAL DATA SOURCES - Smart Energy AI V2.
 - [REFACTORING_SUMMARY_20260417.md](REFACTORING_SUMMARY_20260417.md) - Codebase Refactoring Summary.
 - [REPO_LAYOUT_GUIDE.md](REPO_LAYOUT_GUIDE.md) - Repo Layout Guide.
+- [SUPERVISOR_DEFENSE_BRIEF.md](SUPERVISOR_DEFENSE_BRIEF.md) - Supervisor Defense Brief.
+- [SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md](SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md) - Supervisor Medallion Runtime Roadmap.
 - [SUPERVISOR_MEDALLION_REPORT.md](SUPERVISOR_MEDALLION_REPORT.md) - Supervisor Medallion Report.
+- [SUPERVISOR_THESIS_APPENDIX_EXPORT.md](SUPERVISOR_THESIS_APPENDIX_EXPORT.md) - Supervisor Thesis Appendix Export.
 - [SUPERVISOR_PRESENTATION_APPENDIX.md](SUPERVISOR_PRESENTATION_APPENDIX.md) - Supervisor Presentation Appendix.
 - [Technical Specification_ Autonomous Energy Arbitrage System (Ukraine 2026).md](Technical%20Specification_%20Autonomous%20Energy%20Arbitrage%20System%20(Ukraine%202026).md) - Technical Specification: Autonomous Energy Arbitrage System (Ukraine 2026\).
 - [TEST_PIPELINE_GUIDE.md](TEST_PIPELINE_GUIDE.md) - OREE Effective Scraper - Test Pipeline & Integration Guide.
