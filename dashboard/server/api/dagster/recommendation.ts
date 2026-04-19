@@ -19,6 +19,11 @@ import {
   resolveDagsterAssetResultsDbConfig,
 } from '../../utils/dagster-asset-results'
 import {
+  evaluateScheduleQuality,
+  evaluateSnapshotFreshness,
+  selectDagsterSnapshotCandidate,
+} from '../../utils/dagster-snapshot'
+import {
   assessDagsterScheduleRowPolicy,
   formatClockHour,
   normalizeClockHour,
@@ -104,28 +109,6 @@ type DagsterMaterializedRecommendation = {
   error?: string
 }
 
-type SnapshotFreshness = {
-  isFresh: boolean
-  ageMinutes: number | null
-  materializedAtIso: string | null
-  reason: string
-}
-
-type ScheduleQualityAssessment = {
-  isValid: boolean
-  reason: string
-  rowCount: number
-}
-
-type DagsterSnapshotSourceDetail = 'dagster_postgres_snapshot' | 'dagster_asset_file'
-
-type DagsterSnapshotCandidate = {
-  snapshot: DagsterMaterializedRecommendation
-  sourceDetail: DagsterSnapshotSourceDetail
-  freshness: SnapshotFreshness
-  quality: ScheduleQualityAssessment
-}
-
 type MlRecommendationPayload = {
   serving?: unknown
   data?: {
@@ -204,145 +187,6 @@ function summarizeDagsterForecastProvenance(rows: Array<Record<string, unknown>>
     forecast_promotion_active: null,
     forecast_promotion_source: null,
     optimization_run_id: null,
-  }
-}
-
-function resolveSnapshotTimestamp(snapshot: DagsterMaterializedRecommendation | null): Date | null {
-  if (!snapshot) return null
-
-  const candidates = [snapshot.materialization_time, snapshot.generated_at]
-  for (const candidate of candidates) {
-    if (!candidate) continue
-    const parsed = new Date(candidate)
-    if (!Number.isNaN(parsed.getTime())) {
-      return parsed
-    }
-  }
-
-  return null
-}
-
-function evaluateSnapshotFreshness(snapshot: DagsterMaterializedRecommendation | null): SnapshotFreshness {
-  const materializedAt = resolveSnapshotTimestamp(snapshot)
-  if (!materializedAt) {
-    return {
-      isFresh: false,
-      ageMinutes: null as number | null,
-      materializedAtIso: null as string | null,
-      reason: 'missing_timestamp',
-    }
-  }
-
-  const ageMs = Date.now() - materializedAt.getTime()
-  const ageMinutes = ageMs / 60000
-  return {
-    isFresh: ageMinutes <= MAX_SNAPSHOT_AGE_MINUTES,
-    ageMinutes: Number(ageMinutes.toFixed(2)),
-    materializedAtIso: materializedAt.toISOString(),
-    reason: ageMinutes <= MAX_SNAPSHOT_AGE_MINUTES ? 'fresh' : 'stale',
-  }
-}
-
-function evaluateScheduleQuality(snapshot: DagsterMaterializedRecommendation | null): ScheduleQualityAssessment {
-  if (!snapshot || !Array.isArray(snapshot.schedule)) {
-    return {
-      isValid: false,
-      reason: 'missing_schedule',
-      rowCount: 0,
-    }
-  }
-
-  const rows = snapshot.schedule.slice(0, 24)
-  if (rows.length < 24) {
-    return {
-      isValid: false,
-      reason: 'insufficient_rows',
-      rowCount: rows.length,
-    }
-  }
-
-  const hourOffsets = new Set<number>()
-  for (const row of rows) {
-    const rawOffset = toFiniteNumber((row as any)?.hour_offset ?? row?.hour)
-    if (rawOffset == null) {
-      return {
-        isValid: false,
-        reason: 'invalid_hour_offset',
-        rowCount: rows.length,
-      }
-    }
-
-    const offset = normalizeClockHour(rawOffset, 0)
-    if (hourOffsets.has(offset)) {
-      return {
-        isValid: false,
-        reason: 'duplicate_hour_offset',
-        rowCount: rows.length,
-      }
-    }
-    hourOffsets.add(offset)
-
-    const actionKw = toFiniteNumber(row?.action_kw)
-    if (actionKw == null) {
-      return {
-        isValid: false,
-        reason: 'invalid_action_kw',
-        rowCount: rows.length,
-      }
-    }
-  }
-
-  return {
-    isValid: true,
-    reason: 'valid',
-    rowCount: rows.length,
-  }
-}
-
-function compareDagsterSnapshotCandidates(a: DagsterSnapshotCandidate, b: DagsterSnapshotCandidate) {
-  const aTimestamp = resolveSnapshotTimestamp(a.snapshot)?.getTime() ?? 0
-  const bTimestamp = resolveSnapshotTimestamp(b.snapshot)?.getTime() ?? 0
-  if (aTimestamp !== bTimestamp) {
-    return bTimestamp - aTimestamp
-  }
-
-  if (a.sourceDetail === b.sourceDetail) {
-    return 0
-  }
-
-  return a.sourceDetail === 'dagster_postgres_snapshot' ? -1 : 1
-}
-
-function buildDagsterSnapshotCandidate(
-  snapshot: DagsterMaterializedRecommendation | null,
-  sourceDetail: DagsterSnapshotSourceDetail,
-): DagsterSnapshotCandidate | null {
-  if (!snapshot) {
-    return null
-  }
-
-  return {
-    snapshot,
-    sourceDetail,
-    freshness: evaluateSnapshotFreshness(snapshot),
-    quality: evaluateScheduleQuality(snapshot),
-  }
-}
-
-function selectDagsterSnapshotCandidate(
-  postgresDagster: DagsterMaterializedRecommendation | null,
-  fileDagster: DagsterMaterializedRecommendation | null,
-) {
-  const candidates = [
-    buildDagsterSnapshotCandidate(postgresDagster, 'dagster_postgres_snapshot'),
-    buildDagsterSnapshotCandidate(fileDagster, 'dagster_asset_file'),
-  ]
-    .filter((candidate): candidate is DagsterSnapshotCandidate => candidate != null)
-    .sort(compareDagsterSnapshotCandidates)
-
-  return {
-    selected: candidates.find((candidate) => candidate.freshness.isFresh && candidate.quality.isValid) || null,
-    latest: candidates[0] || null,
   }
 }
 
@@ -547,12 +391,16 @@ export default defineEventHandler(async (event): Promise<Record<string, unknown>
       $fetch<ConfigPayload>('/api/config/current', tenantRequest).catch(() => null),
     ])
 
-    const dagsterSnapshotCandidates = selectDagsterSnapshotCandidate(postgresDagster, fileDagster)
+    const dagsterSnapshotCandidates = selectDagsterSnapshotCandidate(
+      postgresDagster,
+      fileDagster,
+      MAX_SNAPSHOT_AGE_MINUTES,
+    )
     const selectedDagsterCandidate = dagsterSnapshotCandidates.selected
     const activeDagsterCandidate = selectedDagsterCandidate || dagsterSnapshotCandidates.latest
     const materializedDagster = selectedDagsterCandidate?.snapshot || null
     const activeDagsterSnapshot = activeDagsterCandidate?.snapshot || null
-    const snapshotFreshness = activeDagsterCandidate?.freshness || evaluateSnapshotFreshness(null)
+    const snapshotFreshness = activeDagsterCandidate?.freshness || evaluateSnapshotFreshness(null, MAX_SNAPSHOT_AGE_MINUTES)
     const scheduleQuality = activeDagsterCandidate?.quality || evaluateScheduleQuality(null)
     const serving = normalizeServingMetadata(mlRecommendation?.serving)
 
