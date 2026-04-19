@@ -14,6 +14,8 @@ The release also received a small follow-up stabilization outside the original p
 
 The release was then extended again outside the original plan with a supervisor-report completion pass that added one consolidated handoff document, documented the current Gold experiment-summary mart contract explicitly, upgraded the generated scorecard into a reusable comparison template, and wired the new report into the package indexes and manifest.
 
+The release was extended one final time outside the original plan with three packaging-oriented supervisor artifacts: a short defense brief for oral review, a deferred runtime roadmap for a future explicit Silver-asset split and first-class Gold summary asset, and a thesis-appendix-ready export text for written submission.
+
 ## Changes
 
 ### Added
@@ -32,6 +34,9 @@ The release was then extended again outside the original plan with a supervisor-
 * docs/technical/DATASET_LINEAGE_AND_FRESHNESS_SLA.md - Added a lineage, freshness, fallback, and enforcement guide outside the original plan because the user requested fuller operational documentation for the dataset package.
 * docs/technical/SUPERVISOR_PRESENTATION_APPENDIX.md - Added a presentation-outline and thesis-appendix packaging guide outside the original plan because the user requested a tighter supervisor-facing handoff artifact.
 * docs/technical/SUPERVISOR_MEDALLION_REPORT.md - Added a consolidated supervisor-facing handoff report outside the original plan because the user requested one end-to-end report with exact datasets, Gold mart contract, comparison pack, and deferred implementation roadmap.
+* docs/technical/SUPERVISOR_DEFENSE_BRIEF.md - Added a short diploma-defense brief outside the original plan because the user requested a compressed version of the package for oral supervisor review.
+* docs/technical/SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md - Added a deferred runtime roadmap outside the original plan because the user requested an explicit next-step plan for making the medallion topology more physically represented in Dagster.
+* docs/technical/SUPERVISOR_THESIS_APPENDIX_EXPORT.md - Added a thesis-appendix-ready export outside the original plan because the user requested a copy-ready written-submission format.
 
 ### Modified
 
@@ -64,6 +69,15 @@ The release was then extended again outside the original plan with a supervisor-
 * docs/technical/README.md - Added the consolidated supervisor report to the supervisor package index and refreshed the folder index so the report is discoverable from the technical docs surface.
 * docs/README.md - Added main-index discoverability for the consolidated supervisor report.
 * data/results/medallion_preview.md - Regenerated the preview again after the report-completion pass so the tracked preview reflects the current manifest and package outputs.
+* artifacts/medallion/medallion_dataset_manifest.yaml - Extended the manifest once more to publish the defense brief, runtime roadmap, and thesis-appendix export as companion package artifacts.
+* docs/technical/README.md - Extended the supervisor package index and folder file list to surface the defense brief, runtime roadmap, and thesis-appendix export.
+* docs/README.md - Added main-index discoverability for the three new supervisor packaging artifacts.
+* docs/technical/SUPERVISOR_PRESENTATION_APPENDIX.md - Added companion-export links so the short oral-defense and written-submission variants are discoverable from the existing appendix guide.
+* docs/technical/SUPERVISOR_MEDALLION_REPORT.md - Extended the deliverables section so the consolidated report points to the three new companion artifacts.
+* docs/technical/BRONZE_SILVER_GOLD_DATASET_CATALOG.md - Regenerated the catalog after the manifest extension so the package snapshot stays coherent with the current manifest state.
+* docs/technical/EXPERIMENTS_AND_RESULTS_SCORECARD.md - Regenerated the scorecard after the manifest extension so generated package timestamps remain aligned.
+* artifacts/medallion/gold_experiment_summary.json - Regenerated the Gold summary after the manifest extension so the machine-readable package output stays aligned.
+* data/results/medallion_preview.md - Regenerated the preview once more after the final manifest extension so the tracked preview reflects the latest supervisor package composition.
 
 ### Removed
 
@@ -71,9 +85,9 @@ The release was then extended again outside the original plan with a supervisor-
 
 ## Release Summary
 
-**Total Files Affected**: 19
+**Total Files Affected**: 22
 
-### Files Created (13)
+### Files Created (16)
 
 * docs/technical/DAGSTER_BRONZE_SILVER_GOLD_SUPERVISOR_ARCHITECTURE.md - Supervisor-facing Bronze/Silver/Gold narrative for the active Dagster runtime.
 * artifacts/medallion/medallion_dataset_manifest.yaml - Canonical medallion manifest mapping datasets, provenance, and experiment lanes.
@@ -88,6 +102,10 @@ The release was then extended again outside the original plan with a supervisor-
 * docs/technical/DATASET_MODEL_REFERENCE.md - Supervisor-facing dataset model reference for Bronze, Silver, Gold, and multi-tenant surfaces.
 * docs/technical/DATASET_LINEAGE_AND_FRESHNESS_SLA.md - Supervisor-facing lineage, freshness, fallback, and enforcement guide.
 * docs/technical/SUPERVISOR_PRESENTATION_APPENDIX.md - Supervisor-facing presentation-outline and thesis-appendix packaging guide.
+* docs/technical/SUPERVISOR_MEDALLION_REPORT.md - Consolidated supervisor-facing handoff report.
+* docs/technical/SUPERVISOR_DEFENSE_BRIEF.md - Short diploma-defense version of the supervisor package.
+* docs/technical/SUPERVISOR_MEDALLION_RUNTIME_ROADMAP.md - Deferred runtime roadmap for explicit Silver assets and a first-class Gold summary asset.
+* docs/technical/SUPERVISOR_THESIS_APPENDIX_EXPORT.md - Thesis-appendix-ready export of the supervisor package.
 
 ### Files Modified (6)
 
