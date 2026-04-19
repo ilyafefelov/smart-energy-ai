@@ -69,6 +69,51 @@ node dashboard/scripts/stage2_demo_evidence.mjs
 - `archive/` and `docs/archive/` are reference-only surfaces and should not be treated as active runtime code.
 - The repository uses Beads for task tracking; check `AGENTS.md` for the required `bd ready`, `bd create`, `bd update --claim`, and `bd close` workflow.
 
+## Agent Instruction Workflow
+
+This repository now includes a workspace instruction for recurring diploma-facing deliverables at [.github/instructions/recurring-deliverables.instructions.md](.github/instructions/recurring-deliverables.instructions.md).
+
+Use it when the task touches:
+
+- `docs/Stage 2/**/*.md` weekly reports and supporting Stage 2 report artifacts
+- supervisor package docs under `docs/technical/SUPERVISOR*.md`
+- linked medallion deliverables such as the dataset catalog, scorecard, indexes, and manifest
+
+### Example Commands And Prompts
+
+Examples you can give to Copilot or another coding agent:
+
+```text
+Update this week's Stage 2 report with the latest commits, tests, risks, and literature links.
+```
+
+```text
+Start week 03 report from the existing template and prepare the matching artifacts folder.
+```
+
+```text
+Extend the supervisor report package and keep the medallion manifest, scorecard, catalog, and indexes in sync.
+```
+
+```text
+Refresh the defense brief and thesis appendix export after the latest supervisor-report changes.
+```
+
+### How To Use It As The Repo Owner
+
+- Mention the exact week if you want a new weekly report created.
+- If you do not name the week explicitly, the agent should ask which week to update before editing weekly reports.
+- Use the Stage 2 weekly report flow in [docs/Stage 2/weekly_reports/README.md](docs/Stage%202/weekly_reports/README.md) when you want a formal weekly submission package.
+- Use the supervisor package index in [docs/technical/README.md](docs/technical/README.md) when you want to extend or refresh the diploma-defense and supervisor-facing deliverables.
+
+### How Agents Should Use It
+
+- Treat weekly reports and supervisor deliverables as a linked package, not as isolated one-off docs.
+- Update the active week's report in place unless the user explicitly asks for a new week.
+- Keep weekly evidence grounded in commits, tests, generated artifacts, and literature links.
+- If `artifacts/medallion/medallion_dataset_manifest.yaml` changes, rerender the manifest-backed outputs so generated docs and JSON stay coherent.
+- Keep claims honest about what is implemented now versus what remains on the roadmap.
+
 Current Dagster dependency and job map:
 
 - `docs/technical/DAGSTER_PIPELINE_DEPENDENCY_MAP.md`
