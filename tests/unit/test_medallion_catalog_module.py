@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 
@@ -77,6 +79,12 @@ def test_load_manifest_and_build_catalog_payload(tmp_path: Path, monkeypatch) ->
         ),
         encoding="utf-8",
     )
+    fixed_manifest_time = datetime(2026, 4, 19, 2, 15, 0, tzinfo=timezone.utc).timestamp()
+    os.utime(manifest_path, (fixed_manifest_time, fixed_manifest_time))
+    expected_generated_at = datetime.fromtimestamp(
+        manifest_path.stat().st_mtime,
+        tz=timezone.utc,
+    ).replace(microsecond=0).isoformat()
 
     def fake_latest_asset_rows(project_root_arg: Path, asset_name: str):
         if asset_name == "market_data_asset":
@@ -137,6 +145,7 @@ def test_load_manifest_and_build_catalog_payload(tmp_path: Path, monkeypatch) ->
     catalog = medallion_catalog.build_catalog_payload(manifest_path)
 
     assert catalog["runtime_entrypoint"] == "src/definitions.py"
+    assert catalog["generated_at_utc"] == expected_generated_at
     assert len(catalog["layers"]) == 2
     assert catalog["layers"][0]["stats"]["materialized_count"] == 1
     assert catalog["fleet_view"]["status"] == "materialized_asset"

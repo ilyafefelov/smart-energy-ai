@@ -31,6 +31,14 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
+def _file_modified_iso(path: Path) -> str:
+    try:
+        modified_at = path.stat().st_mtime
+    except OSError:
+        return _utc_now_iso()
+    return datetime.fromtimestamp(modified_at, tz=timezone.utc).replace(microsecond=0).isoformat()
+
+
 def _safe_float(value: Any) -> float | None:
     try:
         numeric = float(value)
@@ -495,6 +503,7 @@ def _schedule_totals(rows: list[dict[str, Any]]) -> dict[str, Any]:
 def build_catalog_payload(manifest_path: str | Path, case_study_tenant: str | None = None) -> dict[str, Any]:
     manifest = load_manifest(manifest_path)
     project_root = Path(manifest["_project_root"])
+    manifest_file = Path(manifest["_manifest_path"])
     customers = _load_customers(project_root)
     case_study_customer = _select_case_study_customer(customers, case_study_tenant)
 
@@ -589,7 +598,7 @@ def build_catalog_payload(manifest_path: str | Path, case_study_tenant: str | No
         }
 
     return {
-        "generated_at_utc": _utc_now_iso(),
+        "generated_at_utc": _file_modified_iso(manifest_file),
         "manifest": manifest,
         "project_root": str(project_root),
         "runtime_entrypoint": manifest.get("runtime_entrypoint"),
