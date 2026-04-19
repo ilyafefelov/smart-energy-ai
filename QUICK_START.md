@@ -81,7 +81,11 @@ node dashboard/scripts/stage2_demo_evidence.mjs
 
 ## Working With Agents On Deliverables
 
-This repo includes a recurring-deliverables instruction at [.github/instructions/recurring-deliverables.instructions.md](.github/instructions/recurring-deliverables.instructions.md) and a weekly-report slash prompt at [.github/prompts/stage2-weekly-report.prompt.md](.github/prompts/stage2-weekly-report.prompt.md).
+This repo includes a recurring-deliverables instruction at [.github/instructions/recurring-deliverables.instructions.md](.github/instructions/recurring-deliverables.instructions.md) plus workspace slash prompts for weekly reports and supervisor-package refreshes:
+
+- [.github/prompts/stage2-weekly-report.prompt.md](.github/prompts/stage2-weekly-report.prompt.md)
+- [.github/prompts/stage2-weekly-report-from-commits.prompt.md](.github/prompts/stage2-weekly-report-from-commits.prompt.md)
+- [.github/prompts/supervisor-package-refresh.prompt.md](.github/prompts/supervisor-package-refresh.prompt.md)
 
 Example prompts you can give directly in chat:
 
@@ -105,7 +109,9 @@ How to use this as the repo owner:
 
 - Name the exact week when you want a new weekly report created.
 - If you do not name the week, the agent should ask which week to update before editing `docs/Stage 2/weekly_reports/`.
-- Use the slash prompt when you want a structured weekly-report drafting flow instead of a freeform request.
+- Use the base weekly-report prompt when you want a structured drafting flow from explicit inputs.
+- Use the commit-driven weekly-report prompt when you want the draft framed from recent git history, touched files, and validation evidence.
+- Use the supervisor-package prompt when you want to refresh the medallion report package and its linked generated outputs.
 
 How agents should use it:
 
